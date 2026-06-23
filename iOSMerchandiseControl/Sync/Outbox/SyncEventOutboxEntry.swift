@@ -75,6 +75,7 @@ nonisolated enum SyncEventOutboxPayloadCodec {
             changedCount: entry.changedCount,
             entityIDs: entityIDs,
             metadata: metadata,
+            shopID: shopID(from: entry.storeId),
             source: source(from: metadata),
             sourceDeviceID: entry.sourceDeviceID,
             batchID: try batchID(from: entry.batchID),
@@ -149,6 +150,13 @@ nonisolated enum SyncEventOutboxPayloadCodec {
             throw SyncEventOutboxPayloadError.invalidBatchID
         }
         return uuid
+    }
+
+    private static func shopID(from value: String?) -> UUID? {
+        guard let value = trimmedOptional(value) else {
+            return nil
+        }
+        return UUID(uuidString: value)
     }
 
     private static func trimmed(_ value: String) -> String {

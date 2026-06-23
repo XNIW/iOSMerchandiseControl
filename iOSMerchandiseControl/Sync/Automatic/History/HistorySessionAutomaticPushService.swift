@@ -63,18 +63,35 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         context: ModelContext
     ) async throws -> HistorySessionAutomaticPushResult {
         var result = HistorySessionAutomaticPushResult()
-        let uploadEntries = entries.filter(\.isHistorySessionDirtyForCloud)
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let scopedEntries = entries.filter {
+            $0.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: selectedShopID == nil ? .anonymous : storeIdentity
+            )
+        }
+        let uploadEntries = scopedEntries.filter(\.isHistorySessionDirtyForCloud)
         result.skippedCleanCount = max(0, entries.count - uploadEntries.count)
         guard !uploadEntries.isEmpty else { return result }
 
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID,
+            storeIdentity: selectedShopID == nil ? .anonymous : storeIdentity
+        )
         var uploadPairs: [(entry: HistoryEntry, row: SharedSheetSessionUpsertRow, revision: Int)] = []
         uploadPairs.reserveCapacity(uploadEntries.count)
 
         for entry in uploadEntries {
             do {
                 let snapshot = HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: true)
-                let row = try HistorySessionPayloadCodec.upsertRow(for: snapshot, ownerUserID: ownerUserID)
+                let row = try HistorySessionPayloadCodec.upsertRow(
+                    for: snapshot,
+                    ownerUserID: ownerUserID,
+                    shopID: selectedShopID
+                )
                 uploadPairs.append((entry, row, entry.localChangeRevision))
             } catch HistorySessionSyncError.overlayTooLarge {
                 result.skippedOversizedCount += 1
@@ -102,6 +119,11 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                   readBack.ownerUserID == ownerUserID else {
                 throw HistorySessionSyncError.readBackMismatch
             }
+            pair.entry.assignHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: selectedShopID == nil ? .anonymous : storeIdentity
+            )
             let expectedFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: pair.row)
             let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
             guard fingerprint == expectedFingerprint else {
@@ -130,10 +152,10 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
     ) async throws {
         let request = SyncEventRecordRequest(
             domain: "history",
-            eventType: "upsert",
+            eventType: "history_changed",
             changedCount: remoteIDs.count,
             entityIDs: .object([
-                "history_session_ids": .array(
+                "session_ids": .array(
                     remoteIDs
                         .sorted { $0.uuidString < $1.uuidString }
                         .map { .string($0.uuidString.lowercased()) }
@@ -143,6 +165,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 "source": .string("automatic_history_session_push"),
                 "owner_user_id": .string(ownerUserID.uuidString.lowercased())
             ]),
+            shopID: ShopContextSelection.selectedShopID(ownerUserID: ownerUserID),
             source: "ios_automatic_runtime",
             clientEventID: "history-automatic-push:\(UUID().uuidString.lowercased())"
         )

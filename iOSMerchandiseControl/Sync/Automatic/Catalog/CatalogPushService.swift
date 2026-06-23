@@ -18,8 +18,10 @@ final class CatalogPushService: SyncCatalogPushProviding {
         let remote = self.remote
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
             let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
-                .loadSnapshot(ownerUserID: ownerUserID)
+                .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: selectedShopID == nil ? nil : storeIdentity)
             var blockers: [String] = []
             if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
             if snapshot.staleBaselineCount > 0 { blockers.append("staleBaselineLocalChanges") }
@@ -38,14 +40,19 @@ final class CatalogPushService: SyncCatalogPushProviding {
                   let remote else {
                 return result
             }
-            let changes = try Self.pendingCatalogChanges(context: context, ownerUserID: ownerUserID)
+            let changes = try Self.pendingCatalogChanges(
+                context: context,
+                ownerUserID: ownerUserID,
+                storeIdentity: selectedShopID == nil ? nil : storeIdentity
+            )
             try Task.checkCancellation()
             let push = try await Self.push(
                 changes: changes,
                 ownerUserID: ownerUserID,
                 context: context,
                 remote: remote,
-                plan: plan
+                plan: plan,
+                selectedShopID: selectedShopID
             )
             result = push.result
             try Self.enqueueCatalogSyncEvent(
@@ -64,7 +71,8 @@ final class CatalogPushService: SyncCatalogPushProviding {
 
     nonisolated private static func pendingCatalogChanges(
         context: ModelContext,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        storeIdentity: LocalStoreIdentity?
     ) throws -> [LocalPendingChange] {
         let owner = ownerUserID.uuidString.lowercased()
         let pending = LocalPendingChangeStatus.pending.rawValue
@@ -77,7 +85,9 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 SortDescriptor(\.changeID, order: .forward)
             ]
         )
-        return try context.fetch(descriptor).filter(\.entityKind.isCatalogKind)
+        return try context.fetch(descriptor).filter {
+            $0.entityKind.isCatalogKind && isStoreCompatible($0, storeIdentity: storeIdentity)
+        }
     }
 
     nonisolated private struct CatalogPushOutcome: Sendable {
@@ -96,7 +106,8 @@ final class CatalogPushService: SyncCatalogPushProviding {
         ownerUserID: UUID,
         context: ModelContext,
         remote: any SyncAutomaticCatalogRemoteWriting,
-        plan: SyncCatalogPushPlan
+        plan: SyncCatalogPushPlan,
+        selectedShopID: UUID?
     ) async throws -> CatalogPushOutcome {
         var outcome = CatalogPushOutcome(result: SyncCatalogPushResult(plan: plan))
         var acknowledgedChangeIDs: [String] = []
@@ -136,7 +147,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.supplierIDs.append(row.id)
             } else {
                 let rows = try await remote.createSuppliers([
-                    SyncAutomaticSupplierCreatePayload(ownerUserID: ownerUserID, name: supplier.name)
+                    SyncAutomaticSupplierCreatePayload(ownerUserID: ownerUserID, shopID: selectedShopID, name: supplier.name)
                 ])
                 guard let row = rows.first else { continue }
                 apply(row, to: supplier)
@@ -185,7 +196,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.categoryIDs.append(row.id)
             } else {
                 let rows = try await remote.createCategories([
-                    SyncAutomaticCategoryCreatePayload(ownerUserID: ownerUserID, name: category.name)
+                    SyncAutomaticCategoryCreatePayload(ownerUserID: ownerUserID, shopID: selectedShopID, name: category.name)
                 ])
                 guard let row = rows.first else { continue }
                 apply(row, to: category)
@@ -234,7 +245,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.productIDs.append(row.id)
             } else {
                 let rows = try await remote.createProducts([
-                    makeProductCreatePayload(product, ownerUserID: ownerUserID)
+                    makeProductCreatePayload(product, ownerUserID: ownerUserID, shopID: selectedShopID)
                 ])
                 guard let row = rows.first else { continue }
                 apply(row, to: product)
@@ -366,10 +377,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
 
     nonisolated private static func makeProductCreatePayload(
         _ product: Product,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        shopID: UUID?
     ) -> SyncAutomaticProductCreatePayload {
         SyncAutomaticProductCreatePayload(
             ownerUserID: ownerUserID,
+            shopID: shopID,
             barcode: product.barcode,
             itemNumber: product.itemNumber,
             productName: product.productName,
@@ -432,6 +445,14 @@ final class CatalogPushService: SyncCatalogPushProviding {
             LocalPendingChangeLogicalKey.supplier(remoteID: supplier.remoteID, name: supplier.name),
             LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: supplier.name)
         ])
+    }
+
+    nonisolated private static func isStoreCompatible(
+        _ change: LocalPendingChange,
+        storeIdentity: LocalStoreIdentity?
+    ) -> Bool {
+        guard let storeIdentity else { return true }
+        return Task126OwnerStoreScope.normalizedStoreId(change.storeId) == storeIdentity.storeId
     }
 
     nonisolated private static func pendingKeys(for category: ProductCategory) -> Set<String> {

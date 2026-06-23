@@ -90,6 +90,9 @@ final class HistoryEntry {
     var remotePayloadFingerprint: String?
     var localChangeRevision: Int = 0
     var lastSyncedLocalRevision: Int = 0
+    var ownerUserID: String?
+    var storeID: String?
+    var shopID: UUID?
     
     // Proprietà calcolate per accedere ai dati in formato array
     var data: [[String]] {
@@ -142,7 +145,10 @@ final class HistoryEntry {
         remoteDeletedAt: Date? = nil,
         remotePayloadFingerprint: String? = nil,
         localChangeRevision: Int = 0,
-        lastSyncedLocalRevision: Int = 0
+        lastSyncedLocalRevision: Int = 0,
+        ownerUserID: String? = nil,
+        storeID: String? = nil,
+        shopID: UUID? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -167,6 +173,9 @@ final class HistoryEntry {
         self.remotePayloadFingerprint = remotePayloadFingerprint
         self.localChangeRevision = localChangeRevision
         self.lastSyncedLocalRevision = lastSyncedLocalRevision
+        self.ownerUserID = ownerUserID
+        self.storeID = storeID
+        self.shopID = shopID
     }
 
     func evaluateJSONDecodeSnapshot() -> HistoryEntryJSONDecodeSnapshot {
@@ -254,5 +263,38 @@ extension HistoryEntry {
         self.remoteDeletedAt = remoteDeletedAt
         self.remotePayloadFingerprint = fingerprint
         self.lastSyncedLocalRevision = syncedRevision
+    }
+
+    func assignHistoryScope(
+        ownerUserID: UUID,
+        selectedShopID: UUID?,
+        storeIdentity: LocalStoreIdentity
+    ) {
+        self.ownerUserID = ownerUserID.uuidString.lowercased()
+        self.shopID = selectedShopID
+        self.storeID = selectedShopID == nil ? nil : storeIdentity.storeId
+    }
+
+    func isCompatibleWithHistoryScope(
+        ownerUserID: UUID,
+        selectedShopID: UUID?,
+        storeIdentity: LocalStoreIdentity
+    ) -> Bool {
+        if let owner = self.ownerUserID,
+           owner != ownerUserID.uuidString.lowercased() {
+            return false
+        }
+
+        if let selectedShopID {
+            if let shopID {
+                return shopID == selectedShopID
+            }
+            if let storeID {
+                return Task126OwnerStoreScope.normalizedStoreId(storeID) == storeIdentity.storeId
+            }
+            return false
+        }
+
+        return shopID == nil
     }
 }

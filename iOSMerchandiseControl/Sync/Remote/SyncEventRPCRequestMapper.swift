@@ -44,7 +44,8 @@ nonisolated enum SyncEventRPCRequestMapper {
             pSourceDeviceID: sourceDeviceID,
             pBatchID: request.batchID,
             pClientEventID: clientEventID,
-            pMetadata: metadata
+            pMetadata: metadata,
+            pShopID: request.shopID
         )
     }
 
@@ -138,6 +139,7 @@ nonisolated struct SyncEventRPCRequestParameters: Encodable, Sendable, Equatable
     let pBatchID: UUID?
     let pClientEventID: String
     let pMetadata: SyncEventRPCJSONValue
+    let pShopID: UUID?
 
     enum CodingKeys: String, CodingKey {
         case pDomain = "p_domain"
@@ -150,6 +152,7 @@ nonisolated struct SyncEventRPCRequestParameters: Encodable, Sendable, Equatable
         case pBatchID = "p_batch_id"
         case pClientEventID = "p_client_event_id"
         case pMetadata = "p_metadata"
+        case pShopID = "p_shop_id"
     }
 
     init(
@@ -162,7 +165,8 @@ nonisolated struct SyncEventRPCRequestParameters: Encodable, Sendable, Equatable
         pSourceDeviceID: String?,
         pBatchID: UUID?,
         pClientEventID: String,
-        pMetadata: SyncEventRPCJSONValue
+        pMetadata: SyncEventRPCJSONValue,
+        pShopID: UUID?
     ) {
         self.pDomain = pDomain
         self.pEventType = pEventType
@@ -174,6 +178,7 @@ nonisolated struct SyncEventRPCRequestParameters: Encodable, Sendable, Equatable
         self.pBatchID = pBatchID
         self.pClientEventID = pClientEventID
         self.pMetadata = pMetadata
+        self.pShopID = pShopID
     }
 }
 

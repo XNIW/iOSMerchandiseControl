@@ -113,6 +113,7 @@ struct ContentView: View {
     @StateObject private var excelSession = ExcelSessionViewModel()
     @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
     @StateObject private var syncStateStore = SyncStateStore()
+    @StateObject private var shopContextStore: ShopContextStore
     @State private var selectedTab = Self.initialSelectedTab()
 
     init(
@@ -127,6 +128,11 @@ struct ContentView: View {
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
+        _shopContextStore = StateObject(
+            wrappedValue: ShopContextStore(
+                fetcher: supabaseTransportClient.map { MobileLinkedShopService(remote: $0) } ?? EmptyLinkedShopFetcher()
+            )
+        )
         self.historySessionSyncService = supabaseTransportClient.map {
             HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: $0))
         }
@@ -170,11 +176,13 @@ struct ContentView: View {
             syncStateStore: syncStateStore,
             selectedTab: $selectedTab,
             activityCenter: foregroundActivityCenter,
+            shopContextStore: shopContextStore,
             shopDeviceRegistrationService: shopDeviceRegistrationService
         ) {
             tabContent()
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
+        .environmentObject(shopContextStore)
         .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
@@ -203,6 +211,7 @@ struct ContentView: View {
             NavigationStack {
                 InventoryHomeView()
                     .environmentObject(excelSession)
+                    .environmentObject(shopContextStore)
             }
             .tabItem {
                 Label(L("tab.inventory"), systemImage: "doc.on.doc")
@@ -251,6 +260,7 @@ private struct AppSyncRootHost<Content: View>: View {
 
     @ObservedObject private var activityCenter: ForegroundCloudWorkflowActivityCenter
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
+    @ObservedObject private var shopContextStore: ShopContextStore
     @StateObject private var syncOrchestrator: SyncOrchestrator
     @Binding private var selectedTab: Int
 
@@ -266,6 +276,7 @@ private struct AppSyncRootHost<Content: View>: View {
         syncStateStore: SyncStateStore,
         selectedTab: Binding<Int>,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
+        shopContextStore: ShopContextStore,
         shopDeviceRegistrationService: ShopDeviceRegistrationService?,
         @ViewBuilder content: @escaping () -> Content
     ) {
@@ -288,20 +299,26 @@ private struct AppSyncRootHost<Content: View>: View {
         _selectedTab = selectedTab
         _activityCenter = ObservedObject(wrappedValue: activityCenter)
         _authViewModel = ObservedObject(wrappedValue: authViewModel)
+        _shopContextStore = ObservedObject(wrappedValue: shopContextStore)
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.content = content
     }
 
     var body: some View {
+        let rootBannerState = syncOrchestrator.rootPresentationState
+        let showsRootBanner = syncOrchestrator.shouldShowRootBanner(rootBannerState, selectedTab: selectedTab)
+
         content()
+            .padding(.top, showsRootBanner ? rootBannerReservedTopPadding(for: rootBannerState) : 0)
             .safeAreaInset(edge: .top, spacing: 0) {
-                rootBanner
+                rootBanner(state: rootBannerState, isVisible: showsRootBanner)
             }
             .task {
-                if authViewModel.isSignedIn {
+                await refreshShopContextAndResumeSync()
+                if authViewModel.isSignedIn, shopContextStore.context.syncAllowed {
                     await shopDeviceRegistrationService?.registerHeartbeatAndCheck(reason: "app_sync_bootstrap")
+                    await syncOrchestrator.bootstrap(scenePhase: scenePhase)
                 }
-                await syncOrchestrator.bootstrap(scenePhase: scenePhase)
             }
             .onChange(of: scenePhase) { _, phase in
                 syncOrchestrator.handleScenePhaseChanged(phase)
@@ -316,10 +333,24 @@ private struct AppSyncRootHost<Content: View>: View {
                 syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
+                Task { @MainActor in
+                    await refreshShopContextAndResumeSync()
+                }
                 syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: authViewModel.isSignedIn) { _, _ in
+                Task { @MainActor in
+                    await refreshShopContextAndResumeSync()
+                }
                 syncOrchestrator.handleAuthPresentationChanged()
+            }
+            .onChange(of: shopContextStore.context.activeShopID) { _, _ in
+                Task { @MainActor in
+                    if authViewModel.isSignedIn, shopContextStore.context.syncAllowed {
+                        await shopDeviceRegistrationService?.registerHeartbeatAndCheck(reason: "shop_context_changed")
+                        syncOrchestrator.handleShopContextChanged()
+                    }
+                }
             }
             .onChange(of: activityCenter.activeReasons) { _, _ in
                 syncOrchestrator.resumeDeferredForegroundCheckIfReady()
@@ -351,17 +382,22 @@ private struct AppSyncRootHost<Content: View>: View {
     }
 
     @ViewBuilder
-    private var rootBanner: some View {
-        let state = syncOrchestrator.rootPresentationState
-        if syncOrchestrator.shouldShowRootBanner(state, selectedTab: selectedTab) {
+    private func rootBanner(state: SyncRootPresentationState, isVisible: Bool) -> some View {
+        if isVisible {
             SyncRootForegroundBanner(
                 state: state,
                 reduceMotion: reduceMotion,
                 action: { handleRootAction(state.primaryActionID) }
             )
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
+    }
+
+    private func rootBannerReservedTopPadding(for state: SyncRootPresentationState) -> CGFloat {
+        state.kind == .checking ? 38 : 52
     }
 
     private func handleRootAction(_ actionID: SyncRootPresentationActionID?) {
@@ -382,9 +418,18 @@ private struct AppSyncRootHost<Content: View>: View {
     }
 
     private func registerShopDevice(reason: String) {
-        guard authViewModel.isSignedIn, let shopDeviceRegistrationService else { return }
+        guard authViewModel.isSignedIn,
+              shopContextStore.context.syncAllowed,
+              let shopDeviceRegistrationService else { return }
         Task {
             await shopDeviceRegistrationService.registerHeartbeatAndCheck(reason: reason)
+        }
+    }
+
+    private func refreshShopContextAndResumeSync() async {
+        await shopContextStore.refresh(ownerUserID: authViewModel.sessionInfo?.userID)
+        if shopContextStore.context.syncAllowed {
+            syncOrchestrator.handleShopContextChanged()
         }
     }
 }
@@ -395,44 +440,47 @@ private struct SyncRootForegroundBanner: View {
     let action: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 8) {
             Image(systemName: state.systemImage)
-                .imageScale(.medium)
+                .imageScale(.small)
                 .foregroundStyle(iconTint)
-                .frame(width: 24, height: 24)
+                .frame(width: 22, height: 22)
+                .background(iconTint.opacity(0.14), in: Circle())
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(L(state.titleKey))
-                    .font(.subheadline)
+                    .font(.footnote)
                     .fontWeight(.semibold)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.86)
 
-                if let detailKey = state.detailKey {
+                if let detailKey = visibleDetailKey {
                     Text(L(detailKey))
-                        .font(.footnote)
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
                 }
             }
-
-            Spacer(minLength: 8)
 
             if let actionTitle = publicRemediationActionTitle {
                 Button(L(actionTitle), action: action)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize(horizontal: true, vertical: true)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: maxBannerWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(.regularMaterial, in: Capsule(style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            Capsule(style: .continuous)
                 .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.08), radius: 7, y: 3)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
@@ -448,10 +496,18 @@ private struct SyncRootForegroundBanner: View {
         }
     }
 
+    private var visibleDetailKey: String? {
+        state.kind == .checking ? nil : state.detailKey
+    }
+
+    private var maxBannerWidth: CGFloat {
+        state.kind == .checking ? 280 : 340
+    }
+
     private var accessibilityLabel: String {
         [
             L(state.titleKey),
-            state.detailKey.map { L($0) },
+            visibleDetailKey.map { L($0) },
             state.primaryActionTitleKey.map { L($0) }
         ]
         .compactMap { $0 }

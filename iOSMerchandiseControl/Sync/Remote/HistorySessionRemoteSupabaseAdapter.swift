@@ -2,7 +2,7 @@ import Foundation
 import Supabase
 
 struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
-    static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at"
+    static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,shop_id,updated_at,deleted_at"
 
     let remote: SupabaseTransportClient
 
@@ -27,6 +27,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
 
         let client = await query.client()
         do {
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
             let readBack: [RemoteSharedSheetSessionRow] = try await client
                 .from("shared_sheet_sessions")
                 .upsert(rows, onConflict: "remote_id")
@@ -34,7 +35,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
                 .execute()
                 .value
             guard readBack.count == rows.count,
-                  readBack.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+                  readBack.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == selectedShopID }) else {
                 throw SupabaseTransportClientError.schemaDrift(message: "History/session read-back mismatch.")
             }
             return readBack
@@ -66,10 +67,14 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         }
         let client = await query.client()
         do {
-            return try await client
+            var request = client
                 .from("shared_sheet_sessions")
                 .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .order("remote_id", ascending: true)
                 .range(from: max(0, start), to: max(start, end))
                 .execute()
@@ -102,20 +107,29 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         let sortedIDs = sessionIDs.map { $0.uuidString.lowercased() }.sorted()
         let client = await query.client()
         do {
-            let rows: [RemoteSharedSheetSessionRow] = try await client
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            var request = client
                 .from("shared_sheet_sessions")
                 .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("remote_id", values: sortedIDs)
+            if let selectedShopID {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            let rows: [RemoteSharedSheetSessionRow] = try await request
                 .order("remote_id", ascending: true)
                 .execute()
                 .value
             if !rows.isEmpty { return rows }
-            return try await client
+            var fallback = client
                 .from("shared_sheet_sessions")
                 .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .or(sortedIDs.map { "remote_id.eq.\($0)" }.joined(separator: ","))
+            if let selectedShopID {
+                fallback = fallback.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await fallback
                 .order("remote_id", ascending: true)
                 .execute()
                 .value

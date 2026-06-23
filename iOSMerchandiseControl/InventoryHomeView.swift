@@ -5,10 +5,12 @@ import UniformTypeIdentifiers
 struct InventoryHomeView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @EnvironmentObject var excelSession: ExcelSessionViewModel
+    @EnvironmentObject private var shopContextStore: ShopContextStore
     @Environment(\.modelContext) private var context
 
     @State private var showFileImporter = false
     @State private var showPreGenerate = false
+    @State private var showShopPicker = false
     @State private var loadError: String?
     @State private var navigateToManualGenerated = false
     /// Serve per dire a GeneratedView se deve aprire subito lo scanner
@@ -140,6 +142,8 @@ struct InventoryHomeView: View {
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                pageHeader
+
                 headerSection
 
                 Button {
@@ -172,7 +176,9 @@ struct InventoryHomeView: View {
             .padding(.vertical, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle(L("inventory.home.title"))
+        .sheet(isPresented: $showShopPicker) {
+            shopPickerSheet
+        }
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .navigationDestination(isPresented: $showPreGenerate) {
             PreGenerateView(onExitToHome: {
@@ -234,6 +240,18 @@ struct InventoryHomeView: View {
         .foregroundCloudWorkflowActivity(.editing, isActive: showPreGenerate || navigateToManualGenerated)
     }
 
+    private var pageHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            shopContextHeader
+
+            Text(L("inventory.home.title"))
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: "doc.badge.plus")
@@ -241,17 +259,95 @@ struct InventoryHomeView: View {
                 .foregroundStyle(Color.accentColor)
                 .accessibilityHidden(true)
 
-            Text(L("inventory.home.title"))
-                .font(.title2)
-                .fontWeight(.bold)
-                .fixedSize(horizontal: false, vertical: true)
-
             Text(L("inventory.home.subtitle"))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var shopContextHeader: some View {
+        let presentation = InventoryHomeShopContextPresentation.make(context: shopContextStore.context)
+        if let shopName = presentation.shopName {
+            if presentation.showsSwitcher {
+                Button {
+                    showShopPicker = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "storefront")
+                            .imageScale(.small)
+                            .accessibilityHidden(true)
+                        Text(shopName)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .imageScale(.small)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(Text(shopName))
+            } else {
+                Label {
+                    Text(shopName)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                } icon: {
+                    Image(systemName: "storefront")
+                        .imageScale(.small)
+                }
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    private var shopPickerSheet: some View {
+        NavigationStack {
+            List(shopContextStore.context.linkedShops) { shop in
+                Button {
+                    shopContextStore.selectShop(shop.shopID)
+                    showShopPicker = false
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(shop.name)
+                                .font(.body)
+                            if let code = shop.code {
+                                Text(code)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if shop.shopID == shopContextStore.context.activeShopID {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Color.accentColor)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                }
+                .disabled(!shop.isValidSelection)
+                .foregroundStyle(shop.isValidSelection ? .primary : .secondary)
+            }
+            .navigationTitle("Negozio")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L("common.ok")) {
+                        showShopPicker = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     private var statusSection: some View {
@@ -314,6 +410,7 @@ struct InventoryHomeView: View {
 #Preview {
     InventoryHomeView()
         .environmentObject(ExcelSessionViewModel())
+        .environmentObject(ShopContextStore())
         .modelContainer(for: [
             Product.self,
             Supplier.self,

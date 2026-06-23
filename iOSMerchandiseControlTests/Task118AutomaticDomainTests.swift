@@ -36,6 +36,30 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testRootPresentationDoesNotShowCheckingForIdleDecisionOnlyPass() {
+        let state = SyncOrchestrator.makeRootPresentationState(
+            isTransitioning: false,
+            isSignedIn: true,
+            isAutomaticRuntimeRunning: false,
+            phase: .idle
+        )
+
+        XCTAssertEqual(state.kind, .hidden)
+    }
+
+    @MainActor
+    func testRootPresentationStillShowsCheckingForRealAutomaticWork() {
+        let state = SyncOrchestrator.makeRootPresentationState(
+            isTransitioning: false,
+            isSignedIn: true,
+            isAutomaticRuntimeRunning: false,
+            phase: .pullingEvents
+        )
+
+        XCTAssertEqual(state.kind, .checking)
+    }
+
+    @MainActor
     func testStateStoreRecordsEveryAutomaticRunOutcome() {
         let suiteName = "Task118AutomaticDomainTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

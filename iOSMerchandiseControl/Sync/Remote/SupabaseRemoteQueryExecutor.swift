@@ -23,10 +23,14 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         let clampedLimit = max(1, min(limit, 1_000))
 
         do {
-            return try await client
+            var request = client
                 .from(table)
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
                 .limit(clampedLimit)
                 .execute()
@@ -54,10 +58,14 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         let end = max(start, min(to, start + 999))
 
         do {
-            return try await client
+            var request = client
                 .from(table)
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
                 .range(from: start, to: end)
                 .execute()
@@ -82,11 +90,15 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         let ownerUserID = try await requireOwner()
         let client = await client()
         do {
-            return try await client
+            var request = client
                 .from(table)
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
+            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .execute()
                 .value
         } catch let error as DecodingError {
@@ -166,6 +178,9 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .from(table)
                 .select("*", head: true, count: .exact)
                 .eq("owner_user_id", value: resolvedOwner.uuidString)
+            if let selectedShopID = selectedShopID(ownerUserID: resolvedOwner) {
+                query = query.eq("shop_id", value: selectedShopID.uuidString)
+            }
             if activeOnly {
                 query = query.is("deleted_at", value: nil)
             }
@@ -179,5 +194,9 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         } catch {
             throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
+    }
+
+    private func selectedShopID(ownerUserID: UUID) -> UUID? {
+        ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
     }
 }

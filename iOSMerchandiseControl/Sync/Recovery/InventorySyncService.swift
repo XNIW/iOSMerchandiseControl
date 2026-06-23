@@ -60,8 +60,13 @@ struct InventorySyncService {
         guard !grid.isEmpty else {
             return SyncResult(processedRows: 0, attemptedUpdates: 0, succeeded: 0, failed: 0)
         }
-        let pendingAccumulator = ownerUserID.map {
-            LocalPendingChangeAccumulator(context: context, ownerUserID: $0)
+        let pendingAccumulator = ownerUserID.map { owner in
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: owner)
+            return LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: owner,
+                storeIdentity: selectedShopID == nil ? .anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: owner)
+            )
         }
 
         var header = grid[0]

@@ -19,11 +19,14 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         let remote = self.remote
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
             let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
-                .loadSnapshot(ownerUserID: ownerUserID)
+                .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: selectedShopID == nil ? nil : storeIdentity)
             let tombstoneCount = try Self.pendingProductPriceTombstoneCount(
                 context: context,
-                ownerUserID: ownerUserID
+                ownerUserID: ownerUserID,
+                storeIdentity: selectedShopID == nil ? nil : storeIdentity
             )
             var blockers: [String] = []
             if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
@@ -33,7 +36,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             let plan = SyncProductPricePushPlan(
                 ownerUserID: ownerUserID,
                 pendingChangeCount: snapshot.pendingProductPriceChangeCount,
-                idempotencyKey: "product-price:\(ownerUserID.uuidString.lowercased()):\(snapshot.pendingProductPriceChangeCount):\(tombstoneCount)",
+                idempotencyKey: "product-price:\(ownerUserID.uuidString.lowercased()):\(selectedShopID?.uuidString.lowercased() ?? "legacy"):\(snapshot.pendingProductPriceChangeCount):\(tombstoneCount)",
                 blockers: SyncStringCollectionHelpers.uniquedSorted(blockers)
             )
             var result = SyncProductPricePushResult()
@@ -44,13 +47,18 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                   let remote else {
                 return result
             }
-            let changes = try Self.pendingProductPriceChanges(context: context, ownerUserID: ownerUserID)
+            let changes = try Self.pendingProductPriceChanges(
+                context: context,
+                ownerUserID: ownerUserID,
+                storeIdentity: selectedShopID == nil ? nil : storeIdentity
+            )
             let push = try await Self.push(
                 changes: changes,
                 ownerUserID: ownerUserID,
                 context: context,
                 remote: remote,
-                plan: plan
+                plan: plan,
+                selectedShopID: selectedShopID
             )
             try Self.enqueueProductPriceSyncEvent(
                 context: context,
@@ -67,7 +75,8 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
 
     nonisolated private static func pendingProductPriceTombstoneCount(
         context: ModelContext,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        storeIdentity: LocalStoreIdentity?
     ) throws -> Int {
         let owner = ownerUserID.uuidString.lowercased()
         let kind = LocalPendingChangeEntityKind.productPrice.rawValue
@@ -79,12 +88,15 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                     && change.operationRaw == deleteOperation
             }
         )
-        return try context.fetch(descriptor).filter { !$0.status.isTerminal }.count
+        return try context.fetch(descriptor).filter {
+            !$0.status.isTerminal && isStoreCompatible($0, storeIdentity: storeIdentity)
+        }.count
     }
 
     nonisolated private static func pendingProductPriceChanges(
         context: ModelContext,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        storeIdentity: LocalStoreIdentity?
     ) throws -> [LocalPendingChange] {
         let owner = ownerUserID.uuidString.lowercased()
         let pending = LocalPendingChangeStatus.pending.rawValue
@@ -100,7 +112,9 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                 SortDescriptor(\.changeID, order: .forward)
             ]
         )
-        return try context.fetch(descriptor)
+        return try context.fetch(descriptor).filter {
+            isStoreCompatible($0, storeIdentity: storeIdentity)
+        }
     }
 
     nonisolated private struct ProductPricePushOutcome: Sendable {
@@ -114,7 +128,8 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         ownerUserID: UUID,
         context: ModelContext,
         remote: any SyncAutomaticProductPriceRemoteWriting,
-        plan: SyncProductPricePushPlan
+        plan: SyncProductPricePushPlan,
+        selectedShopID: UUID?
     ) async throws -> ProductPricePushOutcome {
         var outcome = ProductPricePushOutcome(result: SyncProductPricePushResult(plan: plan))
         var acknowledged: [String] = []
@@ -139,7 +154,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             pairs.append((change, price))
         }
         let payloads = pairs.compactMap { _, price in
-            makePayload(price: price, ownerUserID: ownerUserID)
+            makePayload(price: price, ownerUserID: ownerUserID, shopID: selectedShopID)
         }
         guard !payloads.isEmpty else {
             markTerminal(changeIDs: acknowledged, changes: changes, status: .acknowledged)
@@ -150,7 +165,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         let rows = try await remote.insertProductPrices(payloads)
         let rowsByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
         for (change, price) in pairs {
-            guard let expectedID = makePayload(price: price, ownerUserID: ownerUserID)?.id,
+            guard let expectedID = makePayload(price: price, ownerUserID: ownerUserID, shopID: selectedShopID)?.id,
                   let row = rowsByID[expectedID] else {
                 continue
             }
@@ -203,7 +218,8 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
 
     nonisolated private static func makePayload(
         price: ProductPrice,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        shopID: UUID?
     ) -> SyncAutomaticProductPricePayload? {
         guard let productID = price.product?.remoteID,
               let amount = PriceCanonicalizer.canonicalAmount(from: price.price) else {
@@ -214,11 +230,13 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         return SyncAutomaticProductPricePayload(
             id: deterministicPriceID(
                 ownerUserID: ownerUserID,
+                shopID: shopID,
                 productID: productID,
                 type: type,
                 effectiveAt: effectiveAt
             ),
             ownerUserID: ownerUserID,
+            shopID: shopID,
             productID: productID,
             type: type,
             price: amount.doubleValue,
@@ -249,6 +267,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
 
     nonisolated private static func deterministicPriceID(
         ownerUserID: UUID,
+        shopID: UUID?,
         productID: UUID,
         type: String,
         effectiveAt: String
@@ -256,6 +275,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         let name = [
             "TASK-118",
             ownerUserID.uuidString.lowercased(),
+            shopID?.uuidString.lowercased() ?? "legacy",
             productID.uuidString.lowercased(),
             type,
             effectiveAt
@@ -278,6 +298,14 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             "changes:\(outcome.insertedChangeIDs.sorted().joined(separator: ","))",
             "prices:\(outcome.priceIDs.map { $0.uuidString.lowercased() }.sorted().joined(separator: ","))"
         ].joined(separator: "|")
+    }
+
+    nonisolated private static func isStoreCompatible(
+        _ change: LocalPendingChange,
+        storeIdentity: LocalStoreIdentity?
+    ) -> Bool {
+        guard let storeIdentity else { return true }
+        return Task126OwnerStoreScope.normalizedStoreId(change.storeId) == storeIdentity.storeId
     }
 
     nonisolated private static func markTerminal(

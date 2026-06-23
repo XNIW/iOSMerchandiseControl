@@ -94,18 +94,20 @@ struct SyncEventOutboxDrainService {
             sendingRecoveryScanLimit: sendingRecoveryScanLimit,
             clock: clock,
             recoverStaleSending: { ownerUserID, now, staleInterval, scanLimit in
-                try store.recoverStaleSending(
+                let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+                return try store.recoverStaleSending(
                     ownerUserID: ownerUserID,
-                    storeId: Task126SyncPolicy.defaultStoreId,
+                    storeId: storeId,
                     now: now,
                     staleInterval: staleInterval,
                     scanLimit: scanLimit
                 )
             },
             fetchRetryable: { ownerUserID, now, limit in
-                try store.fetchRetryable(
+                let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+                return try store.fetchRetryable(
                     ownerUserID: ownerUserID,
-                    storeId: Task126SyncPolicy.defaultStoreId,
+                    storeId: storeId,
                     now: now,
                     limit: limit
                 )
@@ -209,7 +211,7 @@ struct SyncEventOutboxDrainService {
             guard entry.isRetryable(
                 now: now,
                 currentOwnerUserID: ownerUserID,
-                currentStoreId: Task126SyncPolicy.defaultStoreId
+                currentStoreId: Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             ) else {
                 summary.skippedIneligible += 1
                 continue
@@ -366,6 +368,13 @@ struct SyncEventOutboxDrainService {
         let defaultLimit = max(batchLimit * 4, 32)
         let requestedLimit = max(batchLimit, fetchScanLimit ?? defaultLimit)
         return min(requestedLimit, Self.hardFetchScanLimit)
+    }
+
+    private static func activeOutboxStoreId(ownerUserID: String) -> String? {
+        guard ShopContextSelection.selectedShopID(ownerUserIDString: ownerUserID) != nil else {
+            return nil
+        }
+        return ShopContextSelection.localStoreIdentity(ownerUserIDString: ownerUserID).storeId
     }
 
     private func normalizedOwner(_ value: String) -> String? {

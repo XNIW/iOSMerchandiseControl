@@ -10,6 +10,7 @@ nonisolated struct SyncEventRecordRequest: Sendable, Equatable {
     let changedCount: Int
     let entityIDs: SyncEventJSONValue
     let metadata: SyncEventJSONValue
+    let shopID: UUID?
     let source: String?
     let sourceDeviceID: String?
     let batchID: UUID?
@@ -21,6 +22,7 @@ nonisolated struct SyncEventRecordRequest: Sendable, Equatable {
         changedCount: Int,
         entityIDs: SyncEventJSONValue,
         metadata: SyncEventJSONValue,
+        shopID: UUID? = nil,
         source: String? = nil,
         sourceDeviceID: String? = nil,
         batchID: UUID? = nil,
@@ -31,6 +33,7 @@ nonisolated struct SyncEventRecordRequest: Sendable, Equatable {
         self.changedCount = changedCount
         self.entityIDs = entityIDs
         self.metadata = metadata
+        self.shopID = shopID
         self.source = source
         self.sourceDeviceID = sourceDeviceID
         self.batchID = batchID

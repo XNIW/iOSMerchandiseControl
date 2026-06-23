@@ -34,8 +34,11 @@ struct ProductPricePreviewRemoteSupabaseAdapter:
         do {
             var request = client
                 .from("inventory_product_prices")
-                .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                .select("id,owner_user_id,shop_id,product_id,type,price,effective_at,created_at")
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
             if let afterID {
                 request = request.gt("id", value: afterID.uuidString)
             }
@@ -91,11 +94,15 @@ struct ProductPricePreviewRemoteSupabaseAdapter:
         let start = max(0, from)
         let end = max(start, min(to, start + 999))
         do {
-            return try await client
+            var request = client
                 .from("inventory_product_prices")
                 .select(ProductPriceRemoteSupabaseAdapter.productPriceColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("product_id", values: sortedProductIDs)
+            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .order("product_id", ascending: true)
                 .order("type", ascending: true)
                 .order("effective_at", ascending: true)

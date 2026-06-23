@@ -111,13 +111,27 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     var rootPresentationState: SyncRootPresentationState {
-        if authViewModel.isTransitioning || foregroundTask != nil || automaticRuntime.isRunning {
+        Self.makeRootPresentationState(
+            isTransitioning: authViewModel.isTransitioning,
+            isSignedIn: authViewModel.isSignedIn,
+            isAutomaticRuntimeRunning: automaticRuntime.isRunning,
+            phase: stateStore.state.phase
+        )
+    }
+
+    static func makeRootPresentationState(
+        isTransitioning: Bool,
+        isSignedIn: Bool,
+        isAutomaticRuntimeRunning: Bool,
+        phase: SyncPhase
+    ) -> SyncRootPresentationState {
+        if isTransitioning || isAutomaticRuntimeRunning {
             return .checking
         }
-        if !authViewModel.isSignedIn {
+        if !isSignedIn {
             return .blockedAuth
         }
-        switch stateStore.state.phase {
+        switch phase {
         case .recoveryRequired, .failed:
             return .recoverableError
         case .blocked(.authRequired):
@@ -175,6 +189,14 @@ final class SyncOrchestrator: ObservableObject {
         guard didReachInteractiveUI,
               currentScenePhase == .active else { return }
         submitForegroundTrigger(forceIncremental: true)
+    }
+
+    func handleShopContextChanged() {
+        updateSyncEventSignalWatcher()
+        guard didReachInteractiveUI,
+              currentScenePhase == .active,
+              authViewModel.isSignedIn else { return }
+        submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
     }
 
     func resumeDeferredForegroundCheckIfReady() {
@@ -340,7 +362,7 @@ final class SyncOrchestrator: ObservableObject {
                 self.updateSyncEventSignalWatcher()
                 self.recordRuntimeDiagnostic("timer.isSignedIn", self.authViewModel.isSignedIn)
                 guard self.authViewModel.isSignedIn else { continue }
-                self.submitForegroundTrigger(source: .remoteSyncEvent, forceIncremental: true)
+                self.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
             }
             self?.syncEventSafetyLoopTask = nil
         }
@@ -362,7 +384,10 @@ final class SyncOrchestrator: ObservableObject {
             return
         }
         recordRuntimeDiagnostic("watcher.state", "started")
-        syncEventSignalWatcher?.start(ownerUserID: ownerUserID) { [weak self] in
+        syncEventSignalWatcher?.start(
+            ownerUserID: ownerUserID,
+            selectedShopID: ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        ) { [weak self] in
             self?.recordRuntimeDiagnostic("watcher.signalAt", Date().timeIntervalSince1970)
             if let provider = self?.decisionInputProvider {
                 Task {

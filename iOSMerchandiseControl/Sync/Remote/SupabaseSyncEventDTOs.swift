@@ -54,6 +54,7 @@ nonisolated indirect enum SyncEventJSONValue: Codable, Sendable, Equatable {
 nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equatable {
     let id: Int64
     let ownerUserID: UUID
+    let shopID: UUID?
     let storeID: UUID?
     let domain: String
     let eventType: String
@@ -70,6 +71,7 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
     enum CodingKeys: String, CodingKey {
         case id
         case ownerUserID = "owner_user_id"
+        case shopID = "shop_id"
         case storeID = "store_id"
         case domain
         case eventType = "event_type"
@@ -89,6 +91,7 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
 
         id = try container.decode(Int64.self, forKey: .id)
         ownerUserID = try container.decode(UUID.self, forKey: .ownerUserID)
+        shopID = try container.decodeIfPresent(UUID.self, forKey: .shopID)
         storeID = try container.decodeIfPresent(UUID.self, forKey: .storeID)
         domain = try container.decode(String.self, forKey: .domain)
         eventType = try container.decode(String.self, forKey: .eventType)

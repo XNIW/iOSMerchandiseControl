@@ -309,7 +309,9 @@ struct SyncEventOutboxEnqueueService {
             return SyncEventOutboxProducerResult(kind: .enqueueFailedLocal, errorCode: "dedupe_fetch_failed")
         }
 
-        let request = mapped.request(clientEventID: clientEventID)
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserIDString: ownerUserID)
+        let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserIDString: ownerUserID)
+        let request = mapped.request(clientEventID: clientEventID, shopID: selectedShopID)
         var validationFailure: SyncEventRecordError?
         var payloadJSON: SyncEventOutboxStoredPayloadJSON?
         do {
@@ -325,6 +327,11 @@ struct SyncEventOutboxEnqueueService {
             let now = clock()
             let entry = try SyncEventOutboxFactory.makeEntry(
                 ownerUserID: ownerUserID,
+                storeId: selectedShopID == nil ? nil : storeIdentity.storeId,
+                localStoreId: selectedShopID == nil ? nil : storeIdentity.localStoreId,
+                syncProtocolVersion: storeIdentity.syncProtocolVersion,
+                schemaVersion: storeIdentity.schemaVersion,
+                storeEpoch: storeIdentity.storeEpoch,
                 domain: mapped.domain,
                 eventType: mapped.eventType,
                 changedCount: mapped.changedCount,
@@ -578,13 +585,14 @@ private enum SyncEventOutboxProducerMapper {
         let sourceDeviceID: String?
         let batchID: UUID?
 
-        func request(clientEventID: String) -> SyncEventRecordRequest {
+        func request(clientEventID: String, shopID: UUID?) -> SyncEventRecordRequest {
             SyncEventRecordRequest(
                 domain: domain,
                 eventType: eventType,
                 changedCount: changedCount,
                 entityIDs: entityIDs,
                 metadata: metadata,
+                shopID: shopID,
                 source: source,
                 sourceDeviceID: sourceDeviceID,
                 batchID: batchID,

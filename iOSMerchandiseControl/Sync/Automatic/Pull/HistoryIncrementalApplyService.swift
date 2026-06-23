@@ -72,8 +72,11 @@ nonisolated struct HistoryIncrementalApplyService {
             let protected = try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
             let now = Date()
             var tombstoned = 0
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
             for remoteID in sessionIDs where !protected.history.contains(remoteID) {
                 guard let entry = try fetchHistory(remoteID: remoteID, context: context),
+                      entry.isCompatibleWithHistoryScope(ownerUserID: ownerUserID, selectedShopID: selectedShopID, storeIdentity: storeIdentity),
                       entry.remoteDeletedAt == nil else { continue }
                 entry.remoteDeletedAt = now
                 entry.remoteUpdatedAt = entry.remoteUpdatedAt ?? now
@@ -96,7 +99,15 @@ nonisolated struct HistoryIncrementalApplyService {
         var result = HistoryIncrementalApplyRowsResult()
         guard !rows.isEmpty else { return result }
 
-        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
+            $0.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: storeIdentity
+            )
+        }
         var byRemoteID: [UUID: HistoryEntry] = [:]
         var byUID: [UUID: HistoryEntry] = [:]
         for entry in entries {
@@ -106,7 +117,7 @@ nonisolated struct HistoryIncrementalApplyService {
             byUID[entry.uid] = entry
         }
         var byLogicalFingerprint = logicalFingerprintMap(for: entries)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID, storeIdentity: storeIdentity)
 
         for row in rows {
             guard row.ownerUserID == ownerUserID else {
@@ -131,6 +142,7 @@ nonisolated struct HistoryIncrementalApplyService {
 
                 if logicalMatch != nil {
                     let previousRemoteID = existing.remoteID
+                    existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                     apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     try accumulator.acknowledgeHistorySessionChange(
                         entry: existing,
@@ -153,6 +165,7 @@ nonisolated struct HistoryIncrementalApplyService {
                     continue
                 }
 
+                existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 apply(row: row, to: existing, fingerprint: remoteFingerprint)
                 result.updatedCount += 1
             } else {
@@ -162,6 +175,7 @@ nonisolated struct HistoryIncrementalApplyService {
                 }
 
                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                inserted.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted

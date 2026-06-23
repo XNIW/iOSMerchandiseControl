@@ -79,6 +79,54 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(changes.first?.status, .acknowledged)
     }
 
+    func testShopScopedPushDoesNotUploadUnscopedLegacyHistoryEntry() async throws {
+        let context = try makeContext()
+        let remote = FakeHistorySessionRemote(ownerUserID: owner)
+        let service = HistorySessionSyncService(remote: remote)
+        let shopID = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedStore = SelectedShopStore()
+        selectedStore.save(
+            SelectedShop(
+                shopID: shopID,
+                code: "TASKSHOP",
+                name: "Task Shop",
+                role: "shop_owner",
+                status: "active",
+                selectable: true,
+                canWrite: true
+            ),
+            accountHash: accountHash
+        )
+        defer { selectedStore.clear(accountHash: accountHash) }
+
+        let legacyEntry = HistoryEntry(
+            id: "TASK_SHOP_HISTORY_LEGACY",
+            timestamp: Date(timeIntervalSince1970: 1_778_400_000),
+            data: [["barcode"], ["LEGACY"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            supplier: "Legacy",
+            category: "",
+            uid: UUID(uuidString: "44444444-4444-4444-8444-444444444444")!
+        )
+        context.insert(legacyEntry)
+        legacyEntry.markHistorySessionLocalMutation()
+        try context.save()
+
+        let result = try await service.pushPendingHistorySessions(
+            entries: [legacyEntry],
+            ownerUserID: owner,
+            context: context
+        )
+
+        XCTAssertEqual(result.uploadedCount, 0)
+        let uploadedRemoteIDs = await remote.upsertedRemoteIDs()
+        XCTAssertEqual(uploadedRemoteIDs, [])
+        XCTAssertNil(legacyEntry.shopID)
+        XCTAssertNil(legacyEntry.storeID)
+    }
+
     func testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID() async throws {
         let context = try makeContext()
         let remote = FakeHistorySessionRemote(ownerUserID: owner)
@@ -501,6 +549,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         data: [[String]],
         editable: [[String]],
         complete: [Bool],
+        shopID: UUID? = nil,
         deletedAt: String? = nil
     ) -> RemoteSharedSheetSessionRow {
         RemoteSharedSheetSessionRow(
@@ -518,6 +567,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
                 complete: complete
             ),
             ownerUserID: owner,
+            shopID: shopID,
             updatedAt: "2026-05-13T12:00:01Z",
             deletedAt: deletedAt
         )
@@ -570,6 +620,7 @@ private actor FakeHistorySessionRemote: HistorySessionRemoteSyncing {
                 data: $0.data,
                 sessionOverlay: $0.sessionOverlay,
                 ownerUserID: $0.ownerUserID,
+                shopID: $0.shopID,
                 updatedAt: "2026-05-13T12:00:01Z",
                 deletedAt: $0.deletedAt
             )

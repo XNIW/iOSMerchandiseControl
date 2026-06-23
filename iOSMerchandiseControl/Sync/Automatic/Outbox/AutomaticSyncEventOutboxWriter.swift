@@ -33,7 +33,10 @@ nonisolated enum AutomaticSyncEventOutboxWriter {
     ) throws {
         guard changedCount > 0 else { return }
         let owner = ownerUserID.uuidString.lowercased()
-        let clientEventID = clientEventID(prefix: source, fingerprint: "\(owner):\(clientEventFingerprint):\(changedCount)")
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let shopFingerprint = selectedShopID?.uuidString.lowercased() ?? "legacy"
+        let clientEventID = clientEventID(prefix: source, fingerprint: "\(owner):\(shopFingerprint):\(clientEventFingerprint):\(changedCount)")
         if try existingEntry(context: context, ownerUserID: owner, clientEventID: clientEventID) != nil {
             return
         }
@@ -43,6 +46,7 @@ nonisolated enum AutomaticSyncEventOutboxWriter {
             changedCount: changedCount,
             entityIDs: entityIDs,
             metadata: metadata,
+            shopID: selectedShopID,
             source: source,
             sourceDeviceID: DeviceInstallIDStore().deviceInstallID,
             clientEventID: clientEventID
@@ -53,6 +57,11 @@ nonisolated enum AutomaticSyncEventOutboxWriter {
         )
         let entry = try SyncEventOutboxFactory.makeEntry(
             ownerUserID: owner,
+            storeId: selectedShopID == nil ? nil : storeIdentity.storeId,
+            localStoreId: selectedShopID == nil ? nil : storeIdentity.localStoreId,
+            syncProtocolVersion: storeIdentity.syncProtocolVersion,
+            schemaVersion: storeIdentity.schemaVersion,
+            storeEpoch: storeIdentity.storeEpoch,
             domain: domain,
             eventType: eventType,
             changedCount: changedCount,

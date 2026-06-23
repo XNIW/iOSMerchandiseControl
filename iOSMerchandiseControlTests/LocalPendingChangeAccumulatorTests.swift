@@ -32,6 +32,45 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
         XCTAssertEqual(changes.first?.entityKind, .product)
     }
 
+    func testDefaultStoreIdentityFollowsSelectedShopForOwner() throws {
+        let context = try makeContext()
+        let owner = UUID()
+        let shopID = UUID()
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedStore = SelectedShopStore()
+        selectedStore.save(
+            SelectedShop(
+                shopID: shopID,
+                code: "TASKSHOP",
+                name: "Task Shop",
+                role: "shop_owner",
+                status: "active",
+                selectable: true,
+                canWrite: true
+            ),
+            accountHash: accountHash
+        )
+        defer { selectedStore.clear(accountHash: accountHash) }
+
+        let product = Product(barcode: "TASK_SHOP_SCOPE", productName: "Shop scoped")
+        context.insert(product)
+
+        try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            now: { self.now }
+        ).recordProductChange(
+            product: product,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode", "productName"]
+        )
+
+        let change = try XCTUnwrap(fetchChanges(context).first)
+        XCTAssertEqual(change.storeId, shopID.uuidString.lowercased())
+        XCTAssertEqual(change.localStoreId, "local-\(shopID.uuidString.lowercased())")
+    }
+
     func testTask114PostsLocalPendingChangeNotificationForActiveChange() throws {
         let context = try makeContext()
         let product = Product(barcode: "TASK114_AUTOSYNC", productName: "Autosync")

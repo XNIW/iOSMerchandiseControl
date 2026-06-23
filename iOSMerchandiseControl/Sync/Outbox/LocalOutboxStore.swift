@@ -15,25 +15,25 @@ struct LocalOutboxStore {
 
     func fetchCounts(
         ownerUserID: UUID,
-        storeIdentity: LocalStoreIdentity = .anonymous,
+        storeIdentity: LocalStoreIdentity? = nil,
         now: Date = Date()
     ) throws -> SyncEventOutboxCounts {
         try backingStore.fetchCounts(
             ownerUserID: ownerUserID.uuidString.lowercased(),
-            storeId: storeIdentity.storeId,
+            storeId: storeIdentity?.storeId,
             now: now
         )
     }
 
     func fetchRetryable(
         ownerUserID: UUID,
-        storeIdentity: LocalStoreIdentity = .anonymous,
+        storeIdentity: LocalStoreIdentity? = nil,
         now: Date = Date(),
         limit: Int? = nil
     ) throws -> [SyncEventOutboxEntry] {
         try backingStore.fetchRetryable(
             ownerUserID: ownerUserID.uuidString.lowercased(),
-            storeId: storeIdentity.storeId,
+            storeId: storeIdentity?.storeId,
             now: now,
             limit: limit
         )

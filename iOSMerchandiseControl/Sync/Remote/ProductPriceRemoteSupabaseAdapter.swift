@@ -8,7 +8,7 @@ struct ProductPriceRemoteSupabaseAdapter: SyncAutomaticProductPriceRemoteWriting
         SupabaseRemoteQueryExecutor(transport: remote)
     }
 
-    static let productPriceColumns = "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at"
+    static let productPriceColumns = "id,owner_user_id,shop_id,product_id,type,price,effective_at,source,note,created_at"
 
     func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
         let ownerUserID = try await query.requireOwner()

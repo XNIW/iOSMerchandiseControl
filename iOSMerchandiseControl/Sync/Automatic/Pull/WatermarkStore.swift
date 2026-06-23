@@ -40,6 +40,9 @@ nonisolated struct WatermarkStore {
         if let value = int64(forKey: key(for: scope)) {
             return value
         }
+        guard scope.storeIdentity == .anonymous else {
+            return 0
+        }
         if let legacy = int64(forKey: Self.legacyAccountWatermarkKey(accountHash: scope.accountHash, storeIdentity: scope.storeIdentity)) {
             return legacy
         }

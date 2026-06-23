@@ -275,6 +275,7 @@ nonisolated struct LocalPendingChangeReconciliationRecord: Sendable {
 nonisolated final class LocalPendingChangeAccumulator {
     static let defaultMaxActiveChanges = 1_000
     static let defaultTerminalRetentionLimit = 200
+    private static let activeChangesNotification = Notification.Name("localPendingChangesDidChange")
 
     private let context: ModelContext
     private let ownerUserID: UUID?
@@ -292,9 +293,25 @@ nonisolated final class LocalPendingChangeAccumulator {
     ) {
         self.context = context
         self.ownerUserID = ownerUserID
-        self.storeIdentity = storeIdentity
+        self.storeIdentity = Self.resolveStoreIdentity(
+            explicit: storeIdentity,
+            ownerUserID: ownerUserID
+        )
         self.now = now
         self.maxActiveChanges = max(1, maxActiveChanges)
+    }
+
+    private static func resolveStoreIdentity(
+        explicit: LocalStoreIdentity,
+        ownerUserID: UUID?
+    ) -> LocalStoreIdentity {
+        guard explicit == .anonymous, let ownerUserID else {
+            return explicit
+        }
+        guard ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) != nil else {
+            return .anonymous
+        }
+        return ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
     }
 
     @discardableResult
@@ -654,13 +671,13 @@ nonisolated final class LocalPendingChangeAccumulator {
         guard !change.status.isTerminal else { return }
         if Thread.isMainThread {
             NotificationCenter.default.post(
-                name: .localPendingChangesDidChange,
+                name: Self.activeChangesNotification,
                 object: nil
             )
         } else {
             Task { @MainActor in
                 NotificationCenter.default.post(
-                    name: .localPendingChangesDidChange,
+                    name: Self.activeChangesNotification,
                     object: nil
                 )
             }
@@ -779,7 +796,10 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
         self.context = context
     }
 
-    func loadSnapshot(ownerUserID: UUID?) throws -> LocalPendingChangeSnapshot {
+    func loadSnapshot(
+        ownerUserID: UUID?,
+        storeIdentity: LocalStoreIdentity? = nil
+    ) throws -> LocalPendingChangeSnapshot {
         guard let ownerUserID else {
             return .empty
         }
@@ -791,7 +811,10 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
             },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        let changes = try context.fetch(descriptor)
+        let changes = try context.fetch(descriptor).filter {
+            guard let storeIdentity else { return true }
+            return Task126OwnerStoreScope.normalizedStoreId($0.storeId) == storeIdentity.storeId
+        }
 
         var snapshot = LocalPendingChangeSnapshot.empty
         for change in changes {
@@ -843,16 +866,24 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
         }
         snapshot.pendingHistorySessionChangeCount = max(
             snapshot.pendingHistorySessionChangeCount,
-            try dirtyHistorySessionCount()
+            try dirtyHistorySessionCount(ownerUserID: ownerUserID, storeIdentity: storeIdentity)
         )
         return snapshot
     }
 
-    private func dirtyHistorySessionCount() throws -> Int {
+    private func dirtyHistorySessionCount(ownerUserID: UUID, storeIdentity: LocalStoreIdentity?) throws -> Int {
         let descriptor = FetchDescriptor<HistoryEntry>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
-        return try context.fetch(descriptor).filter(\.isHistorySessionDirtyForCloud).count
+        return try context.fetch(descriptor).filter { entry in
+            guard entry.isHistorySessionDirtyForCloud else { return false }
+            guard let storeIdentity else { return true }
+            return entry.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: UUID(uuidString: storeIdentity.storeId),
+                storeIdentity: storeIdentity
+            )
+        }.count
     }
 }
 

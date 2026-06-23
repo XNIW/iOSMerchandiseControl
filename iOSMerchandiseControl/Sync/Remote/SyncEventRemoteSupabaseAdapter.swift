@@ -33,11 +33,15 @@ struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote {
         let client = await query.client()
         let effectiveLimit = max(1, min(limit, SupabaseSyncEventIncrementalLimits.maximumLimit))
         do {
-            return try await client
+            var request = client
                 .from("sync_events")
-                .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
+                .select("id,owner_user_id,shop_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gt("id", value: Int(afterID))
+            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .order("id", ascending: true)
                 .limit(effectiveLimit)
                 .execute()

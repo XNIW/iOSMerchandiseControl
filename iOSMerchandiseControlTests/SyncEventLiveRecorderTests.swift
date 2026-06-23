@@ -4,6 +4,7 @@ import XCTest
 final class SyncEventLiveRecorderTests: XCTestCase {
     private let clientEventID = "client-event-058"
     private let ownerID = UUID(uuidString: "00000000-0000-0000-0000-000000000058")!
+    private let shopID = UUID(uuidString: "00000000-0000-4000-8000-000000000159")!
 
     func testValidatorPassCallsTransportOnceWithMappedRPCParams() async throws {
         let transport = FakeRPCTransport(.json(fixtureRow(id: 1)))
@@ -28,8 +29,26 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(call.params.pSourceDeviceID, "device-hash")
         XCTAssertEqual(call.params.pBatchID, UUID(uuidString: "00000000-0000-0000-0000-000000000058"))
         XCTAssertNil(call.params.pStoreID)
+        XCTAssertNil(call.params.pShopID)
         XCTAssertEqual(call.params.pEntityIDs, .object(["product_ids": .array([])]))
         XCTAssertEqual(call.params.pMetadata, .object(["source": .string("ios")]))
+    }
+
+    func testShopScopedRequestMapsShopIDToRPCParamsAndResponse() async throws {
+        let transport = FakeRPCTransport(
+            .json(fixtureRow(id: 159, extraFields: #""shop_id": "00000000-0000-4000-8000-000000000159","#))
+        )
+        let recorder = makeRecorder(transport: transport)
+
+        let result = try await recorder.record(validRequest(shopID: shopID))
+
+        guard case .recorded(let row) = result else {
+            return XCTFail("Expected recorded result.")
+        }
+        XCTAssertEqual(row.shopID, shopID)
+        let lastCall = await transport.lastCall()
+        let call = try XCTUnwrap(lastCall)
+        XCTAssertEqual(call.params.pShopID, shopID)
     }
 
     func testCatalogTombstoneEventMapsToRPCParams() async throws {
@@ -467,6 +486,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         changedCount: Int = 1,
         entityIDs: SyncEventJSONValue = .object(["product_ids": .array([])]),
         metadata: SyncEventJSONValue = .object(["source": .string("ios")]),
+        shopID: UUID? = nil,
         sourceDeviceID: String? = "device-hash",
         clientEventID: String? = nil
     ) -> SyncEventRecordRequest {
@@ -476,6 +496,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
             changedCount: changedCount,
             entityIDs: entityIDs,
             metadata: metadata,
+            shopID: shopID,
             source: "ios",
             sourceDeviceID: sourceDeviceID,
             batchID: UUID(uuidString: "00000000-0000-0000-0000-000000000058"),

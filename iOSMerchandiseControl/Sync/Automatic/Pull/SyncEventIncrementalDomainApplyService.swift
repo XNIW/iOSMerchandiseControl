@@ -36,8 +36,13 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             afterID: watermarkBefore,
             limit: limit
         )
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID, defaults: defaults)
+        let scopedEvents = events.filter { event in
+            guard let selectedShopID else { return true }
+            return event.shopID == selectedShopID
+        }
         let eventFetchMs = mcNowMillis() - eventFetchStarted
-        guard !events.isEmpty else {
+        guard !scopedEvents.isEmpty else {
             guard shouldRunLightReconcile(ownerUserID: ownerUserID) else {
                 var summary = SyncIncrementalPullSummary.noWork(watermark: watermarkBefore)
                 summary.eventPageFetchMs = eventFetchMs
@@ -57,13 +62,13 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
 
         var summary = SyncIncrementalPullSummary(
             syncType: .eventIncremental,
-            eventsFetched: events.count,
+            eventsFetched: scopedEvents.count,
             watermarkBefore: watermarkBefore,
             watermarkAfter: watermarkBefore
         )
         summary.eventPageFetchMs = eventFetchMs
 
-        let sortedEvents = events.sorted { $0.id < $1.id }
+        let sortedEvents = scopedEvents.sorted { $0.id < $1.id }
         var eventIDs = extractEntityIDs(from: sortedEvents)
         summary.eventsProcessed = sortedEvents.count
         summary.watermarkAfter = sortedEvents.map(\.id).max() ?? watermarkBefore
@@ -216,15 +221,24 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         defaults: UserDefaults = .standard
     ) {
         let store = WatermarkStore(defaults: defaults)
-        store.save(watermark, for: WatermarkStore.Scope(ownerUserID: ownerUserID, storeIdentity: .anonymous))
-        defaults.set(Int(watermark), forKey: watermarkKey(ownerUserID: ownerUserID))
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID, defaults: defaults)
+        store.save(
+            watermark,
+            for: WatermarkStore.Scope(
+                ownerUserID: ownerUserID,
+                storeIdentity: ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID, defaults: defaults)
+            )
+        )
+        if selectedShopID == nil {
+            defaults.set(Int(watermark), forKey: watermarkKey(ownerUserID: ownerUserID))
+        }
     }
 
     private func watermarkScope(ownerUserID: UUID) -> WatermarkStore.Scope {
         let binding = AccountBindingStore(defaults: defaults).currentBinding
         return WatermarkStore.Scope(
             ownerUserID: ownerUserID,
-            storeIdentity: binding?.storeIdentity ?? .anonymous
+            storeIdentity: binding?.storeIdentity ?? ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID, defaults: defaults)
         )
     }
 

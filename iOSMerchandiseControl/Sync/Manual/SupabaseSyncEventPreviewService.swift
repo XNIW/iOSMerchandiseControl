@@ -79,7 +79,7 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
         do {
             let rows: [RemoteSyncEventRow] = try await clientProvider.client
                 .from("sync_events")
-                .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
+                .select("id,owner_user_id,shop_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
                 .order("created_at", ascending: false)
                 .order("id", ascending: false)
                 .limit(effectiveLimit)
@@ -112,11 +112,15 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
         let effectiveLimit = max(1, min(limit, SyncEventPreviewOptions.maximumLimit))
 
         do {
-            let rows: [RemoteSyncEventRow] = try await clientProvider.client
+            var request = clientProvider.client
                 .from("sync_events")
-                .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
+                .select("id,owner_user_id,shop_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gt("id", value: Int(afterID))
+            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            let rows: [RemoteSyncEventRow] = try await request
                 .order("id", ascending: true)
                 .limit(effectiveLimit)
                 .execute()

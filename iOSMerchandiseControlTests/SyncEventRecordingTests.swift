@@ -451,6 +451,23 @@ final class SyncEventRecordingTests: XCTestCase {
         }
     }
 
+    func testAutomaticHistoryPushUsesHistoryChangedContract() throws {
+        let source = try productionSource(named: "Sync/Automatic/History/HistorySessionAutomaticPushService.swift")
+
+        XCTAssertTrue(source.contains("domain: \"history\""))
+        XCTAssertTrue(source.contains("eventType: \"history_changed\""))
+        XCTAssertTrue(source.contains("\"session_ids\""))
+        XCTAssertFalse(source.contains("eventType: \"upsert\""))
+        XCTAssertFalse(source.contains("\"history_session_ids\""))
+    }
+
+    func testIncrementalSyncEventFetchSelectsShopIDColumn() throws {
+        let source = try productionSource(named: "Sync/Remote/SyncEventRemoteSupabaseAdapter.swift")
+
+        XCTAssertTrue(source.contains(#".from("sync_events")"#))
+        XCTAssertTrue(source.contains("id,owner_user_id,shop_id,store_id"))
+    }
+
     func testRecordTaxonomyMapsToTask055OutboxConceptsWithoutMutation() throws {
         XCTAssertEqual(
             SyncEventRecordError.contract(SyncEventRecordFailure(code: "22023", message: "contract")).plannedOutboxStatus,

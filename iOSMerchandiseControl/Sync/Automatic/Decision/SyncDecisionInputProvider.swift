@@ -149,8 +149,13 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         ownerUserID: UUID?
     ) -> ReadResult<LocalPendingChangeSnapshot> {
         do {
+            let storeIdentity = ownerUserID.flatMap { owner in
+                ShopContextSelection.selectedShopID(ownerUserID: owner) == nil
+                    ? nil
+                    : ShopContextSelection.localStoreIdentity(ownerUserID: owner)
+            }
             return .success(try LocalPendingChangeSnapshotProvider(context: context)
-                .loadSnapshot(ownerUserID: ownerUserID)
+                .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: storeIdentity)
             )
         } catch {
             return .failure(.empty)
@@ -163,8 +168,10 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
     ) -> ReadResult<Int> {
         guard let ownerUserID else { return .success(0) }
         do {
+            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             let counts = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
+                storeId: storeId,
                 now: Date()
             )
             return .success(counts.pending + counts.failedRetryable + counts.retryable)
@@ -215,6 +222,13 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         )
     }
 
+    private nonisolated static func activeOutboxStoreId(ownerUserID: UUID) -> String? {
+        guard ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) != nil else {
+            return nil
+        }
+        return ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID).storeId
+    }
+
     private func requiresBootstrap(
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
         isAuthenticated: Bool
@@ -253,6 +267,8 @@ extension SyncAutomaticTriggerSource {
             return .manualRefresh
         case .rootForeground:
             return .appForeground
+        case .foregroundPoll:
+            return .appForeground
         case .networkReconnect:
             return .networkAvailable
         case .localMutation:
@@ -268,7 +284,7 @@ extension SyncAutomaticTriggerSource {
         switch self {
         case .releaseCard, .rootForeground, .networkReconnect:
             return true
-        case .localMutation, .remoteSyncEvent, .backgroundRefresh:
+        case .foregroundPoll, .localMutation, .remoteSyncEvent, .backgroundRefresh:
             return false
         }
     }

@@ -88,6 +88,22 @@ final class SyncDecisionEngineTests: XCTestCase {
         XCTAssertEqual(action, .lightReconcile)
     }
 
+    func testForegroundPollDoesNotForceRemoteDrainOrLightReconcile() {
+        let source = SyncAutomaticTriggerSource.foregroundPoll
+        let action = SyncDecisionEngine.decide(
+            SyncDecisionInput(
+                trigger: source.syncTrigger,
+                isAuthenticated: true,
+                isNetworkAvailable: true,
+                requestsLightReconcile: source.requestsLightReconcile
+            )
+        )
+
+        XCTAssertEqual(source.syncTrigger, .appForeground)
+        XCTAssertFalse(source.requestsLightReconcile)
+        XCTAssertEqual(action, .noOp)
+    }
+
     func testTask132DBaselineAbsentWithPendingBootstrapsBeforePush() {
         let action = SyncDecisionEngine.decide(
             SyncDecisionInput(

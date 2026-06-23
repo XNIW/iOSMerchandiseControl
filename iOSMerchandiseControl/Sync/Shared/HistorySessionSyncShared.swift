@@ -24,7 +24,36 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
     let data: [[String]]
     let sessionOverlay: HistorySessionOverlayPayload?
     let ownerUserID: UUID
+    let shopID: UUID?
     let deletedAt: String?
+
+    init(
+        remoteID: UUID,
+        payloadVersion: Int,
+        displayName: String,
+        timestamp: String,
+        supplier: String,
+        category: String,
+        isManualEntry: Bool,
+        data: [[String]],
+        sessionOverlay: HistorySessionOverlayPayload?,
+        ownerUserID: UUID,
+        shopID: UUID? = nil,
+        deletedAt: String?
+    ) {
+        self.remoteID = remoteID
+        self.payloadVersion = payloadVersion
+        self.displayName = displayName
+        self.timestamp = timestamp
+        self.supplier = supplier
+        self.category = category
+        self.isManualEntry = isManualEntry
+        self.data = data
+        self.sessionOverlay = sessionOverlay
+        self.ownerUserID = ownerUserID
+        self.shopID = shopID
+        self.deletedAt = deletedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case remoteID = "remote_id"
@@ -37,6 +66,7 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
         case data
         case sessionOverlay = "session_overlay"
         case ownerUserID = "owner_user_id"
+        case shopID = "shop_id"
         case deletedAt = "deleted_at"
     }
 
@@ -52,6 +82,7 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
         try container.encode(data, forKey: .data)
         try container.encodeIfPresent(sessionOverlay, forKey: .sessionOverlay)
         try container.encode(ownerUserID.uuidString.lowercased(), forKey: .ownerUserID)
+        try container.encodeIfPresent(shopID?.uuidString.lowercased(), forKey: .shopID)
         try container.encodeIfPresent(deletedAt, forKey: .deletedAt)
     }
 }
@@ -82,8 +113,39 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
     let data: [[String]]
     let sessionOverlay: HistorySessionOverlayPayload?
     let ownerUserID: UUID
+    let shopID: UUID?
     let updatedAt: String?
     let deletedAt: String?
+
+    init(
+        remoteID: UUID,
+        payloadVersion: Int,
+        displayName: String,
+        timestamp: String,
+        supplier: String,
+        category: String,
+        isManualEntry: Bool,
+        data: [[String]],
+        sessionOverlay: HistorySessionOverlayPayload?,
+        ownerUserID: UUID,
+        shopID: UUID? = nil,
+        updatedAt: String?,
+        deletedAt: String?
+    ) {
+        self.remoteID = remoteID
+        self.payloadVersion = payloadVersion
+        self.displayName = displayName
+        self.timestamp = timestamp
+        self.supplier = supplier
+        self.category = category
+        self.isManualEntry = isManualEntry
+        self.data = data
+        self.sessionOverlay = sessionOverlay
+        self.ownerUserID = ownerUserID
+        self.shopID = shopID
+        self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case remoteID = "remote_id"
@@ -96,6 +158,7 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
         case data
         case sessionOverlay = "session_overlay"
         case ownerUserID = "owner_user_id"
+        case shopID = "shop_id"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
     }
@@ -108,7 +171,8 @@ nonisolated enum HistorySessionPayloadCodec {
 
     static func upsertRow(
         for snapshot: HistorySessionLocalPayloadSnapshot,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        shopID: UUID? = nil
     ) throws -> SharedSheetSessionUpsertRow {
         let overlay = HistorySessionOverlayPayload(
             overlaySchema: overlaySchema,
@@ -131,6 +195,7 @@ nonisolated enum HistorySessionPayloadCodec {
             data: snapshot.data,
             sessionOverlay: overlay,
             ownerUserID: ownerUserID,
+            shopID: shopID,
             deletedAt: snapshot.deletedAt.map(formatTimestamp)
         )
     }

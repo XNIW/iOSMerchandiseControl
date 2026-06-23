@@ -21,8 +21,10 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
         let now = self.now
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
+            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             let counts = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
+                storeId: storeId,
                 now: now()
             )
             return SyncActivityRegistrationSnapshot(
@@ -44,8 +46,10 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
         let now = self.now
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
+            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             let before = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
+                storeId: storeId,
                 now: now()
             )
             guard before.retryable > 0 else {
@@ -65,6 +69,7 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
             ).drainOnce(ownerUserID: ownerUserID)
             let after = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
+                storeId: storeId,
                 now: now()
             )
             return SyncActivityRegistrationResult(
@@ -94,5 +99,12 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
         case .blockedPayloadReplay, .blocked:
             return .blocked
         }
+    }
+
+    nonisolated private static func activeOutboxStoreId(ownerUserID: UUID) -> String? {
+        guard ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) != nil else {
+            return nil
+        }
+        return ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID).storeId
     }
 }

@@ -39,7 +39,9 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
         category: "ShopDeviceRegistrationService"
     )
     private var lastRegistrationAt: Date?
+    private var lastRegistrationScope: String?
     private var lastStatusSnapshot: ShopDeviceAuthorizationSnapshot?
+    private var lastStatusScope: String?
     private let statusCacheTTL: TimeInterval = 15
 
     init(
@@ -52,15 +54,20 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
 
     @discardableResult
     func registerCurrentOwnerDevice(reason: String, force: Bool = false) async -> Bool {
-        if !force, let lastRegistrationAt, Date().timeIntervalSince(lastRegistrationAt) < 60 {
-            return true
-        }
-
-        guard clientProvider.client.auth.currentSession?.isExpired == false else {
+        guard let session = clientProvider.client.auth.currentSession,
+              session.isExpired == false else {
             logger.info(
                 "shop_device_register_current_owner skipped reason=\(Self.safeLogText(reason), privacy: .public) session=missing_or_expired"
             )
             return false
+        }
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: session.user.id)
+        let registrationScope = authorizationScope(shopID: selectedShopID)
+        if !force,
+           lastRegistrationScope == registrationScope,
+           let lastRegistrationAt,
+           Date().timeIntervalSince(lastRegistrationAt) < 60 {
+            return true
         }
 
         do {
@@ -68,25 +75,44 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
                 deviceInstallID: installIDStore.deviceInstallID,
                 reason: reason
             )
+            let rpcName = selectedShopID == nil
+                ? "shop_device_register_current_owner"
+                : "shop_device_register_for_shop"
             logger.info(
-                "shop_device_register_current_owner started reason=\(Self.safeLogText(reason), privacy: .public) device=\(Self.redactedIdentifier(params.pDeviceIdentifier), privacy: .public) app_version_present=\((params.pAppVersion != nil), privacy: .public)"
+                "\(Self.safeLogText(rpcName), privacy: .public) started reason=\(Self.safeLogText(reason), privacy: .public) scope=\(Self.safeLogText(registrationScope), privacy: .public) device=\(Self.redactedIdentifier(params.pDeviceIdentifier), privacy: .public) app_version_present=\((params.pAppVersion != nil), privacy: .public)"
             )
 
-            let response = try await clientProvider.client
-                .rpc("shop_device_register_current_owner", params: params)
-                .execute()
+            let responseData: Data
+            if let selectedShopID {
+                responseData = try await clientProvider.client
+                    .rpc(
+                        "shop_device_register_for_shop",
+                        params: ShopDeviceRegistrationForShopRPCParameters(
+                            shopID: selectedShopID,
+                            device: params
+                        )
+                    )
+                    .execute()
+                    .data
+            } else {
+                responseData = try await clientProvider.client
+                    .rpc("shop_device_register_current_owner", params: params)
+                    .execute()
+                    .data
+            }
 
-            let result = try JSONDecoder().decode(ShopDeviceRegistrationRPCResult.self, from: response.data)
+            let result = try JSONDecoder().decode(ShopDeviceRegistrationRPCResult.self, from: responseData)
             guard result.ok == true else {
                 logger.error(
-                    "shop_device_register_current_owner failed app_code=\(Self.safeLogText(result.code ?? "unknown"), privacy: .public) shop=\(Self.redactedIdentifier(result.shopID), privacy: .public)"
+                    "\(Self.safeLogText(rpcName), privacy: .public) failed app_code=\(Self.safeLogText(result.code ?? "unknown"), privacy: .public) shop=\(Self.redactedIdentifier(result.shopID), privacy: .public)"
                 )
                 return false
             }
 
             lastRegistrationAt = Date()
+            lastRegistrationScope = registrationScope
             logger.info(
-                "shop_device_register_current_owner succeeded app_code=\(Self.safeLogText(result.code ?? "success"), privacy: .public) shop=\(Self.redactedIdentifier(result.shopID), privacy: .public) target=\(Self.redactedIdentifier(result.targetID), privacy: .public)"
+                "\(Self.safeLogText(rpcName), privacy: .public) succeeded app_code=\(Self.safeLogText(result.code ?? "success"), privacy: .public) shop=\(Self.redactedIdentifier(result.shopID), privacy: .public) target=\(Self.redactedIdentifier(result.targetID), privacy: .public)"
             )
             return true
         } catch is CancellationError {
@@ -123,7 +149,10 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
 
     func currentOwnerDeviceStatus(reason: String, force: Bool = false) async -> ShopDeviceAuthorizationSnapshot {
         let now = Date()
+        let selectedShopID = currentSelectedShopID()
+        let statusScope = authorizationScope(shopID: selectedShopID)
         if !force,
+           lastStatusScope == statusScope,
            let lastStatusSnapshot,
            now.timeIntervalSince(lastStatusSnapshot.checkedAt) < statusCacheTTL {
             return lastStatusSnapshot
@@ -148,14 +177,33 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
             let params = ShopDeviceStatusRPCParameters(
                 pDeviceIdentifier: installIDStore.deviceInstallID
             )
-            let response = try await clientProvider.client
-                .rpc("shop_device_status_current_owner", params: params)
-                .execute()
-            let result = try JSONDecoder().decode(ShopDeviceStatusRPCResult.self, from: response.data)
+            let rpcName = selectedShopID == nil
+                ? "shop_device_status_current_owner"
+                : "shop_device_status_for_shop"
+            let responseData: Data
+            if let selectedShopID {
+                responseData = try await clientProvider.client
+                    .rpc(
+                        "shop_device_status_for_shop",
+                        params: ShopDeviceStatusForShopRPCParameters(
+                            shopID: selectedShopID,
+                            deviceIdentifier: installIDStore.deviceInstallID
+                        )
+                    )
+                    .execute()
+                    .data
+            } else {
+                responseData = try await clientProvider.client
+                    .rpc("shop_device_status_current_owner", params: params)
+                    .execute()
+                    .data
+            }
+            let result = try JSONDecoder().decode(ShopDeviceStatusRPCResult.self, from: responseData)
             let snapshot = result.snapshot(checkedAt: now)
             lastStatusSnapshot = snapshot
+            lastStatusScope = statusScope
             logger.info(
-                "shop_device_status_current_owner result reason=\(Self.safeLogText(reason), privacy: .public) status=\(Self.safeLogText(snapshot.status), privacy: .public) code=\(Self.safeLogText(snapshot.code), privacy: .public) can_write=\(snapshot.canWrite, privacy: .public)"
+                "\(Self.safeLogText(rpcName), privacy: .public) result reason=\(Self.safeLogText(reason), privacy: .public) scope=\(Self.safeLogText(statusScope), privacy: .public) status=\(Self.safeLogText(snapshot.status), privacy: .public) code=\(Self.safeLogText(snapshot.code), privacy: .public) can_write=\(snapshot.canWrite, privacy: .public)"
             )
             return snapshot
         } catch {
@@ -173,6 +221,18 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
             throw ShopDeviceAuthorizationBlockedError(snapshot: snapshot)
         }
         return snapshot
+    }
+
+    private func currentSelectedShopID() -> UUID? {
+        guard let session = clientProvider.client.auth.currentSession,
+              session.isExpired == false else {
+            return nil
+        }
+        return ShopContextSelection.selectedShopID(ownerUserID: session.user.id)
+    }
+
+    private func authorizationScope(shopID: UUID?) -> String {
+        shopID?.uuidString.lowercased() ?? "legacy"
     }
 
     private func networkErrorSnapshot(error: Error, checkedAt: Date) -> ShopDeviceAuthorizationSnapshot {
@@ -246,6 +306,21 @@ nonisolated struct ShopDeviceStatusRPCParameters: Encodable {
     let pDeviceIdentifier: String
 
     enum CodingKeys: String, CodingKey {
+        case pDeviceIdentifier = "p_device_identifier"
+    }
+}
+
+nonisolated struct ShopDeviceStatusForShopRPCParameters: Encodable {
+    let pShopID: UUID
+    let pDeviceIdentifier: String
+
+    init(shopID: UUID, deviceIdentifier: String) {
+        self.pShopID = shopID
+        self.pDeviceIdentifier = deviceIdentifier
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case pShopID = "p_shop_id"
         case pDeviceIdentifier = "p_device_identifier"
     }
 }
@@ -385,6 +460,33 @@ nonisolated struct ShopDeviceRegistrationRPCParameters: Encodable {
     let pMetadata: ShopDeviceRegistrationMetadata
 
     enum CodingKeys: String, CodingKey {
+        case pDeviceIdentifier = "p_device_identifier"
+        case pDeviceType = "p_device_type"
+        case pDisplayName = "p_display_name"
+        case pAppVersion = "p_app_version"
+        case pMetadata = "p_metadata"
+    }
+}
+
+nonisolated struct ShopDeviceRegistrationForShopRPCParameters: Encodable {
+    let pShopID: UUID
+    let pDeviceIdentifier: String
+    let pDeviceType: String
+    let pDisplayName: String
+    let pAppVersion: String?
+    let pMetadata: ShopDeviceRegistrationMetadata
+
+    init(shopID: UUID, device: ShopDeviceRegistrationRPCParameters) {
+        self.pShopID = shopID
+        self.pDeviceIdentifier = device.pDeviceIdentifier
+        self.pDeviceType = device.pDeviceType
+        self.pDisplayName = device.pDisplayName
+        self.pAppVersion = device.pAppVersion
+        self.pMetadata = device.pMetadata
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case pShopID = "p_shop_id"
         case pDeviceIdentifier = "p_device_identifier"
         case pDeviceType = "p_device_type"
         case pDisplayName = "p_display_name"

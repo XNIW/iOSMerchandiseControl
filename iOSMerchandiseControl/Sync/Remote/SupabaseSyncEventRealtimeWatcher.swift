@@ -5,6 +5,7 @@ import Supabase
 final class SupabaseSyncEventSignalWatcher {
     private let clientProvider: SupabaseClientProvider
     private var ownerUserID: UUID?
+    private var selectedShopID: UUID?
     private var channel: RealtimeChannelV2?
     private var subscriptionTask: Task<Void, Never>?
     private var signalTask: Task<Void, Never>?
@@ -13,19 +14,25 @@ final class SupabaseSyncEventSignalWatcher {
         self.clientProvider = clientProvider
     }
 
-    func start(ownerUserID: UUID, onSignal: @escaping @MainActor @Sendable () -> Void) {
-        guard self.ownerUserID != ownerUserID else { return }
+    func start(
+        ownerUserID: UUID,
+        selectedShopID: UUID?,
+        onSignal: @escaping @MainActor @Sendable () -> Void
+    ) {
+        guard self.ownerUserID != ownerUserID || self.selectedShopID != selectedShopID else { return }
         stop()
 
-        let channel = clientProvider.client.channel("sync-events-v1-\(ownerUserID.uuidString.lowercased())")
+        let channelScope = selectedShopID?.uuidString.lowercased() ?? ownerUserID.uuidString.lowercased()
+        let channel = clientProvider.client.channel("sync-events-v1-\(channelScope)")
         let insertions = channel.postgresChange(
             InsertAction.self,
             schema: "public",
             table: "sync_events",
-            filter: .eq("owner_user_id", value: ownerUserID)
+            filter: selectedShopID.map { .eq("shop_id", value: $0) } ?? .eq("owner_user_id", value: ownerUserID)
         )
 
         self.ownerUserID = ownerUserID
+        self.selectedShopID = selectedShopID
         self.channel = channel
         subscriptionTask = Task { [weak self] in
             do {
@@ -47,6 +54,7 @@ final class SupabaseSyncEventSignalWatcher {
 
     func stop() {
         ownerUserID = nil
+        selectedShopID = nil
         signalTask?.cancel()
         signalTask = nil
         subscriptionTask?.cancel()

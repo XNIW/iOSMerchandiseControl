@@ -450,7 +450,12 @@ struct HistoryView: View {
     private func recordHistoryDeletionPending(for entry: HistoryEntry) {
         guard let ownerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
         do {
-            _ = try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            _ = try LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: ownerUserID,
+                storeIdentity: selectedShopID == nil ? .anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+            )
                 .recordHistorySessionChange(
                     entry: entry,
                     operation: .delete,

@@ -48,14 +48,29 @@ final class WatermarkStoreTests: XCTestCase {
         XCTAssertEqual(store.watermark(for: scope), 77)
     }
 
-    func testLegacyAccountWatermarkCanBeReadDuringMigration() {
+    func testLegacyAccountWatermarkCanBeReadDuringLegacyMigrationOnly() {
         let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = WatermarkStore(defaults: defaults)
-        let scope = WatermarkStore.Scope(accountHash: "account-a", storeIdentity: LocalStoreIdentity(rawValue: "store-a"))
-        defaults.set(88, forKey: WatermarkStore.legacyAccountWatermarkKey(accountHash: "account-a", storeIdentity: LocalStoreIdentity(rawValue: "store-a")))
+        let scope = WatermarkStore.Scope(accountHash: "account-a", storeIdentity: .anonymous)
+        defaults.set(88, forKey: WatermarkStore.legacyAccountWatermarkKey(accountHash: "account-a", storeIdentity: .anonymous))
 
         XCTAssertEqual(store.watermark(for: scope), 88)
+    }
+
+    func testShopScopedWatermarkDoesNotInheritLegacyOwnerOrAccountWatermark() {
+        let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let ownerID = UUID()
+        let store = WatermarkStore(defaults: defaults)
+        let shopStore = LocalStoreIdentity(rawValue: "store-a")
+        defaults.set(77, forKey: WatermarkStore.legacyOwnerWatermarkKey(ownerUserID: ownerID))
+        defaults.set(88, forKey: WatermarkStore.legacyAccountWatermarkKey(accountHash: "account-a", storeIdentity: shopStore))
+
+        let scope = WatermarkStore.Scope(accountHash: "account-a", storeIdentity: shopStore, legacyOwnerUserID: ownerID)
+
+        XCTAssertEqual(store.watermark(for: scope), 0)
     }
 }

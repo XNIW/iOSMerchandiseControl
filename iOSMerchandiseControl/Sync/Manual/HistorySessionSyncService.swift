@@ -18,20 +18,37 @@ nonisolated final class HistorySessionSyncService {
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void = { _ in }
     ) async throws -> HistorySessionPushResult {
         var result = HistorySessionPushResult()
-        let uploadEntries = includeSynced ? entries : entries.filter(\.isHistorySessionDirtyForCloud)
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let scopedEntries = entries.filter {
+            $0.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: storeIdentity
+            )
+        }
+        let uploadEntries = includeSynced ? scopedEntries : scopedEntries.filter(\.isHistorySessionDirtyForCloud)
         result.skippedCleanCount = includeSynced ? 0 : max(0, entries.count - uploadEntries.count)
         let uploadEntryCount = uploadEntries.count
         await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: uploadEntryCount), onProgress: onProgress)
         guard !uploadEntries.isEmpty else { return result }
 
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID,
+            storeIdentity: storeIdentity
+        )
         var uploadPairs: [(entry: HistoryEntry, row: SharedSheetSessionUpsertRow, revision: Int)] = []
         uploadPairs.reserveCapacity(uploadEntries.count)
 
         for entry in uploadEntries {
             do {
                 let snapshot = HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: true)
-                let row = try HistorySessionPayloadCodec.upsertRow(for: snapshot, ownerUserID: ownerUserID)
+                let row = try HistorySessionPayloadCodec.upsertRow(
+                    for: snapshot,
+                    ownerUserID: ownerUserID,
+                    shopID: selectedShopID
+                )
                 uploadPairs.append((entry, row, entry.localChangeRevision))
             } catch HistorySessionSyncError.overlayTooLarge {
                 result.skippedOversizedCount += 1
@@ -60,6 +77,11 @@ nonisolated final class HistorySessionSyncService {
                   readBack.ownerUserID == ownerUserID else {
                 throw HistorySessionSyncError.readBackMismatch
             }
+            pair.entry.assignHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: storeIdentity
+            )
             let expectedFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: pair.row)
             let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
             guard fingerprint == expectedFingerprint else {
@@ -115,6 +137,7 @@ nonisolated final class HistorySessionSyncService {
         var finalResult = result
         let pruned = try pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
             remoteIDs: Set(allRows.map(\.remoteID)),
+            ownerUserID: ownerUserID,
             context: context
         )
         if pruned > 0 {
@@ -134,7 +157,15 @@ nonisolated final class HistorySessionSyncService {
         var result = HistorySessionPullResult()
         guard !rows.isEmpty else { return result }
 
-        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
+            $0.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: storeIdentity
+            )
+        }
         var byRemoteID: [UUID: HistoryEntry] = [:]
         var byUID: [UUID: HistoryEntry] = [:]
         for entry in entries {
@@ -144,7 +175,11 @@ nonisolated final class HistorySessionSyncService {
             byUID[entry.uid] = entry
         }
         var byLogicalFingerprint = logicalFingerprintMap(for: entries)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID,
+            storeIdentity: storeIdentity
+        )
 
         for row in rows {
             guard row.ownerUserID == ownerUserID else {
@@ -169,6 +204,7 @@ nonisolated final class HistorySessionSyncService {
 
                 if logicalMatch != nil {
                     let previousRemoteID = existing.remoteID
+                    existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                     apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     try accumulator.acknowledgeHistorySessionChange(
                         entry: existing,
@@ -191,6 +227,7 @@ nonisolated final class HistorySessionSyncService {
                     continue
                 }
 
+                existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 apply(row: row, to: existing, fingerprint: remoteFingerprint)
                 result.updatedCount += 1
             } else {
@@ -200,6 +237,7 @@ nonisolated final class HistorySessionSyncService {
                 }
 
                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                inserted.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted
@@ -220,7 +258,15 @@ nonisolated final class HistorySessionSyncService {
         var result = HistorySessionPullResult()
         guard !rows.isEmpty else { return result }
 
-        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
+            $0.isCompatibleWithHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                storeIdentity: storeIdentity
+            )
+        }
         var byRemoteID: [UUID: HistoryEntry] = [:]
         var byUID: [UUID: HistoryEntry] = [:]
         for entry in entries {
@@ -230,7 +276,11 @@ nonisolated final class HistorySessionSyncService {
             byUID[entry.uid] = entry
         }
         var byLogicalFingerprint = logicalFingerprintMap(for: entries)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID,
+            storeIdentity: storeIdentity
+        )
 
         var mutationsSinceSave = 0
         let batchSize = max(1, pageSize)
@@ -259,6 +309,7 @@ nonisolated final class HistorySessionSyncService {
                     }
                 } else if logicalMatch != nil {
                     let previousRemoteID = existing.remoteID
+                    existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                     apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     try accumulator.acknowledgeHistorySessionChange(
                         entry: existing,
@@ -274,6 +325,7 @@ nonisolated final class HistorySessionSyncService {
                 } else if existing.localChangeRevision > existing.lastSyncedLocalRevision {
                     result.skippedDirtyLocalCount += 1
                 } else {
+                    existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                     apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     result.updatedCount += 1
                     mutationsSinceSave += 1
@@ -286,6 +338,7 @@ nonisolated final class HistorySessionSyncService {
                 }
 
                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                inserted.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted
@@ -330,13 +383,17 @@ nonisolated final class HistorySessionSyncService {
 
     private func pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
         remoteIDs: Set<UUID>,
+        ownerUserID: UUID,
         context: ModelContext
     ) throws -> Int {
         let pendingKeys = try fetchActiveHistoryPendingKeys(context: context)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
         var pruned = 0
         for entry in entries {
             guard let remoteID = entry.remoteID,
+                  entry.isCompatibleWithHistoryScope(ownerUserID: ownerUserID, selectedShopID: selectedShopID, storeIdentity: storeIdentity),
                   !remoteIDs.contains(remoteID),
                   entry.remoteDeletedAt == nil,
                   entry.localChangeRevision <= entry.lastSyncedLocalRevision,
