@@ -162,15 +162,12 @@ final class ExcelAnalyzerHTMLParsingTests: XCTestCase {
         assertNoDecorativeRows(dataRows, forbiddenValues: expectedHeader)
     }
 
-    func testMinimalHTMLWithoutRealHeaderUsesGeneratedColumnsWithoutDataHeuristicPromotion() throws {
+    func testMinimalHTMLWithoutRealHeaderUsesAndroidStylePatternPromotion() throws {
         let result = try analyze("html-minimal-no-header")
 
         XCTAssertEqual(result.originalHeader, ["col1", "col2", "col3", "col4", "col5"])
-        assertHeaderContains(result.normalizedHeader, [
-            "barcode", "productName", "purchasePrice", "col1", "col2", "col3", "col4", "col5"
-        ])
-        XCTAssertEqual(Array(result.normalizedHeader.suffix(5)), [
-            "col1", "col2", "col3", "col4", "col5"
+        XCTAssertEqual(result.normalizedHeader, [
+            "barcode", "productName", "purchasePrice", "quantity", "totalPrice"
         ])
         XCTAssertEqual(result.dataRows.count, 2)
         assertRowsAreRectangular(result)
@@ -179,35 +176,21 @@ final class ExcelAnalyzerHTMLParsingTests: XCTestCase {
             header: result.normalizedHeader,
             row: 0,
             column: "barcode",
-            equals: ""
-        )
-        assertRowValue(
-            result.dataRows,
-            header: result.normalizedHeader,
-            row: 0,
-            column: "productName",
-            equals: ""
-        )
-        assertRowValue(
-            result.dataRows,
-            header: result.normalizedHeader,
-            row: 0,
-            column: "purchasePrice",
-            equals: ""
-        )
-        assertRowValue(
-            result.dataRows,
-            header: result.normalizedHeader,
-            row: 0,
-            column: "col1",
             equals: "800000000901"
         )
         assertRowValue(
             result.dataRows,
             header: result.normalizedHeader,
             row: 0,
-            column: "col2",
+            column: "productName",
             equals: "Minimal no header sample A"
+        )
+        assertRowValue(
+            result.dataRows,
+            header: result.normalizedHeader,
+            row: 0,
+            column: "purchasePrice",
+            equals: "2.50"
         )
     }
 

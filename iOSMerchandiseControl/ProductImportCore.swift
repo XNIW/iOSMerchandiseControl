@@ -1,6 +1,46 @@
 import Foundation
 import SwiftData
 
+nonisolated enum AndroidImportKey {
+    static let barcode = "barcode"
+    static let productName = "productName"
+    static let itemNumber = "itemNumber"
+    static let purchasePrice = "purchasePrice"
+    static let retailPrice = "retailPrice"
+    static let quantity = "quantity"
+    static let supplier = "supplier"
+    static let category = "category"
+    static let secondProductName = "secondProductName"
+    static let totalPrice = "totalPrice"
+    static let rowNumber = "rowNumber"
+    static let discount = "discount"
+    static let discountedPrice = "discountedPrice"
+    static let oldPurchasePrice = "oldPurchasePrice"
+    static let oldRetailPrice = "oldRetailPrice"
+    static let realQuantity = "realQuantity"
+    static let complete = "complete"
+
+    static let allKeys: Set<String> = [
+        barcode,
+        productName,
+        itemNumber,
+        purchasePrice,
+        retailPrice,
+        quantity,
+        supplier,
+        category,
+        secondProductName,
+        totalPrice,
+        rowNumber,
+        discount,
+        discountedPrice,
+        oldPurchasePrice,
+        oldRetailPrice,
+        realQuantity,
+        complete
+    ]
+}
+
 nonisolated enum ProductImportCore {
     private static let currentImportSource = "IMPORT_EXCEL"
     private static let previousImportSource = "IMPORT_PREV"
@@ -8,8 +48,6 @@ nonisolated enum ProductImportCore {
     private struct PendingRow {
         var lastRow: [String: String]
         var rowNumbers: [Int]
-        var quantitySum: Double
-        var hasQuantity: Bool
     }
 
     private struct ParsedDraft {
@@ -63,6 +101,83 @@ nonisolated enum ProductImportCore {
         return isNegative ? -parsed : parsed
     }
 
+    static func calculatedRetailPrice(
+        purchasePrice: Double?,
+        markupPercent: Double,
+        roundingStep: Double
+    ) -> Double? {
+        guard let purchasePrice, purchasePrice > 0 else { return nil }
+
+        let unrounded = purchasePrice * (1 + markupPercent / 100)
+        guard roundingStep > 0 else {
+            return unrounded
+        }
+
+        return (unrounded / roundingStep).rounded() * roundingStep
+    }
+
+    @discardableResult
+    static func applyRetailMarkup(
+        to drafts: inout [ProductDraft],
+        markupPercent: Double,
+        roundingStep: Double,
+        onlyEmptyRetailPrice: Bool
+    ) -> Int {
+        var changedCount = 0
+
+        for index in drafts.indices {
+            if onlyEmptyRetailPrice, drafts[index].retailPrice != nil {
+                continue
+            }
+
+            guard let retailPrice = calculatedRetailPrice(
+                purchasePrice: drafts[index].purchasePrice,
+                markupPercent: markupPercent,
+                roundingStep: roundingStep
+            ) else {
+                continue
+            }
+
+            drafts[index].retailPrice = retailPrice
+            changedCount += 1
+        }
+
+        return changedCount
+    }
+
+    @discardableResult
+    static func applyRetailMarkup(
+        to updates: inout [ProductUpdateDraft],
+        markupPercent: Double,
+        roundingStep: Double,
+        onlyEmptyRetailPrice: Bool
+    ) -> Int {
+        var changedCount = 0
+
+        for index in updates.indices {
+            if onlyEmptyRetailPrice, updates[index].new.retailPrice != nil {
+                continue
+            }
+
+            guard let retailPrice = calculatedRetailPrice(
+                purchasePrice: updates[index].new.purchasePrice,
+                markupPercent: markupPercent,
+                roundingStep: roundingStep
+            ) else {
+                continue
+            }
+
+            updates[index].new.retailPrice = retailPrice
+            updates[index].changedFields = ProductUpdateDraft.computeChangedFields(
+                old: updates[index].old,
+                new: updates[index].new
+            )
+            changedCount += 1
+        }
+
+        return changedCount
+    }
+
     static func analyzeImport(
         header: [String],
         dataRows: [[String]],
@@ -73,10 +188,13 @@ nonisolated enum ProductImportCore {
         let existingByBarcode = normalizedExistingProducts(existingProductsByBarcode)
 
         for (index, row) in dataRows.enumerated() {
-            let rowNumber = index + 1
             let map = mappedRow(header: header, row: row)
+            let rowNumber = importRowNumber(
+                from: map[AndroidImportKey.rowNumber],
+                fallback: index + 1
+            )
 
-            guard let barcode = normalizedBarcode(from: map["barcode"]) else {
+            guard let barcode = normalizedBarcode(from: map[AndroidImportKey.barcode]) else {
                 errors.append(
                     ProductImportRowError(
                         rowNumber: rowNumber,
@@ -87,19 +205,14 @@ nonisolated enum ProductImportCore {
                 continue
             }
 
-            let quantityForMerge = quantityValue(in: map)
             if var pending = pendingByBarcode[barcode] {
                 pending.lastRow = map
                 pending.rowNumbers.append(rowNumber)
-                pending.quantitySum += quantityForMerge.value ?? 0
-                pending.hasQuantity = pending.hasQuantity || quantityForMerge.hasInput
                 pendingByBarcode[barcode] = pending
             } else {
                 pendingByBarcode[barcode] = PendingRow(
                     lastRow: map,
-                    rowNumbers: [rowNumber],
-                    quantitySum: quantityForMerge.value ?? 0,
-                    hasQuantity: quantityForMerge.hasInput
+                    rowNumbers: [rowNumber]
                 )
             }
         }
@@ -109,12 +222,7 @@ nonisolated enum ProductImportCore {
         var warnings: [ProductDuplicateWarning] = []
 
         for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
-            var row = pending.lastRow
-            if pending.hasQuantity {
-                row["stockQuantity"] = decimalString(pending.quantitySum)
-                row["quantity"] = ""
-                row["realQuantity"] = ""
-            }
+            let row = pending.lastRow
 
             if pending.rowNumbers.count > 1 {
                 warnings.append(
@@ -366,11 +474,11 @@ nonisolated enum ProductImportCore {
     ) -> ParsedDraft {
         var rowErrorKeys: [String] = []
 
-        let itemNumber = normalizedDisplayName(row["itemNumber"])
-        let productName = normalizedDisplayName(row["productName"])
-        let secondProductName = normalizedDisplayName(row["secondProductName"])
-        let supplierName = normalizedDisplayName(row["supplier"])
-        let categoryName = normalizedDisplayName(row["category"])
+        let itemNumber = normalizedDisplayName(row[AndroidImportKey.itemNumber])
+        let productName = normalizedDisplayName(row[AndroidImportKey.productName])
+        let secondProductName = normalizedDisplayName(row[AndroidImportKey.secondProductName])
+        let supplierName = normalizedDisplayName(row[AndroidImportKey.supplier])
+        let categoryName = normalizedDisplayName(row[AndroidImportKey.category])
         let hasExistingDraft: Bool
         switch existingDraft {
         case .some:
@@ -379,19 +487,17 @@ nonisolated enum ProductImportCore {
             hasExistingDraft = false
         }
 
-        if productName == nil && secondProductName == nil && !hasExistingDraft {
+        if productName == nil && itemNumber == nil && !hasExistingDraft {
             rowErrorKeys.append("import.analysis.row_error.product_name_missing")
-        } else if productName == nil && secondProductName == nil && hasExistingDraft {
-            rowErrorKeys.append("import.analysis.row_error.update_name_missing")
         }
 
-        let purchase = numeric(row["purchasePrice"])
-        let retail = numeric(row["retailPrice"])
-        let discountedPrice = numeric(row["discountedPrice"])
-        let discount = discountPercent(row["discount"])
+        let purchase = numeric(row[AndroidImportKey.purchasePrice])
+        let retail = numeric(row[AndroidImportKey.retailPrice])
+        let discountedPrice = numeric(row[AndroidImportKey.discountedPrice])
+        let discount = discountPercent(row[AndroidImportKey.discount])
         let quantity = quantityValue(in: row)
-        let oldPurchase = numeric(firstNonEmpty(row["oldPurchasePrice"], row["prevPurchase"]))
-        let oldRetail = numeric(firstNonEmpty(row["oldRetailPrice"], row["prevRetail"]))
+        let oldPurchase = numeric(row[AndroidImportKey.oldPurchasePrice])
+        let oldRetail = numeric(row[AndroidImportKey.oldRetailPrice])
 
         appendInvalidNumericErrors(
             [
@@ -501,80 +607,97 @@ nonisolated enum ProductImportCore {
         return map
     }
 
+    private static func importRowNumber(from rawValue: String?, fallback: Int) -> Int {
+        guard let rawValue,
+              let parsed = parseDouble(from: rawValue),
+              parsed.isFinite else {
+            return fallback
+        }
+
+        return Int(parsed.rounded())
+    }
+
     private static func canonicalColumnKey(_ rawKey: String) -> String {
+        let trimmed = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if AndroidImportKey.allKeys.contains(trimmed) {
+            return trimmed
+        }
+
         let key = aliasKey(rawKey)
         if let canonical = columnAliases[key] {
             return canonical
         }
-        return rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        return ""
     }
 
     private static let columnAliases: [String: String] = [
-        "barcode": "barcode",
-        "barcod": "barcode",
-        "codiceabarre": "barcode",
-        "codigobarra": "barcode",
-        "codigodebarras": "barcode",
-        "ean": "barcode",
-        "upc": "barcode",
-        "条形码": "barcode",
-        "條碼": "barcode",
-        "商品条码": "barcode",
-        "itemnumber": "itemNumber",
-        "articolo": "itemNumber",
-        "codicearticolo": "itemNumber",
-        "sku": "itemNumber",
-        "codigo": "itemNumber",
-        "productname": "productName",
-        "nomeprodotto": "productName",
-        "nombreproducto": "productName",
-        "name": "productName",
-        "nome": "productName",
-        "商品名称": "productName",
-        "名称": "productName",
-        "secondproductname": "secondProductName",
-        "secondname": "secondProductName",
-        "nomealternativo": "secondProductName",
-        "nombrealternativo": "secondProductName",
-        "purchaseprice": "purchasePrice",
-        "prezzoacquisto": "purchasePrice",
-        "cost": "purchasePrice",
-        "costo": "purchasePrice",
-        "价格": "purchasePrice",
-        "retailprice": "retailPrice",
-        "prezzovendita": "retailPrice",
-        "sellingprice": "retailPrice",
-        "price": "retailPrice",
-        "precio": "retailPrice",
-        "stockquantity": "stockQuantity",
-        "quantity": "quantity",
-        "quantita": "quantity",
-        "cantidad": "quantity",
-        "qty": "quantity",
-        "realquantity": "realQuantity",
-        "quantitareale": "realQuantity",
-        "cantidadreal": "realQuantity",
-        "supplier": "supplier",
-        "fornitore": "supplier",
-        "proveedor": "supplier",
-        "供应商": "supplier",
-        "category": "category",
-        "categoria": "category",
-        "分类": "category",
-        "discount": "discount",
-        "sconto": "discount",
-        "descuento": "discount",
-        "discountedprice": "discountedPrice",
-        "prezzoscontato": "discountedPrice",
-        "preciocondescuento": "discountedPrice",
-        "oldpurchaseprice": "oldPurchasePrice",
-        "prevpurchase": "prevPurchase",
-        "previouspurchaseprice": "prevPurchase",
-        "prezzoacquistoprecedente": "oldPurchasePrice",
-        "oldretailprice": "oldRetailPrice",
-        "prevretail": "prevRetail",
-        "previousretailprice": "prevRetail",
-        "prezzovenditaprecedente": "oldRetailPrice"
+        "barcode": AndroidImportKey.barcode,
+        "barcod": AndroidImportKey.barcode,
+        "codiceabarre": AndroidImportKey.barcode,
+        "codigobarra": AndroidImportKey.barcode,
+        "codigodebarras": AndroidImportKey.barcode,
+        "ean": AndroidImportKey.barcode,
+        "upc": AndroidImportKey.barcode,
+        "条形码": AndroidImportKey.barcode,
+        "條碼": AndroidImportKey.barcode,
+        "商品条码": AndroidImportKey.barcode,
+        "itemnumber": AndroidImportKey.itemNumber,
+        "articolo": AndroidImportKey.itemNumber,
+        "codicearticolo": AndroidImportKey.itemNumber,
+        "sku": AndroidImportKey.itemNumber,
+        "codigo": AndroidImportKey.itemNumber,
+        "productname": AndroidImportKey.productName,
+        "nomeprodotto": AndroidImportKey.productName,
+        "nombreproducto": AndroidImportKey.productName,
+        "name": AndroidImportKey.productName,
+        "nome": AndroidImportKey.productName,
+        "商品名称": AndroidImportKey.productName,
+        "名称": AndroidImportKey.productName,
+        "secondproductname": AndroidImportKey.secondProductName,
+        "secondname": AndroidImportKey.secondProductName,
+        "nomealternativo": AndroidImportKey.secondProductName,
+        "nombrealternativo": AndroidImportKey.secondProductName,
+        "purchaseprice": AndroidImportKey.purchasePrice,
+        "prezzoacquisto": AndroidImportKey.purchasePrice,
+        "cost": AndroidImportKey.purchasePrice,
+        "costo": AndroidImportKey.purchasePrice,
+        "价格": AndroidImportKey.purchasePrice,
+        "retailprice": AndroidImportKey.retailPrice,
+        "prezzovendita": AndroidImportKey.retailPrice,
+        "sellingprice": AndroidImportKey.retailPrice,
+        "price": AndroidImportKey.retailPrice,
+        "precio": AndroidImportKey.retailPrice,
+        "stockquantity": AndroidImportKey.quantity,
+        "quantity": AndroidImportKey.quantity,
+        "quantita": AndroidImportKey.quantity,
+        "cantidad": AndroidImportKey.quantity,
+        "qty": AndroidImportKey.quantity,
+        "realquantity": AndroidImportKey.realQuantity,
+        "quantitareale": AndroidImportKey.realQuantity,
+        "cantidadreal": AndroidImportKey.realQuantity,
+        "supplier": AndroidImportKey.supplier,
+        "suppliername": AndroidImportKey.supplier,
+        "fornitore": AndroidImportKey.supplier,
+        "proveedor": AndroidImportKey.supplier,
+        "供应商": AndroidImportKey.supplier,
+        "category": AndroidImportKey.category,
+        "categoryname": AndroidImportKey.category,
+        "categoria": AndroidImportKey.category,
+        "分类": AndroidImportKey.category,
+        "discount": AndroidImportKey.discount,
+        "sconto": AndroidImportKey.discount,
+        "descuento": AndroidImportKey.discount,
+        "discountedprice": AndroidImportKey.discountedPrice,
+        "prezzoscontato": AndroidImportKey.discountedPrice,
+        "preciocondescuento": AndroidImportKey.discountedPrice,
+        "oldpurchaseprice": AndroidImportKey.oldPurchasePrice,
+        "prevpurchase": AndroidImportKey.oldPurchasePrice,
+        "previouspurchaseprice": AndroidImportKey.oldPurchasePrice,
+        "prezzoacquistoprecedente": AndroidImportKey.oldPurchasePrice,
+        "oldretailprice": AndroidImportKey.oldRetailPrice,
+        "prevretail": AndroidImportKey.oldRetailPrice,
+        "previousretailprice": AndroidImportKey.oldRetailPrice,
+        "prezzovenditaprecedente": AndroidImportKey.oldRetailPrice
     ]
 
     private static func normalizedExistingProducts(
@@ -589,30 +712,16 @@ nonisolated enum ProductImportCore {
     }
 
     private static func quantityValue(in row: [String: String]) -> NumericValue {
-        let realQuantity = numeric(row["realQuantity"])
-        if let value = realQuantity.value, value > 0 {
+        let realQuantity = numeric(row[AndroidImportKey.realQuantity])
+        if realQuantity.hasInput {
             return realQuantity
         }
-
-        let stockQuantity = numeric(row["stockQuantity"])
-        if stockQuantity.hasInput || stockQuantity.value != nil {
-            return stockQuantity
-        }
-        return numeric(row["quantity"])
+        return numeric(row[AndroidImportKey.quantity])
     }
 
     private static func numeric(_ raw: String?) -> NumericValue {
         let text = trimImportText(raw ?? "")
         return NumericValue(raw: text, value: parseDouble(from: text))
-    }
-
-    private static func firstNonEmpty(_ values: String?...) -> String? {
-        for value in values {
-            if !trimImportText(value ?? "").isEmpty {
-                return value
-            }
-        }
-        return nil
     }
 
     private static func discountPercent(_ raw: String?) -> NumericValue {
@@ -764,13 +873,6 @@ nonisolated enum ProductImportCore {
         return cleaned
             .split(whereSeparator: { $0.isWhitespace })
             .joined(separator: " ")
-    }
-
-    private static func decimalString(_ value: Double) -> String {
-        if value.rounded() == value {
-            return String(Int(value))
-        }
-        return String(value)
     }
 
     private static func roundPrice(_ value: Double) -> Double {

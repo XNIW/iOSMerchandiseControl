@@ -16,6 +16,13 @@ enum ColumnStatus {
     case emptyOriginal   // header originale vuoto
 }
 
+nonisolated struct ExcelImportAnalysisTable: Sendable {
+    let originalHeader: [String]
+    let normalizedHeader: [String]
+    let headerSource: [String]
+    let dataRows: [[String]]
+}
+
 /// ViewModel globale per il flusso Excel
 /// (equivalente concettuale di ExcelViewModel su Android)
 @MainActor
@@ -25,6 +32,7 @@ final class ExcelSessionViewModel: ObservableObject {
     private struct LoadedWorkbook: Sendable {
         let originalHeader: [String]
         let normalizedHeader: [String]
+        let headerSource: [String]
         let rows: [[String]]
         let analysisMetrics: AnalysisMetrics?
     }
@@ -34,6 +42,9 @@ final class ExcelSessionViewModel: ObservableObject {
 
     // 🔹 Header normalizzato (es. ["barcode", "productName", "purchasePrice", ...])
     @Published var normalizedHeader: [String] = []
+
+    // Fonte rilevamento per ogni colonna: alias / pattern / generated / unknown.
+    @Published var headerSource: [String] = []
 
     // Snapshot dell'header normalizzato iniziale, usato per validare gli append.
     @Published var initialNormalizedHeader: [String] = []
@@ -193,6 +204,7 @@ final class ExcelSessionViewModel: ObservableObject {
     func resetState() {
         originalHeader = []
         normalizedHeader = []
+        headerSource = []
         initialNormalizedHeader = []
         rows = []
         selectedColumns = []
@@ -352,14 +364,15 @@ final class ExcelSessionViewModel: ObservableObject {
 
         do {
             let loaded = try await Self.runDetached {
-                let parsed = try ExcelAnalyzer.loadFromMultipleURLs(urls)
+                let parsed = try ExcelAnalyzer.loadFromMultipleURLDetails(urls)
                 return LoadedWorkbook(
                     originalHeader: parsed.originalHeader,
                     normalizedHeader: parsed.normalizedHeader,
-                    rows: parsed.rows,
+                    headerSource: parsed.headerSource,
+                    rows: [parsed.normalizedHeader] + parsed.dataRows,
                     analysisMetrics: ExcelAnalyzer.computeAnalysisMetrics(
                         header: parsed.normalizedHeader,
-                        rows: parsed.rows
+                        rows: parsed.dataRows
                     )
                 )
             }
@@ -367,6 +380,7 @@ final class ExcelSessionViewModel: ObservableObject {
             // Torniamo sul MainActor
             self.originalHeader = loaded.originalHeader
             self.normalizedHeader = loaded.normalizedHeader
+            self.headerSource = loaded.headerSource
             self.initialNormalizedHeader = loaded.normalizedHeader
             self.rows = loaded.rows
             self.selectedColumns = Self.defaultColumnSelections(for: loaded.normalizedHeader)
@@ -1318,14 +1332,14 @@ nonisolated struct ExcelAnalyzer {
             "prezzoprecedenteacquisto", "acquistoprec",
             "previouspurchaseprice", "prezzo vecchio acquisto",
             "旧进价", "precio de compra anterior",
-            "old purchase price"
+            "old purchase price", "prevPurchase", "prev purchase"
         ]),
         ("oldRetailPrice", [
             "oldretailprice", "prezzovecchiovendita",
             "prezzoprecedentevendita", "venditaprec",
             "previousretailprice", "prezzo vecchio vendita",
             "旧零售价", "precio de venta anterior",
-            "old retail price"
+            "old retail price", "prevRetail", "prev retail"
         ])
     ]
 
@@ -1383,35 +1397,54 @@ nonisolated struct ExcelAnalyzer {
     /// Porta la logica di loadFromMultipleUris(context, uris)
     static func loadFromMultipleURLs(_ urls: [URL])
         throws -> (originalHeader: [String], normalizedHeader: [String], rows: [[String]]) {
+        let details = try loadFromMultipleURLDetails(urls)
+        return (
+            details.originalHeader,
+            details.normalizedHeader,
+            [details.normalizedHeader] + details.dataRows
+        )
+    }
+
+    static func loadFromMultipleURLDetails(_ urls: [URL]) throws -> ExcelImportAnalysisTable {
         guard let firstURL = urls.first else {
             throw ExcelLoadError.invalidFormat("Nessun file selezionato.")
         }
 
         // 🔹 Manteniamo l'header originale solo del primo file
-        let (originalHeader, goldenHeader, firstDataRows) = try readAndAnalyzeExcel(from: firstURL)
-        var allValidRows = firstDataRows
+        let first = try readAndAnalyzeExcelDetailed(from: firstURL)
+        let originalHeader = first.originalHeader
+        let goldenHeader = first.normalizedHeader
+        let goldenHeaderSource = first.headerSource
+        var allValidRows = first.dataRows
 
         if urls.count > 1 {
             for url in urls.dropFirst() {
-                let (_, header, dataRows) = try readAndAnalyzeExcel(from: url)
+                let details = try readAndAnalyzeExcelDetailed(from: url)
 
                 // Richiediamo che gli header normalizzati siano identici
-                if header != goldenHeader {
+                if details.normalizedHeader != goldenHeader {
                     throw ExcelLoadError.incompatibleHeader
                 }
-                allValidRows.append(contentsOf: dataRows)
+                allValidRows.append(contentsOf: details.dataRows)
             }
         }
 
-        // rows: prima riga = header normalizzato
-        let rowsWithHeader = [goldenHeader] + allValidRows
-        return (originalHeader, goldenHeader, rowsWithHeader)
+        return ExcelImportAnalysisTable(
+            originalHeader: originalHeader,
+            normalizedHeader: goldenHeader,
+            headerSource: goldenHeaderSource,
+            dataRows: allValidRows
+        )
     }
 
     /// Porta la logica di readAndAnalyzeExcel(context, uri) con analisi avanzata stile Android
     static func readAndAnalyzeExcel(from url: URL)
         throws -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
+        let details = try readAndAnalyzeExcelDetailed(from: url)
+        return (details.originalHeader, details.normalizedHeader, details.dataRows)
+    }
 
+    static func readAndAnalyzeExcelDetailed(from url: URL) throws -> ExcelImportAnalysisTable {
         let data = try Data(contentsOf: url)
         let ext = url.pathExtension.lowercased()
 
@@ -1421,7 +1454,7 @@ nonisolated struct ExcelAnalyzer {
         if looksLikeHtml(data: data) {
             debugLog("Rilevato HTML (anche con estensione .\(ext))", level: .info)
             let rows = try rowsFromHTML(data: data)
-            return analyzeRows(normalizeAllCells(rows))
+            return analyzeRowsDetailed(normalizeAllCells(rows))
         }
 
         // 2) Prova come XLSX (ZIP), basato sul contenuto
@@ -1429,7 +1462,7 @@ nonisolated struct ExcelAnalyzer {
             do {
                 debugLog("Firma ZIP rilevata, provo come XLSX", level: .info)
                 let rows = try rowsFromXLSX(at: url)
-                return analyzeRows(normalizeAllCells(rows))
+                return analyzeRowsDetailed(normalizeAllCells(rows))
             } catch {
                 debugLog("Errore lettura XLSX: \(error.localizedDescription)", level: .warning)
 
@@ -1447,7 +1480,7 @@ nonisolated struct ExcelAnalyzer {
         if ext == "xls" || ext == "xlsx" {
             debugLog("Provo parser legacy .xls per \(url.lastPathComponent)", level: .info)
             let rows = try rowsFromLegacyXLS(data: data)
-            return analyzeRows(normalizeAllCells(rows))
+            return analyzeRowsDetailed(normalizeAllCells(rows))
         }
 
         // 4) Estensione non supportata
@@ -1476,7 +1509,12 @@ nonisolated struct ExcelAnalyzer {
 
     static func analyzeSheetRows(_ rows: [[String]])
         -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
-        analyzeRows(normalizeAllCells(rows))
+        let details = analyzeSheetRowsDetailed(rows)
+        return (details.originalHeader, details.normalizedHeader, details.dataRows)
+    }
+
+    static func analyzeSheetRowsDetailed(_ rows: [[String]]) -> ExcelImportAnalysisTable {
+        analyzeRowsDetailed(normalizeAllCells(rows))
     }
 
     private static func looksLikeHtml(data: Data) -> Bool {
@@ -1963,7 +2001,19 @@ nonisolated struct ExcelAnalyzer {
     /// - elimina righe di riepilogo (totali)
     private static func analyzeRows(_ rows: [[String]])
         -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
-        guard !rows.isEmpty else { return ([], [], []) }
+        let details = analyzeRowsDetailed(rows)
+        return (details.originalHeader, details.normalizedHeader, details.dataRows)
+    }
+
+    private static func analyzeRowsDetailed(_ rows: [[String]]) -> ExcelImportAnalysisTable {
+        guard !rows.isEmpty else {
+            return ExcelImportAnalysisTable(
+                originalHeader: [],
+                normalizedHeader: [],
+                headerSource: [],
+                dataRows: []
+            )
+        }
 
         // 1. Trova la riga di intestazione dati
         let (headerRow, dataStartIndex, hasHeader) = findDataHeaderRow(in: rows)
@@ -1973,12 +2023,7 @@ nonisolated struct ExcelAnalyzer {
 
         // 2b. Come su Android: se abbiamo riconosciuto un header,
         //      filtriamo le righe per eliminare totali / righe inutili.
-        let dataRows: [[String]]
-        if hasHeader {
-            dataRows = filterDataRows(rawDataRows)
-        } else {
-            dataRows = rawDataRows
-        }
+        let dataRows = filterDataRows(rawDataRows)
 
         // 3. Rimuovi colonne completamente vuote
         let (filteredHeader, filteredDataRows, _) = removeEmptyColumns(
@@ -1989,6 +2034,10 @@ nonisolated struct ExcelAnalyzer {
         // 4. Normalizza intestazioni
         var normalizedHeader = filteredHeader.enumerated().map { index, rawHeader in
             normalizeHeaderCell(rawHeader, index: index)
+        }
+        var headerSource = filteredHeader.map { rawHeader -> String in
+            if !hasHeader { return "generated" }
+            return canonicalRole(forHeader: rawHeader) == nil ? "unknown" : "alias"
         }
 
         // 5. Mappatura iniziale basata sugli header normalizzati
@@ -2003,20 +2052,24 @@ nonisolated struct ExcelAnalyzer {
              Self.pruneBadMappings(
                 headerMap: &headerMap,
                  normalizedHeader: &normalizedHeader,
+                 headerSource: &headerSource,
                  dataRows: filteredDataRows
             )
          }
 
         // 6. Euristiche sui dati per colonne mancanti.
-        // Se non esiste una riga header reale, non promuoviamo colonne solo dai valori.
-        if hasHeader {
-            headerMap = applyHeuristics(
-                headerMap: headerMap,
-                dataRows: filteredDataRows,
-                normalizedHeader: normalizedHeader
-            )
-        } else {
-            debugLog("Header sintetico: euristiche dati disabilitate per evitare falsi riconoscimenti.", level: .info)
+        let headerMapBeforePatterns = headerMap
+        headerMap = applyHeuristics(
+            headerMap: headerMap,
+            dataRows: filteredDataRows,
+            normalizedHeader: normalizedHeader
+        )
+        for (key, columnIndex) in headerMap where headerMapBeforePatterns[key] == nil {
+            guard normalizedHeader.indices.contains(columnIndex) else { continue }
+            normalizedHeader[columnIndex] = key
+            if headerSource.indices.contains(columnIndex), headerSource[columnIndex] != "alias" {
+                headerSource[columnIndex] = "pattern"
+            }
         }
 
         // 7. Assicura che le colonne obbligatorie (barcode, productName, purchasePrice)
@@ -2024,10 +2077,12 @@ nonisolated struct ExcelAnalyzer {
         let ensured = ensureMandatoryColumns(
             normalizedHeader: normalizedHeader,
             dataRows: filteredDataRows,
+            headerSource: headerSource,
             headerMap: headerMap
         )
         normalizedHeader = ensured.newHeader
         let ensuredDataRows = ensured.newDataRows
+        headerSource = ensured.newHeaderSource
         headerMap = ensured.newHeaderMap
 
         // 8. Filtra righe di riepilogo ...
@@ -2067,7 +2122,12 @@ nonisolated struct ExcelAnalyzer {
         #endif
         
         // 🔹 Ritorniamo sia header originale (filtrato) che normalizzato
-        return (filteredHeader, normalizedHeader, finalDataRows)
+        return ExcelImportAnalysisTable(
+            originalHeader: filteredHeader,
+            normalizedHeader: normalizedHeader,
+            headerSource: headerSource,
+            dataRows: finalDataRows
+        )
     }
 
     // MARK: - Normalizzazione Header (Compatibile con Android)
@@ -2134,14 +2194,6 @@ nonisolated struct ExcelAnalyzer {
 
     /// Trova la riga di header e l'indice da cui iniziano i dati
     private static func findDataHeaderRow(in rows: [[String]]) -> (headerRow: [String], dataStartIndex: Int, hasHeader: Bool) {
-        if let candidate = bestCanonicalHeaderCandidate(in: rows) {
-            debugLog(
-                "Header canonico individuato alla riga \(candidate.index), dati da riga \(candidate.index + 1) (match=\(candidate.canonicalMatches), score=\(candidate.score)).",
-                level: .success
-            )
-            return (rows[candidate.index], candidate.index + 1, true)
-        }
-
         // Heuristica: prima riga che sembra "dati": >=3 numeri e >=1 testo
         var dataRowIdx = -1
         for (idx, row) in rows.enumerated() {
@@ -2385,6 +2437,7 @@ nonisolated struct ExcelAnalyzer {
 
         var result = headerMap
         let colCount = normalizedHeader.count
+        guard !dataRows.isEmpty else { return result }
         let halfThreshold = Int(Double(dataRows.count) * 0.5)
 
         func unusedColumns() -> [Int] {
@@ -2433,6 +2486,88 @@ nonisolated struct ExcelAnalyzer {
                     debugLog("Colonna \(col) identificata come barcode tramite euristica (lunghezza 8/12/13).")
                     break
                 }
+            }
+        }
+
+        // 1b) Coppia Android: totalPrice ~= quantity * purchasePrice entro 10%.
+        // Deve precedere le euristiche numeriche singole per non scambiare purchasePrice per quantity.
+        if result["quantity"] == nil || result["purchasePrice"] == nil || result["totalPrice"] == nil {
+            let numericColumns = unusedColumns().filter { col in
+                let count = dataRows.count(where: { row in
+                    guard col < row.count else { return false }
+                    return row[col].toDouble().map { $0 > 0 } ?? false
+                })
+                return Double(count) >= 0.7 * Double(dataRows.count)
+            }
+
+            func numericValues(in col: Int) -> [Double] {
+                dataRows.compactMap { row in
+                    guard col < row.count else { return nil }
+                    return row[col].toDouble()
+                }
+            }
+
+            func median(_ values: [Double]) -> Double {
+                let sorted = values.sorted()
+                guard !sorted.isEmpty else { return 0 }
+                let mid = sorted.count / 2
+                if sorted.count.isMultiple(of: 2) {
+                    return (sorted[mid - 1] + sorted[mid]) / 2
+                }
+                return sorted[mid]
+            }
+
+            func integerRatio(_ values: [Double]) -> Double {
+                guard !values.isEmpty else { return 0 }
+                let integers = values.count { value in
+                    abs(value.rounded() - value) < 0.0001
+                }
+                return Double(integers) / Double(values.count)
+            }
+
+            var bestTriple: (quantity: Int, purchase: Int, total: Int, matches: Int, score: Double)?
+            for quantityCol in numericColumns {
+                for purchaseCol in numericColumns where purchaseCol != quantityCol {
+                    for totalCol in numericColumns where totalCol != quantityCol && totalCol != purchaseCol {
+                        let matches = dataRows.count(where: { row in
+                            guard quantityCol < row.count,
+                                  purchaseCol < row.count,
+                                  totalCol < row.count,
+                                  let quantity = row[quantityCol].toDouble(),
+                                  let purchase = row[purchaseCol].toDouble(),
+                                  let total = row[totalCol].toDouble() else {
+                                return false
+                            }
+                            let expected = quantity * purchase
+                            let epsilon = 0.10 * max(expected, 1.0)
+                            return abs(total - expected) <= epsilon
+                        })
+                        if Double(matches) >= 0.7 * Double(dataRows.count) {
+                            let quantityValues = numericValues(in: quantityCol)
+                            let purchaseValues = numericValues(in: purchaseCol)
+                            let totalValues = numericValues(in: totalCol)
+                            let quantityMedian = median(quantityValues)
+                            let purchaseMedian = median(purchaseValues)
+                            let totalMedian = median(totalValues)
+                            let score = Double(matches)
+                                + integerRatio(quantityValues)
+                                + (purchaseMedian >= quantityMedian ? 0.10 : 0)
+                                + (totalMedian >= purchaseMedian ? 0.05 : 0)
+                            if bestTriple == nil ||
+                                matches > bestTriple!.matches ||
+                                (matches == bestTriple!.matches && score > bestTriple!.score) {
+                                bestTriple = (quantityCol, purchaseCol, totalCol, matches, score)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let triple = bestTriple {
+                if result["quantity"] == nil { result["quantity"] = triple.quantity }
+                if result["purchasePrice"] == nil { result["purchasePrice"] = triple.purchase }
+                if result["totalPrice"] == nil { result["totalPrice"] = triple.total }
+                debugLog("Colonne \(triple.quantity)/\(triple.purchase)/\(triple.total) identificate come quantity/purchasePrice/totalPrice.", level: .success)
             }
         }
 
@@ -2638,15 +2773,18 @@ nonisolated struct ExcelAnalyzer {
     private static func ensureMandatoryColumns(
         normalizedHeader: [String],
         dataRows: [[String]],
+        headerSource: [String],
         headerMap: [String: Int]
-    ) -> (newHeader: [String], newDataRows: [[String]], newHeaderMap: [String: Int]) {
+    ) -> (newHeader: [String], newDataRows: [[String]], newHeaderSource: [String], newHeaderMap: [String: Int]) {
 
         var newHeader = normalizedHeader
         var newDataRows = dataRows
+        var newHeaderSource = headerSource
         var newHeaderMap = headerMap
 
         func insertColumn(at index: Int, key: String) {
             newHeader.insert(key, at: index)
+            newHeaderSource.insert("generated", at: index)
             for i in 0..<newDataRows.count {
                 newDataRows[i].insert("", at: index)
             }
@@ -2685,7 +2823,7 @@ nonisolated struct ExcelAnalyzer {
             insertColumn(at: idx, key: "purchasePrice")
         }
 
-        return (newHeader, newDataRows, newHeaderMap)
+        return (newHeader, newDataRows, newHeaderSource, newHeaderMap)
     }
 
     /// Elimina righe di riepilogo (totali) basandosi su token e mancanza di identità
@@ -2809,18 +2947,18 @@ nonisolated struct ExcelAnalyzer {
             dataRows: dataRows,
             hasHeader: true
         )
+        var headerSource = normalizedHeader.map { canonicalRole(forHeader: $0) == nil ? "unknown" : "alias" }
         Self.pruneBadMappings(
             headerMap: &headerMap,
             normalizedHeader: &normalizedHeader,
+            headerSource: &headerSource,
             dataRows: dataRows
         )
-        if normalizedHeader.contains(where: { !isGeneratedColumnName($0) }) {
-            headerMap = applyHeuristics(
-                headerMap: headerMap,
-                dataRows: dataRows,
-                normalizedHeader: normalizedHeader
-            )
-        }
+        headerMap = applyHeuristics(
+            headerMap: headerMap,
+            dataRows: dataRows,
+            normalizedHeader: normalizedHeader
+        )
         
         let confidence = calculateAnalysisConfidence(
             header: header,
@@ -2943,6 +3081,7 @@ nonisolated struct ExcelAnalyzer {
     private static func pruneBadMappings(
         headerMap: inout [String: Int],
         normalizedHeader: inout [String],
+        headerSource: inout [String],
         dataRows: [[String]],
         sampleLimit: Int = 200,
         minNonBlankRatio: Double = 0.05,   // < 5% considerata “quasi vuota”
@@ -2991,6 +3130,9 @@ nonisolated struct ExcelAnalyzer {
             // “Togli quell’intestazione”: rimetti un placeholder neutro, così non sembra “riconosciuta”
             if normalizedHeader.indices.contains(col) {
                 normalizedHeader[col] = "col\(col + 1)"
+            }
+            if headerSource.indices.contains(col) {
+                headerSource[col] = "unknown"
             }
         }
     }

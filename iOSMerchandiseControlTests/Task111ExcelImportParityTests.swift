@@ -13,7 +13,7 @@ final class Task111ExcelImportParityTests: XCTestCase {
             "purchasePrice",
             "discount",
             "retailPrice",
-            "stockQuantity"
+            "quantity"
         ]
         let dataRows = [
             ["8.71101E+12", "TASK111 Locale", "EUR 1.234,50", "0.15", "$ 2,345.60", "1 234"]
@@ -34,7 +34,7 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertEqual(analysis.totalInputRows, 1)
     }
 
-    func testDuplicateBarcodeUsesLastRowAndAggregatesRealQuantity() throws {
+    func testDuplicateBarcodeUsesLastRowWithoutSummingQuantity() throws {
         let header = [
             "barcode",
             "productName",
@@ -63,7 +63,275 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertEqual(draft.productName, "Last")
         XCTAssertEqual(draft.purchasePrice, 8.5)
         XCTAssertEqual(draft.retailPrice, 16)
-        XCTAssertEqual(draft.stockQuantity, 5)
+        XCTAssertEqual(draft.stockQuantity, 3)
+    }
+
+    func testParseNumberMatchesAndroidSupplierCases() throws {
+        XCTAssertEqual(try XCTUnwrap(ProductImportCore.parseDouble(from: "1.234,56")), 1234.56, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(ProductImportCore.parseDouble(from: "1,234.56")), 1234.56, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(ProductImportCore.parseDouble(from: "1234,56")), 1234.56, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(ProductImportCore.parseDouble(from: "1234")), 1234, accuracy: 0.0001)
+    }
+
+    func testGoldenSupplierImportFixtureMatchesAndroidContract() throws {
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/supplier-import/android-canonical-sample.json")
+        let fixtureData = try Data(contentsOf: fixtureURL)
+        let fixture = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: fixtureData) as? [String: Any]
+        )
+        let sampleRows = try XCTUnwrap(fixture["sampleRows"] as? [[String]])
+        let sheetRows = try XCTUnwrap(fixture["sheetRows"] as? [[String]])
+        let metadataRowsBeforeHeader = try XCTUnwrap(fixture["metadataRowsBeforeHeader"] as? [[String]])
+        let expectedHeader = try XCTUnwrap(fixture["normalizedHeader"] as? [String])
+        let expectedHeaderSourceByKey = try XCTUnwrap(fixture["headerSource"] as? [String: String])
+        let expectedDataRowsCount = try XCTUnwrap(fixture["dataRowsCount"] as? NSNumber).intValue
+        let expectedDuplicateWarning = try XCTUnwrap(fixture["duplicateWarning"] as? [String: Any])
+        let expectedDuplicateRows = try XCTUnwrap(expectedDuplicateWarning["rows"] as? [NSNumber]).map(\.intValue)
+        let expectedErrors = try XCTUnwrap(fixture["errors"] as? [Any])
+        let expectedParseNumber = try XCTUnwrap(fixture["parseNumberResults"] as? [String: NSNumber])
+
+        let details = ExcelAnalyzer.analyzeSheetRowsDetailed(sampleRows)
+        XCTAssertEqual(details.normalizedHeader, expectedHeader)
+        XCTAssertEqual(
+            details.headerSource,
+            details.normalizedHeader.map { expectedHeaderSourceByKey[$0] ?? "" }
+        )
+        XCTAssertEqual(details.dataRows.count, expectedDataRowsCount)
+
+        let sheetDetails = ExcelAnalyzer.analyzeSheetRowsDetailed(sheetRows)
+        XCTAssertEqual(sheetDetails.normalizedHeader, expectedHeader)
+        XCTAssertEqual(sheetDetails.dataRows.count, expectedDataRowsCount)
+        XCTAssertGreaterThan(metadataRowsBeforeHeader.count, 0)
+
+        let aliasSamples = try XCTUnwrap(fixture["aliasSamples"] as? [String: [[String]]])
+        for (_, rows) in aliasSamples {
+            let aliasDetails = ExcelAnalyzer.analyzeSheetRowsDetailed(rows)
+            XCTAssertEqual(aliasDetails.normalizedHeader, expectedHeader)
+        }
+
+        let headerlessSample = try XCTUnwrap(fixture["headerlessSample"] as? [String: Any])
+        let headerlessRows = try XCTUnwrap(headerlessSample["rows"] as? [[String]])
+        let headerlessExpectedHeader = try XCTUnwrap(headerlessSample["normalizedHeader"] as? [String])
+        let headerlessExpectedSource = try XCTUnwrap(headerlessSample["headerSource"] as? [String])
+        let headerlessDetails = ExcelAnalyzer.analyzeSheetRowsDetailed(headerlessRows)
+        XCTAssertEqual(headerlessDetails.normalizedHeader, headerlessExpectedHeader)
+        XCTAssertEqual(headerlessDetails.headerSource, headerlessExpectedSource)
+
+        for (raw, expected) in expectedParseNumber {
+            XCTAssertEqual(
+                try XCTUnwrap(ProductImportCore.parseDouble(from: raw)),
+                expected.doubleValue,
+                accuracy: 0.0001
+            )
+        }
+
+        let importHeader = [AndroidImportKey.rowNumber] + details.normalizedHeader
+        let importRows = details.dataRows.enumerated().map { item in
+            [String(item.offset + 2)] + item.element
+        }
+        let analysis = ProductImportCore.analyzeImport(
+            header: importHeader,
+            dataRows: importRows,
+            existingProductsByBarcode: [
+                "9999999900001": ProductDraft(
+                    barcode: "9999999900001",
+                    itemNumber: "EX-001",
+                    productName: "Existing old",
+                    secondProductName: nil,
+                    purchasePrice: 90,
+                    retailPrice: 140,
+                    stockQuantity: nil,
+                    supplierName: "Fornitore A",
+                    categoryName: "Categoria A"
+                )
+            ]
+        )
+
+        XCTAssertEqual(analysis.newProducts.count, try XCTUnwrap(fixture["newProducts"] as? NSNumber).intValue)
+        XCTAssertEqual(analysis.updatedProducts.count, try XCTUnwrap(fixture["updatedProducts"] as? NSNumber).intValue)
+        XCTAssertEqual(analysis.errors.count, expectedErrors.count)
+        XCTAssertEqual(analysis.warnings.first?.barcode, expectedDuplicateWarning["barcode"] as? String)
+        XCTAssertEqual(analysis.warnings.first?.rowNumbers, expectedDuplicateRows)
+        XCTAssertTrue(analysis.newProducts.contains { $0.barcode == fixture["itemNumberOnlyAcceptedBarcode"] as? String })
+
+        let forbiddenKeys = try XCTUnwrap(fixture["forbiddenPublicKeys"] as? [String])
+        for key in forbiddenKeys {
+            XCTAssertFalse(details.normalizedHeader.contains(key), "\(key) leaked into normalizedHeader")
+        }
+        let publicKeysAudit = try XCTUnwrap(fixture["publicKeysAudit"] as? [String: Any])
+        let auditForbiddenKeys = try XCTUnwrap(publicKeysAudit["forbidden"] as? [String])
+        let previewRows = try XCTUnwrap(fixture["previewRows"] as? [[String: Any]])
+        for key in auditForbiddenKeys {
+            XCTAssertFalse(previewRows.contains { $0.keys.contains(key) }, "\(key) leaked into previewRows")
+        }
+    }
+
+    func testNewProductIdentityMatchesAndroidProductNameOrItemNumber() throws {
+        let analysis = ProductImportCore.analyzeImport(
+            header: ["barcode", "itemNumber", "secondProductName", "purchasePrice", "retailPrice"],
+            dataRows: [
+                ["TASK111_ITEM_ONLY", "ITEM-ONLY", "", "10", "20"],
+                ["TASK111_SECOND_ONLY", "", "Only second name", "10", "20"]
+            ],
+            existingProductsByBarcode: [:]
+        )
+
+        XCTAssertEqual(analysis.newProducts.map(\.barcode), ["TASK111_ITEM_ONLY"])
+        XCTAssertEqual(analysis.newProducts.first?.itemNumber, "ITEM-ONLY")
+        XCTAssertTrue(analysis.errors.contains {
+            $0.rowNumber == 2 &&
+            $0.reasonKeys.contains("import.analysis.row_error.product_name_missing")
+        })
+    }
+
+    func testNewProductMissingRetailPriceBlocksApplyEvenWithItemNumber() throws {
+        let analysis = ProductImportCore.analyzeImport(
+            header: ["barcode", "itemNumber", "purchasePrice", "quantity"],
+            dataRows: [
+                ["TASK111_NO_RETAIL", "ITEM-NO-RETAIL", "100", "1"]
+            ],
+            existingProductsByBarcode: [:]
+        )
+
+        XCTAssertTrue(analysis.newProducts.isEmpty)
+        let error = try XCTUnwrap(analysis.errors.first)
+        XCTAssertEqual(error.rowNumber, 1)
+        XCTAssertEqual(error.reasonKeys, ["import.analysis.row_error.retail_required"])
+        XCTAssertEqual(error.rowContent[AndroidImportKey.itemNumber], "ITEM-NO-RETAIL")
+        XCTAssertNil(error.rowContent["stockQuantity"])
+        XCTAssertNil(error.rowContent["prevPurchase"])
+        XCTAssertNil(error.rowContent["prevRetail"])
+    }
+
+    func testRetailMarkupHelperFillsOnlyEmptyRetailPriceByDefault() throws {
+        var drafts = [
+            ProductDraft(
+                barcode: "TASK111_BULK_EMPTY",
+                productName: "Bulk empty",
+                purchasePrice: 100,
+                retailPrice: nil
+            ),
+            ProductDraft(
+                barcode: "TASK111_BULK_FILLED",
+                productName: "Bulk filled",
+                purchasePrice: 100,
+                retailPrice: 180
+            ),
+            ProductDraft(
+                barcode: "TASK111_BULK_NO_PURCHASE",
+                productName: "Bulk no purchase",
+                purchasePrice: nil,
+                retailPrice: nil
+            )
+        ]
+
+        let changed = ProductImportCore.applyRetailMarkup(
+            to: &drafts,
+            markupPercent: 30,
+            roundingStep: 50,
+            onlyEmptyRetailPrice: true
+        )
+
+        XCTAssertEqual(changed, 1)
+        XCTAssertEqual(drafts[0].retailPrice, 150)
+        XCTAssertEqual(drafts[1].retailPrice, 180)
+        XCTAssertNil(drafts[2].retailPrice)
+    }
+
+    func testLegacyImportAliasesNormalizeToAndroidCanonicalKeys() throws {
+        let details = ExcelAnalyzer.analyzeSheetRowsDetailed([
+            [
+                "Codice a barre",
+                "Nome",
+                "Prezzo acquisto",
+                "Prezzo vendita",
+                "stockQuantity",
+                "prevPurchase",
+                "prevRetail"
+            ],
+            [
+                "1234567890123",
+                "Legacy alias",
+                "1.234,56",
+                "2,345.67",
+                "4",
+                "900",
+                "1500"
+            ]
+        ])
+
+        XCTAssertEqual(details.normalizedHeader, [
+            "barcode",
+            "productName",
+            "purchasePrice",
+            "retailPrice",
+            "quantity",
+            "oldPurchasePrice",
+            "oldRetailPrice"
+        ])
+        XCTAssertEqual(details.headerSource, Array(repeating: "alias", count: details.normalizedHeader.count))
+        XCTAssertFalse(details.normalizedHeader.contains("stockQuantity"))
+        XCTAssertFalse(details.normalizedHeader.contains("prevPurchase"))
+        XCTAssertFalse(details.normalizedHeader.contains("prevRetail"))
+
+        let analysis = ProductImportCore.analyzeImport(
+            header: details.normalizedHeader,
+            dataRows: details.dataRows,
+            existingProductsByBarcode: [:]
+        )
+
+        XCTAssertTrue(analysis.errors.isEmpty)
+        let draft = try XCTUnwrap(analysis.newProducts.first)
+        XCTAssertEqual(draft.stockQuantity, 4)
+        XCTAssertEqual(draft.oldPurchasePrice, 900)
+        XCTAssertEqual(draft.oldRetailPrice, 1500)
+    }
+
+    func testMappedRowsExposeOnlyAndroidCanonicalKeys() throws {
+        let analysis = ProductImportCore.analyzeImport(
+            header: [
+                "barcode",
+                "productName",
+                "purchasePrice",
+                "retailPrice",
+                "articleCode",
+                "stockQuantity",
+                "prevPurchase",
+                "unknownSupplierKey"
+            ],
+            dataRows: [
+                ["", "Canonical only", "10", "20", "ART-LEAK", "5", "7", "ignored"]
+            ],
+            existingProductsByBarcode: [:]
+        )
+
+        let error = try XCTUnwrap(analysis.errors.first)
+        XCTAssertFalse(error.rowContent.keys.contains("articleCode"))
+        XCTAssertFalse(error.rowContent.keys.contains("unknownSupplierKey"))
+        XCTAssertFalse(error.rowContent.keys.contains("stockQuantity"))
+        XCTAssertFalse(error.rowContent.keys.contains("prevPurchase"))
+        XCTAssertEqual(error.rowContent[AndroidImportKey.quantity], "5")
+        XCTAssertEqual(error.rowContent[AndroidImportKey.oldPurchasePrice], "7")
+    }
+
+    func testHeaderlessSupplierRowsPromotePatternColumnsWithHeaderSource() throws {
+        let details = ExcelAnalyzer.analyzeSheetRowsDetailed([
+            ["1234567890123", "No header A", "2.50", "3", "7.50"],
+            ["9876543210987", "No header B", "4.00", "2", "8.00"]
+        ])
+
+        XCTAssertEqual(details.normalizedHeader, [
+            "barcode",
+            "productName",
+            "purchasePrice",
+            "quantity",
+            "totalPrice"
+        ])
+        XCTAssertEqual(details.headerSource, Array(repeating: "pattern", count: details.normalizedHeader.count))
+        XCTAssertEqual(details.dataRows.count, 2)
     }
 
     func testValidationRejectsDirtyRowsWithoutBlockingValidRows() throws {
@@ -73,7 +341,7 @@ final class Task111ExcelImportParityTests: XCTestCase {
             "secondProductName",
             "purchasePrice",
             "retailPrice",
-            "stockQuantity",
+            "quantity",
             "discount"
         ]
         let dataRows = [
@@ -133,14 +401,16 @@ final class Task111ExcelImportParityTests: XCTestCase {
             categoryName: product.category?.name
         )
         let analysis = ProductImportCore.analyzeImport(
-            header: ["barcode", "productName", "purchasePrice"],
-            dataRows: [["TASK111_EXISTING", "Existing updated", "5"]],
+            header: ["barcode", "purchasePrice"],
+            dataRows: [["TASK111_EXISTING", "5"]],
             existingProductsByBarcode: [existing.barcode: existing]
         )
 
         XCTAssertEqual(analysis.updatedProducts.count, 1)
         let update = try XCTUnwrap(analysis.updatedProducts.first)
-        XCTAssertEqual(update.new.productName, "Existing updated")
+        XCTAssertTrue(analysis.errors.isEmpty)
+        XCTAssertEqual(update.new.productName, "Existing")
+        XCTAssertEqual(update.new.itemNumber, "OLD")
         XCTAssertEqual(update.new.retailPrice, 6)
         XCTAssertEqual(update.new.stockQuantity, 10)
         XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).first?.productName, "Existing")

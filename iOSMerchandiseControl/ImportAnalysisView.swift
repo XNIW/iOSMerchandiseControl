@@ -273,6 +273,9 @@ struct ImportAnalysisView: View {
     @State private var editingDraftItem: EditingItem?
     @State private var isApplying = false
     @State private var selectedFilter: AnalysisFilter = .all
+    @State private var bulkMarkupPercent = "30"
+    @State private var bulkRoundingStep = 100
+    @State private var bulkOnlyEmptyRetailPrice = true
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     let hasWorkToApply: () -> Bool
     let onApply: () async throws -> Void
@@ -337,6 +340,7 @@ struct ImportAnalysisView: View {
         List {
             summarySection
             filterSection
+            bulkRetailPriceSection
 
             if showsWarnings {
                 warningsSection
@@ -543,6 +547,44 @@ struct ImportAnalysisView: View {
                 .padding(.vertical, 2)
             }
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 0))
+        }
+    }
+
+    private var bulkRetailPriceSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Calcola prezzo vendita da prezzo acquisto")
+                    .font(.subheadline.weight(.semibold))
+
+                Text("Il prezzo vendita viene scritto solo come modifica esplicita: purchasePrice non viene mai copiato automaticamente in retailPrice.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                TextField("Markup %", text: $bulkMarkupPercent)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.roundedBorder)
+
+                Picker("Arrotonda a", selection: $bulkRoundingStep) {
+                    Text("10").tag(10)
+                    Text("50").tag(50)
+                    Text("100").tag(100)
+                }
+                .pickerStyle(.segmented)
+
+                Toggle("Solo righe con retailPrice vuoto", isOn: $bulkOnlyEmptyRetailPrice)
+
+                Button {
+                    applyBulkRetailPrices()
+                } label: {
+                    Label("Applica calcolo", systemImage: "wand.and.stars")
+                }
+                .buttonStyle(.bordered)
+                .disabled(!hasBulkRetailPriceCandidates)
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Prezzi e conferma")
         }
     }
 
@@ -871,6 +913,39 @@ struct ImportAnalysisView: View {
         }
     }
 
+    private var hasBulkRetailPriceCandidates: Bool {
+        session.newProducts.contains { ($0.purchasePrice ?? 0) > 0 }
+            || session.updatedProducts.contains { ($0.new.purchasePrice ?? 0) > 0 }
+    }
+
+    private func applyBulkRetailPrices() {
+        guard let markupPercent = ProductImportCore.parseDouble(from: bulkMarkupPercent) else {
+            applyError = "Markup non valido."
+            return
+        }
+
+        let roundingStep = Double(bulkRoundingStep)
+        let changedNew = ProductImportCore.applyRetailMarkup(
+            to: &session.newProducts,
+            markupPercent: markupPercent,
+            roundingStep: roundingStep,
+            onlyEmptyRetailPrice: bulkOnlyEmptyRetailPrice
+        )
+        let changedUpdates = ProductImportCore.applyRetailMarkup(
+            to: &session.updatedProducts,
+            markupPercent: markupPercent,
+            roundingStep: roundingStep,
+            onlyEmptyRetailPrice: bulkOnlyEmptyRetailPrice
+        )
+        let changed = changedNew + changedUpdates > 0
+
+        if changed {
+            session.refreshNonProductSummary()
+        } else {
+            applyError = "Nessuna riga ha un purchasePrice disponibile per il calcolo."
+        }
+    }
+
     private func exportErrors() {
         Task { @MainActor in
             do {
@@ -1103,9 +1178,13 @@ private struct EditProductDraftView: View {
         productName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var trimmedItemNumber: String {
+        itemNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var saveDisabled: Bool {
         trimmedBarcode.isEmpty
-            || trimmedProductName.isEmpty
+            || (trimmedProductName.isEmpty && trimmedItemNumber.isEmpty)
             || forbiddenBarcodes.contains(trimmedBarcode)
     }
 
