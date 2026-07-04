@@ -30,6 +30,7 @@ for (const [legacy, canonical] of [
   ["categoryname", "category"],
   ["prevpurchase", "oldPurchasePrice"],
   ["prevretail", "oldRetailPrice"],
+  ["ref", "itemNumber"],
 ]) {
   contains(core, `"${legacy}": AndroidImportKey.${canonical}`);
 }
@@ -39,7 +40,9 @@ contains(core, "return \"\"");
 contains(core, "let realQuantity = numeric(row[AndroidImportKey.realQuantity])");
 contains(core, "return numeric(row[AndroidImportKey.quantity])");
 contains(core, "pendingByBarcode[barcode] = PendingRow(");
-contains(core, "rowErrorKeys.append(\"import.analysis.row_error.retail_required\")");
+contains(core, "let key = \"import.analysis.row_error.retail_required\"");
+contains(core, "recoverableErrorKeys.append(key)");
+contains(core, "if !blockingErrorKeys.isEmpty");
 contains(core, "finalRetail = retail.value.map(roundPrice)");
 assert.equal(core.includes("quantitySum"), false, "quantity summing must not exist");
 assert.equal(core.includes("stockQuantity -> quantity"), false, "forbidden public key wording leaked into core contract");
@@ -48,17 +51,23 @@ contains(excel, "ExcelImportAnalysisTable");
 contains(excel, "headerSource");
 contains(excel, "applyHeuristics(");
 contains(excel, "headerSource[columnIndex] = \"pattern\"");
+contains(excel, "\"itemnumber\", \"item_number\", \"ref\"");
+contains(excel, "zeroPaddedIntegerString");
 
 contains(core, "static func calculatedRetailPrice(");
 contains(core, "static func applyRetailMarkup(");
 contains(view, "ProductImportCore.applyRetailMarkup(");
+contains(view, "hasCorrectableDraftIssues");
+contains(view, "guard canApply else { return }");
 
 for (const requiredTest of [
   "testGoldenSupplierImportFixtureMatchesAndroidContract",
   "testHeaderlessSupplierRowsPromotePatternColumnsWithHeaderSource",
   "testDuplicateBarcodeUsesLastRowWithoutSummingQuantity",
+  "testNewProductIdentityMatchesAndroidPrimaryOrSecondNameFallback",
   "testNewProductMissingRetailPriceBlocksApplyEvenWithItemNumber",
   "testRetailMarkupHelperFillsOnlyEmptyRetailPriceByDefault",
+  "testXlsxNumericBarcodeStylePreservesLeadingZeroes",
   "testLegacyImportAliasesNormalizeToAndroidCanonicalKeys",
   "testMappedRowsExposeOnlyAndroidCanonicalKeys",
 ]) {

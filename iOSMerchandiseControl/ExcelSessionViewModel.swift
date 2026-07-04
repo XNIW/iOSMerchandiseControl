@@ -1028,6 +1028,10 @@ nonisolated struct ExcelAnalyzer {
         let path: String
     }
 
+    private struct CellStyle {
+        let zeroPaddingWidth: Int?
+    }
+
     // MARK: - XML Parser Delegates
 
     /// Parser per sharedStrings.xml
@@ -1115,6 +1119,46 @@ nonisolated struct ExcelAnalyzer {
             relationships[id] = target
         }
     }
+
+    private final class StylesDelegate: NSObject, XMLParserDelegate {
+        var customFormats: [String: String] = [:]
+        var styles: [CellStyle] = []
+        private var inCellXfs = false
+
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attributeDict: [String : String] = [:]) {
+            switch name {
+            case "numFmt":
+                guard let id = attributeDict["numFmtId"],
+                      let formatCode = attributeDict["formatCode"] else {
+                    return
+                }
+                customFormats[id] = formatCode
+
+            case "cellXfs":
+                inCellXfs = true
+
+            case "xf" where inCellXfs:
+                let formatCode = attributeDict["numFmtId"].flatMap { customFormats[$0] }
+                styles.append(
+                    CellStyle(
+                        zeroPaddingWidth: ExcelAnalyzer.zeroPaddingWidth(from: formatCode)
+                    )
+                )
+
+            default:
+                break
+            }
+        }
+
+        func parser(_ parser: XMLParser, didEndElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?) {
+            if name == "cellXfs" {
+                inCellXfs = false
+            }
+        }
+    }
     
     private static func normalizeAllCells(_ rows: [[String]]) -> [[String]] {
         rows.map { row in
@@ -1125,6 +1169,7 @@ nonisolated struct ExcelAnalyzer {
     /// Parser per sheetX.xml (righe + celle)
     private final class SheetDelegate: NSObject, XMLParserDelegate {
         let sharedStrings: [String]
+        let styles: [CellStyle]
 
         // output
         var rows: [[String]] = []
@@ -1134,11 +1179,13 @@ nonisolated struct ExcelAnalyzer {
         var currentColIndex: Int = 0
         var currentCellType: String? = nil   // "s" per shared string
         var currentCellRef: String? = nil
+        var currentStyleIndex: Int? = nil
         var collectingValue = false
         var currentValue: String = ""
 
-        init(sharedStrings: [String]) {
+        init(sharedStrings: [String], styles: [CellStyle]) {
             self.sharedStrings = sharedStrings
+            self.styles = styles
         }
 
         func parser(_ parser: XMLParser, didStartElement name: String,
@@ -1153,6 +1200,7 @@ nonisolated struct ExcelAnalyzer {
             case "c": // cell
                 currentCellType = attributeDict["t"]
                 currentCellRef = attributeDict["r"]
+                currentStyleIndex = attributeDict["s"].flatMap(Int.init)
                 currentValue = ""
                 collectingValue = false
 
@@ -1193,6 +1241,11 @@ nonisolated struct ExcelAnalyzer {
                     if let idx = Int(text), idx >= 0, idx < sharedStrings.count {
                         text = sharedStrings[idx]
                     }
+                } else if let currentStyleIndex,
+                          currentStyleIndex >= 0,
+                          currentStyleIndex < styles.count,
+                          let width = styles[currentStyleIndex].zeroPaddingWidth {
+                    text = ExcelAnalyzer.zeroPaddedIntegerString(text, width: width)
                 }
 
                 // Assicuriamo capacità della riga
@@ -1276,7 +1329,7 @@ nonisolated struct ExcelAnalyzer {
             "second name", "secondname", "nombre 2", "nome 2"
         ]),
         ("itemNumber", [
-            "itemnumber", "item_number", "货号", "codice",
+            "itemnumber", "item_number", "ref", "货号", "codice",
             "code", "articolo", "número de artículo",
             "numero de artículo", "número de producto",
             "numero de producto", "código", "referencia",
@@ -1387,10 +1440,34 @@ nonisolated struct ExcelAnalyzer {
     /// Token che identificano righe di riepilogo ("totale", "subtotal", ecc.)
     private static let summaryTokens = [
         "合计", "总计", "小计", "汇总", "合計", "總計",
-        "小計", "總結", "总额",
+        "小計", "總結", "总额", "总数", "总价", "总数量", "总金额", "总件数",
         "subtotal", "total", "totale", "tot.", "sommario",
         "resumen", "sum"
-    ].map { $0.lowercased() }
+    ].map(normalizeSummaryLabel)
+
+    private static let summarySuffixTokens = Set([
+        "",
+        "总数", "总价", "总数量", "总金额", "总件数",
+        "quantity", "qty", "count", "price", "amount", "importe"
+    ].map(normalizeSummaryLabel))
+
+    private static func normalizeSummaryLabel(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .components(separatedBy: CharacterSet(charactersIn: " \t\n\r:：()（）._-"))
+            .joined()
+    }
+
+    private static func isSummaryLabel(_ value: String) -> Bool {
+        let normalized = normalizeSummaryLabel(value)
+        guard !normalized.isEmpty else { return false }
+        if summaryTokens.contains(normalized) { return true }
+        return summaryTokens.contains { token in
+            normalized.hasPrefix(token) &&
+            summarySuffixTokens.contains(normalizeSummaryLabel(String(normalized.dropFirst(token.count))))
+        }
+    }
 
     // MARK: - API principale
 
@@ -1495,6 +1572,7 @@ nonisolated struct ExcelAnalyzer {
     static func readSheetByName(at url: URL, sheetName: String) throws -> [[String]] {
         let archive = try openXLSXArchive(at: url)
         let sharedStrings = try sharedStringsFromArchive(archive)
+        let styles = try stylesFromArchive(archive)
         let targetKey = normalizedSheetKey(sheetName)
 
         guard let sheetInfo = try workbookSheets(from: archive).first(where: {
@@ -1504,7 +1582,7 @@ nonisolated struct ExcelAnalyzer {
         }
 
         let sheetData = try dataFromArchive(archive, path: sheetInfo.path)
-        return parseSheetXML(sheetData, sharedStrings: sharedStrings)
+        return parseSheetXML(sheetData, sharedStrings: sharedStrings, styles: styles)
     }
 
     static func analyzeSheetRows(_ rows: [[String]])
@@ -1832,6 +1910,7 @@ nonisolated struct ExcelAnalyzer {
 
         // 1) sharedStrings.xml (può anche non esserci)
         let sharedStrings = try sharedStringsFromArchive(archive)
+        let styles = try stylesFromArchive(archive)
 
         // 2) Trova il primo sheet
         //   - prima proviamo "xl/worksheets/sheet1.xml"
@@ -1846,7 +1925,7 @@ nonisolated struct ExcelAnalyzer {
         }
 
         let sheetData = try dataFromArchive(archive, path: sheetPath)
-        return parseSheetXML(sheetData, sharedStrings: sharedStrings)
+        return parseSheetXML(sheetData, sharedStrings: sharedStrings, styles: styles)
     }
     
     // MARK: - Parser sharedStrings.xml
@@ -1861,8 +1940,12 @@ nonisolated struct ExcelAnalyzer {
     
     // MARK: - Parser sheet.xml → righe
 
-    private static func parseSheetXML(_ data: Data, sharedStrings: [String]) -> [[String]] {
-        let delegate = SheetDelegate(sharedStrings: sharedStrings)
+    private static func parseSheetXML(
+        _ data: Data,
+        sharedStrings: [String],
+        styles: [CellStyle]
+    ) -> [[String]] {
+        let delegate = SheetDelegate(sharedStrings: sharedStrings, styles: styles)
         let parser = XMLParser(data: data)
         parser.delegate = delegate
         parser.parse()
@@ -1895,6 +1978,47 @@ nonisolated struct ExcelAnalyzer {
             return parseSharedStringsXML(ssData)
         }
         return []
+    }
+
+    private static func stylesFromArchive(_ archive: Archive) throws -> [CellStyle] {
+        guard let stylesData = try? dataFromArchive(archive, path: "xl/styles.xml") else {
+            return []
+        }
+
+        let delegate = StylesDelegate()
+        let parser = XMLParser(data: stylesData)
+        parser.delegate = delegate
+        parser.parse()
+        return delegate.styles
+    }
+
+    private static func zeroPaddingWidth(from formatCode: String?) -> Int? {
+        guard let formatCode else { return nil }
+        let primarySection = formatCode.split(separator: ";", maxSplits: 1).first.map(String.init) ?? formatCode
+        let cleaned = primarySection
+            .replacingOccurrences(of: #"\"#, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !cleaned.isEmpty,
+              cleaned.allSatisfy({ $0 == "0" }) else {
+            return nil
+        }
+
+        return cleaned.count
+    }
+
+    private static func zeroPaddedIntegerString(_ rawValue: String, width: Int) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard width > 0,
+              let value = Double(trimmed),
+              value.isFinite,
+              value.rounded() == value else {
+            return rawValue
+        }
+
+        let integer = String(Int64(value))
+        guard integer.count < width else { return integer }
+        return String(repeating: "0", count: width - integer.count) + integer
     }
 
     private static func workbookSheets(from archive: Archive) throws -> [WorkbookSheetInfo] {
@@ -2194,6 +2318,11 @@ nonisolated struct ExcelAnalyzer {
 
     /// Trova la riga di header e l'indice da cui iniziano i dati
     private static func findDataHeaderRow(in rows: [[String]]) -> (headerRow: [String], dataStartIndex: Int, hasHeader: Bool) {
+        if let candidate = bestCanonicalHeaderCandidate(in: rows) {
+            debugLog("Header canonico individuato alla riga \(candidate.index), dati da riga \(candidate.index + 1).")
+            return (rows[candidate.index], candidate.index + 1, true)
+        }
+
         // Heuristica: prima riga che sembra "dati": >=3 numeri e >=1 testo
         var dataRowIdx = -1
         for (idx, row) in rows.enumerated() {
@@ -2485,6 +2614,25 @@ nonisolated struct ExcelAnalyzer {
                     result["barcode"] = col
                     debugLog("Colonna \(col) identificata come barcode tramite euristica (lunghezza 8/12/13).")
                     break
+                }
+            }
+        }
+
+        if result["itemNumber"] == nil,
+           let barcodeCol = result["barcode"],
+           barcodeCol > 0 {
+            let candidateCol = barcodeCol - 1
+            if unusedColumns().contains(candidateCol) {
+                let matches = dataRows.count(where: { row in
+                    guard candidateCol < row.count else { return false }
+                    let value = row[candidateCol].trimmingCharacters(in: .whitespacesAndNewlines)
+                    return value.count >= 4 &&
+                        value.count <= 12 &&
+                        value.allSatisfy { $0.isNumber || $0.isLetter || $0 == "-" || $0 == "_" }
+                })
+                if matches >= halfThreshold {
+                    result["itemNumber"] = candidateCol
+                    debugLog("Colonna \(candidateCol) identificata come itemNumber tramite euristica Android pre-barcode.")
                 }
             }
         }
@@ -2834,27 +2982,25 @@ nonisolated struct ExcelAnalyzer {
     ) -> [[String]] {
 
         return dataRows.filter { row in
-            let productName = headerMap["productName"].flatMap { idx in
-                idx < row.count ? row[idx] : ""
-            } ?? ""
-            let itemNumber = headerMap["itemNumber"].flatMap { idx in
-                idx < row.count ? row[idx] : ""
-            } ?? ""
-            let barcode = headerMap["barcode"].flatMap { idx in
-                idx < row.count ? row[idx] : ""
-            } ?? ""
+            func value(_ key: String) -> String {
+                headerMap[key].flatMap { idx in
+                    idx < row.count ? row[idx] : ""
+                } ?? ""
+            }
+
+            let productName = value("productName")
+            let secondProductName = value("secondProductName")
+            let itemNumber = value("itemNumber")
+            let barcode = value("barcode")
 
             // primo testo non numerico nella riga
             let firstText = row.first(where: { cell in
                 let trimmed = cell.trimmingCharacters(in: .whitespacesAndNewlines)
                 return !trimmed.isEmpty && trimmed.toDouble() == nil
-            })?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            })?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             // token di riepilogo?
-            let looksLikeToken = summaryTokens.contains { token in
-                firstText.hasPrefix(token) ||
-                productName.lowercased().hasPrefix(token)
-            }
+            let looksLikeToken = isSummaryLabel(firstText) || isSummaryLabel(productName)
 
             // quante celle numeriche ci sono nella riga?
             let numberCount = row.filter { cell in
@@ -2863,13 +3009,55 @@ nonisolated struct ExcelAnalyzer {
             }.count
 
             // riga senza identità (nessun barcode/item/productName significativo)
-            let lacksIdentity = barcode.isEmpty &&
-                                itemNumber.isEmpty &&
-                                productName.count < 3
+            let lacksIdentity = !hasPlausibleProductIdentity(
+                barcode: barcode,
+                itemNumber: itemNumber,
+                productName: productName,
+                secondProductName: secondProductName
+            )
 
             // Filtra via solo se sembra davvero un riepilogo
             return !(looksLikeToken && numberCount >= 2 && lacksIdentity)
         }
+    }
+
+    private static func hasPlausibleProductIdentity(
+        barcode: String,
+        itemNumber: String,
+        productName: String,
+        secondProductName: String
+    ) -> Bool {
+        let code = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        let digits = code.filter(\.isNumber)
+        let barcodeLooksPlausible = digits.count >= 8 &&
+            (code.allSatisfy(\.isNumber) || code.toDouble() == nil)
+        let itemLooksPlausible = hasPlausibleItemIdentity(itemNumber)
+        let nameLooksPlausible = hasPlausibleNameIdentity(productName)
+        let secondNameLooksPlausible = hasPlausibleNameIdentity(secondProductName)
+        return barcodeLooksPlausible || itemLooksPlausible || nameLooksPlausible || secondNameLooksPlausible
+    }
+
+    private static func hasPlausibleItemIdentity(_ value: String) -> Bool {
+        let item = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !item.isEmpty, !isSummaryLabel(item) else { return false }
+        let isNumeric = item.toDouble() != nil
+        let digitsOnly = item.allSatisfy(\.isNumber)
+        if isNumeric && !digitsOnly { return false }
+        let digitCount = item.filter(\.isNumber).count
+        let letterCount = item.filter(\.isLetter).count
+        let separatorCount = item.filter { $0 == "-" || $0 == "/" || $0 == "_" }.count
+        if digitCount == item.count { return digitCount >= 4 }
+        if digitCount > 0 { return true }
+        if separatorCount > 0 { return true }
+        if letterCount == item.count { return item.count >= 5 }
+        return item.count >= 4
+    }
+
+    private static func hasPlausibleNameIdentity(_ value: String) -> Bool {
+        let name = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.count >= 3 &&
+            name.toDouble() == nil &&
+            !isSummaryLabel(name)
     }
     
     private enum DebugLevel {

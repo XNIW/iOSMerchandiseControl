@@ -53,6 +53,7 @@ nonisolated enum ProductImportCore {
     private struct ParsedDraft {
         let draft: ProductDraft
         let errorKeys: [String]
+        let recoverableErrorKeys: [String]
     }
 
     private struct NumericValue {
@@ -239,6 +240,10 @@ nonisolated enum ProductImportCore {
                 row: row,
                 existingDraft: oldDraft
             )
+            let recoverableErrorKeys = Set(parsed.recoverableErrorKeys)
+            let blockingErrorKeys = parsed.errorKeys.filter {
+                !recoverableErrorKeys.contains($0)
+            }
 
             if !parsed.errorKeys.isEmpty {
                 errors.append(
@@ -248,7 +253,9 @@ nonisolated enum ProductImportCore {
                         rowContent: row
                     )
                 )
-                continue
+                if !blockingErrorKeys.isEmpty {
+                    continue
+                }
             }
 
             if let oldDraft {
@@ -473,6 +480,7 @@ nonisolated enum ProductImportCore {
         existingDraft: ProductDraft?
     ) -> ParsedDraft {
         var rowErrorKeys: [String] = []
+        var recoverableErrorKeys: [String] = []
 
         let itemNumber = normalizedDisplayName(row[AndroidImportKey.itemNumber])
         let productName = normalizedDisplayName(row[AndroidImportKey.productName])
@@ -487,7 +495,7 @@ nonisolated enum ProductImportCore {
             hasExistingDraft = false
         }
 
-        if productName == nil && itemNumber == nil && !hasExistingDraft {
+        if productName == nil && itemNumber == nil && secondProductName == nil && !hasExistingDraft {
             rowErrorKeys.append("import.analysis.row_error.product_name_missing")
         }
 
@@ -543,7 +551,11 @@ nonisolated enum ProductImportCore {
         let finalRetail = retail.value.map(roundPrice)
         if !hasExistingDraft {
             if finalRetail == nil || (finalRetail ?? 0) <= 0 {
-                rowErrorKeys.append("import.analysis.row_error.retail_required")
+                let key = "import.analysis.row_error.retail_required"
+                rowErrorKeys.append(key)
+                if !retail.hasInput {
+                    recoverableErrorKeys.append(key)
+                }
             }
         } else if retail.hasInput, let finalRetail, finalRetail <= 0 {
             rowErrorKeys.append("import.analysis.row_error.retail_positive")
@@ -580,7 +592,11 @@ nonisolated enum ProductImportCore {
             )
         }
 
-        return ParsedDraft(draft: draft, errorKeys: rowErrorKeys)
+        return ParsedDraft(
+            draft: draft,
+            errorKeys: rowErrorKeys,
+            recoverableErrorKeys: recoverableErrorKeys
+        )
     }
 
     private static func mappedRow(header: [String], row: [String]) -> [String: String] {
@@ -645,6 +661,7 @@ nonisolated enum ProductImportCore {
         "articolo": AndroidImportKey.itemNumber,
         "codicearticolo": AndroidImportKey.itemNumber,
         "sku": AndroidImportKey.itemNumber,
+        "ref": AndroidImportKey.itemNumber,
         "codigo": AndroidImportKey.itemNumber,
         "productname": AndroidImportKey.productName,
         "nomeprodotto": AndroidImportKey.productName,

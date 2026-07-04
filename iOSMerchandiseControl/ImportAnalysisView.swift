@@ -312,8 +312,16 @@ struct ImportAnalysisView: View {
         session.newProducts.count + session.updatedProducts.count
     }
 
+    private var hasCorrectableDraftIssues: Bool {
+        session.newProducts.contains { ($0.retailPrice ?? 0) <= 0 }
+            || session.updatedProducts.contains { update in
+                guard let retailPrice = update.new.retailPrice else { return false }
+                return retailPrice <= 0
+            }
+    }
+
     private var canApply: Bool {
-        !isApplying && hasWorkToApply()
+        !isApplying && hasWorkToApply() && !hasCorrectableDraftIssues
     }
 
     private var showsWarnings: Bool {
@@ -898,7 +906,7 @@ struct ImportAnalysisView: View {
     }
 
     private func applyConfirmedImport() {
-        guard !isApplying, hasWorkToApply() else { return }
+        guard canApply else { return }
         isApplying = true
 
         Task {

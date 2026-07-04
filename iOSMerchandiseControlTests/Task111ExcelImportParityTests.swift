@@ -1,5 +1,6 @@
 import SwiftData
 import XCTest
+import ZIPFoundation
 @testable import iOSMerchandiseControl
 
 @MainActor
@@ -169,7 +170,7 @@ final class Task111ExcelImportParityTests: XCTestCase {
         }
     }
 
-    func testNewProductIdentityMatchesAndroidProductNameOrItemNumber() throws {
+    func testNewProductIdentityMatchesAndroidPrimaryOrSecondNameFallback() throws {
         let analysis = ProductImportCore.analyzeImport(
             header: ["barcode", "itemNumber", "secondProductName", "purchasePrice", "retailPrice"],
             dataRows: [
@@ -179,12 +180,11 @@ final class Task111ExcelImportParityTests: XCTestCase {
             existingProductsByBarcode: [:]
         )
 
-        XCTAssertEqual(analysis.newProducts.map(\.barcode), ["TASK111_ITEM_ONLY"])
+        XCTAssertTrue(analysis.errors.isEmpty)
+        XCTAssertEqual(analysis.newProducts.map(\.barcode), ["TASK111_ITEM_ONLY", "TASK111_SECOND_ONLY"])
         XCTAssertEqual(analysis.newProducts.first?.itemNumber, "ITEM-ONLY")
-        XCTAssertTrue(analysis.errors.contains {
-            $0.rowNumber == 2 &&
-            $0.reasonKeys.contains("import.analysis.row_error.product_name_missing")
-        })
+        XCTAssertEqual(analysis.newProducts.last?.productName, "Only second name")
+        XCTAssertEqual(analysis.newProducts.last?.secondProductName, "Only second name")
     }
 
     func testNewProductMissingRetailPriceBlocksApplyEvenWithItemNumber() throws {
@@ -196,7 +196,8 @@ final class Task111ExcelImportParityTests: XCTestCase {
             existingProductsByBarcode: [:]
         )
 
-        XCTAssertTrue(analysis.newProducts.isEmpty)
+        XCTAssertEqual(analysis.newProducts.map(\.barcode), ["TASK111_NO_RETAIL"])
+        XCTAssertNil(analysis.newProducts.first?.retailPrice)
         let error = try XCTUnwrap(analysis.errors.first)
         XCTAssertEqual(error.rowNumber, 1)
         XCTAssertEqual(error.reasonKeys, ["import.analysis.row_error.retail_required"])
@@ -204,6 +205,16 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertNil(error.rowContent["stockQuantity"])
         XCTAssertNil(error.rowContent["prevPurchase"])
         XCTAssertNil(error.rowContent["prevRetail"])
+
+        var drafts = analysis.newProducts
+        let changed = ProductImportCore.applyRetailMarkup(
+            to: &drafts,
+            markupPercent: 50,
+            roundingStep: 10,
+            onlyEmptyRetailPrice: true
+        )
+        XCTAssertEqual(changed, 1)
+        XCTAssertEqual(drafts.first?.retailPrice, 150)
     }
 
     func testRetailMarkupHelperFillsOnlyEmptyRetailPriceByDefault() throws {
@@ -696,6 +707,17 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertEqual(ProductImportCore.normalizedRelationKey(draft.supplierName), "task111 supplier")
     }
 
+    func testXlsxNumericBarcodeStylePreservesLeadingZeroes() throws {
+        let url = try makeMinimalXLSXWithZeroPaddedBarcode()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "Products")
+        let values = rows.flatMap { $0 }
+
+        XCTAssertTrue(values.contains("0000123456789"))
+        XCTAssertFalse(values.contains("123456789"))
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -708,6 +730,107 @@ final class Task111ExcelImportParityTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)
         return ModelContext(container)
+    }
+
+    private func makeMinimalXLSXWithZeroPaddedBarcode() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let xlsxURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task111-leading-zero-\(UUID().uuidString).xlsx")
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("_rels", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("xl/_rels", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("xl/worksheets", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+              <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+              <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+            </Types>
+            """,
+            to: root.appendingPathComponent("[Content_Types].xml")
+        )
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+            </Relationships>
+            """,
+            to: root.appendingPathComponent("_rels/.rels")
+        )
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheets><sheet name="Products" sheetId="1" r:id="rId1"/></sheets>
+            </workbook>
+            """,
+            to: root.appendingPathComponent("xl/workbook.xml")
+        )
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+            </Relationships>
+            """,
+            to: root.appendingPathComponent("xl/_rels/workbook.xml.rels")
+        )
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <numFmts count="1"><numFmt numFmtId="164" formatCode="0000000000000"/></numFmts>
+              <cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs>
+            </styleSheet>
+            """,
+            to: root.appendingPathComponent("xl/styles.xml")
+        )
+        try write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+                <row r="1">
+                  <c r="A1" t="inlineStr"><is><t>barcode</t></is></c>
+                  <c r="B1" t="inlineStr"><is><t>productName</t></is></c>
+                  <c r="C1" t="inlineStr"><is><t>retailPrice</t></is></c>
+                </row>
+                <row r="2">
+                  <c r="A2" s="1"><v>123456789</v></c>
+                  <c r="B2" t="inlineStr"><is><t>Leading Zero Product</t></is></c>
+                  <c r="C2"><v>10</v></c>
+                </row>
+              </sheetData>
+            </worksheet>
+            """,
+            to: root.appendingPathComponent("xl/worksheets/sheet1.xml")
+        )
+
+        try FileManager.default.zipItem(at: root, to: xlsxURL, shouldKeepParent: false)
+        try? FileManager.default.removeItem(at: root)
+        return xlsxURL
+    }
+
+    private func write(_ text: String, to url: URL) throws {
+        guard let data = text.data(using: .utf8) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: url)
     }
 
     private func makeMinimalPreGenerateSession() -> ExcelSessionViewModel {
