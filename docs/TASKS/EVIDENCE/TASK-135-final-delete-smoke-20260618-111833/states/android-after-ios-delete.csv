@@ -1,0 +1,7 @@
+-- Android local after iOS delete
+uid,id,displayName,deletedAt,syncStatus,remoteId,localChangeRevision,lastSyncedLocalRevision
+44,3b92fec8-ca29-40d1-979d-7d9370beefee,TASK135_DELETE_HISTORY_IOS_20260618T152426Z,2026-06-18T15:28:01+00:00,SYNCED_SUCCESSFULLY,3b92fec8-ca29-40d1-979d-7d9370beefee,0,0
+id,barcode,productName,remoteId
+19730,TASK135_DELETE_PRODUCT_IOS_20260618T152426Z,"TASK135 delete product iOS 20260618T152426Z",9a347bf9-3525-4d04-a532-b6a626d177a2
+pending_tombstones
+0

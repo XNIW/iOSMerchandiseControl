@@ -6,6 +6,7 @@ nonisolated struct HistoryIncrementalApplyResult {
     var inserted = 0
     var updated = 0
     var missingRemoteTombstoned = 0
+    var missingRemoteCount = 0
     var fetchMs = 0
     var applyMs = 0
 }
@@ -56,6 +57,7 @@ nonisolated struct HistoryIncrementalApplyService {
             inserted: historyResult.insertedCount,
             updated: historyResult.updatedCount,
             missingRemoteTombstoned: tombstoned,
+            missingRemoteCount: missingSessionIDs.count,
             fetchMs: fetchMs,
             applyMs: applyMs
         )
@@ -101,11 +103,16 @@ nonisolated struct HistoryIncrementalApplyService {
 
         let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
         let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let adoptableRemoteIDs = remoteHistoryIDsEligibleForScopeAdoption(rows, selectedShopID: selectedShopID)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
             $0.isCompatibleWithHistoryScope(
                 ownerUserID: ownerUserID,
                 selectedShopID: selectedShopID,
                 storeIdentity: storeIdentity
+            ) || $0.isAdoptableByRemoteHistoryIdentity(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                remoteIDs: adoptableRemoteIDs
             )
         }
         var byRemoteID: [UUID: HistoryEntry] = [:]
@@ -134,6 +141,7 @@ nonisolated struct HistoryIncrementalApplyService {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
                     } else {
+                        existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                         applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                     }
@@ -199,6 +207,14 @@ nonisolated struct HistoryIncrementalApplyService {
             result[fingerprint] = result[fingerprint] ?? entry
         }
         return result
+    }
+
+    private static func remoteHistoryIDsEligibleForScopeAdoption(
+        _ rows: [RemoteSharedSheetSessionRow],
+        selectedShopID: UUID?
+    ) -> Set<UUID> {
+        guard let selectedShopID else { return [] }
+        return Set(rows.compactMap { $0.shopID == selectedShopID ? $0.remoteID : nil })
     }
 
     private static func apply(

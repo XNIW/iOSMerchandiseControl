@@ -54,6 +54,29 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         try assertPrepareThrows(.conflictsPresent, preview: preview, context: context)
     }
 
+    func testReplacementApplyKeepsCleanProductsWhenOtherBarcodeConflicts() async throws {
+        let context = try makeContext()
+        let preview = makePreview(
+            newProducts: [
+                makeSummary(payload: makePayload(barcode: "100", productName: "Conflicted Remote")),
+                makeSummary(payload: makePayload(barcode: "101", productName: "Clean Remote"))
+            ],
+            conflicts: [
+                SyncPreviewConflict(kind: .missingRemoteReference, barcodeOrKey: "100")
+            ]
+        )
+
+        let result = try await service.replaceLocalCatalogWithRemoteSnapshot(
+            preview: preview,
+            context: context,
+            options: SupabasePullApplyOptions(allowLookupOnlyApplyWhenProductConflicts: true),
+            isAuthenticated: true
+        )
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).map(\.barcode), ["101"])
+    }
+
     func testPrepareApplyPlanBlocksInvalidLocalInventoryBeforeMutations() throws {
         let context = try makeContext()
         context.insert(Product(barcode: "   ", productName: "Broken local product"))

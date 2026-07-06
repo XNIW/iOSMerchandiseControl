@@ -545,6 +545,7 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
                 "source": .string("ios_history_session_push"),
                 "uploaded_count": .number(Double(sortedIDs.count))
             ]),
+            shopID: ShopContextSelection.selectedShopID(ownerUserID: runtime.session.userID),
             source: "ios_history_session_push",
             sourceDeviceID: nil,
             batchID: UUID(),
@@ -774,16 +775,22 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
             ?? environment["TEST_RUNNER_TASK072D_RUN_PREFIX"] else {
             throw XCTSkip("TASK072D_RUN_PREFIX=TASK072D_IOS_<run>_ is required.")
         }
-        guard prefix.hasPrefix("TASK072D_IOS_"), prefix.hasSuffix("_") else {
-            throw XCTSkip("TASK072D_RUN_PREFIX must be run-scoped as TASK072D_IOS_<run>_.")
+        let isTask072DPrefix = prefix.hasPrefix("TASK072D_IOS_")
+        let isSyncTestPrefix = prefix.hasPrefix("SYNC_TEST_")
+        guard (isTask072DPrefix || isSyncTestPrefix), prefix.hasSuffix("_") else {
+            throw XCTSkip("TASK072D_RUN_PREFIX must be run-scoped as TASK072D_IOS_<run>_ or SYNC_TEST_<run>_.")
         }
 
         let adminPrefix = environment["TASK072D_ADMIN_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK072D_ADMIN_RUN_PREFIX"]
-            ?? prefix.replacingOccurrences(of: "TASK072D_IOS_", with: "TASK072D_ADMIN_")
+            ?? (isTask072DPrefix
+                ? prefix.replacingOccurrences(of: "TASK072D_IOS_", with: "TASK072D_ADMIN_")
+                : prefix)
         let androidPrefix = environment["TASK072D_ANDROID_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK072D_ANDROID_RUN_PREFIX"]
-            ?? prefix.replacingOccurrences(of: "TASK072D_IOS_", with: "TASK072D_ANDROID_")
+            ?? (isTask072DPrefix
+                ? prefix.replacingOccurrences(of: "TASK072D_IOS_", with: "TASK072D_ANDROID_")
+                : prefix)
         let requiresExternal = Self.isEnabled(
             environment["TASK072D_REQUIRE_EXTERNAL_RECEIVE"]
                 ?? environment["TEST_RUNNER_TASK072D_REQUIRE_EXTERNAL_RECEIVE"]
@@ -823,7 +830,7 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
     ) async throws -> [RemoteSharedSheetSessionRow] {
         try await runtime.provider.client
             .from("shared_sheet_sessions")
-            .select("remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at")
+            .select("remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,shop_id,updated_at,deleted_at")
             .eq("owner_user_id", value: runtime.session.userID.uuidString)
             .like("display_name", pattern: "\(scope.prefix)%")
             .order("remote_id", ascending: true)

@@ -108,6 +108,38 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
         XCTAssertEqual(ranges, ["0...999"])
     }
 
+    func testGeneratePreviewFetchesReferencedLegacyLookupRowsByID() async throws {
+        let supplierID = UUID()
+        let categoryID = UUID()
+        let mock = MockSupabaseInventoryFetching(
+            products: [
+                remoteProduct(
+                    barcode: "TASK115-LEGACY-LOOKUP",
+                    name: "Legacy lookup product",
+                    supplierID: supplierID,
+                    categoryID: categoryID
+                )
+            ],
+            suppliersByID: [
+                supplierID: remoteSupplier(id: supplierID, name: "Legacy Supplier")
+            ],
+            categoriesByID: [
+                categoryID: remoteCategory(id: categoryID, name: "Legacy Category")
+            ]
+        )
+        let service = SupabasePullPreviewService(inventoryService: mock, pageSize: 2)
+        let state = await service.generatePreview(context: try makeContext())
+
+        guard case .success(let preview) = state else {
+            return XCTFail("Expected success preview, got \(state)")
+        }
+
+        XCTAssertEqual(preview.newProducts.count, 1)
+        XCTAssertTrue(preview.conflicts.isEmpty)
+        XCTAssertEqual(preview.remoteSupplierLookups.map(\.displayName), ["Legacy Supplier"])
+        XCTAssertEqual(preview.remoteCategoryLookups.map(\.displayName), ["Legacy Category"])
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -126,7 +158,9 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
     private func remoteProduct(
         id: UUID = UUID(),
         barcode: String,
-        name: String
+        name: String,
+        supplierID: UUID? = nil,
+        categoryID: UUID? = nil
     ) -> RemoteInventoryProductRow {
         RemoteInventoryProductRow(
             id: id,
@@ -137,9 +171,29 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
             secondProductName: nil,
             purchasePrice: nil,
             retailPrice: nil,
-            supplierID: nil,
-            categoryID: nil,
+            supplierID: supplierID,
+            categoryID: categoryID,
             stockQuantity: nil,
+            updatedAt: "2026-05-05T00:00:00Z",
+            deletedAt: nil
+        )
+    }
+
+    private func remoteSupplier(id: UUID = UUID(), name: String) -> RemoteInventorySupplierRow {
+        RemoteInventorySupplierRow(
+            id: id,
+            ownerUserID: ownerID,
+            name: name,
+            updatedAt: "2026-05-05T00:00:00Z",
+            deletedAt: nil
+        )
+    }
+
+    private func remoteCategory(id: UUID = UUID(), name: String) -> RemoteInventoryCategoryRow {
+        RemoteInventoryCategoryRow(
+            id: id,
+            ownerUserID: ownerID,
+            name: name,
             updatedAt: "2026-05-05T00:00:00Z",
             deletedAt: nil
         )
@@ -164,17 +218,23 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
     }
 }
 
-private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching {
+private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching, SupabaseInventoryLookupByIDFetching {
     private let products: [RemoteInventoryProductRow]
+    private let suppliersByID: [UUID: RemoteInventorySupplierRow]
+    private let categoriesByID: [UUID: RemoteInventoryCategoryRow]
     private let productPrices: [RemoteInventoryProductPriceRow]
     private var productRanges: [String] = []
     private var productPriceRanges: [String] = []
 
     init(
         products: [RemoteInventoryProductRow],
+        suppliersByID: [UUID: RemoteInventorySupplierRow] = [:],
+        categoriesByID: [UUID: RemoteInventoryCategoryRow] = [:],
         productPrices: [RemoteInventoryProductPriceRow] = []
     ) {
         self.products = products
+        self.suppliersByID = suppliersByID
+        self.categoriesByID = categoriesByID
         self.productPrices = productPrices
     }
 
@@ -197,6 +257,14 @@ private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching {
 
     func fetchCategoriesPage(from: Int, to: Int) async throws -> [RemoteInventoryCategoryRow] {
         []
+    }
+
+    func fetchSuppliersByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventorySupplierRow] {
+        ids.sorted { $0.uuidString < $1.uuidString }.compactMap { suppliersByID[$0] }
+    }
+
+    func fetchCategoriesByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventoryCategoryRow] {
+        ids.sorted { $0.uuidString < $1.uuidString }.compactMap { categoriesByID[$0] }
     }
 
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {

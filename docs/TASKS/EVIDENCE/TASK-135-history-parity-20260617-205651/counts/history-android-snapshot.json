@@ -1,0 +1,6 @@
+{
+  "status": "blocked",
+  "source": "android_room",
+  "reason": "Android repo/files and adb are not available from this workspace",
+  "rows": []
+}

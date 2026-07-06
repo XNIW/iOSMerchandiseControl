@@ -1,0 +1,33 @@
+{
+  "android": {
+    "categoriesActive": 35,
+    "historySessionsActive": 39,
+    "historySessionsUserVisible": 35,
+    "pendingAggregate": 0,
+    "productPricesActive": 41131,
+    "productsActive": 19704,
+    "status": "PASS",
+    "suppliersActive": 66
+  },
+  "ios": {
+    "categoriesActive": 35,
+    "historySessionsActive": 39,
+    "historySessionsUserVisible": 35,
+    "pendingAggregate": 0,
+    "productPricesActive": 41131,
+    "productsActive": 19704,
+    "status": "PASS",
+    "suppliersActive": 66
+  },
+  "supabase": {
+    "categoriesActive": 35,
+    "historySessionsActive": 39,
+    "historySessionsUserVisible": 35,
+    "owner_hash": "bf727712f2b9c4c17918cba5ba8e1e7a",
+    "productPricesActive": 41131,
+    "productsActive": 19704,
+    "suppliersActive": 66,
+    "syncEventsCount": 1850,
+    "syncEventsMaxId": 3102
+  }
+}

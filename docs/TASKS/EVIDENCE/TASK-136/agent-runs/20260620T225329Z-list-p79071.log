@@ -1,0 +1,313 @@
+=== mc-agent list ===
+help
+help-json
+version
+doctor
+harness doctor
+preflight
+preflight require head consistency
+git head-consistency
+git head-consistency task122
+config validate
+config validate task122
+config print-redacted
+list commands
+list commands-json
+report --task
+report --latest
+report validate-json
+report validate-json task118
+report validate-json task120
+scan sensitive
+scan evidence
+scan repo-diff
+scan release-cta
+scan task126-policy-matrix
+scan owner-store-scope task126
+scan local-store-identity task126
+scan pending-base-version task126
+scan changed-fields-contract task126
+scan no-cross-owner-store-pending-push task126
+scan conflict-review-coverage task126
+scan productprice-history-policy task126
+scan cache-active-store-only task126
+scan inactive-cache-cleanup-safety task126
+scan task126-final-gates
+scan scanner-self-tests task126
+scan options-mainactor-heavy-fetch task127
+scan productprice-full-fetch-mainactor task127
+scan options-refresh-debounce task127
+scan task127-debug-hook-release-safety
+scan task127-final-gates
+scan scanner-self-tests task127
+ios test options-summary-performance task127
+ios test options-summary-provider task127
+ios smoke options-performance task127
+android audit options-performance task127
+ios test sync-policy task126
+ios test account-store-boundary task126
+ios test conflict-review task126
+ios test conflict-review-ui task126
+ios test account-switch-review-ui task126
+ios smoke conflict-review-ui task126
+ios smoke account-switch-review-ui task126
+ios test cache-memory task126
+android test sync-policy task126
+android test account-store-boundary task126
+android test conflict-review task126
+android test conflict-review-ui task126
+android test account-switch-review-ui task126
+android smoke conflict-review-ui task126
+android smoke account-switch-review-ui task126
+android test cache-memory task126
+scan sync-boundaries
+scan no-full-pull-normal-path task118
+scan sync-architecture task119
+scan manual-boundary task119
+scan dead-code task119
+scan xcode-membership task119
+scan no-full-pull-normal-path task119
+scan task-docs task120
+scan harness-routing task120
+scan harness-health task120
+scan source-format task120
+scan duplicate-symbols task120
+scan automatic-legacy-monolith task120
+scan mainactor-boundary task120
+scan swiftdata-context-boundary task120
+scan manual-root-residue task120
+scan master-plan-consistency task120
+scan mcp-wrapper task120
+scan scanner-self-tests task120
+scan status-taxonomy task120
+scan evidence-metadata task120
+scan sync-architecture task120
+scan manual-boundary task120
+scan dead-code task120
+scan xcode-membership task120
+report validate-json task121
+scan task-docs task121
+scan master-plan-consistency task121
+scan harness-routing task121
+scan harness-health task121
+scan mcp-wrapper task121
+scan status-taxonomy task121
+scan evidence-metadata task121
+scan scanner-self-tests task121
+scan source-format task121
+scan sync-inventory task121
+scan sync-architecture task121
+scan retry-ownership task121
+scan manual-boundary task121
+scan root-residue task121
+scan shared-purity task121
+scan dead-code task121
+scan xcode-membership task121
+scan duplicate-symbols task121
+report validate-json task122
+preflight require head consistency task122
+scan task-docs task122
+scan master-plan-consistency task122
+scan evidence-metadata task122
+scan harness-routing task122
+scan harness-health task122
+scan mcp-wrapper task122
+scan status-taxonomy task122
+scan scanner-self-tests task122
+scan source-format task122
+scan swift-source-shape task122
+scan sync-inventory task122
+scan sync-architecture task122
+scan remote-transport-thin task122
+scan adapter-delegation-depth task122
+scan domain-method-ownership task122
+scan manual-debug-boundary task122
+scan transport-protocol-conformance task122
+scan composition-import-boundary task122
+scan remote-query-ownership task122
+scan debug-seed-boundary task122
+scan dto-mapper-duplication task122
+scan supabase-query-map task122
+scan supabase-query-map task122 strict
+scan transport-callsite-map task122
+scan protocol-conformance-map task122
+scan supabase-contract-map task122
+scan supabase-contract-map task122 strict
+scan android-parity-ledger task122
+scan performance-baseline task122
+scan offline-outbox-conflict task122
+scan xcode-membership task122
+scan dead-code task122
+scan sensitive task122
+scan evidence task122
+scan sync-efficiency-acceptance task122
+ios build debug task122
+ios build release task122
+report validate-json task124
+preflight require head consistency task124
+scan automation-discovery task124
+scan harness-routing task124
+scan scanner-self-tests task124
+scan no-root-supabase-legacy task124
+scan no-automatic-manual-dependency task124
+scan transport-thin-only task124
+scan remote-adapter-single-domain task124
+scan no-full-pull-normal-path task124
+scan no-hidden-manual-sync task124
+scan no-stale-pbxproj-reference task124
+scan no-mainactor-heavy-sync task124
+scan no-service-role-client task124
+scan no-rls-bypass task124
+scan source-format task124
+scan dead-code-residue task124
+scan no-legacy-runtime-path
+scan no-full-pull-normal-path
+scan automatic-contracts-clean
+scan root-host-clean
+scan options-observer-only
+scan duplicate-sync-owner
+scan incremental-apply-contract
+scan swiftdata-mainactor-heavy
+scan l10n-sync-keys
+scan price-contract task130
+scan swiftdata-fetch-budget task130
+harness golden-corpus validate task130
+harness golden-corpus roundtrip task130
+harness real-device-feasibility task130
+evidence hygiene
+evidence bundle
+account fixture prepare
+account fixture cleanup
+safety check-prefix
+safety dry-run-required
+ios build debug
+ios build release
+ios test sync
+ios test automatic-domain
+ios test automatic-architecture
+ios test automatic-domain task120
+ios test automatic-architecture task120
+ios test automatic-domain task121
+ios test automatic-architecture task121
+ios test sync task121
+ios test manual-sync-regression task121
+ios test price-contract task130
+ios test task131-harness
+ios benchmark import-large task130
+ios smoke options-first-sync task130
+ios smoke scanner-edge task130
+ios smoke accessibility task130
+ios test lifecycle
+ios test offline
+ios smoke simulator
+ios smoke options
+ios smoke history
+ios auth-preflight
+ios live-write
+ios live-full-pull
+ios runtime-ui-counts
+ios physical-runtime-counts
+ios physical-auth-store-diagnostics
+ios physical-sync-acceptance
+ios cleanup-scoped
+android build debug
+android build release
+android test sync
+android test offline
+android test broad task129
+android test quarantine-report task129
+android test price-contract task130
+android smoke device
+android smoke options
+android auth-preflight
+android live-pull
+android live-write
+android live-full-pull
+android offline-tier-status
+android offline-write
+android reconnect-drain
+sync counts
+supabase start
+supabase status-redacted
+supabase contract sync-schema task120
+supabase contract sync-schema task121
+supabase contract price-schema task130
+supabase verify-schema
+supabase verify-rls
+supabase verify-grants
+supabase verify-rpc
+supabase verify-realtime
+supabase explain-cleanup
+supabase cleanup dry-run
+supabase cleanup execute
+supabase residue-check
+supabase pooler-cooldown-check
+live sync-matrix
+live reconcile-counts
+live runtime-parity
+live physical-runtime-parity
+live mutation-near-realtime
+live offline-reconnect-sync
+live account-merge-policy-matrix
+live sync-performance-budget
+live offline-matrix
+live cleanup-and-verify
+live task123-single-propagation
+live task123-cold-restart
+live task123-noop
+live task123-burst-10
+live task134-field-merge
+live task134-price-append
+live task134-price-conflict
+live task134-delete-edit-conflict
+live task134-dirty-protected
+live task134-admin-web-update
+live task134-ui-sync-state
+live task134-performance-strict
+cleanup task134-all
+report task134-final
+preflight task125
+git head-consistency task125
+report validate-json task125
+scan no-hidden-manual-sync task125
+scan no-full-pull-normal-path task125
+scan no-service-role-client task125
+scan no-rls-bypass task125
+scan no-mainactor-heavy-sync task125
+scan no-stale-pbxproj-reference task125
+scan no-test-fixture-in-app-target task125
+scan no-root-legacy-sync-service task125
+scan remote-adapter-single-domain task125
+scan background-task-registration task125
+scan background-task-no-ui-context task125
+scan outbox-pending-survives-restart task125
+scan evidence-redaction task125
+scan source-format task125
+scan dead-code-residue task125
+scan task125-final-gates
+ios device-auth-preflight task125
+android auth-preflight task125
+live real-device-realtime task125
+live real-device-offline-reconnect task125
+live real-device-background-sync task125
+live real-device-kill-restart-pending task125
+live real-device-network-flapping task125
+live runtime-parity task125
+supabase cleanup task125
+supabase residue-check task125
+physical devices list task131
+ios physical sync-policy-ui task131
+ios simulator sync-policy-ui task131
+android physical sync-policy-ui task131
+physical sync-policy-matrix task131
+physical conflict-review-matrix task131
+physical account-switch-matrix task131
+physical offline-background-matrix task131
+physical accessibility-smoke task131
+physical hybrid-sync-policy-matrix task131
+physical hybrid-conflict-review-matrix task131
+physical hybrid-offline-reconnect-matrix task131
+physical hybrid-accessibility-smoke task131
+scan task131-matrix-completeness
+scan task131-redaction
+scan task131-final-gates

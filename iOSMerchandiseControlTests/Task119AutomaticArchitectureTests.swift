@@ -173,7 +173,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertFalse(engineIsRunning)
     }
 
-    func testAutomaticEngineRunsSnapshotRecoveryWhenIncrementalRequiresFullRecovery() async {
+    func testAutomaticEngineRequestsRecoveryWhenIncrementalRequiresFullRecovery() async {
         let incrementalProvider = Task132RecoveryRequiredIncrementalProvider()
         let recoveryProvider = Task132SnapshotRecoveryProvider()
         let engine = AutomaticSyncEngine(
@@ -190,8 +190,8 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         let recoveryCallCount = await recoveryProvider.callCount
 
         XCTAssertEqual(result.status, .success)
-        XCTAssertTrue(result.didWork)
-        XCTAssertEqual(recoveryCallCount, 1)
+        XCTAssertFalse(result.didWork)
+        XCTAssertEqual(recoveryCallCount, 0)
     }
 
     func testAutomaticEngineTreatsCompletedNoChangeDrainAsVerifiedSuccess() async {
@@ -260,7 +260,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertFalse(orchestrator.contains("blocked_full_recovery_requires_explicit_context"))
     }
 
-    func testAutomaticEngineDoesNotTreatRecoveryRequestAsNoWorkWhenProviderIsMissing() async {
+    func testAutomaticEngineDoesNotRunSnapshotRecoveryForRequestRecoveryAction() async {
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -273,7 +273,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
         let result = await engine.run(action: .requestRecovery, source: .rootForeground, ownerUserID: UUID())
 
-        XCTAssertEqual(result.status, .failed)
+        XCTAssertEqual(result.status, .success)
         XCTAssertFalse(result.didWork)
     }
 
@@ -323,6 +323,35 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(payload.categoryID, categoryID)
         XCTAssertNil(payload.productName)
         XCTAssertNil(payload.deletedAt)
+    }
+
+    func testRemoteProductUpdatesAreShopScopedAndReadBackChecked() throws {
+        let executor = try source("iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift")
+        let executorUpdateStart = try XCTUnwrap(executor.range(of: "func updateRow"))
+        let executorUpdateEnd = try XCTUnwrap(
+            executor.range(
+                of: "func exactRowCount",
+                range: executorUpdateStart.upperBound..<executor.endIndex
+            )
+        )
+        let executorUpdate = String(executor[executorUpdateStart.lowerBound..<executorUpdateEnd.lowerBound])
+
+        XCTAssertTrue(executorUpdate.contains("selectedShopID(ownerUserID: ownerUserID)"))
+        XCTAssertTrue(executorUpdate.contains(#"request = request.eq("shop_id", value: selectedShopID.uuidString)"#))
+
+        let priceAdapter = try source("iOSMerchandiseControl/Sync/Remote/ProductPriceManualPushRemoteSupabaseAdapter.swift")
+        let priceUpdateStart = try XCTUnwrap(priceAdapter.range(of: "func updateProduct"))
+        let priceUpdateEnd = try XCTUnwrap(
+            priceAdapter.range(
+                of: "private func mapProductPriceManualPushPostgrestError",
+                range: priceUpdateStart.upperBound..<priceAdapter.endIndex
+            )
+        )
+        let priceUpdate = String(priceAdapter[priceUpdateStart.lowerBound..<priceUpdateEnd.lowerBound])
+
+        XCTAssertTrue(priceUpdate.contains("ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)"))
+        XCTAssertTrue(priceUpdate.contains(#"request = request.eq("shop_id", value: selectedShopID.uuidString)"#))
+        XCTAssertTrue(priceUpdate.contains("row.shopID == selectedShopID"))
     }
 }
 

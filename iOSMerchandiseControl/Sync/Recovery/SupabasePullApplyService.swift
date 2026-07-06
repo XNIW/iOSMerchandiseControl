@@ -305,120 +305,132 @@ nonisolated struct SupabasePullApplyService: Sendable {
         var tombstones: [SupabasePullApplyProductTombstone] = []
         var expectedStates: [SupabasePullApplyExpectedProductState] = []
 
-        let shouldSkipProductMutationsDueToConflicts =
-            options.allowLookupOnlyApplyWhenProductConflicts && !preview.conflicts.isEmpty
+        let conflictedProductBarcodes = options.allowLookupOnlyApplyWhenProductConflicts
+            ? productConflictBarcodes(from: preview.conflicts)
+            : []
+        let shouldSkipProductMutationsDueToConflicts = !conflictedProductBarcodes.isEmpty
 
-        if !shouldSkipProductMutationsDueToConflicts {
-            for summary in preview.newProducts.sorted(by: productSort) {
-                guard let payload = summary.applyPayload else {
-                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
-                }
-
-                try validateNumbers(payload: payload, options: options)
-
-                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(payload.barcode) else {
-                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-                }
-
-                guard snapshot.productsByBarcode[barcode] == nil else {
-                    throw SupabasePullApplyError.previewStale
-                }
-
-                let primaryName = SupabasePullPreviewNormalizer.semanticString(payload.productName)
-                let secondaryName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName)
-                guard primaryName != nil || secondaryName != nil else {
-                    throw SupabasePullApplyError.missingRequiredField(barcode: barcode, field: "productName")
-                }
-
-                inserts.append(SupabasePullApplyProductInsert(barcode: barcode, payload: payload))
-                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: nil))
+        for summary in preview.newProducts.sorted(by: productSort) {
+            guard let payload = summary.applyPayload else {
+                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
             }
 
-            for summary in preview.updateCandidates.sorted(by: productSort) {
-                guard let payload = summary.applyPayload else {
-                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
-                }
+            try validateNumbers(payload: payload, options: options)
 
-                try validateNumbers(payload: payload, options: options)
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(payload.barcode) else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+            }
 
-                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
-                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-                }
+            guard !conflictedProductBarcodes.contains(barcode) else {
+                continue
+            }
 
-                guard let localProduct = snapshot.productsByBarcode[barcode] else {
-                    throw SupabasePullApplyError.previewStale
-                }
+            guard snapshot.productsByBarcode[barcode] == nil else {
+                throw SupabasePullApplyError.previewStale
+            }
 
-                if let localRemoteID = localProduct.remoteID,
-                   localRemoteID != payload.remoteID {
-                    throw SupabasePullApplyError.previewStale
-                }
+            let primaryName = SupabasePullPreviewNormalizer.semanticString(payload.productName)
+            let secondaryName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName)
+            guard primaryName != nil || secondaryName != nil else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: barcode, field: "productName")
+            }
 
-                if hasPendingLocalProductChange(
-                    payload: payload,
+            inserts.append(SupabasePullApplyProductInsert(barcode: barcode, payload: payload))
+            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: nil))
+        }
+
+        for summary in preview.updateCandidates.sorted(by: productSort) {
+            guard let payload = summary.applyPayload else {
+                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+            }
+
+            try validateNumbers(payload: payload, options: options)
+
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+            }
+
+            guard !conflictedProductBarcodes.contains(barcode) else {
+                continue
+            }
+
+            guard let localProduct = snapshot.productsByBarcode[barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if let localRemoteID = localProduct.remoteID,
+               localRemoteID != payload.remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if hasPendingLocalProductChange(
+                payload: payload,
+                barcode: barcode,
+                pendingChanges: pendingProductChanges
+            ) {
+                continue
+            }
+
+            guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
+                continue
+            }
+
+            let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
+            updates.append(
+                SupabasePullApplyProductUpdate(
                     barcode: barcode,
-                    pendingChanges: pendingProductChanges
-                ) {
-                    continue
-                }
-
-                guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
-                    continue
-                }
-
-                let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
-                updates.append(
-                    SupabasePullApplyProductUpdate(
-                        barcode: barcode,
-                        payload: payload,
-                        expectedFingerprint: fingerprint
-                    )
-                )
-                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
-            }
-
-            for summary in preview.remoteTombstones.sorted(by: productSort) {
-                guard let payload = summary.applyPayload else {
-                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
-                }
-
-                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
-                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-                }
-
-                guard let localProduct = snapshot.productsByBarcode[barcode] else {
-                    continue
-                }
-
-                if let localRemoteID = localProduct.remoteID,
-                   localRemoteID != payload.remoteID {
-                    throw SupabasePullApplyError.previewStale
-                }
-
-                if hasPendingLocalProductChange(
                     payload: payload,
-                    barcode: barcode,
-                    pendingChanges: pendingProductChanges
-                ) {
-                    continue
-                }
-
-                guard localProduct.remoteDeletedAt != (payload.remoteDeletedAt ?? localProduct.remoteDeletedAt)
-                        || localProduct.remoteUpdatedAt != payload.remoteUpdatedAt
-                        || localProduct.remoteID != payload.remoteID else {
-                    continue
-                }
-
-                let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
-                tombstones.append(
-                    SupabasePullApplyProductTombstone(
-                        barcode: barcode,
-                        payload: payload,
-                        expectedFingerprint: fingerprint
-                    )
+                    expectedFingerprint: fingerprint
                 )
-                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
+            )
+            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
+        }
+
+        for summary in preview.remoteTombstones.sorted(by: productSort) {
+            guard let payload = summary.applyPayload else {
+                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
             }
+
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+            }
+
+            guard !conflictedProductBarcodes.contains(barcode) else {
+                continue
+            }
+
+            guard let localProduct = snapshot.productsByBarcode[barcode] else {
+                continue
+            }
+
+            if let localRemoteID = localProduct.remoteID,
+               localRemoteID != payload.remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if hasPendingLocalProductChange(
+                payload: payload,
+                barcode: barcode,
+                pendingChanges: pendingProductChanges
+            ) {
+                continue
+            }
+
+            guard localProduct.remoteDeletedAt != (payload.remoteDeletedAt ?? localProduct.remoteDeletedAt)
+                    || localProduct.remoteUpdatedAt != payload.remoteUpdatedAt
+                    || localProduct.remoteID != payload.remoteID else {
+                continue
+            }
+
+            let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
+            tombstones.append(
+                SupabasePullApplyProductTombstone(
+                    barcode: barcode,
+                    payload: payload,
+                    expectedFingerprint: fingerprint
+                )
+            )
+            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
         }
 
         let productPrunes = shouldSkipProductMutationsDueToConflicts || !options.isCompleteRemoteSnapshot
@@ -507,6 +519,22 @@ nonisolated struct SupabasePullApplyService: Sendable {
             remoteCategoryIDs: preview.remoteCategoryIDs,
             shouldPruneUnreferencedCleanLookups: shouldPruneUnreferencedCleanLookups
         )
+    }
+
+    private func productConflictBarcodes(from conflicts: [SyncPreviewConflict]) -> Set<String> {
+        Set(conflicts.compactMap { conflict in
+            switch conflict.kind {
+            case .remoteDuplicateBarcode,
+                 .remoteEmptyBarcode,
+                 .remoteIDConflict,
+                 .missingRemoteReference,
+                 .missingRemoteSupplier,
+                 .missingRemoteCategory:
+                return SupabasePullPreviewNormalizer.normalizedBarcode(conflict.barcodeOrKey)
+            case .localDuplicateBarcode:
+                return nil
+            }
+        })
     }
 
     func apply(plan: SupabasePullApplyPlan, context: ModelContext) throws -> SupabasePullApplyResult {
@@ -681,7 +709,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
     ) async throws -> SupabasePullApplyResult {
         let replacementOptions = SupabasePullApplyOptions(
             applyStockQuantity: options.applyStockQuantity,
-            allowLookupOnlyApplyWhenProductConflicts: false,
+            allowLookupOnlyApplyWhenProductConflicts: options.allowLookupOnlyApplyWhenProductConflicts,
             isCompleteRemoteSnapshot: true
         )
         try validateGlobalGuards(

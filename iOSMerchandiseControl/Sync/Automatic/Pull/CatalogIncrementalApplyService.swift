@@ -9,10 +9,13 @@ nonisolated struct CatalogIncrementalApplyResult {
     var productsUpdated = 0
     var productsTombstoned = 0
     var suppliersCreated = 0
+    var suppliersUpdated = 0
     var categoriesCreated = 0
+    var categoriesUpdated = 0
     var productsMissingRemoteTombstoned = 0
     var suppliersMissingRemoteTombstoned = 0
     var categoriesMissingRemoteTombstoned = 0
+    var missingRemoteTargetCount = 0
     var remoteActiveProductIDs = Set<UUID>()
     var catalogFetchMs = 0
     var catalogApplyMs = 0
@@ -80,10 +83,15 @@ nonisolated struct CatalogIncrementalApplyService {
             productsUpdated: result.productsUpdated,
             productsTombstoned: result.productsTombstoned,
             suppliersCreated: result.suppliersCreated,
+            suppliersUpdated: result.suppliersUpdated,
             categoriesCreated: result.categoriesCreated,
+            categoriesUpdated: result.categoriesUpdated,
             productsMissingRemoteTombstoned: missingResult.products,
             suppliersMissingRemoteTombstoned: missingResult.suppliers,
             categoriesMissingRemoteTombstoned: missingResult.categories,
+            missingRemoteTargetCount: missingTargetSupplierIDs.count
+                + missingTargetCategoryIDs.count
+                + missingTargetProductIDs.count,
             remoteActiveProductIDs: Set(products
                 .filter { SupabasePullPreviewNormalizer.semanticString($0.deletedAt) == nil }
                 .map(\.id)),
@@ -112,6 +120,7 @@ nonisolated struct CatalogIncrementalApplyService {
                     supplierCache[row.id] = supplier
                 }
                 result.suppliersCreated += applied.created ? 1 : 0
+                result.suppliersUpdated += applied.updated ? 1 : 0
             }
             for row in categories where !protected.categories.contains(row.id) {
                 let applied = try applyTargetedCategory(row, context: context)
@@ -119,6 +128,7 @@ nonisolated struct CatalogIncrementalApplyService {
                     categoryCache[row.id] = category
                 }
                 result.categoriesCreated += applied.created ? 1 : 0
+                result.categoriesUpdated += applied.updated ? 1 : 0
             }
 
             for row in products where !protected.products.contains(row.id) {

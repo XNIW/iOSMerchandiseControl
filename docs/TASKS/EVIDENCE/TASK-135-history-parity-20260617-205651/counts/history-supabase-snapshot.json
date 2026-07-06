@@ -1,0 +1,6 @@
+{
+  "status": "blocked",
+  "source": "supabase",
+  "reason": "supabase status failed: local container supabase_db_iOSMerchandiseControl is missing",
+  "rows": []
+}

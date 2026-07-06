@@ -127,6 +127,61 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertNil(legacyEntry.storeID)
     }
 
+    func testShopScopedPendingHistoryChangeAssignsScopeAndUploads() async throws {
+        let context = try makeContext()
+        let remote = FakeHistorySessionRemote(ownerUserID: owner)
+        let service = HistorySessionSyncService(remote: remote)
+        let shopID = UUID(uuidString: "34343434-3434-4434-8434-343434343434")!
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedStore = SelectedShopStore()
+        selectedStore.save(
+            SelectedShop(
+                shopID: shopID,
+                code: "TASKSHOP",
+                name: "Task Shop",
+                role: "shop_owner",
+                status: "active",
+                selectable: true,
+                canWrite: true
+            ),
+            accountHash: accountHash
+        )
+        defer { selectedStore.clear(accountHash: accountHash) }
+
+        let entry = HistoryEntry(
+            id: "TASK_SHOP_HISTORY_PENDING",
+            timestamp: Date(timeIntervalSince1970: 1_778_400_000),
+            data: [["barcode"], ["SHOP_PENDING"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            supplier: "Scoped",
+            category: "",
+            uid: UUID(uuidString: "45454545-4545-4545-8545-454545454545")!
+        )
+        context.insert(entry)
+        entry.markHistorySessionLocalMutation()
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+            .recordHistorySessionChange(
+                entry: entry,
+                operation: .upsert,
+                changedFields: ["data"]
+            )
+        try context.save()
+
+        let result = try await service.pushPendingHistorySessions(
+            entries: [entry],
+            ownerUserID: owner,
+            context: context
+        )
+
+        XCTAssertEqual(result.uploadedCount, 1)
+        XCTAssertEqual(entry.shopID, shopID)
+        XCTAssertEqual(entry.storeID, shopID.uuidString.lowercased())
+        let uploaded = await remote.upsertedRows()
+        XCTAssertEqual(uploaded.single?.shopID, shopID)
+        XCTAssertEqual(entry.syncStatus, .syncedSuccessfully)
+    }
+
     func testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID() async throws {
         let context = try makeContext()
         let remote = FakeHistorySessionRemote(ownerUserID: owner)
@@ -392,6 +447,88 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(entry.data, [["barcode"], ["LOCAL"]])
         XCTAssertEqual(entry.localChangeRevision, 2)
         XCTAssertEqual(entry.lastSyncedLocalRevision, 1)
+    }
+
+    func testShopScopedPullAdoptsUnscopedRemoteIDMatchesForUpdateAndTombstone() async throws {
+        let context = try makeContext()
+        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner))
+        let shopID = UUID(uuidString: "35353535-3535-4535-8535-353535353535")!
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedStore = SelectedShopStore()
+        selectedStore.save(
+            SelectedShop(
+                shopID: shopID,
+                code: "TASKSHOP",
+                name: "Task Shop",
+                role: "shop_owner",
+                status: "active",
+                selectable: true,
+                canWrite: true
+            ),
+            accountHash: accountHash
+        )
+        defer { selectedStore.clear(accountHash: accountHash) }
+
+        let updateID = UUID(uuidString: "46464646-4646-4646-8646-464646464646")!
+        let tombstoneID = UUID(uuidString: "47474747-4747-4747-8747-474747474747")!
+        let updateEntry = HistoryEntry(
+            id: updateID.uuidString.lowercased(),
+            data: [["barcode"], ["LOCAL_OLD"]],
+            uid: updateID,
+            remoteID: updateID,
+            remotePayloadFingerprint: "old",
+            localChangeRevision: 1,
+            lastSyncedLocalRevision: 1
+        )
+        updateEntry.title = "LOCAL_OLD"
+        let tombstoneEntry = HistoryEntry(
+            id: tombstoneID.uuidString.lowercased(),
+            data: [["barcode"], ["LOCAL_DELETE"]],
+            uid: tombstoneID,
+            remoteID: tombstoneID,
+            remotePayloadFingerprint: "old",
+            localChangeRevision: 1,
+            lastSyncedLocalRevision: 1
+        )
+        tombstoneEntry.title = "LOCAL_DELETE"
+        context.insert(updateEntry)
+        context.insert(tombstoneEntry)
+        try context.save()
+
+        let updateRow = remoteRow(
+            remoteID: updateID,
+            displayName: "REMOTE_UPDATED_SHOP",
+            data: [["barcode"], ["REMOTE_UPDATED"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            shopID: shopID
+        )
+        let tombstoneRow = remoteRow(
+            remoteID: tombstoneID,
+            displayName: "REMOTE_DELETED_SHOP",
+            data: [["barcode"], ["REMOTE_DELETED"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            shopID: shopID,
+            deletedAt: "2026-05-15T17:00:00Z"
+        )
+
+        let result = try service.applyRemoteSharedSheetSessions(
+            [updateRow, tombstoneRow],
+            ownerUserID: owner,
+            context: context
+        )
+
+        XCTAssertEqual(result.updatedCount, 2)
+        XCTAssertEqual(result.insertedCount, 0)
+        XCTAssertEqual(updateEntry.title, "REMOTE_UPDATED_SHOP")
+        XCTAssertEqual(updateEntry.data, [["barcode"], ["REMOTE_UPDATED"]])
+        XCTAssertEqual(updateEntry.shopID, shopID)
+        XCTAssertEqual(updateEntry.storeID, shopID.uuidString.lowercased())
+        XCTAssertNotNil(tombstoneEntry.remoteDeletedAt)
+        XCTAssertEqual(tombstoneEntry.shopID, shopID)
+        XCTAssertEqual(tombstoneEntry.storeID, shopID.uuidString.lowercased())
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 2)
     }
 
     func testPushUploadsDeletedHistorySessionTombstone() async throws {

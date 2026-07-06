@@ -36,10 +36,11 @@ struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote {
             var request = client
                 .from("sync_events")
                 .select("id,owner_user_id,shop_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
-                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gt("id", value: Int(afterID))
             if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
                 request = request.eq("shop_id", value: selectedShopID.uuidString)
+            } else {
+                request = request.eq("owner_user_id", value: ownerUserID.uuidString)
             }
             return try await request
                 .order("id", ascending: true)

@@ -1,0 +1,89 @@
+{
+  "breakdown": {
+    "legacy_null_shop_products_active": 5,
+    "other_owner_null_shop_products_active_global_context": 121,
+    "shop_products_active": 19705
+  },
+  "counts": {
+    "categories": 39,
+    "history_active": 45,
+    "history_deleted": 81,
+    "history_mobile_visible": 41,
+    "product_prices": 41137,
+    "products": 19710,
+    "suppliers": 70
+  },
+  "expected": {
+    "categories": 39,
+    "history_active": 45,
+    "history_deleted": 81,
+    "history_mobile_visible": 41,
+    "product_prices": 41137,
+    "products": 19710,
+    "suppliers": 70
+  },
+  "gate": "supabase-scoped-audit",
+  "gates": {
+    "categories": {
+      "actual": 39,
+      "expected": 39,
+      "status": "PASS"
+    },
+    "history_active": {
+      "actual": 45,
+      "expected": 45,
+      "status": "PASS"
+    },
+    "history_deleted": {
+      "actual": 81,
+      "expected": 81,
+      "status": "PASS"
+    },
+    "history_mobile_visible": {
+      "actual": 41,
+      "expected": 41,
+      "status": "PASS"
+    },
+    "product_prices": {
+      "actual": 41137,
+      "expected": 41137,
+      "status": "PASS"
+    },
+    "products": {
+      "actual": 19710,
+      "expected": 19710,
+      "status": "PASS"
+    },
+    "suppliers": {
+      "actual": 70,
+      "expected": 70,
+      "status": "PASS"
+    }
+  },
+  "note": "Global Supabase counts are not a TASK-136 gate; they include other owner/scope rows. This scoped audit includes selected shop plus same-owner legacy null-shop rows.",
+  "scope": {
+    "included": "selected shop_id plus same-owner legacy shop_id IS NULL",
+    "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+    "shop_id": "bc01ea8e-0ae5-4b7a-abbc-4863a1be5b8d"
+  },
+  "status": "PASS",
+  "task": "TASK-136",
+  "technical_history_excluded": [
+    {
+      "display_name": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE",
+      "remote_id": "53d91b99-1a32-4711-bfdc-6636a7cce6c1"
+    },
+    {
+      "display_name": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL",
+      "remote_id": "7b22539f-95b4-4165-a3b6-869bfedc27b4"
+    },
+    {
+      "display_name": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE",
+      "remote_id": "560da308-71a5-43f2-9bf3-4c92502c0f8a"
+    },
+    {
+      "display_name": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL",
+      "remote_id": "7be52c5a-2e8b-4090-a43f-7845c49bb13b"
+    }
+  ]
+}

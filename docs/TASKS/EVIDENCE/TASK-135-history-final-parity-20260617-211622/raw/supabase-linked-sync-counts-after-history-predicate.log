@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/agent-runs/20260618T015602Z-sync-counts-source-supabase-profile-linked-p57756.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/agent-runs/20260618T015602Z-sync-counts-source-supabase-profile-linked-p57756.json
+NEXT_ACTION Run remaining sync counts or live reconcile-counts.

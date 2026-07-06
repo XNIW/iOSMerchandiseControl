@@ -1,0 +1,13 @@
+ M docs/MASTER-PLAN.md
+ M docs/TASKS/TASK-135-task132d-immediate-drift-sync-unblocker.md
+ M iOSMerchandiseControl/LocalPendingChange.swift
+ M iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift
+ M iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift
+ M iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift
+ M iOSMerchandiseControl/Sync/Remote/OptionsRemoteCountSupabaseAdapter.swift
+ M iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift
+ M iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift
+ M iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift
+?? docs/TASKS/EVIDENCE/TASK-132C-clean-baseline-20260617-115823/ios-store-backup-before-reset/default.store
+?? docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/
+?? docs/TASKS/EVIDENCE/TASK-135-history-parity-20260617-205651/

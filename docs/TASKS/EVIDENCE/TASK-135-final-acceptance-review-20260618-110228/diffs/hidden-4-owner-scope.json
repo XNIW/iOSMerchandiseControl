@@ -1,0 +1,152 @@
+{
+  "android": [
+    {
+      "fingerprint": "9fa0b6c321ab4d703528f9b8b7622c9a5e69e39963124e7bd4d4e5df83a8b1ae",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "39",
+      "payloadHash": "e15e5642b9d87e5f3c3df34c09e5873036f2ff225c37f2d955504c22e5493bd9",
+      "reasonHidden": "local id technical/TASK, title technical/TASK",
+      "remote_id": "53d91b99-1a32-4711-bfdc-6636a7cce6c1",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "5af53268b12dbc9b7278ddfa06dc625c5a807f40aa75825dd833b4ce627fbd98",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "36",
+      "payloadHash": "0595acc16a79a0e1164d23f6a0da508dd6ea5e448cb2fd4e66bde816188829d5",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "560da308-71a5-43f2-9bf3-4c92502c0f8a",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "0d8b2ddb92a89879ab7080e4aaf43bcc5121917c569ca3693a3e208692e4cf04",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "40",
+      "payloadHash": "f0039494330626d30666bbeb50041ed3fc3126bd6e7ed25f5c3ef63eaa87a07c",
+      "reasonHidden": "local id technical/TASK, title technical/TASK",
+      "remote_id": "7b22539f-95b4-4165-a3b6-869bfedc27b4",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "8c9748219de7a6e8228f90b0e254c135533c2912b8fed23d77f5653fd8dcaf12",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "37",
+      "payloadHash": "8ebd81067b97ffe244cb965d747e61a5cead120581af4a035c2dda75c423d158",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "7be52c5a-2e8b-4090-a43f-7845c49bb13b",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    }
+  ],
+  "ios": [
+    {
+      "fingerprint": "5af53268b12dbc9b7278ddfa06dc625c5a807f40aa75825dd833b4ce627fbd98",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "560da308-71a5-43f2-9bf3-4c92502c0f8a",
+      "payloadHash": "0595acc16a79a0e1164d23f6a0da508dd6ea5e448cb2fd4e66bde816188829d5",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "560da308-71a5-43f2-9bf3-4c92502c0f8a",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "8c9748219de7a6e8228f90b0e254c135533c2912b8fed23d77f5653fd8dcaf12",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "7be52c5a-2e8b-4090-a43f-7845c49bb13b",
+      "payloadHash": "8ebd81067b97ffe244cb965d747e61a5cead120581af4a035c2dda75c423d158",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "7be52c5a-2e8b-4090-a43f-7845c49bb13b",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "9fa0b6c321ab4d703528f9b8b7622c9a5e69e39963124e7bd4d4e5df83a8b1ae",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "53d91b99-1a32-4711-bfdc-6636a7cce6c1",
+      "payloadHash": "e15e5642b9d87e5f3c3df34c09e5873036f2ff225c37f2d955504c22e5493bd9",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "53d91b99-1a32-4711-bfdc-6636a7cce6c1",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "0d8b2ddb92a89879ab7080e4aaf43bcc5121917c569ca3693a3e208692e4cf04",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "7b22539f-95b4-4165-a3b6-869bfedc27b4",
+      "payloadHash": "f0039494330626d30666bbeb50041ed3fc3126bd6e7ed25f5c3ef63eaa87a07c",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "7b22539f-95b4-4165-a3b6-869bfedc27b4",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    }
+  ],
+  "supabase": [
+    {
+      "fingerprint": "9fa0b6c321ab4d703528f9b8b7622c9a5e69e39963124e7bd4d4e5df83a8b1ae",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "",
+      "payloadHash": "e15e5642b9d87e5f3c3df34c09e5873036f2ff225c37f2d955504c22e5493bd9",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "53d91b99-1a32-4711-bfdc-6636a7cce6c1",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "5af53268b12dbc9b7278ddfa06dc625c5a807f40aa75825dd833b4ce627fbd98",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "",
+      "payloadHash": "0595acc16a79a0e1164d23f6a0da508dd6ea5e448cb2fd4e66bde816188829d5",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "560da308-71a5-43f2-9bf3-4c92502c0f8a",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "0d8b2ddb92a89879ab7080e4aaf43bcc5121917c569ca3693a3e208692e4cf04",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "",
+      "payloadHash": "f0039494330626d30666bbeb50041ed3fc3126bd6e7ed25f5c3ef63eaa87a07c",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "7b22539f-95b4-4165-a3b6-869bfedc27b4",
+      "timestamp": "2026-05-21 18:00:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    },
+    {
+      "fingerprint": "8c9748219de7a6e8228f90b0e254c135533c2912b8fed23d77f5653fd8dcaf12",
+      "isShownInHistoryList": false,
+      "isUserVisible": false,
+      "local_id": "",
+      "payloadHash": "8ebd81067b97ffe244cb965d747e61a5cead120581af4a035c2dda75c423d158",
+      "reasonHidden": "title technical/TASK",
+      "remote_id": "7be52c5a-2e8b-4090-a43f-7845c49bb13b",
+      "timestamp": "2026-05-13 19:20:00",
+      "title": "TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL",
+      "tombstone": false
+    }
+  ]
+}

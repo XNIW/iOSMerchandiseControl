@@ -1,0 +1,15 @@
+{
+  "after": {
+    "queriedAt": "2026-06-18 15:06:38.850377+00",
+    "syncEventsCount": 1850,
+    "syncEventsMaxId": 3102
+  },
+  "before": {
+    "queriedAt": "2026-06-18 15:06:17.218097+00",
+    "syncEventsCount": 1850,
+    "syncEventsMaxId": 3102
+  },
+  "countUnchanged": true,
+  "maxIdUnchanged": true,
+  "status": "PASS"
+}

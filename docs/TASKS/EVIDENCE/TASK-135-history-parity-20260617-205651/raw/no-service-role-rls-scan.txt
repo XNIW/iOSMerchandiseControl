@@ -1,0 +1,10 @@
+iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift:21:        XCTAssertFalse(config.publishableKey.lowercased().contains("service_role"))
+iOSMerchandiseControl/SupabaseConfig.swift:63:            || lowercased.contains("service_role")
+iOSMerchandiseControl/SupabaseConfig.swift:68:        return decodedJWTRole(value) == "service_role"
+iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift:728:        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
+iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift:663:            "service_role",
+iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift:170:        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
+iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift:1313:        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
+iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift:29:        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
+iOSMerchandiseControlTests/SyncEventRecordingTests.swift:443:            "service_role",
+iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift:725:            "service_role",

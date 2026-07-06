@@ -14,10 +14,18 @@ nonisolated struct TargetedCatalogApplyResult: Sendable {
     var productsUpdated = 0
     var productsTombstoned = 0
     var suppliersCreated = 0
+    var suppliersUpdated = 0
     var categoriesCreated = 0
+    var categoriesUpdated = 0
 
     var totalMutations: Int {
-        productsInserted + productsUpdated + productsTombstoned + suppliersCreated + categoriesCreated
+        productsInserted
+            + productsUpdated
+            + productsTombstoned
+            + suppliersCreated
+            + suppliersUpdated
+            + categoriesCreated
+            + categoriesUpdated
     }
 }
 
@@ -80,45 +88,63 @@ nonisolated func remoteIDFromLogicalKey(_ key: String) -> UUID? {
 nonisolated func applyTargetedSupplier(
     _ row: RemoteInventorySupplierRow,
     context: ModelContext
-) throws -> (supplier: Supplier?, created: Bool) {
+) throws -> (supplier: Supplier?, created: Bool, updated: Bool) {
     let deletedAt = SupabaseRemoteDateParser.parse(row.deletedAt)
     let updatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
     guard let name = SupabasePullPreviewNormalizer.semanticString(row.name) else {
-        return (nil, false)
+        return (nil, false, false)
     }
     if let supplier = try fetchSupplier(remoteID: row.id, context: context)
         ?? fetchSupplier(name: name, context: context) {
+        let wasName = supplier.name
+        let wasRemoteID = supplier.remoteID
+        let wasUpdatedAt = supplier.remoteUpdatedAt
+        let wasDeletedAt = supplier.remoteDeletedAt
+        supplier.name = name
         supplier.remoteID = row.id
         supplier.remoteUpdatedAt = updatedAt
         supplier.remoteDeletedAt = deletedAt
-        return (deletedAt == nil ? supplier : nil, false)
+        let updated = wasName != supplier.name
+            || wasRemoteID != supplier.remoteID
+            || wasUpdatedAt != supplier.remoteUpdatedAt
+            || wasDeletedAt != supplier.remoteDeletedAt
+        return (deletedAt == nil ? supplier : nil, false, updated)
     }
-    guard deletedAt == nil else { return (nil, false) }
+    guard deletedAt == nil else { return (nil, false, false) }
     let supplier = Supplier(name: name, remoteID: row.id, remoteUpdatedAt: updatedAt)
     context.insert(supplier)
-    return (supplier, true)
+    return (supplier, true, false)
 }
 
 nonisolated func applyTargetedCategory(
     _ row: RemoteInventoryCategoryRow,
     context: ModelContext
-) throws -> (category: ProductCategory?, created: Bool) {
+) throws -> (category: ProductCategory?, created: Bool, updated: Bool) {
     let deletedAt = SupabaseRemoteDateParser.parse(row.deletedAt)
     let updatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
     guard let name = SupabasePullPreviewNormalizer.semanticString(row.name) else {
-        return (nil, false)
+        return (nil, false, false)
     }
     if let category = try fetchCategory(remoteID: row.id, context: context)
         ?? fetchCategory(name: name, context: context) {
+        let wasName = category.name
+        let wasRemoteID = category.remoteID
+        let wasUpdatedAt = category.remoteUpdatedAt
+        let wasDeletedAt = category.remoteDeletedAt
+        category.name = name
         category.remoteID = row.id
         category.remoteUpdatedAt = updatedAt
         category.remoteDeletedAt = deletedAt
-        return (deletedAt == nil ? category : nil, false)
+        let updated = wasName != category.name
+            || wasRemoteID != category.remoteID
+            || wasUpdatedAt != category.remoteUpdatedAt
+            || wasDeletedAt != category.remoteDeletedAt
+        return (deletedAt == nil ? category : nil, false, updated)
     }
-    guard deletedAt == nil else { return (nil, false) }
+    guard deletedAt == nil else { return (nil, false, false) }
     let category = ProductCategory(name: name, remoteID: row.id, remoteUpdatedAt: updatedAt)
     context.insert(category)
-    return (category, true)
+    return (category, true, false)
 }
 
 nonisolated func applyTargetedProduct(
@@ -387,6 +413,10 @@ nonisolated struct SyncEventEntityIDSet: Sendable {
         supplierIDs.isEmpty && categoryIDs.isEmpty && productIDs.isEmpty && priceIDs.isEmpty && sessionIDs.isEmpty
     }
 
+    var totalIDs: Int {
+        supplierIDs.count + categoryIDs.count + productIDs.count + priceIDs.count + sessionIDs.count
+    }
+
     var isCatalogEmpty: Bool {
         supplierIDs.isEmpty && categoryIDs.isEmpty && productIDs.isEmpty
     }
@@ -417,5 +447,132 @@ nonisolated struct SyncEventEntityIDSet: Sendable {
             guard case .string(let raw) = element else { return nil }
             return UUID(uuidString: raw)
         })
+    }
+}
+
+nonisolated enum SyncEventApplyStatusValue: String, Codable, Sendable, Equatable {
+    case applied
+    case blocked
+    case skipped
+    case retrying
+}
+
+nonisolated enum SyncEventApplyStatusReason: String, Codable, Sendable, Equatable {
+    case applied
+    case selfOrigin = "self_origin"
+    case dirtyLocal = "dirty_local"
+    case missingEntityIDs = "missing_entity_ids"
+    case entityIDsTooLarge = "entity_ids_too_large"
+    case missingRemote = "missing_remote"
+    case unsupportedDomain = "unsupported_domain"
+}
+
+nonisolated struct SyncEventApplyStatusEntityIDs: Codable, Sendable, Equatable {
+    var supplierIDs: [UUID] = []
+    var categoryIDs: [UUID] = []
+    var productIDs: [UUID] = []
+    var priceIDs: [UUID] = []
+    var sessionIDs: [UUID] = []
+
+    init(_ ids: SyncEventEntityIDSet = SyncEventEntityIDSet()) {
+        supplierIDs = ids.supplierIDs.sorted { $0.uuidString < $1.uuidString }
+        categoryIDs = ids.categoryIDs.sorted { $0.uuidString < $1.uuidString }
+        productIDs = ids.productIDs.sorted { $0.uuidString < $1.uuidString }
+        priceIDs = ids.priceIDs.sorted { $0.uuidString < $1.uuidString }
+        sessionIDs = ids.sessionIDs.sorted { $0.uuidString < $1.uuidString }
+    }
+}
+
+nonisolated struct SyncEventApplyStatusRecord: Codable, Sendable, Equatable {
+    var ownerUserID: UUID
+    var eventID: Int64
+    var shopID: UUID?
+    var domain: String
+    var entityType: String?
+    var entityIDs: SyncEventApplyStatusEntityIDs
+    var status: SyncEventApplyStatusValue
+    var reason: SyncEventApplyStatusReason
+    var attemptCount: Int
+    var lastAttemptAtMs: Int
+    var nextRetryAtMs: Int?
+    var correlationID: String?
+    var clientEventID: String?
+    var remoteCreatedAt: String
+}
+
+nonisolated struct SyncEventApplyStatusStore {
+    private static let retryDelayMs = 30_000
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func record(
+        event: RemoteSyncEventRow,
+        ownerUserID: UUID,
+        ids: SyncEventEntityIDSet,
+        status: SyncEventApplyStatusValue,
+        reason: SyncEventApplyStatusReason,
+        nowMs: Int = mcNowMillis()
+    ) {
+        let key = storageKey(ownerUserID: ownerUserID)
+        var records = loadRecords(ownerUserID: ownerUserID)
+        let previous = records[String(event.id)]
+        records[String(event.id)] = SyncEventApplyStatusRecord(
+            ownerUserID: ownerUserID,
+            eventID: event.id,
+            shopID: event.shopID,
+            domain: event.domain,
+            entityType: entityType(from: event.metadata),
+            entityIDs: SyncEventApplyStatusEntityIDs(ids),
+            status: status,
+            reason: reason,
+            attemptCount: (previous?.attemptCount ?? 0) + 1,
+            lastAttemptAtMs: nowMs,
+            nextRetryAtMs: status == .blocked || status == .retrying ? nowMs + Self.retryDelayMs : nil,
+            correlationID: event.clientEventID ?? event.batchID?.uuidString,
+            clientEventID: event.clientEventID,
+            remoteCreatedAt: Self.remoteCreatedAtString(event.createdAt)
+        )
+        if let encoded = try? JSONEncoder().encode(records) {
+            defaults.set(encoded, forKey: key)
+        }
+    }
+
+    func record(ownerUserID: UUID, eventID: Int64) -> SyncEventApplyStatusRecord? {
+        loadRecords(ownerUserID: ownerUserID)[String(eventID)]
+    }
+
+    func records(ownerUserID: UUID) -> [SyncEventApplyStatusRecord] {
+        loadRecords(ownerUserID: ownerUserID)
+            .values
+            .sorted { $0.eventID < $1.eventID }
+    }
+
+    private func loadRecords(ownerUserID: UUID) -> [String: SyncEventApplyStatusRecord] {
+        guard let data = defaults.data(forKey: storageKey(ownerUserID: ownerUserID)),
+              let records = try? JSONDecoder().decode([String: SyncEventApplyStatusRecord].self, from: data) else {
+            return [:]
+        }
+        return records
+    }
+
+    private func storageKey(ownerUserID: UUID) -> String {
+        "sync.events.applyStatus.\(AccountBindingStore.accountHash(for: ownerUserID))"
+    }
+
+    private func entityType(from metadata: SyncEventJSONValue) -> String? {
+        guard case .object(let object) = metadata,
+              case .string(let entityType) = object["entity_type"] else {
+            return nil
+        }
+        return entityType
+    }
+
+    private static func remoteCreatedAtString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 }

@@ -1,0 +1,12 @@
+-- iOS local after iOS delete
+-- history
+Z_PK,ZID,ZTITLE,ZREMOTEDELETEDAT,ZLOCALCHANGEREVISION,ZLASTSYNCEDLOCALREVISION,ZSYNCSTATUS
+215,TASK135_DELETE_HISTORY_IOS_20260618T152426Z,TASK135_DELETE_HISTORY_IOS_20260618T152426Z,803489281,2,2,1
+-- product
+(no rows)
+-- prices
+(no rows)
+-- pending
+Z_PK,ZENTITYKINDRAW,ZOPERATIONRAW,ZSTATUSRAW,ZLOGICALKEY,ZENTITYREMOTEIDRAW,ZCHANGEDFIELDSRAW,ZSTOREID,ZLOCALSTOREID
+1,historySession,delete,acknowledged,historySession:remote:3b92fec8-ca29-40d1-979d-7d9370beefee,3b92fec8-ca29-40d1-979d-7d9370beefee,deleted_at,anonymous,local-anonymous
+5,product,delete,pending,product:remote:9a347bf9-3525-4d04-a532-b6a626d177a2,9a347bf9-3525-4d04-a532-b6a626d177a2,tombstone,default,local-default

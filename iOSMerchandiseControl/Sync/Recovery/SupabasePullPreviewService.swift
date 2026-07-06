@@ -8,6 +8,11 @@ protocol SupabaseInventoryFetching: Sendable {
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow]
 }
 
+protocol SupabaseInventoryLookupByIDFetching: Sendable {
+    func fetchSuppliersByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventorySupplierRow]
+    func fetchCategoriesByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventoryCategoryRow]
+}
+
 nonisolated struct SupabasePullPreviewService: Sendable {
     private let inventoryService: any SupabaseInventoryFetching
     private let pageSize: Int
@@ -101,7 +106,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
             try await inventoryService.fetchProductPricesPage(from: from, to: to)
         }
 
-        let suppliers: [RemoteInventorySupplierRow]
+        var suppliers: [RemoteInventorySupplierRow]
         do {
             let result = try await suppliersFetch
             suppliers = result.rows
@@ -115,7 +120,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
             sourceErrors.append(sourceErrorWarning(for: "inventory_suppliers", error: error))
         }
 
-        let categories: [RemoteInventoryCategoryRow]
+        var categories: [RemoteInventoryCategoryRow]
         do {
             let result = try await categoriesFetch
             categories = result.rows
@@ -127,6 +132,36 @@ nonisolated struct SupabasePullPreviewService: Sendable {
             categories = []
             partialCatalog = true
             sourceErrors.append(sourceErrorWarning(for: "inventory_categories", error: error))
+        }
+
+        if let lookupFetcher = inventoryService as? any SupabaseInventoryLookupByIDFetching {
+            let missingSupplierIDs = Set(products.compactMap(\.supplierID))
+                .subtracting(Set(suppliers.map(\.id)))
+            if !missingSupplierIDs.isEmpty {
+                do {
+                    suppliers = Self.mergedLookupRows(
+                        suppliers,
+                        extra: try await lookupFetcher.fetchSuppliersByIDs(missingSupplierIDs)
+                    )
+                } catch {
+                    partialCatalog = true
+                    sourceErrors.append(sourceErrorWarning(for: "inventory_suppliers", error: error))
+                }
+            }
+
+            let missingCategoryIDs = Set(products.compactMap(\.categoryID))
+                .subtracting(Set(categories.map(\.id)))
+            if !missingCategoryIDs.isEmpty {
+                do {
+                    categories = Self.mergedLookupRows(
+                        categories,
+                        extra: try await lookupFetcher.fetchCategoriesByIDs(missingCategoryIDs)
+                    )
+                } catch {
+                    partialCatalog = true
+                    sourceErrors.append(sourceErrorWarning(for: "inventory_categories", error: error))
+                }
+            }
         }
 
         let productPrices: [RemoteInventoryProductPriceRow]
@@ -193,6 +228,18 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     private struct RemoteFetchOutcome: Sendable {
         let snapshot: RemoteInventorySnapshot
         let partialCatalog: Bool
+    }
+
+    private static func mergedLookupRows<Row: Identifiable>(
+        _ rows: [Row],
+        extra: [Row]
+    ) -> [Row] where Row.ID == UUID {
+        var seen = Set(rows.map(\.id))
+        var merged = rows
+        for row in extra where seen.insert(row.id).inserted {
+            merged.append(row)
+        }
+        return merged
     }
 }
 

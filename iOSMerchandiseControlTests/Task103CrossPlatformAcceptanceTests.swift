@@ -473,8 +473,15 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
         let after = try task114LocalCounts(context: ModelContext(context.container))
         XCTAssertEqual(after.products, preview.remoteCounts.activeProducts)
-        XCTAssertEqual(after.suppliers, preview.remoteCounts.suppliers)
-        XCTAssertEqual(after.categories, preview.remoteCounts.categories)
+        if shouldReplaceLocalWithCloud {
+            XCTAssertEqual(after.suppliers, preview.remoteCounts.suppliers)
+            XCTAssertEqual(after.categories, preview.remoteCounts.categories)
+        } else {
+            XCTAssertEqual(after.suppliers, before.suppliers + result.suppliersCreated)
+            XCTAssertEqual(after.categories, before.categories + result.categoriesCreated)
+            XCTAssertEqual(result.suppliersCreated, plannedSuppliers)
+            XCTAssertEqual(result.categoriesCreated, plannedCategories)
+        }
         XCTAssertLessThanOrEqual(after.productPrices, priceResult.totalConsidered)
 
         print(

@@ -1,0 +1,43 @@
+-- Android create statements
+CREATE UNIQUE INDEX `index_categories_name` ON `categories` (`name`)
+CREATE UNIQUE INDEX `index_category_remote_refs_categoryId` ON `category_remote_refs` (`categoryId`)
+CREATE UNIQUE INDEX `index_category_remote_refs_remoteId` ON `category_remote_refs` (`remoteId`)
+CREATE UNIQUE INDEX `index_history_entry_remote_refs_historyEntryUid` ON `history_entry_remote_refs` (`historyEntryUid`)
+CREATE UNIQUE INDEX `index_history_entry_remote_refs_remoteId` ON `history_entry_remote_refs` (`remoteId`)
+CREATE UNIQUE INDEX `index_pending_catalog_tombstones_entityType_remoteId` ON `pending_catalog_tombstones` (`entityType`, `remoteId`)
+CREATE UNIQUE INDEX `index_product_price_remote_refs_productPriceId` ON `product_price_remote_refs` (`productPriceId`)
+CREATE UNIQUE INDEX `index_product_price_remote_refs_remoteId` ON `product_price_remote_refs` (`remoteId`)
+CREATE INDEX `index_product_prices_productId_type_createdAt` ON `product_prices` (`productId`, `type`, `createdAt`)
+CREATE UNIQUE INDEX `index_product_prices_productId_type_effectiveAt` ON `product_prices` (`productId`, `type`, `effectiveAt`)
+CREATE UNIQUE INDEX `index_product_remote_refs_productId` ON `product_remote_refs` (`productId`)
+CREATE UNIQUE INDEX `index_product_remote_refs_remoteId` ON `product_remote_refs` (`remoteId`)
+CREATE UNIQUE INDEX `index_products_barcode` ON `products` (`barcode`)
+CREATE INDEX `index_products_categoryId` ON `products` (`categoryId`)
+CREATE INDEX `index_products_supplierId` ON `products` (`supplierId`)
+CREATE UNIQUE INDEX `index_supplier_remote_refs_remoteId` ON `supplier_remote_refs` (`remoteId`)
+CREATE UNIQUE INDEX `index_supplier_remote_refs_supplierId` ON `supplier_remote_refs` (`supplierId`)
+CREATE UNIQUE INDEX `index_suppliers_name` ON `suppliers` (`name`)
+CREATE TABLE `categories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL COLLATE NOCASE)
+CREATE TABLE `category_remote_refs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `categoryId` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `localChangeRevision` INTEGER NOT NULL, `lastSyncedLocalRevision` INTEGER NOT NULL, `lastRemoteAppliedAt` INTEGER, `lastRemotePayloadFingerprint` TEXT, `remoteUpdatedAt` TEXT, FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `history_entries` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id` TEXT NOT NULL, `displayName` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `data` TEXT NOT NULL, `editable` TEXT NOT NULL, `complete` TEXT NOT NULL, `supplier` TEXT NOT NULL, `category` TEXT NOT NULL, `wasExported` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL, `orderTotal` REAL NOT NULL, `paymentTotal` REAL NOT NULL, `missingItems` INTEGER NOT NULL, `totalItems` INTEGER NOT NULL, `isManualEntry` INTEGER NOT NULL, `deletedAt` TEXT)
+CREATE TABLE `history_entry_remote_refs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `historyEntryUid` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `localChangeRevision` INTEGER NOT NULL, `lastSyncedLocalRevision` INTEGER NOT NULL, `lastRemoteAppliedAt` INTEGER, `lastRemotePayloadFingerprint` TEXT, FOREIGN KEY(`historyEntryUid`) REFERENCES `history_entries`(`uid`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `pending_catalog_tombstones` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `entityType` TEXT NOT NULL, `remoteId` TEXT NOT NULL, `enqueuedAtMs` INTEGER NOT NULL, `attemptCount` INTEGER NOT NULL)
+CREATE TABLE `product_price_remote_refs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `productPriceId` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, FOREIGN KEY(`productPriceId`) REFERENCES `product_prices`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `product_prices` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `productId` INTEGER NOT NULL, `type` TEXT NOT NULL, `price` REAL NOT NULL, `effectiveAt` TEXT NOT NULL, `source` TEXT, `note` TEXT, `createdAt` TEXT NOT NULL, FOREIGN KEY(`productId`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `product_remote_refs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `productId` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `localChangeRevision` INTEGER NOT NULL, `lastSyncedLocalRevision` INTEGER NOT NULL, `lastRemoteAppliedAt` INTEGER, `lastRemotePayloadFingerprint` TEXT, `remoteUpdatedAt` TEXT, localChangedFields TEXT, FOREIGN KEY(`productId`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `products` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `barcode` TEXT NOT NULL, `itemNumber` TEXT, `productName` TEXT, `secondProductName` TEXT, `purchasePrice` REAL, `retailPrice` REAL, `oldPurchasePrice` REAL, `oldRetailPrice` REAL, `supplierId` INTEGER, `categoryId` INTEGER, `stockQuantity` REAL, FOREIGN KEY(`supplierId`) REFERENCES `suppliers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )
+CREATE TABLE `supplier_remote_refs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `supplierId` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `localChangeRevision` INTEGER NOT NULL, `lastSyncedLocalRevision` INTEGER NOT NULL, `lastRemoteAppliedAt` INTEGER, `lastRemotePayloadFingerprint` TEXT, `remoteUpdatedAt` TEXT, FOREIGN KEY(`supplierId`) REFERENCES `suppliers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+CREATE TABLE `suppliers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)
+-- sqlite_sequence
+name,seq
+history_entries,43
+history_entry_remote_refs,43
+suppliers,89
+supplier_remote_refs,89
+categories,58
+category_remote_refs,58
+products,19729
+product_remote_refs,19729
+product_prices,41179
+product_price_remote_refs,41171
+pending_catalog_tombstones,1

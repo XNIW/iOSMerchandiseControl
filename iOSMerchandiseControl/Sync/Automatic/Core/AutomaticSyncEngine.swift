@@ -69,11 +69,14 @@ actor AutomaticSyncEngine {
                         source: source,
                         cancellationToken: cancellationToken
                     ) || didRun
-                case .bootstrap, .fullRecovery, .requestRecovery:
+                case .bootstrap, .fullRecovery:
                     didRun = try await recoverRemoteSnapshot(
                         ownerUserID: ownerUserID,
                         cancellationToken: cancellationToken
                     ) || didRun
+                case .requestRecovery:
+                    recordDiagnostic("recovery.lastOutcome", "requested")
+                    recordDiagnostic("recovery.requestedAt", Date().timeIntervalSince1970)
                 case .retryAfterBusy:
                     let decision = retryPolicy.decisionForBusy(attempt: 0, isBackground: false)
                     switch decision.action {
@@ -159,10 +162,10 @@ actor AutomaticSyncEngine {
         try await cancellationPolicy.checkCancellation(token: cancellationToken)
         recordIncrementalSummary(summary, source: source)
         if summary.requiresFullRecovery {
-            return try await recoverRemoteSnapshot(
-                ownerUserID: ownerUserID,
-                cancellationToken: cancellationToken
-            )
+            recordDiagnostic("recovery.lastOutcome", "requested")
+            recordDiagnostic("recovery.requestedAt", Date().timeIntervalSince1970)
+            recordDiagnostic("recovery.requestedReason", summary.requiresFullRecoveryReason ?? "unspecified")
+            return summary.eventsFetched > 0 || summary.totalApplied > 0
         }
         return summary.eventsFetched > 0 || summary.totalApplied > 0 || summary.requiresFullRecovery
     }

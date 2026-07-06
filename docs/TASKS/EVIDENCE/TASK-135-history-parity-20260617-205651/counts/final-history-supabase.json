@@ -1,0 +1,14 @@
+{
+  "status": "blocked",
+  "source": "supabase",
+  "reason": "local Supabase container unavailable; no row-level live query executed",
+  "metrics": {
+    "activeHistorySessions": null,
+    "tombstonedHistorySessions": null,
+    "task135HistoryFixtures": null,
+    "duplicateRemoteID": null,
+    "duplicateFingerprint": null,
+    "missingRemoteIDVisibleRows": null,
+    "payloadHashMismatches": null
+  }
+}
