@@ -1,0 +1,6 @@
+-- iOS pending after cleanup
+-- iOS fixture products after cleanup
+-- Android pending after cleanup
+pending_tombstones,product_pending,price_missing_refs
+0,0,0
+-- Android fixture products after cleanup

@@ -297,4 +297,24 @@ extension HistoryEntry {
 
         return shopID == nil
     }
+
+    func isAdoptableByRemoteHistoryIdentity(
+        ownerUserID: UUID,
+        selectedShopID: UUID?,
+        remoteIDs: Set<UUID>
+    ) -> Bool {
+        guard selectedShopID != nil,
+              !remoteIDs.isEmpty else {
+            return false
+        }
+        if let owner = self.ownerUserID,
+           owner != ownerUserID.uuidString.lowercased() {
+            return false
+        }
+        guard shopID == nil,
+              storeID == nil else {
+            return false
+        }
+        return remoteID.map(remoteIDs.contains) == true || remoteIDs.contains(uid)
+    }
 }

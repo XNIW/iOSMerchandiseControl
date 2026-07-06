@@ -1,0 +1,12 @@
+{
+  "status": "not_run_live",
+  "source": "ios_swiftdata",
+  "reason": "no live row-level SwiftData export was run in this pass; verification is covered by targeted in-memory XCTest",
+  "tests": {
+    "HistorySessionSyncServiceTests": "passed",
+    "OptionsLocalDatabaseSummaryTests": "passed",
+    "passed": 18,
+    "failed": 0
+  },
+  "rows": []
+}

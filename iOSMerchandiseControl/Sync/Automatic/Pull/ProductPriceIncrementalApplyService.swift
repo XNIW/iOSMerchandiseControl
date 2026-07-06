@@ -11,6 +11,7 @@ nonisolated struct ProductPriceIncrementalApplyServiceResult {
     var remoteIdentityLinked = 0
     var skippedExisting = 0
     var missingRemotePruned = 0
+    var missingRemoteCount = 0
     var applyMs = 0
 }
 
@@ -74,6 +75,7 @@ nonisolated struct ProductPriceIncrementalApplyService {
             remoteIdentityLinked: applyResult.remoteIdentityLinked,
             skippedExisting: applyResult.skippedExisting,
             missingRemotePruned: pruned,
+            missingRemoteCount: missingPriceIDs.count,
             applyMs: mcNowMillis() - applyStarted
         )
     }
@@ -129,12 +131,18 @@ nonisolated struct ProductPriceIncrementalApplyService {
                     skippedExisting += 1
                     continue
                 }
-                let outcome = try applyTargetedProductPriceRow(
-                    row,
-                    product: product,
-                    currentPricesByKey: &currentPricesByKey,
-                    context: context
-                )
+                let outcome: ProductPriceApplyResult
+                do {
+                    outcome = try applyTargetedProductPriceRow(
+                        row,
+                        product: product,
+                        currentPricesByKey: &currentPricesByKey,
+                        context: context
+                    )
+                } catch ProductPriceApplyError.policyBlocked(let reasons) where reasons.contains(.conflicts) {
+                    skippedExisting += 1
+                    continue
+                }
                 inserted += outcome.inserted
                 remoteIdentityLinked += outcome.remoteIdentityLinked
                 skippedExisting += outcome.skippedExisting

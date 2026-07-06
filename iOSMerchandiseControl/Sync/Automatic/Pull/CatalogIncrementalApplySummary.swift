@@ -8,7 +8,9 @@ struct CatalogIncrementalApplySummary: Equatable, Sendable {
     var productsUpdated: Int = 0
     var productsTombstoned: Int = 0
     var suppliersCreated: Int = 0
+    var suppliersUpdated: Int = 0
     var categoriesCreated: Int = 0
+    var categoriesUpdated: Int = 0
     var suppliersMissingRemoteTombstoned: Int = 0
     var categoriesMissingRemoteTombstoned: Int = 0
 
@@ -22,7 +24,9 @@ struct CatalogIncrementalApplySummary: Equatable, Sendable {
         productsUpdated = summary.productsUpdated
         productsTombstoned = summary.productsTombstoned
         suppliersCreated = summary.suppliersCreated
+        suppliersUpdated = summary.suppliersUpdated
         categoriesCreated = summary.categoriesCreated
+        categoriesUpdated = summary.categoriesUpdated
         suppliersMissingRemoteTombstoned = summary.suppliersMissingRemoteTombstoned
         categoriesMissingRemoteTombstoned = summary.categoriesMissingRemoteTombstoned
     }

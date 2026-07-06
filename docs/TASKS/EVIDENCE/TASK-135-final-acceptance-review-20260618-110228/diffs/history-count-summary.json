@@ -1,0 +1,32 @@
+{
+  "android": {
+    "active": 39,
+    "duplicateFingerprintVisible": 0,
+    "duplicateRemoteIdVisible": 0,
+    "hiddenActive": 4,
+    "rows": 43,
+    "shown": 35,
+    "userVisible": 35,
+    "visibleTask135Residue": 0
+  },
+  "ios": {
+    "active": 39,
+    "duplicateFingerprintVisible": 0,
+    "duplicateRemoteIdVisible": 0,
+    "hiddenActive": 4,
+    "rows": 96,
+    "shown": 35,
+    "userVisible": 35,
+    "visibleTask135Residue": 0
+  },
+  "supabase": {
+    "active": 39,
+    "duplicateFingerprintVisible": 0,
+    "duplicateRemoteIdVisible": 0,
+    "hiddenActive": 4,
+    "rows": 95,
+    "shown": 35,
+    "userVisible": 35,
+    "visibleTask135Residue": 0
+  }
+}

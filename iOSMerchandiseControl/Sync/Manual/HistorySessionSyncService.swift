@@ -159,11 +159,16 @@ nonisolated final class HistorySessionSyncService {
 
         let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
         let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let adoptableRemoteIDs = remoteHistoryIDsEligibleForScopeAdoption(rows, selectedShopID: selectedShopID)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
             $0.isCompatibleWithHistoryScope(
                 ownerUserID: ownerUserID,
                 selectedShopID: selectedShopID,
                 storeIdentity: storeIdentity
+            ) || $0.isAdoptableByRemoteHistoryIdentity(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                remoteIDs: adoptableRemoteIDs
             )
         }
         var byRemoteID: [UUID: HistoryEntry] = [:]
@@ -196,6 +201,7 @@ nonisolated final class HistorySessionSyncService {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
                     } else {
+                        existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                         applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                     }
@@ -260,11 +266,16 @@ nonisolated final class HistorySessionSyncService {
 
         let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
         let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let adoptableRemoteIDs = remoteHistoryIDsEligibleForScopeAdoption(rows, selectedShopID: selectedShopID)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
             $0.isCompatibleWithHistoryScope(
                 ownerUserID: ownerUserID,
                 selectedShopID: selectedShopID,
                 storeIdentity: storeIdentity
+            ) || $0.isAdoptableByRemoteHistoryIdentity(
+                ownerUserID: ownerUserID,
+                selectedShopID: selectedShopID,
+                remoteIDs: adoptableRemoteIDs
             )
         }
         var byRemoteID: [UUID: HistoryEntry] = [:]
@@ -303,6 +314,7 @@ nonisolated final class HistorySessionSyncService {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
                     } else {
+                        existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                         applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                         mutationsSinceSave += 1
@@ -379,6 +391,14 @@ nonisolated final class HistorySessionSyncService {
             result[fingerprint] = result[fingerprint] ?? entry
         }
         return result
+    }
+
+    private func remoteHistoryIDsEligibleForScopeAdoption(
+        _ rows: [RemoteSharedSheetSessionRow],
+        selectedShopID: UUID?
+    ) -> Set<UUID> {
+        guard let selectedShopID else { return [] }
+        return Set(rows.compactMap { $0.shopID == selectedShopID ? $0.remoteID : nil })
     }
 
     private func pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(

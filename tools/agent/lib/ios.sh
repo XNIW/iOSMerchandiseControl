@@ -1715,10 +1715,23 @@ after_suppliers = after_counts.get("suppliers", {}).get("active")
 after_categories = after_counts.get("categories", {}).get("active")
 after_product_prices = after_counts.get("product_prices", {}).get("active")
 counts_match = True
-if isinstance(remote_suppliers, int):
-    counts_match = counts_match and after_suppliers == remote_suppliers
-if isinstance(remote_categories, int):
-    counts_match = counts_match and after_categories == remote_categories
+replace_local_with_cloud = metrics.get("replace_local_with_cloud") == "true"
+if replace_local_with_cloud:
+    if isinstance(remote_suppliers, int):
+        counts_match = counts_match and after_suppliers == remote_suppliers
+    if isinstance(remote_categories, int):
+        counts_match = counts_match and after_categories == remote_categories
+else:
+    suppliers_created = metrics.get("suppliers_created", max(0, supplier_delta))
+    categories_created = metrics.get("categories_created", max(0, category_delta))
+    planned_suppliers = metrics.get("planned_suppliers")
+    planned_categories = metrics.get("planned_categories")
+    counts_match = counts_match and supplier_delta == suppliers_created
+    counts_match = counts_match and category_delta == categories_created
+    if isinstance(planned_suppliers, int):
+        counts_match = counts_match and suppliers_created == planned_suppliers
+    if isinstance(planned_categories, int):
+        counts_match = counts_match and categories_created == planned_categories
 if isinstance(remote_product_prices, int):
     materialized_prices = metrics.get("after_prices")
     if isinstance(materialized_prices, int):

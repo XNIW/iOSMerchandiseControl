@@ -1,0 +1,17 @@
+{
+  "ios_category_name": "\u53d1\u9970",
+  "ios_category_pk": 390,
+  "ios_history_pk": 215,
+  "ios_history_remote_id": "3b92fec8-ca29-40d1-979d-7d9370beefee",
+  "ios_history_title": "TASK135_DELETE_HISTORY_IOS_20260618T152426Z",
+  "ios_product_barcode": "TASK135_DELETE_PRODUCT_IOS_20260618T152426Z",
+  "ios_product_pk": 98792,
+  "ios_product_price_pks": [
+    206139,
+    206140
+  ],
+  "ios_supplier_name": "Amanda",
+  "ios_supplier_pk": 543,
+  "owner_hash": "ad3d747e936ccd13ed305b1d8a3fb9558ac1e1a0081b9728b3aec2f14f06b1c8",
+  "tag": "20260618T152426Z"
+}

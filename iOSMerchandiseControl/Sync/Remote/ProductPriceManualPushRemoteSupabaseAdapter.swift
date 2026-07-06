@@ -47,16 +47,21 @@ struct ProductPriceManualPushRemoteSupabaseAdapter: SupabaseProductPriceManualPu
         let ownerUserID = try await query.requireOwner()
         let client = await query.client()
         do {
-            let row: RemoteInventoryProductRow = try await client
+            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            var request = try client
                 .from("inventory_products")
                 .update(payload)
                 .eq("id", value: id.uuidString)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            let row: RemoteInventoryProductRow = try await request
                 .select(CatalogRemoteSupabaseAdapter.productColumns)
                 .single()
                 .execute()
                 .value
-            guard row.id == id, row.ownerUserID == ownerUserID else {
+            guard row.id == id, row.ownerUserID == ownerUserID, row.shopID == selectedShopID else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Product update read-back mismatch.")
             }
             return row

@@ -1,0 +1,5 @@
+RESULT BLOCKED_EXTERNAL
+EXIT_CODE 2
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T143155Z-sync-counts-source-android-p79330.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T143155Z-sync-counts-source-android-p79330.json
+NEXT_ACTION Resolve source-specific access/auth/device blocker and retry.

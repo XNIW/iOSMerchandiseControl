@@ -1,0 +1,24 @@
+# TASK-135 Hidden 4 Local Check
+
+## ios
+- hidden_active=4
+- remote_id=53d91b99-1a32-4711-bfdc-6636a7cce6c1 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=560da308-71a5-43f2-9bf3-4c92502c0f8a title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=7b22539f-95b4-4165-a3b6-869bfedc27b4 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=7be52c5a-2e8b-4090-a43f-7845c49bb13b title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+
+## android
+- hidden_active=4
+- remote_id=53d91b99-1a32-4711-bfdc-6636a7cce6c1 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=local id technical/TASK, title technical/TASK
+- remote_id=560da308-71a5-43f2-9bf3-4c92502c0f8a title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=7b22539f-95b4-4165-a3b6-869bfedc27b4 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=local id technical/TASK, title technical/TASK
+- remote_id=7be52c5a-2e8b-4090-a43f-7845c49bb13b title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+
+## supabase
+- hidden_active=4
+- remote_id=53d91b99-1a32-4711-bfdc-6636a7cce6c1 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=560da308-71a5-43f2-9bf3-4c92502c0f8a title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=7b22539f-95b4-4165-a3b6-869bfedc27b4 title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+- remote_id=7be52c5a-2e8b-4090-a43f-7845c49bb13b title=TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL is_matrix=True isUserVisible=False isShownInHistoryList=False reasonHidden=title technical/TASK
+
+RESULT=PASS

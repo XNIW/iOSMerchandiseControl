@@ -1,0 +1,6 @@
+-- iOS pending after failure
+ZENTITYKINDRAW,ZOPERATIONRAW,ZSTATUSRAW,count
+product,delete,pending,1
+-- Android pending after failure
+pending_tombstones,product_pending,price_missing_refs
+0,1,2

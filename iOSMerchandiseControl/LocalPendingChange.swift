@@ -423,6 +423,13 @@ nonisolated final class LocalPendingChangeAccumulator {
         origin: LocalPendingChangeOrigin = .historySessionSave,
         changedFields: [String]
     ) throws -> LocalPendingChange? {
+        if let ownerUserID {
+            entry.assignHistoryScope(
+                ownerUserID: ownerUserID,
+                selectedShopID: ShopContextSelection.selectedShopID(ownerUserID: ownerUserID),
+                storeIdentity: storeIdentity
+            )
+        }
         let remoteID = entry.ensureHistorySessionRemoteID()
         let key = LocalPendingChangeLogicalKey.historySession(
             remoteID: remoteID,

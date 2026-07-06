@@ -8,6 +8,16 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
     private static var retainedContexts: [ModelContext] = []
 
+    override func setUp() {
+        super.setUp()
+        clearSelectedShop()
+    }
+
+    override func tearDown() {
+        clearSelectedShop()
+        super.tearDown()
+    }
+
     func testBlocksSnapshotWithoutSafeDryRun() {
         let plan = makePlan(remoteDedupeStatus: .unsafePartialRemoteDedupe(.networkOrPermission))
 
@@ -55,6 +65,32 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         XCTAssertNotEqual(payload.id, changed.payloads.first?.id)
     }
 
+    func testPayloadIncludesSelectedShopScopeWhenAvailable() throws {
+        let shopID = uuid(901)
+        SelectedShopStore(defaults: .standard).save(
+            SelectedShop(
+                shopID: shopID,
+                code: "SHOP-901",
+                name: "Shop 901",
+                role: "owner",
+                status: "active",
+                selectable: true,
+                canWrite: true,
+                selectedAt: Date(timeIntervalSince1970: 1_778_000_001)
+            ),
+            accountHash: AccountBindingStore.accountHash(for: ownerID)
+        )
+        let scoped = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
+        let scopedPayload = try XCTUnwrap(scoped.payloads.first)
+
+        clearSelectedShop()
+        let legacy = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
+
+        XCTAssertEqual(scopedPayload.shopID, shopID)
+        XCTAssertNil(legacy.payloads.first?.shopID)
+        XCTAssertNotEqual(scopedPayload.id, legacy.payloads.first?.id)
+    }
+
     func testReadBackExactMatchSucceedsWithNormalizedTypeEffectiveAtAndPrice() async throws {
         let plan = makePlan(localPrices: [
             localPrice(type: " PuRcHaSe ", price: 12.3404, effectiveAt: try date("2026-05-01T10:30:00Z"))
@@ -100,7 +136,13 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
     func testReadBackMissingRowIsFailure() async throws {
         let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
         let remote = MockProductPriceManualPushRemote(readBackRows: [])
-        let service = SupabaseProductPriceManualPushService(remote: remote)
+        let service = SupabaseProductPriceManualPushService(
+            remote: remote,
+            options: ProductPriceManualPushOptions(
+                readBackRetryAttempts: 0,
+                readBackRetryDelayNanoseconds: 1
+            )
+        )
 
         let result = try await service.push(snapshot: snapshot)
 
@@ -108,6 +150,29 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
             return XCTFail("Expected missing row verification failure")
         }
         XCTAssertEqual(ids, snapshot.payloads.map(\.id))
+    }
+
+    func testReadBackRetriesTransientMissingRowsUntilExactMatch() async throws {
+        let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
+        let remote = MockProductPriceManualPushRemote(
+            readBackRowsByCall: [
+                [],
+                snapshot.payloads.map { $0.remoteRow() }
+            ]
+        )
+        let service = SupabaseProductPriceManualPushService(
+            remote: remote,
+            options: ProductPriceManualPushOptions(
+                readBackRetryAttempts: 2,
+                readBackRetryDelayNanoseconds: 1
+            )
+        )
+
+        let result = try await service.push(snapshot: snapshot)
+        let readBackCalls = await remote.readBackCalls
+
+        XCTAssertTrue(result.isVerifiedSuccess)
+        XCTAssertEqual(readBackCalls, 2)
     }
 
     func testReadBackPriceMismatchIsFailure() async throws {
@@ -149,7 +214,13 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
             readBackRows: [],
             readBackError: SupabaseTransportClientError.networkError(statusCode: nil, message: "timeout")
         )
-        let service = SupabaseProductPriceManualPushService(remote: remote)
+        let service = SupabaseProductPriceManualPushService(
+            remote: remote,
+            options: ProductPriceManualPushOptions(
+                readBackRetryAttempts: 0,
+                readBackRetryDelayNanoseconds: 1
+            )
+        )
 
         let result = try await service.push(snapshot: snapshot)
 
@@ -702,17 +773,21 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
     }
 
+    private func clearSelectedShop() {
+        SelectedShopStore(defaults: .standard).clear(accountHash: AccountBindingStore.accountHash(for: ownerID))
+    }
+
     private func source(named fileName: String) throws -> String {
         let testsURL = URL(fileURLWithPath: #filePath)
         let repoRoot = testsURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        return try String(
-            contentsOf: repoRoot
-                .appendingPathComponent("iOSMerchandiseControl")
-                .appendingPathComponent(fileName),
-            encoding: .utf8
-        )
+        let sourceURL = repoRoot
+            .appendingPathComponent("iOSMerchandiseControl")
+            .appendingPathComponent("Sync")
+            .appendingPathComponent("Manual")
+            .appendingPathComponent(fileName)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
     }
 
     private func loadStrings(language: String) throws -> [String: String] {
@@ -742,6 +817,7 @@ private extension ProductPriceManualPushPayload {
         RemoteInventoryProductPriceRow(
             id: id,
             ownerUserID: ownerUserID,
+            shopID: shopID,
             productID: productID,
             type: type ?? self.type,
             price: price ?? self.price,
@@ -755,6 +831,7 @@ private extension ProductPriceManualPushPayload {
 
 private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
     private var readBackRows: [RemoteInventoryProductPriceRow]
+    private var readBackRowsByCall: [[RemoteInventoryProductPriceRow]]
     private let insertError: Error?
     private let readBackError: Error?
     private let productUpdateOverride: RemoteInventoryProductRow?
@@ -771,6 +848,7 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
 
     init(
         readBackRows: [RemoteInventoryProductPriceRow] = [],
+        readBackRowsByCall: [[RemoteInventoryProductPriceRow]] = [],
         insertError: Error? = nil,
         readBackError: Error? = nil,
         productUpdateOverride: RemoteInventoryProductRow? = nil,
@@ -779,6 +857,7 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
         echoInsertedRowsToReadBack: Bool = false
     ) {
         self.readBackRows = readBackRows
+        self.readBackRowsByCall = readBackRowsByCall
         self.insertError = insertError
         self.readBackError = readBackError
         self.productUpdateOverride = productUpdateOverride
@@ -823,7 +902,13 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
         if let readBackError {
             throw readBackError
         }
-        let filtered = readBackRows.filter { row in
+        let sourceRows: [RemoteInventoryProductPriceRow]
+        if readBackRowsByCall.isEmpty {
+            sourceRows = readBackRows
+        } else {
+            sourceRows = readBackRowsByCall.removeFirst()
+        }
+        let filtered = sourceRows.filter { row in
             row.ownerUserID == ownerUserID && productIDs.contains(row.productID)
         }
         guard from < filtered.count else {

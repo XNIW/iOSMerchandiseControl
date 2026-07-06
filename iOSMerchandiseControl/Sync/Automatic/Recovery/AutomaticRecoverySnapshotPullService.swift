@@ -58,6 +58,7 @@ actor AutomaticRecoverySnapshotPullService: SyncRecoverySnapshotPullProviding {
         let catalogResult = try await catalogApplyService.replaceLocalCatalogWithRemoteSnapshot(
             preview: preview,
             context: context,
+            options: SupabasePullApplyOptions(allowLookupOnlyApplyWhenProductConflicts: true),
             isAuthenticated: true,
             accountGuard: SupabasePullApplyAccountGuard(
                 currentUserID: ownerUserID,

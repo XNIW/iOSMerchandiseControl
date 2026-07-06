@@ -1,0 +1,8 @@
+-- Android local after Android create timeout
+uid,id,displayName,deletedAt,syncStatus,remoteId,localChangeRevision,lastSyncedLocalRevision,lastRemoteAppliedAt
+45,TASK135_DELETE_HISTORY_ANDROID_20260618T153334Z,TASK135_DELETE_HISTORY_ANDROID_20260618T153334Z,,SYNCED_SUCCESSFULLY,5fcc2ac6-dbce-457c-8eb6-f79515787ff3,1,1,1781796909687
+id,barcode,productName,remoteId,localChangeRevision,lastSyncedLocalRevision,lastRemoteAppliedAt,localChangedFields,priceId,type,price,priceRemoteId
+19731,TASK135_DELETE_PRODUCT_ANDROID_20260618T153334Z,"TASK135 delete product Android 20260618T153334Z",,,,,,41180,PURCHASE,34.56,
+19731,TASK135_DELETE_PRODUCT_ANDROID_20260618T153334Z,"TASK135 delete product Android 20260618T153334Z",,,,,,41181,RETAIL,45.67,
+pending_tombstones,product_pending,price_missing_refs
+0,1,2

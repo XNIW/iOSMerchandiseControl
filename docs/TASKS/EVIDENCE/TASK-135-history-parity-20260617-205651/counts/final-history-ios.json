@@ -1,0 +1,14 @@
+{
+  "status": "not_run_live",
+  "source": "ios_swiftdata",
+  "reason": "live SwiftData row-level export not executed in this pass; targeted in-memory tests passed",
+  "metrics": {
+    "activeHistorySessions": null,
+    "tombstonedHistorySessions": null,
+    "task135HistoryFixtures": null,
+    "duplicateRemoteID": null,
+    "duplicateFingerprint": "covered_by_test",
+    "missingRemoteIDVisibleRows": "covered_by_test",
+    "payloadHashMismatches": null
+  }
+}

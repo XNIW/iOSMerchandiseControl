@@ -1,0 +1,2 @@
+?? docs/TASKS/EVIDENCE/TASK-132C-clean-baseline-20260617-115823/ios-store-backup-before-reset/default.store
+?? docs/TASKS/EVIDENCE/TASK-135-history-parity-20260617-205651/

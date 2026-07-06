@@ -7,19 +7,23 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
     private let defaults: UserDefaults
     private let watermarkStore: WatermarkStore
     private let limit: Int
+    private let currentDeviceID: String?
+    private static let entityIDBudget = 250
 
     init(
         eventFetcher: any SupabaseSyncEventIncrementalFetching,
         remote: any SyncAutomaticIncrementalRemote,
         defaults: UserDefaults = .standard,
         watermarkStore: WatermarkStore? = nil,
-        limit: Int = 50
+        limit: Int = 50,
+        currentDeviceID: String? = DeviceInstallIDStore().deviceInstallID
     ) {
         self.eventFetcher = eventFetcher
         self.remote = remote
         self.defaults = defaults
         self.watermarkStore = watermarkStore ?? WatermarkStore(defaults: defaults)
         self.limit = max(1, min(limit, SupabaseSyncEventIncrementalLimits.maximumLimit))
+        self.currentDeviceID = currentDeviceID
     }
 
     func applyNextEvents(
@@ -69,18 +73,37 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         summary.eventPageFetchMs = eventFetchMs
 
         let sortedEvents = scopedEvents.sorted { $0.id < $1.id }
-        var eventIDs = extractEntityIDs(from: sortedEvents)
+        let statusStore = SyncEventApplyStatusStore(defaults: defaults)
+        let protectedIDs = try await protectedRemoteIDs(ownerUserID: ownerUserID, modelContainer: modelContainer)
+        let classification = classifyEvents(
+            sortedEvents,
+            ownerUserID: ownerUserID,
+            protectedIDs: protectedIDs,
+            statusStore: statusStore
+        )
+        let eventsForApply = classification.eventsForApply
+        var eventIDs = extractEntityIDs(from: eventsForApply)
         summary.eventsProcessed = sortedEvents.count
-        summary.watermarkAfter = sortedEvents.map(\.id).max() ?? watermarkBefore
+        summary.watermarkAfter = checkpointWatermark(
+            sortedEvents: sortedEvents,
+            watermarkBefore: watermarkBefore,
+            firstBlockedEventID: classification.firstBlockedEventID
+        )
+        summary.requiresFullRecoveryReason = classification.requiresFullRecoveryReason
 
         guard eventIDs.hasWork else {
-            watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
+            recordApplied(eventsForApply, ownerUserID: ownerUserID, statusStore: statusStore)
+            if summary.watermarkAfter > watermarkBefore {
+                watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
+            }
+            summary.totalElapsedMs = mcNowMillis() - totalStarted
             return summary
         }
 
         guard !eventIDs.hasUnrecoverableGap else {
             summary.requiresFullRecoveryReason = "sync_event_missing_entity_ids"
-            watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
+            summary.watermarkAfter = watermarkBefore
+            summary.totalElapsedMs = mcNowMillis() - totalStarted
             return summary
         }
 
@@ -99,6 +122,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         }
 
         var remoteActiveProductIDsForPrices: Set<UUID>?
+        var missingRemoteDomains = Set<String>()
         if eventIDs.hasCatalogWork {
             let catalogResult = try await CatalogIncrementalApplyService(
                 remote: remote
@@ -115,12 +139,17 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             summary.productsUpdated = catalogResult.productsUpdated
             summary.productsTombstoned = catalogResult.productsTombstoned + catalogResult.productsMissingRemoteTombstoned
             summary.suppliersCreated = catalogResult.suppliersCreated
+            summary.suppliersUpdated = catalogResult.suppliersUpdated
             summary.categoriesCreated = catalogResult.categoriesCreated
+            summary.categoriesUpdated = catalogResult.categoriesUpdated
             summary.suppliersMissingRemoteTombstoned = catalogResult.suppliersMissingRemoteTombstoned
             summary.categoriesMissingRemoteTombstoned = catalogResult.categoriesMissingRemoteTombstoned
             summary.catalogFetchMs = catalogResult.catalogFetchMs
             summary.catalogApplyMs = catalogResult.catalogApplyMs
             remoteActiveProductIDsForPrices = catalogResult.remoteActiveProductIDs
+            if catalogResult.missingRemoteTargetCount > 0 {
+                missingRemoteDomains.insert("catalog")
+            }
         }
 
         if eventIDs.hasPriceWork {
@@ -135,6 +164,9 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             summary.productPricesInserted = priceResult.inserted
             summary.productPriceIdentityLinked = priceResult.remoteIdentityLinked
             summary.productPricesMissingRemotePruned = priceResult.missingRemotePruned
+            if priceResult.missingRemoteCount > 0 {
+                missingRemoteDomains.insert("prices")
+            }
         }
 
         if eventIDs.hasHistoryWork {
@@ -151,9 +183,36 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             summary.historyInserted = historyResult.inserted
             summary.historyUpdated = historyResult.updated
             summary.historyMissingRemoteTombstoned = historyResult.missingRemoteTombstoned
+            if historyResult.missingRemoteCount > 0 {
+                missingRemoteDomains.insert("history")
+            }
         }
 
-        watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
+        let firstMissingRemoteEventID = eventsForApply
+            .filter { missingRemoteDomains.contains($0.domain) }
+            .map(\.id)
+            .min()
+        let finalFirstBlockedEventID = minEventID(
+            classification.firstBlockedEventID,
+            firstMissingRemoteEventID
+        )
+        if firstMissingRemoteEventID != nil {
+            summary.requiresFullRecoveryReason = summary.requiresFullRecoveryReason ?? "sync_event_missing_remote"
+            summary.watermarkAfter = checkpointWatermark(
+                sortedEvents: sortedEvents,
+                watermarkBefore: watermarkBefore,
+                firstBlockedEventID: finalFirstBlockedEventID
+            )
+        }
+        recordApplyOutcomes(
+            eventsForApply,
+            ownerUserID: ownerUserID,
+            statusStore: statusStore,
+            missingRemoteDomains: missingRemoteDomains
+        )
+        if summary.watermarkAfter > watermarkBefore {
+            watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
+        }
         summary.totalElapsedMs = mcNowMillis() - totalStarted
         return summary
     }
@@ -258,19 +317,140 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         return true
     }
 
+    private func protectedRemoteIDs(
+        ownerUserID: UUID,
+        modelContainer: ModelContainer
+    ) async throws -> IncrementalApplyProtectedRemoteIDs {
+        try await Task.detached(priority: .utility) {
+            let context = ModelContext(modelContainer)
+            return try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
+        }.value
+    }
+
+    private func classifyEvents(
+        _ events: [RemoteSyncEventRow],
+        ownerUserID: UUID,
+        protectedIDs: IncrementalApplyProtectedRemoteIDs,
+        statusStore: SyncEventApplyStatusStore
+    ) -> SyncEventApplyClassification {
+        var classification = SyncEventApplyClassification()
+        for event in events {
+            let ids = entityIDs(for: event)
+            if let currentDeviceID,
+               event.sourceDeviceID == currentDeviceID {
+                statusStore.record(
+                    event: event,
+                    ownerUserID: ownerUserID,
+                    ids: ids,
+                    status: .skipped,
+                    reason: .selfOrigin
+                )
+                continue
+            }
+
+            guard isSupportedDomain(event.domain) else {
+                classification.block(
+                    eventID: event.id,
+                    reason: "sync_event_unsupported_domain"
+                )
+                statusStore.record(
+                    event: event,
+                    ownerUserID: ownerUserID,
+                    ids: ids,
+                    status: .blocked,
+                    reason: .unsupportedDomain
+                )
+                continue
+            }
+
+            if ids.hasUnrecoverableGap {
+                classification.block(
+                    eventID: event.id,
+                    reason: "sync_event_missing_entity_ids"
+                )
+                statusStore.record(
+                    event: event,
+                    ownerUserID: ownerUserID,
+                    ids: ids,
+                    status: .blocked,
+                    reason: .missingEntityIDs
+                )
+                continue
+            }
+
+            if ids.totalIDs > Self.entityIDBudget {
+                classification.block(
+                    eventID: event.id,
+                    reason: "sync_event_entity_ids_too_large"
+                )
+                statusStore.record(
+                    event: event,
+                    ownerUserID: ownerUserID,
+                    ids: ids,
+                    status: .blocked,
+                    reason: .entityIDsTooLarge
+                )
+                continue
+            }
+
+            if containsProtectedIDs(ids, protectedIDs: protectedIDs) {
+                classification.block(
+                    eventID: event.id,
+                    reason: "sync_event_dirty_local"
+                )
+                statusStore.record(
+                    event: event,
+                    ownerUserID: ownerUserID,
+                    ids: ids,
+                    status: .blocked,
+                    reason: .dirtyLocal
+                )
+                continue
+            }
+
+            classification.eventsForApply.append(event)
+        }
+        return classification
+    }
+
+    private func recordApplied(
+        _ events: [RemoteSyncEventRow],
+        ownerUserID: UUID,
+        statusStore: SyncEventApplyStatusStore
+    ) {
+        for event in events {
+            statusStore.record(
+                event: event,
+                ownerUserID: ownerUserID,
+                ids: entityIDs(for: event),
+                status: .applied,
+                reason: .applied
+            )
+        }
+    }
+
+    private func recordApplyOutcomes(
+        _ events: [RemoteSyncEventRow],
+        ownerUserID: UUID,
+        statusStore: SyncEventApplyStatusStore,
+        missingRemoteDomains: Set<String>
+    ) {
+        for event in events {
+            let isMissingRemote = missingRemoteDomains.contains(event.domain)
+            statusStore.record(
+                event: event,
+                ownerUserID: ownerUserID,
+                ids: entityIDs(for: event),
+                status: isMissingRemote ? .blocked : .applied,
+                reason: isMissingRemote ? .missingRemote : .applied
+            )
+        }
+    }
+
     private func extractEntityIDs(from events: [RemoteSyncEventRow]) -> SyncEventEntityIDSet {
         events.reduce(into: SyncEventEntityIDSet()) { result, event in
             guard event.domain == "catalog" || event.domain == "prices" || event.domain == "history" else { return }
-            let ids = SyncEventEntityIDSet(json: event.entityIDs)
-            if event.domain == "catalog", ids.isEmpty, event.changedCount > 0 {
-                result.hasUnrecoverableCatalogGap = true
-            }
-            if event.domain == "history", ids.sessionIDs.isEmpty, event.changedCount > 0 {
-                result.hasUnrecoverableHistoryGap = true
-            }
-            if event.domain == "prices", ids.priceIDs.isEmpty, event.changedCount > 0 {
-                result.hasUnrecoverablePriceGap = true
-            }
+            let ids = entityIDs(for: event)
             result.supplierIDs.formUnion(ids.supplierIDs)
             result.categoryIDs.formUnion(ids.categoryIDs)
             result.productIDs.formUnion(ids.productIDs)
@@ -279,4 +459,84 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         }
     }
 
+    private func hasUnrecoverableGap(_ event: RemoteSyncEventRow) -> Bool {
+        entityIDs(for: event).hasUnrecoverableGap
+    }
+
+    private func entityIDs(for event: RemoteSyncEventRow) -> SyncEventEntityIDSet {
+        var ids = SyncEventEntityIDSet(json: event.entityIDs)
+        markUnrecoverableGap(for: event, ids: ids, into: &ids)
+        return ids
+    }
+
+    private func isSupportedDomain(_ domain: String) -> Bool {
+        domain == "catalog" || domain == "prices" || domain == "history"
+    }
+
+    private func containsProtectedIDs(
+        _ ids: SyncEventEntityIDSet,
+        protectedIDs: IncrementalApplyProtectedRemoteIDs
+    ) -> Bool {
+        !ids.supplierIDs.isDisjoint(with: protectedIDs.suppliers)
+            || !ids.categoryIDs.isDisjoint(with: protectedIDs.categories)
+            || !ids.productIDs.isDisjoint(with: protectedIDs.products)
+            || !ids.priceIDs.isDisjoint(with: protectedIDs.prices)
+            || !ids.sessionIDs.isDisjoint(with: protectedIDs.history)
+    }
+
+    private func checkpointWatermark(
+        sortedEvents: [RemoteSyncEventRow],
+        watermarkBefore: Int64,
+        firstBlockedEventID: Int64?
+    ) -> Int64 {
+        guard let firstBlockedEventID else {
+            return sortedEvents.map(\.id).max() ?? watermarkBefore
+        }
+        return sortedEvents
+            .filter { $0.id < firstBlockedEventID }
+            .map(\.id)
+            .max() ?? watermarkBefore
+    }
+
+    private func minEventID(_ lhs: Int64?, _ rhs: Int64?) -> Int64? {
+        switch (lhs, rhs) {
+        case (.some(let lhs), .some(let rhs)):
+            return min(lhs, rhs)
+        case (.some(let lhs), .none):
+            return lhs
+        case (.none, .some(let rhs)):
+            return rhs
+        case (.none, .none):
+            return nil
+        }
+    }
+
+    private func markUnrecoverableGap(
+        for event: RemoteSyncEventRow,
+        ids: SyncEventEntityIDSet,
+        into result: inout SyncEventEntityIDSet
+    ) {
+        if event.domain == "catalog", ids.isEmpty, event.changedCount > 0 {
+            result.hasUnrecoverableCatalogGap = true
+        }
+        if event.domain == "history", ids.sessionIDs.isEmpty, event.changedCount > 0 {
+            result.hasUnrecoverableHistoryGap = true
+        }
+        if event.domain == "prices", ids.priceIDs.isEmpty, event.changedCount > 0 {
+            result.hasUnrecoverablePriceGap = true
+        }
+    }
+
+}
+
+private nonisolated struct SyncEventApplyClassification {
+    var eventsForApply: [RemoteSyncEventRow] = []
+    var firstBlockedEventID: Int64?
+    var requiresFullRecoveryReason: String?
+
+    mutating func block(eventID: Int64, reason: String) {
+        guard firstBlockedEventID == nil else { return }
+        firstBlockedEventID = eventID
+        requiresFullRecoveryReason = reason
+    }
 }

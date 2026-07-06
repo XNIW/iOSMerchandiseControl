@@ -1,0 +1,22 @@
+Stopped services: [supabase_imgproxy_MerchandiseControlSupabase supabase_edge_runtime_MerchandiseControlSupabase supabase_pooler_MerchandiseControlSupabase]
+{
+  "ANON_KEY": "[REDACTED]",
+  "API_URL": "http://127.0.0.1:54321",
+  "DB_URL": "[REDACTED]",
+  "GRAPHQL_URL": "http://127.0.0.1:54321/graphql/v1",
+  "INBUCKET_URL": "http://127.0.0.1:54324",
+  "JWT_SECRET": "[REDACTED]",
+  "MAILPIT_URL": "http://127.0.0.1:54324",
+  "MCP_URL": "http://127.0.0.1:54321/mcp",
+  "PUBLISHABLE_KEY": "[REDACTED]",
+  "REST_URL": "http://127.0.0.1:54321/rest/v1",
+  "S3_PROTOCOL_ACCESS_KEY_ID": "[REDACTED]",
+  "S3_PROTOCOL_ACCESS_KEY_SECRET": "[REDACTED]",
+  "S3_PROTOCOL_REGION": "local",
+  "SECRET_KEY": "[REDACTED]",
+  "SERVICE_ROLE_KEY": "[REDACTED]",
+  "STORAGE_S3_URL": "http://127.0.0.1:54321/storage/v1/s3",
+  "STUDIO_URL": "http://127.0.0.1:54323"
+}
+A new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

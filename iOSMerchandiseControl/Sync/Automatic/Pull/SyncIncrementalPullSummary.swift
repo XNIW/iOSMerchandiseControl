@@ -15,7 +15,9 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     var productsUpdated: Int = 0
     var productsTombstoned: Int = 0
     var suppliersCreated: Int = 0
+    var suppliersUpdated: Int = 0
     var categoriesCreated: Int = 0
+    var categoriesUpdated: Int = 0
     var productPricesInserted: Int = 0
     var productPriceIdentityLinked: Int = 0
     var productPricesMissingRemotePruned: Int = 0
@@ -51,7 +53,9 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
             + productsUpdated
             + productsTombstoned
             + suppliersCreated
+            + suppliersUpdated
             + categoriesCreated
+            + categoriesUpdated
             + productPricesInserted
             + productPriceIdentityLinked
             + productPricesMissingRemotePruned

@@ -1,0 +1,14 @@
+{
+  "status": "blocked",
+  "source": "android_room",
+  "reason": "Android project and adb are unavailable from this workspace",
+  "metrics": {
+    "activeHistorySessions": null,
+    "tombstonedHistorySessions": null,
+    "task135HistoryFixtures": null,
+    "duplicateRemoteID": null,
+    "duplicateFingerprint": null,
+    "missingRemoteIDVisibleRows": null,
+    "payloadHashMismatches": null
+  }
+}

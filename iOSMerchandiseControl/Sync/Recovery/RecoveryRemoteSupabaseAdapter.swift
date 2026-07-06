@@ -25,3 +25,13 @@ struct RecoveryRemoteSupabaseAdapter: SupabaseInventoryFetching {
         try await productPrice.fetchProductPricesPage(from: from, to: to)
     }
 }
+
+extension RecoveryRemoteSupabaseAdapter: SupabaseInventoryLookupByIDFetching {
+    func fetchSuppliersByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventorySupplierRow] {
+        try await catalog.fetchSuppliersByIDs(ids)
+    }
+
+    func fetchCategoriesByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventoryCategoryRow] {
+        try await catalog.fetchCategoriesByIDs(ids)
+    }
+}

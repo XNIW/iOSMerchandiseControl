@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-114-20260618T181650Z-TASK135_REVIEW_MATRIX_20260618T181308Z_",
+  "created_at": "2026-06-18T18:16:56Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK135_REVIEW_MATRIX_20260618T181308Z_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-114"
+}

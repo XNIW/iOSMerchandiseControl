@@ -91,6 +91,26 @@ extension CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogIncrementalReading {
     }
 }
 
+extension CatalogRemoteSupabaseAdapter: SupabaseInventoryLookupByIDFetching {
+    func fetchSuppliersByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventorySupplierRow] {
+        try await query.fetchRowsByIDs(
+            table: "inventory_suppliers",
+            columns: Self.supplierColumns,
+            ids: ids,
+            allowLegacyNullShopRows: true
+        )
+    }
+
+    func fetchCategoriesByIDs(_ ids: Set<UUID>) async throws -> [RemoteInventoryCategoryRow] {
+        try await query.fetchRowsByIDs(
+            table: "inventory_categories",
+            columns: Self.categoryColumns,
+            ids: ids,
+            allowLegacyNullShopRows: true
+        )
+    }
+}
+
 extension CatalogRemoteSupabaseAdapter {
     static let supplierColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"
     static let categoryColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"

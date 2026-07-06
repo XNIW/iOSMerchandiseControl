@@ -16,6 +16,7 @@ protocol SupabaseProductPriceManualPushRemoteAccessing: Sendable {
 nonisolated struct ProductPriceManualPushPayload: Encodable, Sendable, Equatable, Identifiable {
     let id: UUID
     let ownerUserID: UUID
+    let shopID: UUID?
     let productID: UUID
     let type: String
     let price: Double
@@ -25,9 +26,36 @@ nonisolated struct ProductPriceManualPushPayload: Encodable, Sendable, Equatable
     let note: String?
     let createdAt: String
 
+    init(
+        id: UUID,
+        ownerUserID: UUID,
+        shopID: UUID? = nil,
+        productID: UUID,
+        type: String,
+        price: Double,
+        priceCanonical: String,
+        effectiveAt: String,
+        source: String?,
+        note: String?,
+        createdAt: String
+    ) {
+        self.id = id
+        self.ownerUserID = ownerUserID
+        self.shopID = shopID
+        self.productID = productID
+        self.type = type
+        self.price = price
+        self.priceCanonical = priceCanonical
+        self.effectiveAt = effectiveAt
+        self.source = source
+        self.note = note
+        self.createdAt = createdAt
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case ownerUserID = "owner_user_id"
+        case shopID = "shop_id"
         case productID = "product_id"
         case type
         case price
@@ -109,19 +137,27 @@ nonisolated struct ProductPriceManualPushOptions: Sendable, Equatable {
     static let defaultBatchLimit = 100
     static let defaultReadBackPageSize = 1_000
     static let defaultReadBackMaxPages = 20
+    static let defaultReadBackRetryAttempts = 6
+    static let defaultReadBackRetryDelayNanoseconds: UInt64 = 500_000_000
 
     let batchLimit: Int
     let readBackPageSize: Int
     let readBackMaxPages: Int
+    let readBackRetryAttempts: Int
+    let readBackRetryDelayNanoseconds: UInt64
 
     init(
         batchLimit: Int = Self.defaultBatchLimit,
         readBackPageSize: Int = Self.defaultReadBackPageSize,
-        readBackMaxPages: Int = Self.defaultReadBackMaxPages
+        readBackMaxPages: Int = Self.defaultReadBackMaxPages,
+        readBackRetryAttempts: Int = Self.defaultReadBackRetryAttempts,
+        readBackRetryDelayNanoseconds: UInt64 = Self.defaultReadBackRetryDelayNanoseconds
     ) {
         self.batchLimit = max(1, min(batchLimit, 100))
         self.readBackPageSize = max(1, min(readBackPageSize, 1_000))
         self.readBackMaxPages = max(1, readBackMaxPages)
+        self.readBackRetryAttempts = max(0, min(readBackRetryAttempts, 10))
+        self.readBackRetryDelayNanoseconds = min(readBackRetryDelayNanoseconds, 2_000_000_000)
     }
 }
 
@@ -190,6 +226,7 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
             .map {
                 [
                     $0.productID.uuidString.lowercased(),
+                    $0.shopID?.uuidString.lowercased() ?? "legacy",
                     $0.type,
                     $0.effectiveAt,
                     $0.priceCanonical
@@ -212,9 +249,11 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
         guard remoteType == "PURCHASE" || remoteType == "RETAIL" else {
             throw ProductPriceManualPushError.invalidPayload
         }
+        let shopID = ShopContextSelection.selectedShopID(ownerUserID: payload.ownerUserID)
 
         let id = deterministicID(
             ownerUserID: payload.ownerUserID,
+            shopID: shopID,
             productID: payload.productID,
             type: remoteType,
             effectiveAt: payload.effectiveAt
@@ -228,6 +267,7 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
         return ProductPriceManualPushPayload(
             id: id,
             ownerUserID: payload.ownerUserID,
+            shopID: shopID,
             productID: payload.productID,
             type: remoteType,
             price: payload.canonicalPrice.doubleValue,
@@ -239,14 +279,26 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
         )
     }
 
-    private static func deterministicID(ownerUserID: UUID, productID: UUID, type: String, effectiveAt: String) -> UUID {
-        let name = [
+    private static func deterministicID(
+        ownerUserID: UUID,
+        shopID: UUID?,
+        productID: UUID,
+        type: String,
+        effectiveAt: String
+    ) -> UUID {
+        var components = [
             "TASK-051",
-            ownerUserID.uuidString.lowercased(),
+            ownerUserID.uuidString.lowercased()
+        ]
+        if let shopID {
+            components.append(shopID.uuidString.lowercased())
+        }
+        components.append(contentsOf: [
             productID.uuidString.lowercased(),
             type,
             effectiveAt
-        ].joined(separator: "|")
+        ])
+        let name = components.joined(separator: "|")
         let namespaceBytes = withUnsafeBytes(of: namespace.uuid) { Array($0) }
         var source = Data(namespaceBytes)
         source.append(Data(name.utf8))
@@ -294,7 +346,7 @@ struct SupabaseProductPriceManualPushService: Sendable {
             insertedCount = try await insert(snapshot: snapshot)
         } catch let error as ProductPriceManualPushError {
             if case .uniqueConflict = error {
-                let verification = try await verify(snapshot: snapshot)
+                let verification = try await verifyWithReadBackRetry(snapshot: snapshot)
                 if case .exactMatch = verification {
                     return ProductPriceManualPushResult(
                         insertedCount: 0,
@@ -306,7 +358,7 @@ struct SupabaseProductPriceManualPushService: Sendable {
             }
             throw error
         }
-        let verification = try await verify(snapshot: snapshot)
+        let verification = try await verifyWithReadBackRetry(snapshot: snapshot)
         return ProductPriceManualPushResult(
             insertedCount: insertedCount,
             verification: verification,
@@ -376,6 +428,38 @@ struct SupabaseProductPriceManualPushService: Sendable {
         }
     }
 
+    private func verifyWithReadBackRetry(
+        snapshot: ProductPriceManualPushSnapshot
+    ) async throws -> ProductPriceManualPushVerificationResult {
+        var latest = try await verify(snapshot: snapshot)
+        guard shouldRetryReadBackVerification(latest) else {
+            return latest
+        }
+
+        for _ in 0..<options.readBackRetryAttempts {
+            do {
+                try await Task.sleep(nanoseconds: options.readBackRetryDelayNanoseconds)
+            } catch is CancellationError {
+                throw ProductPriceManualPushError.cancelled
+            }
+            latest = try await verify(snapshot: snapshot)
+            if !shouldRetryReadBackVerification(latest) {
+                return latest
+            }
+        }
+
+        return latest
+    }
+
+    private func shouldRetryReadBackVerification(_ result: ProductPriceManualPushVerificationResult) -> Bool {
+        switch result {
+        case .missingRows, .unknown:
+            return true
+        case .exactMatch, .mismatchedRows:
+            return false
+        }
+    }
+
     private func exactMatch(
         snapshot: ProductPriceManualPushSnapshot,
         rows: [RemoteInventoryProductPriceRow]
@@ -433,6 +517,7 @@ struct SupabaseProductPriceManualPushService: Sendable {
         }
 
         append(row.ownerUserID == payload.ownerUserID, "owner_user_id")
+        append(row.shopID == payload.shopID, "shop_id")
         append(row.productID == payload.productID, "product_id")
         append(normalizedRemoteType == payload.type, "type")
         append(remotePrice?.value == payload.priceCanonical, "price")

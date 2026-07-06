@@ -84,7 +84,8 @@ struct SupabaseRemoteQueryExecutor: Sendable {
     func fetchRowsByIDs<Row: Decodable & Sendable>(
         table: String,
         columns: String,
-        ids: Set<UUID>
+        ids: Set<UUID>,
+        allowLegacyNullShopRows: Bool = false
     ) async throws -> [Row] {
         guard !ids.isEmpty else { return [] }
         let ownerUserID = try await requireOwner()
@@ -96,7 +97,9 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
             if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
-                request = request.eq("shop_id", value: selectedShopID.uuidString)
+                request = allowLegacyNullShopRows
+                    ? request.or("shop_id.eq.\(selectedShopID.uuidString),shop_id.is.null")
+                    : request.eq("shop_id", value: selectedShopID.uuidString)
             }
             return try await request
                 .execute()
@@ -145,11 +148,15 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         let ownerUserID = try await requireOwner()
         let client = await client()
         do {
-            return try await client
+            var request = try client
                 .from(table)
                 .update(payload)
                 .eq("id", value: id.uuidString)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
+            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request
                 .select(columns)
                 .single()
                 .execute()

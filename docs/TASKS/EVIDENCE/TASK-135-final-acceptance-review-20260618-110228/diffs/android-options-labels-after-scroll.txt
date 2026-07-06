@@ -1,0 +1,30 @@
+English
+Account cloud collegato
+Accesso come x***@gmail.com
+Esci
+Rapida
+Sessioni
+Catalogo e prezzi
+Last successful sync: 2026-06-18 11:07
+Sessioni e cronologia
+Sessions: restored 4, sent 0
+Sincronizzazione automatica attiva
+Modifiche e aggiornamenti vengono gestiti automaticamente in background quando account e rete sono pronti.
+Stato database locale
+Database locale pronto
+Prodotti
+19704
+Fornitori
+66
+Categorie
+35
+Storico prezzi
+41131
+Sessioni cronologia
+35
+Ultima sincronizzazione
+2026-06-18 11:07
+Inventario
+Database
+Cronologia
+Opzioni
