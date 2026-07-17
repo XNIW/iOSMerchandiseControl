@@ -520,15 +520,17 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 compareSupplier: !supplierFetchFailed,
                 compareCategory: !categoryFetchFailed
             )
+            let imageReferenceChanged = localProduct.primaryImageVersionID != product.primaryImageVersionID
+                || localProduct.primaryImageUpdatedAt != SupabaseRemoteDateParser.parse(product.primaryImageUpdatedAt)
 
             let productSupplierDiffs = changes.filter { $0.fieldKey == .supplierName }
             let productCategoryDiffs = changes.filter { $0.fieldKey == .categoryName }
             supplierDiffs.append(contentsOf: productSupplierDiffs)
             categoryDiffs.append(contentsOf: productCategoryDiffs)
 
-            if changes.isEmpty && localProduct.remoteID != nil {
+            if changes.isEmpty && !imageReferenceChanged && localProduct.remoteID != nil {
                 unchangedProducts.append(productSummary(product, remote: remote, classification: .unchanged))
-            } else if changes.isEmpty && localProduct.remoteID == nil {
+            } else if changes.isEmpty && !imageReferenceChanged && localProduct.remoteID == nil {
                 updateCandidates.append(productSummary(product, remote: remote, classification: .linkOnly))
             } else {
                 changes.sort { ($0.fieldKey.rawValue, $0.remoteDisplay ?? "") < ($1.fieldKey.rawValue, $1.remoteDisplay ?? "") }
@@ -999,6 +1001,8 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 remoteID: product.id,
                 remoteUpdatedAt: SupabaseRemoteDateParser.parse(product.updatedAt),
                 remoteDeletedAt: SupabaseRemoteDateParser.parse(product.deletedAt),
+                primaryImageVersionID: product.primaryImageVersionID,
+                primaryImageUpdatedAt: SupabaseRemoteDateParser.parse(product.primaryImageUpdatedAt),
                 barcode: SupabasePullPreviewNormalizer.semanticString(product.barcode),
                 itemNumber: product.itemNumber,
                 productName: product.productName,

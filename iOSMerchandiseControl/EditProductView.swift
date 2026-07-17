@@ -1,9 +1,14 @@
+import PhotosUI
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct EditProductView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @EnvironmentObject private var shopContextStore: ShopContextStore
+    @EnvironmentObject private var productImageStore: ProductImageStore
 
     let existingProduct: Product?
     let pendingOwnerUserID: UUID?
@@ -25,6 +30,12 @@ struct EditProductView: View {
     @State private var categoryName: String
     @State private var validationMessage: String?
     @State private var productForHistory: Product?
+    @State private var selectedImageItem: PhotosPickerItem?
+    @State private var pendingImageURL: URL?
+    @State private var imageMessage: String?
+    @State private var showingCamera = false
+    @State private var showingRemoveImageConfirmation = false
+    @State private var isViewActive = false
 
     init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
         self.existingProduct = product
@@ -65,6 +76,8 @@ struct EditProductView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            productImageSection
 
             Section(L("product.section.main")) {
                 TextField(L("product.field.barcode"), text: $barcode)
@@ -169,6 +182,55 @@ struct EditProductView: View {
                 validationMessage = nil
             }
         }
+        .onChange(of: selectedImageItem) { _, item in
+            guard let item else { return }
+            Task {
+                do {
+                    guard let transfer = try await item.loadTransferable(type: ProductImageTransferFile.self) else {
+                        imageMessage = L("product.image.error.input")
+                        return
+                    }
+                    replacePendingImageURL(with: transfer.fileURL)
+                    await uploadPendingImage()
+                } catch {
+                    imageMessage = L("product.image.error.input")
+                }
+                selectedImageItem = nil
+            }
+        }
+        .task(id: imageScope) {
+            productImageStore.activate(scope: imageScope)
+        }
+        .onAppear { isViewActive = true }
+        .onDisappear {
+            isViewActive = false
+            if !isImageBusy {
+                clearPendingImageURL()
+            }
+        }
+        .sheet(isPresented: $showingCamera) {
+            ProductImageCameraPicker(
+                onCapture: { url in
+                    showingCamera = false
+                    replacePendingImageURL(with: url)
+                    Task { await uploadPendingImage() }
+                },
+                onCancel: {
+                    showingCamera = false
+                }
+            )
+            .ignoresSafeArea()
+        }
+        .confirmationDialog(
+            L("product.image.remove.confirm.title"),
+            isPresented: $showingRemoveImageConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("product.image.remove"), role: .destructive) {
+                Task { await removeCurrentImage() }
+            }
+            Button(L("common.cancel"), role: .cancel) {}
+        }
         .sheet(item: $productForHistory) { product in
             NavigationStack {
                 ProductPriceHistoryView(
@@ -185,6 +247,209 @@ struct EditProductView: View {
                 )
             }
         }
+    }
+
+    @ViewBuilder
+    private var productImageSection: some View {
+        Section(L("product.image.section")) {
+            if let product = existingProduct,
+               let productID = product.remoteID {
+                ProductImageRemoteView(
+                    scope: imageScope,
+                    productID: productID,
+                    versionID: product.primaryImageVersionID,
+                    variant: .main
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+
+                if isImageBusy {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text(imageProgressLabel)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let imageMessage {
+                    Text(imageMessage)
+                        .font(.footnote)
+                        .foregroundStyle(productImageStore.operationStage(productID: productID) == .failed ? .red : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if canWriteProductImage {
+                    HStack {
+                        PhotosPicker(selection: $selectedImageItem, matching: .images) {
+                            Label(L("product.image.library"), systemImage: "photo.on.rectangle")
+                        }
+                        .disabled(isImageBusy)
+
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button {
+                                showingCamera = true
+                            } label: {
+                                Label(L("product.image.camera"), systemImage: "camera")
+                            }
+                            .disabled(isImageBusy)
+                        }
+                    }
+
+                    if product.primaryImageVersionID != nil {
+                        Button(L("product.image.remove"), role: .destructive) {
+                            showingRemoveImageConfirmation = true
+                        }
+                        .disabled(isImageBusy)
+                    }
+
+                    if pendingImageURL != nil,
+                       productImageStore.operationStage(productID: productID) == .failed {
+                        HStack {
+                            Button(L("product.image.retry")) {
+                                Task { await uploadPendingImage() }
+                            }
+                            Button(L("common.cancel"), role: .cancel) {
+                                clearPendingImageURL()
+                                imageMessage = nil
+                            }
+                        }
+                    }
+                } else {
+                    Text(productImageStore.isAvailable
+                         ? L("product.image.read_only")
+                         : L("product.image.unavailable"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(L("product.image.save_first"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var imageScope: ProductImageScope? {
+        guard supabaseAuthViewModel.isSignedIn,
+              let accountID = supabaseAuthViewModel.sessionInfo?.userID,
+              let selectedShop = shopContextStore.context.selectedShop,
+              selectedShop.isValidProductImageSelection else {
+            return nil
+        }
+        return ProductImageScope(accountID: accountID, shopID: selectedShop.shopID)
+    }
+
+    private var canWriteProductImage: Bool {
+        guard productImageStore.isAvailable,
+              existingProduct?.remoteID != nil,
+              imageScope != nil,
+              shopContextStore.context.syncAllowed,
+              let selectedShop = shopContextStore.context.selectedShop else {
+            return false
+        }
+        return selectedShop.canWrite && selectedShop.isValidProductImageSelection
+    }
+
+    private var isImageBusy: Bool {
+        guard let productID = existingProduct?.remoteID else { return false }
+        switch productImageStore.operationStage(productID: productID) {
+        case .processing, .uploading, .finalizing, .removing:
+            return true
+        case .idle, .failed:
+            return false
+        }
+    }
+
+    private var imageProgressLabel: String {
+        guard let productID = existingProduct?.remoteID else { return L("product.image.processing") }
+        switch productImageStore.operationStage(productID: productID) {
+        case .processing: return L("product.image.processing")
+        case .uploading, .finalizing: return L("product.image.uploading")
+        case .removing: return L("product.image.removing")
+        case .idle, .failed: return ""
+        }
+    }
+
+    private func uploadPendingImage() async {
+        guard canWriteProductImage,
+              let fileURL = pendingImageURL,
+              let scope = imageScope,
+              let product = existingProduct,
+              let productID = product.remoteID else {
+            imageMessage = L("product.image.error.context")
+            return
+        }
+        imageMessage = nil
+        do {
+            let result = try await productImageStore.upload(
+                fileURL: fileURL,
+                scope: scope,
+                productID: productID,
+                previousVersionID: product.primaryImageVersionID
+            )
+            product.primaryImageVersionID = result.versionID
+            if let imageUpdatedAt = result.imageUpdatedAt {
+                product.primaryImageUpdatedAt = imageUpdatedAt
+            }
+            do {
+                try context.save()
+                imageMessage = String(
+                    format: L("product.image.success.metrics"),
+                    result.metrics.mainBytes / 1_024,
+                    result.metrics.thumbBytes / 1_024,
+                    result.metrics.elapsedMilliseconds
+                )
+            } catch {
+                context.rollback()
+                imageMessage = L("product.image.error.local_refresh")
+            }
+            clearPendingImageURL()
+        } catch {
+            imageMessage = L("product.image.error.upload")
+            if !isViewActive {
+                clearPendingImageURL()
+            }
+        }
+    }
+
+    private func removeCurrentImage() async {
+        guard canWriteProductImage,
+              let scope = imageScope,
+              let product = existingProduct,
+              let productID = product.remoteID,
+              let versionID = product.primaryImageVersionID else {
+            return
+        }
+        imageMessage = nil
+        do {
+            let result = try await productImageStore.remove(
+                scope: scope,
+                productID: productID,
+                versionID: versionID
+            )
+            product.primaryImageVersionID = nil
+            product.primaryImageUpdatedAt = result.imageUpdatedAt
+            do {
+                try context.save()
+                imageMessage = L("product.image.remove.success")
+            } catch {
+                context.rollback()
+                imageMessage = L("product.image.error.local_refresh")
+            }
+        } catch {
+            imageMessage = L("product.image.error.remove")
+        }
+    }
+
+    private func replacePendingImageURL(with url: URL) {
+        clearPendingImageURL()
+        pendingImageURL = url
+    }
+
+    private func clearPendingImageURL() {
+        guard let pendingImageURL else { return }
+        try? FileManager.default.removeItem(at: pendingImageURL)
+        self.pendingImageURL = nil
     }
 
     private func save() {
