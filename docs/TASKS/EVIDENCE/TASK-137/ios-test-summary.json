@@ -1,0 +1,33 @@
+{
+  "task": "TASK-137",
+  "target": "iPhone 16e Simulator iOS 26.2",
+  "runtime_kind": "simulator-urlprotocol-contract",
+  "product_image_tests": {
+    "tests": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "suites": {
+      "api_client": 7,
+      "cache": 4,
+      "processor": 6,
+      "sync_contract": 5
+    }
+  },
+  "consolidation_rerun": "final targeted Product Images suite after remove/read/origin hardening",
+  "existing_sync_regression": {
+    "tests": 46,
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0
+  },
+  "localization_tests": {
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "debug_build": "PASS",
+  "supabase_live": "NOT_RUN",
+  "physical_device": "NOT_RUN"
+}

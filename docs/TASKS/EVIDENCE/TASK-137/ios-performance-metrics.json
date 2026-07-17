@@ -1,0 +1,10 @@
+{
+  "task": "TASK-137",
+  "test": "ProductImageProcessorTests/testHighResolutionPreprocessPerformanceBaseline",
+  "target": "iPhone 16e Simulator iOS 26.2",
+  "measurements": {
+    "clock_monotonic_seconds": 0.072969135,
+    "memory_peak_physical_kb": 88657.16,
+    "memory_physical_delta_kb": 0
+  }
+}
