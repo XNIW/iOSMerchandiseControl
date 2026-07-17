@@ -158,6 +158,7 @@ nonisolated func applyTargetedProduct(
     }
     let updatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
     let deletedAt = SupabaseRemoteDateParser.parse(row.deletedAt)
+    let primaryImageUpdatedAt = SupabaseRemoteDateParser.parse(row.primaryImageUpdatedAt)
     let existing = try fetchProduct(remoteID: row.id, context: context)
         ?? fetchProduct(barcode: barcode, context: context)
     if let deletedAt {
@@ -165,6 +166,8 @@ nonisolated func applyTargetedProduct(
         product.remoteID = row.id
         product.remoteUpdatedAt = updatedAt
         product.remoteDeletedAt = deletedAt
+        product.primaryImageVersionID = row.primaryImageVersionID
+        product.primaryImageUpdatedAt = primaryImageUpdatedAt
         product.supplier = nil
         product.category = nil
         return (false, false, true)
@@ -174,6 +177,8 @@ nonisolated func applyTargetedProduct(
         product.remoteID = row.id
         product.remoteUpdatedAt = updatedAt
         product.remoteDeletedAt = nil
+        product.primaryImageVersionID = row.primaryImageVersionID
+        product.primaryImageUpdatedAt = primaryImageUpdatedAt
         product.itemNumber = SupabasePullPreviewNormalizer.semanticString(row.itemNumber)
         product.productName = SupabasePullPreviewNormalizer.semanticString(row.productName)
         product.secondProductName = SupabasePullPreviewNormalizer.semanticString(row.secondProductName)
@@ -189,6 +194,8 @@ nonisolated func applyTargetedProduct(
         barcode: barcode,
         remoteID: row.id,
         remoteUpdatedAt: updatedAt,
+        primaryImageVersionID: row.primaryImageVersionID,
+        primaryImageUpdatedAt: primaryImageUpdatedAt,
         itemNumber: SupabasePullPreviewNormalizer.semanticString(row.itemNumber),
         productName: SupabasePullPreviewNormalizer.semanticString(row.productName),
         secondProductName: SupabasePullPreviewNormalizer.semanticString(row.secondProductName),
@@ -199,6 +206,23 @@ nonisolated func applyTargetedProduct(
         category: category
     ))
     return (true, false, false)
+}
+
+nonisolated func applyTargetedProductImageReference(
+    _ row: RemoteInventoryProductRow,
+    context: ModelContext
+) throws -> Bool {
+    guard let product = try fetchProduct(remoteID: row.id, context: context) else {
+        return false
+    }
+    let updatedAt = SupabaseRemoteDateParser.parse(row.primaryImageUpdatedAt)
+    guard product.primaryImageVersionID != row.primaryImageVersionID
+            || product.primaryImageUpdatedAt != updatedAt else {
+        return false
+    }
+    product.primaryImageVersionID = row.primaryImageVersionID
+    product.primaryImageUpdatedAt = updatedAt
+    return true
 }
 
 nonisolated func applyTargetedProductPriceRow(

@@ -9,9 +9,11 @@ nonisolated struct SupabaseConfig: Sendable {
     private static let fileName = "SupabaseConfig"
     private static let projectURLKey = "SUPABASE_PROJECT_URL"
     private static let publishableKeyKey = "SUPABASE_PUBLISHABLE_KEY"
+    private static let productImageAPIBaseURLKey = "PRODUCT_IMAGE_API_BASE_URL"
 
     let projectURL: URL
     let publishableKey: String
+    let productImageAPIBaseURL: URL?
 
     static func load(bundle: Bundle = .main) throws -> SupabaseConfig {
         guard let configURL = bundle.url(forResource: fileName, withExtension: "plist") else {
@@ -44,7 +46,25 @@ nonisolated struct SupabaseConfig: Sendable {
             throw SupabaseConfigError.invalidConfig
         }
 
-        return SupabaseConfig(projectURL: projectURL, publishableKey: publishableKey)
+        let imageAPIValue = normalizedString(
+            ProcessInfo.processInfo.environment[productImageAPIBaseURLKey]
+        ) ?? normalizedString(values[productImageAPIBaseURLKey])
+        let productImageAPIBaseURL: URL?
+        if let imageAPIValue, !isPlaceholder(imageAPIValue) {
+            guard let candidate = URL(string: imageAPIValue),
+                  isAllowedProductImageAPIURL(candidate) else {
+                throw SupabaseConfigError.invalidConfig
+            }
+            productImageAPIBaseURL = candidate
+        } else {
+            productImageAPIBaseURL = nil
+        }
+
+        return SupabaseConfig(
+            projectURL: projectURL,
+            publishableKey: publishableKey,
+            productImageAPIBaseURL: productImageAPIBaseURL
+        )
     }
 
     private static func normalizedString(_ value: Any?) -> String? {
@@ -55,6 +75,27 @@ nonisolated struct SupabaseConfig: Sendable {
 
     private static func isPlaceholder(_ value: String) -> Bool {
         value.uppercased().hasPrefix("YOUR_")
+    }
+
+    private static func isAllowedProductImageAPIURL(_ url: URL) -> Bool {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              let host = components.host?.lowercased(),
+              !host.isEmpty else {
+            return false
+        }
+        if components.scheme?.lowercased() == "https" {
+            return true
+        }
+#if DEBUG && targetEnvironment(simulator)
+        return components.scheme?.lowercased() == "http"
+            && (host == "localhost" || host == "127.0.0.1" || host == "::1")
+#else
+        return false
+#endif
     }
 
     private static func isServerOnlyKey(_ value: String) -> Bool {

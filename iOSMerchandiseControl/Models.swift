@@ -71,6 +71,8 @@ final class Product {
     var remoteID: UUID?
     var remoteUpdatedAt: Date?
     var remoteDeletedAt: Date?
+    var primaryImageVersionID: UUID?
+    var primaryImageUpdatedAt: Date?
 
     var itemNumber: String?
     var productName: String?
@@ -91,6 +93,8 @@ final class Product {
         remoteID: UUID? = nil,
         remoteUpdatedAt: Date? = nil,
         remoteDeletedAt: Date? = nil,
+        primaryImageVersionID: UUID? = nil,
+        primaryImageUpdatedAt: Date? = nil,
         itemNumber: String? = nil,
         productName: String? = nil,
         secondProductName: String? = nil,
@@ -104,6 +108,8 @@ final class Product {
         self.remoteID = remoteID
         self.remoteUpdatedAt = remoteUpdatedAt
         self.remoteDeletedAt = remoteDeletedAt
+        self.primaryImageVersionID = primaryImageVersionID
+        self.primaryImageUpdatedAt = primaryImageUpdatedAt
         self.itemNumber = itemNumber
         self.productName = productName
         self.secondProductName = secondProductName

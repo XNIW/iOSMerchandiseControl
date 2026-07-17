@@ -1,0 +1,11 @@
+{
+  "task": "TASK-137",
+  "source": "XCTest attachments exported from the final passing xcresult",
+  "fixtures": [
+    "ios-heic-metrics.json",
+    "ios-high-resolution-metrics.json",
+    "ios-rotated-jpeg-metrics.json",
+    "ios-transparent-png-metrics.json"
+  ],
+  "associated_failures": 0
+}

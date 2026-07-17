@@ -237,7 +237,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         static let products = "inventory_products"
         static let supplierColumns = "id,owner_user_id,name,updated_at,deleted_at"
         static let categoryColumns = "id,owner_user_id,name,updated_at,deleted_at"
-        static let productColumns = "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at"
+        static let productColumns = "id,owner_user_id,shop_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at,primary_image_version_id,primary_image_updated_at"
     }
 
     private let clientProvider: SupabaseClientProvider
@@ -1019,6 +1019,8 @@ final class SupabaseManualPushService {
         product.remoteID = row.id
         product.remoteUpdatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
         product.remoteDeletedAt = SupabaseRemoteDateParser.parse(row.deletedAt)
+        product.primaryImageVersionID = row.primaryImageVersionID
+        product.primaryImageUpdatedAt = SupabaseRemoteDateParser.parse(row.primaryImageUpdatedAt)
     }
 
     private func save(_ context: ModelContext) throws {

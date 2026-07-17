@@ -214,6 +214,8 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
     let remoteID: UUID?
     let remoteUpdatedAt: Date?
     let remoteDeletedAt: Date?
+    let primaryImageVersionID: UUID?
+    let primaryImageUpdatedAt: Date?
 
     init(snapshot: LocalProductSnapshot) {
         barcode = SupabasePullPreviewNormalizer.normalizedBarcode(snapshot.barcode) ?? snapshot.barcode
@@ -228,6 +230,8 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
         remoteID = snapshot.remoteID
         remoteUpdatedAt = snapshot.remoteUpdatedAt
         remoteDeletedAt = snapshot.remoteDeletedAt
+        primaryImageVersionID = snapshot.primaryImageVersionID
+        primaryImageUpdatedAt = snapshot.primaryImageUpdatedAt
     }
 
     func matches(_ snapshot: LocalProductSnapshot) -> Bool {
@@ -246,6 +250,8 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
             && snapshot.remoteID == remoteID
             && snapshot.remoteUpdatedAt == remoteUpdatedAt
             && snapshot.remoteDeletedAt == remoteDeletedAt
+            && snapshot.primaryImageVersionID == primaryImageVersionID
+            && snapshot.primaryImageUpdatedAt == primaryImageUpdatedAt
     }
 }
 
@@ -613,6 +619,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 remoteID: insert.payload.remoteID,
                 remoteUpdatedAt: insert.payload.remoteUpdatedAt,
                 remoteDeletedAt: insert.payload.remoteDeletedAt,
+                primaryImageVersionID: insert.payload.primaryImageVersionID,
+                primaryImageUpdatedAt: insert.payload.primaryImageUpdatedAt,
                 itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
                 productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
                 secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
@@ -1028,6 +1036,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 remoteID: insert.payload.remoteID,
                 remoteUpdatedAt: insert.payload.remoteUpdatedAt,
                 remoteDeletedAt: insert.payload.remoteDeletedAt,
+                primaryImageVersionID: insert.payload.primaryImageVersionID,
+                primaryImageUpdatedAt: insert.payload.primaryImageUpdatedAt,
                 itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
                 productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
                 secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
@@ -1229,7 +1239,9 @@ nonisolated struct SupabasePullApplyService: Sendable {
     ) -> Bool {
         if local.remoteID != payload.remoteID
             || local.remoteUpdatedAt != payload.remoteUpdatedAt
-            || local.remoteDeletedAt != payload.remoteDeletedAt {
+            || local.remoteDeletedAt != payload.remoteDeletedAt
+            || local.primaryImageVersionID != payload.primaryImageVersionID
+            || local.primaryImageUpdatedAt != payload.primaryImageUpdatedAt {
             return true
         }
         if let itemNumber = SupabasePullPreviewNormalizer.semanticString(payload.itemNumber),
@@ -1387,6 +1399,14 @@ nonisolated struct SupabasePullApplyService: Sendable {
             product.remoteDeletedAt = payload.remoteDeletedAt
             didMutate = true
         }
+        if product.primaryImageVersionID != payload.primaryImageVersionID {
+            product.primaryImageVersionID = payload.primaryImageVersionID
+            didMutate = true
+        }
+        if product.primaryImageUpdatedAt != payload.primaryImageUpdatedAt {
+            product.primaryImageUpdatedAt = payload.primaryImageUpdatedAt
+            didMutate = true
+        }
     }
 
     private func applyProductTombstone(
@@ -1404,6 +1424,14 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
         if product.remoteDeletedAt != payload.remoteDeletedAt {
             product.remoteDeletedAt = payload.remoteDeletedAt
+            didMutate = true
+        }
+        if product.primaryImageVersionID != payload.primaryImageVersionID {
+            product.primaryImageVersionID = payload.primaryImageVersionID
+            didMutate = true
+        }
+        if product.primaryImageUpdatedAt != payload.primaryImageUpdatedAt {
+            product.primaryImageUpdatedAt = payload.primaryImageUpdatedAt
             didMutate = true
         }
         return didMutate

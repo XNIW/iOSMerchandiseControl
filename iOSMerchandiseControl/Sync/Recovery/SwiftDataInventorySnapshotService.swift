@@ -61,6 +61,8 @@ nonisolated struct SwiftDataInventorySnapshotService {
                     remoteID: product.remoteID,
                     remoteUpdatedAt: product.remoteUpdatedAt,
                     remoteDeletedAt: product.remoteDeletedAt,
+                    primaryImageVersionID: product.primaryImageVersionID,
+                    primaryImageUpdatedAt: product.primaryImageUpdatedAt,
                     itemNumber: product.itemNumber,
                     productName: product.productName,
                     secondProductName: product.secondProductName,

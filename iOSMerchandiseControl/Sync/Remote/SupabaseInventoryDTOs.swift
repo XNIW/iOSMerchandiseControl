@@ -83,6 +83,8 @@ nonisolated struct RemoteInventoryProductRow: Codable, Sendable, Identifiable {
     let stockQuantity: Double?
     let updatedAt: String
     let deletedAt: String?
+    let primaryImageVersionID: UUID?
+    let primaryImageUpdatedAt: String?
 
     init(
         id: UUID,
@@ -98,7 +100,9 @@ nonisolated struct RemoteInventoryProductRow: Codable, Sendable, Identifiable {
         categoryID: UUID?,
         stockQuantity: Double?,
         updatedAt: String,
-        deletedAt: String?
+        deletedAt: String?,
+        primaryImageVersionID: UUID? = nil,
+        primaryImageUpdatedAt: String? = nil
     ) {
         self.id = id
         self.ownerUserID = ownerUserID
@@ -114,6 +118,8 @@ nonisolated struct RemoteInventoryProductRow: Codable, Sendable, Identifiable {
         self.stockQuantity = stockQuantity
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt
+        self.primaryImageVersionID = primaryImageVersionID
+        self.primaryImageUpdatedAt = primaryImageUpdatedAt
     }
 
     enum CodingKeys: String, CodingKey {
@@ -131,6 +137,8 @@ nonisolated struct RemoteInventoryProductRow: Codable, Sendable, Identifiable {
         case stockQuantity = "stock_quantity"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
+        case primaryImageVersionID = "primary_image_version_id"
+        case primaryImageUpdatedAt = "primary_image_updated_at"
     }
 }
 

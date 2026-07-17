@@ -1,0 +1,13 @@
+{
+  "elapsedMilliseconds" : 7,
+  "fixture" : "rotated-jpeg",
+  "inputBytes" : 12481,
+  "inputHeight" : 600,
+  "inputWidth" : 1200,
+  "mainBytes" : 12612,
+  "mainHeight" : 1200,
+  "mainWidth" : 600,
+  "thumbBytes" : 2007,
+  "thumbHeight" : 384,
+  "thumbWidth" : 192
+}
