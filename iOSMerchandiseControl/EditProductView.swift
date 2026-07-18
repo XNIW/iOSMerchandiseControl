@@ -36,6 +36,7 @@ struct EditProductView: View {
     @State private var showingCamera = false
     @State private var showingRemoveImageConfirmation = false
     @State private var isViewActive = false
+    @State private var imageOperationTask: Task<Void, Never>?
 
     init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
         self.existingProduct = product
@@ -184,7 +185,7 @@ struct EditProductView: View {
         }
         .onChange(of: selectedImageItem) { _, item in
             guard let item else { return }
-            Task {
+            startImageOperation {
                 do {
                     guard let transfer = try await item.loadTransferable(type: ProductImageTransferFile.self) else {
                         imageMessage = L("product.image.error.input")
@@ -192,6 +193,8 @@ struct EditProductView: View {
                     }
                     replacePendingImageURL(with: transfer.fileURL)
                     await uploadPendingImage()
+                } catch is CancellationError {
+                    imageMessage = L("product.image.cancelled")
                 } catch {
                     imageMessage = L("product.image.error.input")
                 }
@@ -204,16 +207,15 @@ struct EditProductView: View {
         .onAppear { isViewActive = true }
         .onDisappear {
             isViewActive = false
-            if !isImageBusy {
-                clearPendingImageURL()
-            }
+            cancelImageOperation()
+            clearPendingImageURL()
         }
         .sheet(isPresented: $showingCamera) {
             ProductImageCameraPicker(
                 onCapture: { url in
                     showingCamera = false
                     replacePendingImageURL(with: url)
-                    Task { await uploadPendingImage() }
+                    startImageOperation { await uploadPendingImage() }
                 },
                 onCancel: {
                     showingCamera = false
@@ -227,7 +229,7 @@ struct EditProductView: View {
             titleVisibility: .visible
         ) {
             Button(L("product.image.remove"), role: .destructive) {
-                Task { await removeCurrentImage() }
+                startImageOperation { await removeCurrentImage() }
             }
             Button(L("common.cancel"), role: .cancel) {}
         }
@@ -268,6 +270,10 @@ struct EditProductView: View {
                         ProgressView()
                         Text(imageProgressLabel)
                             .foregroundStyle(.secondary)
+                        Spacer()
+                        Button(L("product.image.cancel"), role: .cancel) {
+                            cancelImageOperation()
+                        }
                     }
                 }
 
@@ -306,7 +312,7 @@ struct EditProductView: View {
                        productImageStore.operationStage(productID: productID) == .failed {
                         HStack {
                             Button(L("product.image.retry")) {
-                                Task { await uploadPendingImage() }
+                                startImageOperation { await uploadPendingImage() }
                             }
                             Button(L("common.cancel"), role: .cancel) {
                                 clearPendingImageURL()
@@ -353,9 +359,9 @@ struct EditProductView: View {
     private var isImageBusy: Bool {
         guard let productID = existingProduct?.remoteID else { return false }
         switch productImageStore.operationStage(productID: productID) {
-        case .processing, .uploading, .finalizing, .removing:
+        case .processing, .uploadingMain, .uploadingThumb, .finalizing, .removing:
             return true
-        case .idle, .failed:
+        case .idle, .completed, .cancelled, .failed:
             return false
         }
     }
@@ -364,9 +370,11 @@ struct EditProductView: View {
         guard let productID = existingProduct?.remoteID else { return L("product.image.processing") }
         switch productImageStore.operationStage(productID: productID) {
         case .processing: return L("product.image.processing")
-        case .uploading, .finalizing: return L("product.image.uploading")
+        case .uploadingMain: return L("product.image.uploading_main")
+        case .uploadingThumb: return L("product.image.uploading_thumb")
+        case .finalizing: return L("product.image.finalizing")
         case .removing: return L("product.image.removing")
-        case .idle, .failed: return ""
+        case .idle, .completed, .cancelled, .failed: return ""
         }
     }
 
@@ -404,6 +412,9 @@ struct EditProductView: View {
                 imageMessage = L("product.image.error.local_refresh")
             }
             clearPendingImageURL()
+        } catch is CancellationError {
+            imageMessage = L("product.image.cancelled")
+            clearPendingImageURL()
         } catch {
             imageMessage = L("product.image.error.upload")
             if !isViewActive {
@@ -436,9 +447,29 @@ struct EditProductView: View {
                 context.rollback()
                 imageMessage = L("product.image.error.local_refresh")
             }
+        } catch is CancellationError {
+            imageMessage = L("product.image.cancelled")
         } catch {
             imageMessage = L("product.image.error.remove")
         }
+    }
+
+    private func startImageOperation(_ operation: @escaping @MainActor () async -> Void) {
+        imageOperationTask?.cancel()
+        imageOperationTask = Task { @MainActor in
+            await operation()
+            imageOperationTask = nil
+        }
+    }
+
+    private func cancelImageOperation() {
+        guard let imageOperationTask else { return }
+        imageOperationTask.cancel()
+        self.imageOperationTask = nil
+        if let productID = existingProduct?.remoteID {
+            productImageStore.cancelOperation(productID: productID)
+        }
+        imageMessage = L("product.image.cancelled")
     }
 
     private func replacePendingImageURL(with url: URL) {

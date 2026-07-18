@@ -1,5 +1,6 @@
 import CoreGraphics
 import ImageIO
+import UIKit
 import UniformTypeIdentifiers
 import XCTest
 @testable import iOSMerchandiseControl
@@ -84,6 +85,83 @@ final class ProductImageCacheTests: XCTestCase {
         XCTAssertEqual(currentData, data)
     }
 
+    func testDiskLRUEvictsLeastRecentlyUsedEntryWithinByteBudget() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let data = try jpegFixture()
+        let budget = data.count * 2
+        let cache = ProductImageCache(
+            rootDirectory: root,
+            maximumDiskBytes: budget
+        )
+        let scope = String(repeating: "d", count: 64)
+        let shopID = UUID()
+        let versionID = UUID()
+        func key(_ productID: UUID) -> ProductImageCacheKey {
+            ProductImageCacheKey(
+                cacheScope: scope,
+                shopID: shopID,
+                productID: productID,
+                versionID: versionID,
+                variant: .thumb
+            )
+        }
+        let first = key(UUID())
+        let second = key(UUID())
+        let third = key(UUID())
+
+        try await cache.write(data, for: first)
+        try await Task.sleep(for: .milliseconds(20))
+        try await cache.write(data, for: second)
+        try await Task.sleep(for: .milliseconds(20))
+        let touchedFirst = try await cache.read(first)
+        XCTAssertNotNil(touchedFirst)
+        try await Task.sleep(for: .milliseconds(20))
+        try await cache.write(data, for: third)
+
+        let retainedFirst = try await cache.read(first)
+        let evictedSecond = try await cache.read(second)
+        let retainedThird = try await cache.read(third)
+        let usage = try await cache.diskUsageBytes()
+        XCTAssertNotNil(retainedFirst)
+        XCTAssertNil(evictedSecond)
+        XCTAssertNotNil(retainedThird)
+        XCTAssertLessThanOrEqual(usage, budget)
+    }
+
+    func testOfflineCacheHitDoesNotRequireAnAuthenticatedSession() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let accountID = UUID()
+        let scope = ProductImageScope(accountID: accountID, shopID: UUID())
+        let reference = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let key = ProductImageCacheKey(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            shopID: scope.shopID,
+            productID: reference.productID,
+            versionID: reference.versionID,
+            variant: .thumb
+        )
+        let cache = ProductImageCache(rootDirectory: root)
+        let data = try jpegFixture()
+        try await cache.write(data, for: key)
+        let service = ProductImageService(
+            apiBaseURL: URL(string: "https://admin.task138.invalid")!,
+            storageBaseURL: URL(string: "https://storage.task138.invalid")!,
+            cache: cache
+        ) { nil }
+
+        let result = try await service.load(reference)
+
+        XCTAssertEqual(result.source, "cache")
+        XCTAssertEqual(result.data, data)
+    }
+
     func testInvalidScopeAndMetadataBearingJPEGAreRejected() async throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -114,7 +192,36 @@ final class ProductImageCacheTests: XCTestCase {
     }
 
     @MainActor
-    func testMemoryCachePreservesOtherAccountNamespacesAcrossActivation() async throws {
+    func testNoImageVersionPerformsNoLoadAndCreatesNoCacheEntry() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let accountID = UUID()
+        let scope = ProductImageScope(accountID: accountID, shopID: UUID())
+        let cache = ProductImageCache(rootDirectory: root)
+        let service = ProductImageService(
+            apiBaseURL: URL(string: "https://admin.task138.invalid")!,
+            storageBaseURL: URL(string: "https://storage.task138.invalid")!,
+            cache: cache
+        ) {
+            ProductImageSessionSnapshot(accountID: accountID, accessToken: "fixture")
+        }
+        let store = ProductImageStore(service: service)
+        store.activate(scope: scope)
+
+        await store.load(
+            scope: scope,
+            productID: UUID(),
+            versionID: nil,
+            variant: .thumb
+        )
+
+        XCTAssertTrue(store.loadingReferences.isEmpty)
+        XCTAssertTrue(store.failedReferences.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
+    }
+
+    @MainActor
+    func testAccountSwitchClearsMemoryAndPurgesPreviousDiskScope() async throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let accountA = UUID()
@@ -128,15 +235,16 @@ final class ProductImageCacheTests: XCTestCase {
             variant: .thumb
         )
         let cache = ProductImageCache(rootDirectory: root)
+        let key = ProductImageCacheKey(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountA),
+            shopID: scopeA.shopID,
+            productID: reference.productID,
+            versionID: reference.versionID,
+            variant: .thumb
+        )
         try await cache.write(
             try jpegFixture(),
-            for: ProductImageCacheKey(
-                cacheScope: ProductImageService.expectedCacheScope(accountID: accountA),
-                shopID: scopeA.shopID,
-                productID: reference.productID,
-                versionID: reference.versionID,
-                variant: .thumb
-            )
+            for: key
         )
         let service = ProductImageService(
             apiBaseURL: URL(string: "https://admin.task137.invalid")!,
@@ -152,8 +260,52 @@ final class ProductImageCacheTests: XCTestCase {
         XCTAssertNotNil(store.image(for: reference))
         store.activate(scope: scopeB)
         XCTAssertNil(store.image(for: reference))
+        await service.deactivate(scope: scopeA, purgeAccountScope: true)
+        let cachedImage = try await cache.read(key)
+        XCTAssertNil(cachedImage)
         store.activate(scope: scopeA)
+        XCTAssertNil(store.image(for: reference))
+    }
+
+    @MainActor
+    func testMemoryWarningPurgesDecodedImagesAndAccounting() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let accountID = UUID()
+        let scope = ProductImageScope(accountID: accountID, shopID: UUID())
+        let reference = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let cache = ProductImageCache(rootDirectory: root)
+        try await cache.write(try jpegFixture(), for: ProductImageCacheKey(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            shopID: scope.shopID,
+            productID: reference.productID,
+            versionID: reference.versionID,
+            variant: .thumb
+        ))
+        let service = ProductImageService(
+            apiBaseURL: URL(string: "https://admin.task138.invalid")!,
+            storageBaseURL: URL(string: "https://storage.task138.invalid")!,
+            cache: cache
+        ) { nil }
+        let store = ProductImageStore(service: service)
+        store.activate(scope: scope)
+        await store.load(reference)
         XCTAssertNotNil(store.image(for: reference))
+        XCTAssertEqual(store.cachedImageCount, 1)
+        XCTAssertGreaterThan(store.cachedImageCostBytes, 0)
+        XCTAssertLessThanOrEqual(store.cachedImageCostBytes, ProductImageStore.memoryCostLimit)
+
+        NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        try await Task.sleep(for: .milliseconds(20))
+
+        XCTAssertNil(store.image(for: reference))
+        XCTAssertEqual(store.cachedImageCount, 0)
+        XCTAssertEqual(store.cachedImageCostBytes, 0)
     }
 
     private func temporaryRoot() -> URL {

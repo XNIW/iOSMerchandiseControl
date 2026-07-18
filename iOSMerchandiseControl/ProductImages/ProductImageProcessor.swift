@@ -17,7 +17,8 @@ nonisolated enum ProductImageProcessor {
     private static let thumbQualities: [CGFloat] = [0.75, 0.68, 0.60, 0.52]
 
     static func prepare(fileURL: URL) async throws -> PreparedProductImage {
-        try await Task.detached(priority: .userInitiated) {
+        let task = Task.detached(priority: .userInitiated) {
+            try Task.checkCancellation()
             let values = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
             guard values.isRegularFile == true else {
                 throw ProductImageError.inputEmpty
@@ -29,11 +30,18 @@ nonisolated enum ProductImageProcessor {
                 throw ProductImageError.inputTooLarge
             }
             let data = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
+            try Task.checkCancellation()
             return try prepare(data: data)
-        }.value
+        }
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
     }
 
     static func prepare(data: Data) throws -> PreparedProductImage {
+        try Task.checkCancellation()
         let startedAt = Date()
         guard !data.isEmpty else {
             throw ProductImageError.inputEmpty
@@ -63,39 +71,56 @@ nonisolated enum ProductImageProcessor {
         guard height <= maximumInputPixels / width else {
             throw ProductImageError.inputPixelLimitExceeded
         }
+        try Task.checkCancellation()
 
+        let downsampleStartedAt = Date()
+        let normalizedMain = try autoreleasepool {
+            try normalizedImage(source: source, maximumSide: mainMaximumSide)
+        }
+        let downsampleMilliseconds = milliseconds(since: downsampleStartedAt)
+
+        let mainStartedAt = Date()
         let main = try makeVariant(
-            source: source,
-            sourceLongestSide: max(width, height),
-            initialMaximumSide: mainMaximumSide,
+            normalizedImage: normalizedMain,
             minimumSide: 640,
             qualities: mainQualities,
             targetBytes: mainTargetBytes,
             hardMaximumBytes: mainMaximumBytes
         )
+        let mainEncodeMilliseconds = milliseconds(since: mainStartedAt)
+
+        // The original source is never decoded again: the preview is derived from
+        // the already oriented, sRGB, alpha-flattened main bitmap.
+        let thumbStartedAt = Date()
+        let normalizedThumb = try autoreleasepool {
+            try resizedImage(normalizedMain, maximumSide: thumbMaximumSide)
+        }
         let thumb = try makeVariant(
-            source: source,
-            sourceLongestSide: max(width, height),
-            initialMaximumSide: thumbMaximumSide,
+            normalizedImage: normalizedThumb,
             minimumSide: 128,
             qualities: thumbQualities,
             targetBytes: thumbMaximumBytes,
             hardMaximumBytes: thumbMaximumBytes
         )
+        let thumbEncodeMilliseconds = milliseconds(since: thumbStartedAt)
+        try Task.checkCancellation()
 
         let elapsed = max(0, Int(Date().timeIntervalSince(startedAt) * 1_000))
         return PreparedProductImage(
             main: main,
             thumb: thumb,
             metrics: ProductImagePreprocessMetrics(
+                downsampleMilliseconds: downsampleMilliseconds,
                 elapsedMilliseconds: elapsed,
                 inputBytes: data.count,
                 inputHeight: height,
                 inputWidth: width,
                 mainBytes: main.metadata.bytes,
+                mainEncodeMilliseconds: mainEncodeMilliseconds,
                 mainHeight: main.metadata.height,
                 mainWidth: main.metadata.width,
                 thumbBytes: thumb.metadata.bytes,
+                thumbEncodeMilliseconds: thumbEncodeMilliseconds,
                 thumbHeight: thumb.metadata.height,
                 thumbWidth: thumb.metadata.width
             )
@@ -139,23 +164,73 @@ nonisolated enum ProductImageProcessor {
             && data[data.count - 1] == 0xd9
     }
 
+    static func validateDownloadedJPEG(
+        _ data: Data,
+        variant: ProductImageVariant
+    ) async throws {
+        try Task.checkCancellation()
+        let maximumSide = variant == .thumb ? thumbMaximumSide : mainMaximumSide
+        let task = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            guard isJPEG(data),
+                  !containsAPP1Metadata(data),
+                  let source = CGImageSourceCreateWithData(
+                    data as CFData,
+                    [kCGImageSourceShouldCache: false] as CFDictionary
+                  ),
+                  CGImageSourceGetCount(source) == 1,
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
+                  width > 0,
+                  height > 0,
+                  max(width, height) <= maximumSide else {
+                throw ProductImageError.downloadedImageInvalid
+            }
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: maximumSide
+            ]
+            guard CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) != nil else {
+                throw ProductImageError.downloadedImageInvalid
+            }
+            try Task.checkCancellation()
+        }
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
     private static func makeVariant(
-        source: CGImageSource,
-        sourceLongestSide: Int,
-        initialMaximumSide: Int,
+        normalizedImage: CGImage,
         minimumSide: Int,
         qualities: [CGFloat],
         targetBytes: Int,
         hardMaximumBytes: Int
     ) throws -> PreparedProductImageVariant {
-        var maximumSide = min(initialMaximumSide, sourceLongestSide)
+        let sourceLongestSide = max(normalizedImage.width, normalizedImage.height)
+        var maximumSide = sourceLongestSide
         var fallback: PreparedProductImageVariant?
+        var resizeAttempts = 0
 
-        while maximumSide > 0 {
-            let image = try normalizedImage(source: source, maximumSide: maximumSide)
+        // 16 is a hard upper bound; the 0.85 scale ladder reaches the documented
+        // minimum from 1600 px in substantially fewer iterations.
+        while maximumSide > 0, resizeAttempts < 16 {
+            try Task.checkCancellation()
+            resizeAttempts += 1
+            let image = try autoreleasepool {
+                try resizedImage(normalizedImage, maximumSide: maximumSide)
+            }
             for quality in qualities {
-                let encoded = try encodeJPEG(image, quality: quality)
-                let variant = try validatedVariant(encoded)
+                try Task.checkCancellation()
+                let variant = try autoreleasepool {
+                    let encoded = try encodeJPEG(image, quality: quality)
+                    return try validatedVariant(encoded)
+                }
                 if variant.metadata.bytes <= hardMaximumBytes,
                    fallback == nil || variant.metadata.bytes < fallback!.metadata.bytes {
                     fallback = variant
@@ -165,7 +240,7 @@ nonisolated enum ProductImageProcessor {
                 }
             }
 
-            if maximumSide <= minimumSide || maximumSide >= sourceLongestSide && sourceLongestSide < minimumSide {
+            if maximumSide <= minimumSide || sourceLongestSide < minimumSide {
                 break
             }
             let reduced = max(minimumSide, Int((Double(maximumSide) * 0.85).rounded(.down)))
@@ -183,6 +258,7 @@ nonisolated enum ProductImageProcessor {
         source: CGImageSource,
         maximumSide: Int
     ) throws -> CGImage {
+        try Task.checkCancellation()
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
@@ -210,7 +286,50 @@ nonisolated enum ProductImageProcessor {
         guard let normalized = context.makeImage() else {
             throw ProductImageError.decodeFailed
         }
+        try Task.checkCancellation()
         return normalized
+    }
+
+    private static func resizedImage(
+        _ image: CGImage,
+        maximumSide: Int
+    ) throws -> CGImage {
+        try Task.checkCancellation()
+        let longestSide = max(image.width, image.height)
+        guard longestSide > 0, maximumSide > 0 else {
+            throw ProductImageError.decodeFailed
+        }
+        if longestSide <= maximumSide {
+            return image
+        }
+        let scale = CGFloat(maximumSide) / CGFloat(longestSide)
+        let width = max(1, Int((CGFloat(image.width) * scale).rounded()))
+        let height = max(1, Int((CGFloat(image.height) * scale).rounded()))
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            throw ProductImageError.decodeFailed
+        }
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let resized = context.makeImage() else {
+            throw ProductImageError.decodeFailed
+        }
+        try Task.checkCancellation()
+        return resized
+    }
+
+    private static func milliseconds(since start: Date) -> Int {
+        max(0, Int(Date().timeIntervalSince(start) * 1_000))
     }
 
     private static func encodeJPEG(_ image: CGImage, quality: CGFloat) throws -> Data {

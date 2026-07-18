@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 import UIKit
 
 struct ProductImageRemoteView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: ProductImageStore
 
     let scope: ProductImageScope?
@@ -22,22 +23,38 @@ struct ProductImageRemoteView: View {
         )
     }
 
+    private var thumbnailReference: ProductImageReference? {
+        guard variant == .main, let reference else { return nil }
+        return ProductImageReference(
+            scope: reference.scope,
+            productID: reference.productID,
+            versionID: reference.versionID,
+            variant: .thumb
+        )
+    }
+
+    private var displayedReference: ProductImageReference? {
+        guard let reference else { return nil }
+        if store.image(for: reference) != nil {
+            return reference
+        }
+        if let thumbnailReference, store.image(for: thumbnailReference) != nil {
+            return thumbnailReference
+        }
+        return nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(.quaternary)
 
-            if let reference, let image = store.image(for: reference) {
-                if variant == .thumb {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                }
-            } else if let reference, store.isLoading(reference) {
+            if let displayedReference,
+               let image = store.image(for: displayedReference) {
+                renderedImage(image)
+                    .id(displayedReference.variant)
+                    .transition(.opacity)
+            } else if isLoading {
                 ProgressView()
                     .controlSize(.small)
             } else if let reference, store.didFail(reference) {
@@ -61,24 +78,88 @@ struct ProductImageRemoteView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(.quaternary, lineWidth: 1)
         }
+        .overlay(alignment: .bottomTrailing) {
+            if let reference,
+               displayedReference != nil,
+               store.didFail(reference) {
+                retryButton(reference)
+                    .padding(8)
+            }
+        }
         .task(id: reference) {
             guard let reference else { return }
-            await store.load(reference)
+            if variant == .main {
+                await store.loadProgressively(
+                    scope: reference.scope,
+                    productID: reference.productID,
+                    versionID: reference.versionID
+                )
+            } else {
+                await store.load(reference)
+            }
         }
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.18),
+            value: displayedReference?.variant
+        )
         .accessibilityLabel(Text(L(versionID == nil ? "product.image.placeholder" : "product.image.preview")))
         .accessibilityValue(Text(L(accessibilityStateKey)))
+        .accessibilityIdentifier("product.image.\(variant.rawValue)")
     }
 
     private var accessibilityStateKey: String {
         guard let reference else { return "product.image.state.empty" }
-        if store.isLoading(reference) { return "product.image.state.loading" }
+        if isLoading { return "product.image.state.loading" }
         if store.didFail(reference) { return "product.image.state.error" }
-        if store.image(for: reference) != nil {
-            return store.source(for: reference) == "cache"
+        if let displayedReference {
+            return store.source(for: displayedReference) == "cache"
                 ? "product.image.state.cached"
                 : "product.image.state.ready"
         }
         return "product.image.state.empty"
+    }
+
+    private var isLoading: Bool {
+        guard let reference else { return false }
+        if store.isLoading(reference) { return true }
+        if let thumbnailReference, store.isLoading(thumbnailReference) { return true }
+        return false
+    }
+
+    @ViewBuilder
+    private func renderedImage(_ image: UIImage) -> some View {
+        if variant == .thumb {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+        }
+    }
+
+    private func retryButton(_ reference: ProductImageReference) -> some View {
+        Button {
+            Task {
+                if variant == .main {
+                    await store.loadProgressively(
+                        scope: reference.scope,
+                        productID: reference.productID,
+                        versionID: reference.versionID
+                    )
+                } else {
+                    await store.load(reference)
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.clockwise.circle.fill")
+                .font(.title2)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(L("product.image.retry_read")))
     }
 }
 

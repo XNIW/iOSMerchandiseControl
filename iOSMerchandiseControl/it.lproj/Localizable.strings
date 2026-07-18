@@ -1667,6 +1667,11 @@
 "product.image.state.error" = "Immagine non disponibile";
 "product.image.processing" = "Ottimizzazione immagine…";
 "product.image.uploading" = "Upload e verifica…";
+"product.image.uploading_main" = "Upload immagine principale…";
+"product.image.uploading_thumb" = "Upload miniatura…";
+"product.image.finalizing" = "Finalizzazione immagine…";
+"product.image.cancel" = "Annulla operazione immagine";
+"product.image.cancelled" = "L'operazione immagine e stata annullata.";
 "product.image.removing" = "Rimozione immagine…";
 "product.image.read_only" = "Solo owner e manager del catalogo possono cambiare questa immagine.";
 "product.image.unavailable" = "Configura il base URL non segreto dell'API Admin per gestire le immagini.";

@@ -86,6 +86,21 @@ final class ProductImageProcessorTests: XCTestCase {
         try attachMetrics(name: "high-resolution", prepared: prepared)
     }
 
+    func testFortyEightMegapixelInputDownsamplesWithinFrozenBudgets() throws {
+        let input = try makeFixture(width: 8_000, height: 6_000, type: .jpeg, patterned: true)
+
+        let prepared = try ProductImageProcessor.prepare(data: input)
+
+        XCTAssertEqual(prepared.metrics.inputWidth * prepared.metrics.inputHeight, 48_000_000)
+        XCTAssertLessThanOrEqual(max(prepared.main.metadata.width, prepared.main.metadata.height), 1_600)
+        XCTAssertLessThanOrEqual(max(prepared.thumb.metadata.width, prepared.thumb.metadata.height), 384)
+        XCTAssertLessThanOrEqual(prepared.main.metadata.bytes, ProductImageProcessor.mainMaximumBytes)
+        XCTAssertLessThanOrEqual(prepared.thumb.metadata.bytes, ProductImageProcessor.thumbMaximumBytes)
+        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.main.data))
+        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.thumb.data))
+        try attachMetrics(name: "48-megapixel", prepared: prepared)
+    }
+
     func testHighResolutionPreprocessPerformanceBaseline() throws {
         let input = try makeFixture(width: 5_000, height: 4_000, type: .jpeg, patterned: true)
         let options = XCTMeasureOptions()
@@ -106,6 +121,9 @@ final class ProductImageProcessorTests: XCTestCase {
         }
         XCTAssertThrowsError(try ProductImageProcessor.prepare(data: Data("<svg/>".utf8))) { error in
             XCTAssertEqual(error as? ProductImageError, .unsupportedFormat)
+        }
+        XCTAssertThrowsError(try ProductImageProcessor.prepare(data: Data([0xff, 0xd8, 0xff, 0xd9]))) { error in
+            XCTAssertEqual(error as? ProductImageError, .decodeFailed)
         }
     }
 
@@ -197,11 +215,14 @@ final class ProductImageProcessorTests: XCTestCase {
             "inputBytes": prepared.metrics.inputBytes,
             "inputWidth": prepared.metrics.inputWidth,
             "inputHeight": prepared.metrics.inputHeight,
+            "downsampleMilliseconds": prepared.metrics.downsampleMilliseconds,
             "elapsedMilliseconds": prepared.metrics.elapsedMilliseconds,
             "mainBytes": prepared.metrics.mainBytes,
+            "mainEncodeMilliseconds": prepared.metrics.mainEncodeMilliseconds,
             "mainWidth": prepared.metrics.mainWidth,
             "mainHeight": prepared.metrics.mainHeight,
             "thumbBytes": prepared.metrics.thumbBytes,
+            "thumbEncodeMilliseconds": prepared.metrics.thumbEncodeMilliseconds,
             "thumbWidth": prepared.metrics.thumbWidth,
             "thumbHeight": prepared.metrics.thumbHeight
         ]

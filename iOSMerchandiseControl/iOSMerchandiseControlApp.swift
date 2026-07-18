@@ -14,7 +14,12 @@ struct iOSMerchandiseControlApp: App {
     private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
 
     init() {
-        let dependencies = Self.isRunningHostedXCTest
+        #if DEBUG
+        let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
+        #else
+        let isTask138VisualHarness = false
+        #endif
+        let dependencies = Self.isRunningHostedXCTest || isTask138VisualHarness
             ? Self.makeHostedXCTestDependencies()
             : Self.makeSupabaseDependencies()
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
@@ -24,30 +29,23 @@ struct iOSMerchandiseControlApp: App {
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
-        SyncBackgroundTaskScheduler.shared.register()
-        SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
+        if !isTask138VisualHarness {
+            SyncBackgroundTaskScheduler.shared.register()
+            SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
+        }
     }
 
     var body: some Scene {
         WindowGroup {
-            if let task126SmokeKind = Self.task126UISmokeKind {
-                Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
-            } else if Self.isRunningHostedXCTest {
-                HostedXCTestRootView()
+            #if DEBUG
+            if let task138VisualState = Self.task138ProductImageVisualState {
+                Task138ProductImageVisualHarness(state: task138VisualState)
             } else {
-                ContentView(
-                    supabaseTransportClient: supabaseTransportClient,
-                    supabasePullPreviewService: supabasePullPreviewService,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    syncEventSignalWatcher: syncEventSignalWatcher,
-                    shopDeviceRegistrationService: shopDeviceRegistrationService
-                )
-                .environmentObject(supabaseAuthViewModel)
-                .environmentObject(productImageStore)
-                .onOpenURL { url in
-                    _ = supabaseAuthViewModel.handleOpenURL(url)
-                }
+                standardRootView
             }
+            #else
+            standardRootView
+            #endif
         }
         .modelContainer(for: [
             Product.self,
@@ -60,6 +58,28 @@ struct iOSMerchandiseControlApp: App {
             SyncEventOutboxEntry.self,
             LocalPendingChange.self
         ])
+    }
+
+    @ViewBuilder
+    private var standardRootView: some View {
+        if let task126SmokeKind = Self.task126UISmokeKind {
+            Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
+        } else if Self.isRunningHostedXCTest {
+            HostedXCTestRootView()
+        } else {
+            ContentView(
+                supabaseTransportClient: supabaseTransportClient,
+                supabasePullPreviewService: supabasePullPreviewService,
+                syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                syncEventSignalWatcher: syncEventSignalWatcher,
+                shopDeviceRegistrationService: shopDeviceRegistrationService
+            )
+            .environmentObject(supabaseAuthViewModel)
+            .environmentObject(productImageStore)
+            .onOpenURL { url in
+                _ = supabaseAuthViewModel.handleOpenURL(url)
+            }
+        }
     }
 
     private static var isRunningHostedXCTest: Bool {
@@ -76,6 +96,14 @@ struct iOSMerchandiseControlApp: App {
         return nil
         #endif
     }
+
+    #if DEBUG
+    private static var task138ProductImageVisualState: Task138ProductImageVisualState? {
+        Task138ProductImageVisualState(
+            environmentValue: ProcessInfo.processInfo.environment["TASK138_PRODUCT_IMAGE_VISUAL_STATE"]
+        )
+    }
+    #endif
 
     private static func makeHostedXCTestDependencies() -> SupabaseAppDependencies {
         SupabaseAppDependencies(

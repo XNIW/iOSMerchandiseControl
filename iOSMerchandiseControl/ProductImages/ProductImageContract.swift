@@ -64,14 +64,17 @@ nonisolated struct PreparedProductImageVariant: Equatable, Sendable {
 }
 
 nonisolated struct ProductImagePreprocessMetrics: Equatable, Sendable {
+    let downsampleMilliseconds: Int
     let elapsedMilliseconds: Int
     let inputBytes: Int
     let inputHeight: Int
     let inputWidth: Int
     let mainBytes: Int
+    let mainEncodeMilliseconds: Int
     let mainHeight: Int
     let mainWidth: Int
     let thumbBytes: Int
+    let thumbEncodeMilliseconds: Int
     let thumbHeight: Int
     let thumbWidth: Int
 }
@@ -102,8 +105,11 @@ nonisolated struct ProductImageRemoveResult: Sendable {
 nonisolated enum ProductImageOperationStage: Equatable, Sendable {
     case idle
     case processing
-    case uploading
+    case uploadingMain
+    case uploadingThumb
     case finalizing
+    case completed
+    case cancelled
     case removing
     case failed
 }

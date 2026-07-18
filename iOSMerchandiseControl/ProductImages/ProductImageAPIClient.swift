@@ -84,6 +84,8 @@ private final class ProductImageNoRedirectDelegate: NSObject, URLSessionTaskDele
 }
 
 actor ProductImageAPIClient {
+    static let readURLBatchMaximum = 100
+
     private enum SignedURLMode {
         case upload
         case read
@@ -175,7 +177,7 @@ actor ProductImageAPIClient {
         prepared: PreparedProductImage,
         accessToken: String
     ) async throws -> ProductImageIntentResponse {
-        try await post(
+        return try await post(
             path: "api/shop/product-images/intent",
             body: IntentRequest(
                 main: prepared.main.metadata,
@@ -221,15 +223,31 @@ actor ProductImageAPIClient {
         reference: ProductImageReference,
         accessToken: String
     ) async throws -> ProductImageReadResponse {
-        try await post(
+        try await resolveReadURLs(references: [reference], accessToken: accessToken)
+    }
+
+    func resolveReadURLs(
+        references: [ProductImageReference],
+        accessToken: String
+    ) async throws -> ProductImageReadResponse {
+        var seen = Set<ProductImageReference>()
+        let uniqueReferences = references.filter { seen.insert($0).inserted }
+        guard let first = uniqueReferences.first,
+              uniqueReferences.count <= Self.readURLBatchMaximum,
+              uniqueReferences.allSatisfy({ $0.scope == first.scope }) else {
+            throw ProductImageError.invalidResponse
+        }
+        return try await post(
             path: "api/shop/product-images/read-urls",
             body: ReadRequest(
-                refs: [ReadRequest.Ref(
-                    productId: reference.productID,
-                    variant: reference.variant,
-                    versionId: reference.versionID
-                )],
-                shopId: reference.scope.shopID
+                refs: uniqueReferences.map {
+                    ReadRequest.Ref(
+                        productId: $0.productID,
+                        variant: $0.variant,
+                        versionId: $0.versionID
+                    )
+                },
+                shopId: first.scope.shopID
             ),
             accessToken: accessToken
         )
@@ -254,13 +272,29 @@ actor ProductImageAPIClient {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("false", forHTTPHeaderField: "x-upsert")
-        let (_, response) = try await storageSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw ProductImageError.invalidResponse
+        for attempt in 0...1 {
+            try Task.checkCancellation()
+            do {
+                let (_, response) = try await storageSession.data(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    throw ProductImageError.invalidResponse
+                }
+                if (200..<300).contains(http.statusCode) {
+                    return
+                }
+                if attempt == 0, (500..<600).contains(http.statusCode) {
+                    continue
+                }
+                throw ProductImageError.uploadFailed(status: http.statusCode)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let error as URLError where attempt == 0 && Self.isTransientUploadError(error) {
+                continue
+            } catch {
+                throw error
+            }
         }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ProductImageError.uploadFailed(status: http.statusCode)
-        }
+        throw ProductImageError.invalidResponse
     }
 
     func downloadJPEG(
@@ -380,6 +414,19 @@ actor ProductImageAPIClient {
         case "https": return 443
         case "http": return 80
         default: return nil
+        }
+    }
+
+    private static func isTransientUploadError(_ error: URLError) -> Bool {
+        switch error.code {
+        case .cannotConnectToHost,
+             .dnsLookupFailed,
+             .networkConnectionLost,
+             .notConnectedToInternet,
+             .timedOut:
+            return true
+        default:
+            return false
         }
     }
 }

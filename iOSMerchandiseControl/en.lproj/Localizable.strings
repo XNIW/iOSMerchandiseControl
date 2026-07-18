@@ -1668,6 +1668,11 @@
 "product.image.state.error" = "Image unavailable";
 "product.image.processing" = "Optimizing the image…";
 "product.image.uploading" = "Uploading and verifying…";
+"product.image.uploading_main" = "Uploading main image…";
+"product.image.uploading_thumb" = "Uploading thumbnail…";
+"product.image.finalizing" = "Finalizing image…";
+"product.image.cancel" = "Cancel image operation";
+"product.image.cancelled" = "The image operation was cancelled.";
 "product.image.removing" = "Removing the image…";
 "product.image.read_only" = "Only catalog owners and managers can change this image.";
 "product.image.unavailable" = "Configure the non-secret Admin API base URL to manage images.";

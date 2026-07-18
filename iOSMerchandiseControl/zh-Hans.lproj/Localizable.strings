@@ -1668,6 +1668,11 @@
 "product.image.state.error" = "图片不可用";
 "product.image.processing" = "正在优化图片…";
 "product.image.uploading" = "正在上传并验证…";
+"product.image.uploading_main" = "正在上传主图…";
+"product.image.uploading_thumb" = "正在上传缩略图…";
+"product.image.finalizing" = "正在完成图片处理…";
+"product.image.cancel" = "取消图片操作";
+"product.image.cancelled" = "图片操作已取消。";
 "product.image.removing" = "正在移除图片…";
 "product.image.read_only" = "只有目录所有者和经理可以更改此图片。";
 "product.image.unavailable" = "请配置非机密的 Admin API 基础 URL 以管理图片。";

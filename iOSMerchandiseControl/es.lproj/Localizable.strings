@@ -1668,6 +1668,11 @@
 "product.image.state.error" = "Imagen no disponible";
 "product.image.processing" = "Optimizando la imagen…";
 "product.image.uploading" = "Subiendo y verificando…";
+"product.image.uploading_main" = "Subiendo imagen principal…";
+"product.image.uploading_thumb" = "Subiendo miniatura…";
+"product.image.finalizing" = "Finalizando imagen…";
+"product.image.cancel" = "Cancelar operación de imagen";
+"product.image.cancelled" = "La operación de imagen se canceló.";
 "product.image.removing" = "Eliminando la imagen…";
 "product.image.read_only" = "Solo propietarios y gerentes del catálogo pueden cambiar esta imagen.";
 "product.image.unavailable" = "Configura la URL base no secreta de la API Admin para gestionar imágenes.";
