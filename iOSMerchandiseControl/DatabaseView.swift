@@ -1486,6 +1486,8 @@ private func importSurfaceCardWidth(for geometry: GeometryProxy) -> CGFloat {
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @EnvironmentObject private var shopContextStore: ShopContextStore
+    @EnvironmentObject private var productImageStore: ProductImageStore
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     // Tutti i prodotti dal database, ordinati per barcode
@@ -2715,6 +2717,7 @@ struct DatabaseView: View {
 
     private struct DatabaseProductRow: View {
         let product: Product
+        let imageScope: ProductImageScope?
         let onEdit: () -> Void
         let onHistory: () -> Void
 
@@ -2727,15 +2730,25 @@ struct DatabaseView: View {
         }
 
         var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                titleBlock
+            HStack(alignment: .top, spacing: 12) {
+                ProductImageRemoteView(
+                    scope: imageScope,
+                    productID: product.remoteID,
+                    versionID: product.primaryImageVersionID,
+                    variant: .thumb
+                )
+                .frame(width: 72, height: 72)
 
-                metricsBlock
+                VStack(alignment: .leading, spacing: 8) {
+                    titleBlock
 
-                identityLabels
+                    metricsBlock
 
-                if hasMetadata {
-                    metadataLabels
+                    identityLabels
+
+                    if hasMetadata {
+                        metadataLabels
+                    }
                 }
             }
             .contentShape(Rectangle())
@@ -3136,6 +3149,7 @@ struct DatabaseView: View {
                 ForEach(filteredProducts) { (product: Product) in
                     DatabaseProductRow(
                         product: product,
+                        imageScope: imageScope,
                         onEdit: {
                             productToEdit = product
                         },
@@ -3299,6 +3313,9 @@ struct DatabaseView: View {
 
         }
         .navigationTitle(L("database.title"))
+        .task(id: imageScope) {
+            productImageStore.activate(scope: imageScope)
+        }
         .toolbarBackground(Color(.systemGroupedBackground), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbar {
@@ -3605,6 +3622,16 @@ struct DatabaseView: View {
 
     private var currentPendingOwnerUserID: UUID? {
         supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
+    }
+
+    private var imageScope: ProductImageScope? {
+        guard supabaseAuthViewModel.isSignedIn,
+              let accountID = supabaseAuthViewModel.sessionInfo?.userID,
+              let selectedShop = shopContextStore.context.selectedShop,
+              selectedShop.isValidProductImageSelection else {
+            return nil
+        }
+        return ProductImageScope(accountID: accountID, shopID: selectedShop.shopID)
     }
 
     private func handleDatabaseScan(_ code: String) {

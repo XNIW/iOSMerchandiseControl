@@ -266,6 +266,8 @@ nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
     let remoteID: UUID
     let remoteUpdatedAt: Date?
     let remoteDeletedAt: Date?
+    let primaryImageVersionID: UUID?
+    let primaryImageUpdatedAt: Date?
     let barcode: String?
     let itemNumber: String?
     let productName: String?
@@ -286,6 +288,8 @@ nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
         remoteID: UUID,
         remoteUpdatedAt: Date? = nil,
         remoteDeletedAt: Date? = nil,
+        primaryImageVersionID: UUID? = nil,
+        primaryImageUpdatedAt: Date? = nil,
         barcode: String?,
         itemNumber: String? = nil,
         productName: String? = nil,
@@ -305,6 +309,8 @@ nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
         self.remoteID = remoteID
         self.remoteUpdatedAt = remoteUpdatedAt
         self.remoteDeletedAt = remoteDeletedAt
+        self.primaryImageVersionID = primaryImageVersionID
+        self.primaryImageUpdatedAt = primaryImageUpdatedAt
         self.barcode = barcode
         self.itemNumber = itemNumber
         self.productName = productName
@@ -481,6 +487,8 @@ nonisolated struct LocalProductSnapshot: Sendable {
     let remoteID: UUID?
     let remoteUpdatedAt: Date?
     let remoteDeletedAt: Date?
+    let primaryImageVersionID: UUID?
+    let primaryImageUpdatedAt: Date?
     let itemNumber: String?
     let productName: String?
     let secondProductName: String?
@@ -495,6 +503,8 @@ nonisolated struct LocalProductSnapshot: Sendable {
         remoteID: UUID? = nil,
         remoteUpdatedAt: Date? = nil,
         remoteDeletedAt: Date? = nil,
+        primaryImageVersionID: UUID? = nil,
+        primaryImageUpdatedAt: Date? = nil,
         itemNumber: String? = nil,
         productName: String? = nil,
         secondProductName: String? = nil,
@@ -508,6 +518,8 @@ nonisolated struct LocalProductSnapshot: Sendable {
         self.remoteID = remoteID
         self.remoteUpdatedAt = remoteUpdatedAt
         self.remoteDeletedAt = remoteDeletedAt
+        self.primaryImageVersionID = primaryImageVersionID
+        self.primaryImageUpdatedAt = primaryImageUpdatedAt
         self.itemNumber = itemNumber
         self.productName = productName
         self.secondProductName = secondProductName

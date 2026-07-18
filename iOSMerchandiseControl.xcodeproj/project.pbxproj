@@ -511,7 +511,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare codici a barre e acquisire immagini dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -559,7 +559,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare codici a barre e acquisire immagini dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

@@ -131,7 +131,13 @@ nonisolated struct CatalogIncrementalApplyService {
                 result.categoriesUpdated += applied.updated ? 1 : 0
             }
 
-            for row in products where !protected.products.contains(row.id) {
+            for row in products {
+                if protected.products.contains(row.id) {
+                    if try applyTargetedProductImageReference(row, context: context) {
+                        result.productsUpdated += 1
+                    }
+                    continue
+                }
                 let supplier = try row.supplierID.flatMap { remoteID -> Supplier? in
                     if let cached = supplierCache[remoteID] { return cached }
                     if let existing = try fetchSupplier(remoteID: remoteID, context: context) {

@@ -114,7 +114,7 @@ extension CatalogRemoteSupabaseAdapter: SupabaseInventoryLookupByIDFetching {
 extension CatalogRemoteSupabaseAdapter {
     static let supplierColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"
     static let categoryColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"
-    static let productColumns = "id,owner_user_id,shop_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at"
+    static let productColumns = "id,owner_user_id,shop_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at,primary_image_version_id,primary_image_updated_at"
 
     func fetchProducts(limit: Int = 100) async throws -> [RemoteInventoryProductRow] {
         try await query.fetchRows(
