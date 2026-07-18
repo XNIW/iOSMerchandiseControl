@@ -105,8 +105,10 @@ preservando i diff esistenti e gli invarianti sync.
 
 - mapping DTO/apply, PhotosPicker/camera, processor, API, cache e UI
   implementati con framework Apple gia disponibili;
-- suite finale Product Images `22/22`, sync esistenti `46/46`, localizzazioni
+- suite finale Product Images `22/22`, sync esistenti `61/61`, localizzazioni
   `8/8` e build Debug baseline `PASS`;
+- rerun release post-integrazione combinato `91/91 PASS`; `xcodebuild analyze`
+  `PASS` con soli warning baseline in vendor/test fuori dal diff TASK-137;
 - metriche e riepiloghi xcresult copiati in evidence durevole;
 - consolidamento Mac: signed URL vincolate all'origin Supabase configurato;
   read/download e remove coperti dinamicamente; remove fail-closed su stato e

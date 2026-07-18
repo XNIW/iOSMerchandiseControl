@@ -8,16 +8,28 @@
     "failed": 0,
     "skipped": 0,
     "suites": {
-      "api_client": 7,
-      "cache": 4,
+      "api_client": 6,
+      "cache": 5,
       "processor": 6,
       "sync_contract": 5
     }
   },
   "consolidation_rerun": "final targeted Product Images suite after remove/read/origin hardening",
   "existing_sync_regression": {
-    "tests": 46,
-    "passed": 46,
+    "tests": 61,
+    "passed": 61,
+    "failed": 0,
+    "skipped": 0,
+    "suites": {
+      "manual_push": 12,
+      "pull_apply": 38,
+      "pull_preview_pagination": 5,
+      "incremental_domain_apply": 6
+    }
+  },
+  "post_integration_release_rerun": {
+    "tests": 91,
+    "passed": 91,
     "failed": 0,
     "skipped": 0
   },
