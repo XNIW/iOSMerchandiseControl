@@ -106,14 +106,39 @@ nonisolated struct SupabaseSyncEventLiveRecorder: SyncEventRecording, Sendable {
             )
         }
 
+        let automaticScope = try validatedAutomaticScopeIfPresent(
+            session: session,
+            request: request
+        )
+
         let params = try SyncEventRPCRequestMapper.parameters(from: request)
 
         do {
-            let data = try await transport.call(
-                functionName: SyncEventRPCRequestMapper.functionName,
-                params: params
-            )
-            return try Self.decodeResult(from: data, request: request)
+            let data: Data
+            do {
+                data = try await transport.call(
+                    functionName: SyncEventRPCRequestMapper.functionName,
+                    params: params
+                )
+            } catch let error as SyncEventRPCTransportError {
+                guard Self.isMissingV6Writer(error),
+                      SyncEventRPCRequestMapper.legacyParametersIfCompatible(
+                        params,
+                        hasAutomaticShopScope: automaticScope != nil
+                      ) != nil else {
+                    throw error
+                }
+                let legacyData = try await transport.call(
+                    functionName: SyncEventRPCRequestMapper.legacyFunctionName,
+                    params: params
+                )
+                data = try Self.normalizedLegacyResponse(legacyData)
+            }
+            let result = try Self.decodeResult(from: data, request: request)
+            if let automaticScope {
+                try validateAutomaticResult(result, scope: automaticScope)
+            }
+            return result
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as SyncEventRecordError {
@@ -138,6 +163,98 @@ nonisolated struct SupabaseSyncEventLiveRecorder: SyncEventRecording, Sendable {
         }
     }
 
+    private static func isMissingV6Writer(_ error: SyncEventRPCTransportError) -> Bool {
+        let code: String?
+        switch error {
+        case .http(_, let value, _),
+             .postgrest(let value, _):
+            code = value
+        case .network, .unknown:
+            return false
+        }
+        let normalized = code?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "pgrst202" || normalized == "42883"
+    }
+
+    /// Legacy PostgREST may serialize bigint `id` as a JSON number. Quote the
+    /// exact decimal token before the V6 decoder sees it; JSONSerialization
+    /// and Double are deliberately avoided so values above 2^53 stay exact.
+    private static func normalizedLegacyResponse(_ data: Data) throws -> Data {
+        guard var source = String(data: data, encoding: .utf8) else {
+            throw SyncEventRecordError.schema(
+                SyncEventRecordFailure(
+                    code: "response_decode",
+                    message: "Legacy sync event response was not valid UTF-8."
+                )
+            )
+        }
+        let expression = try NSRegularExpression(pattern: #""id"\s*:\s*([0-9]+)"#)
+        let sourceRange = NSRange(source.startIndex..<source.endIndex, in: source)
+        guard let match = expression.firstMatch(in: source, range: sourceRange),
+              let tokenRange = Range(match.range(at: 1), in: source) else {
+            return data
+        }
+        let token = String(source[tokenRange])
+        guard let exact = Int64(token), exact >= 0, String(exact) == token else {
+            throw SyncEventRecordError.schema(
+                SyncEventRecordFailure(
+                    code: "response_decode",
+                    message: "Legacy sync event id was outside the exact Int64 range."
+                )
+            )
+        }
+        source.replaceSubrange(tokenRange, with: "\"\(token)\"")
+        return Data(source.utf8)
+    }
+
+    private func validatedAutomaticScopeIfPresent(
+        session: SyncEventLiveRecorderSession,
+        request: SyncEventRecordRequest
+    ) throws -> Task126VerifiedOwnerStoreScope? {
+        guard let scope = Task126OwnerStoreGate.currentAutomaticScope else {
+            return nil
+        }
+        do {
+            try Task126OwnerStoreGate.revalidateCurrentAutomaticScopeLeaseIfPresent()
+            guard session.userID == scope.ownerUserID,
+                  request.shopID == scope.shopID else {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
+            return scope
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw Self.automaticScopeMismatch()
+        }
+    }
+
+    private func validateAutomaticResult(
+        _ result: SyncEventRecordResult,
+        scope: Task126VerifiedOwnerStoreScope
+    ) throws {
+        do {
+            try Task126OwnerStoreGate.revalidateCurrentAutomaticScopeLeaseIfPresent()
+            try Task126OwnerStoreGate.validateRemoteIdentity(
+                ownerUserID: result.row.ownerUserID,
+                shopID: result.row.shopID,
+                scope: scope
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw Self.automaticScopeMismatch()
+        }
+    }
+
+    private static func automaticScopeMismatch() -> SyncEventRecordError {
+        .auth(
+            SyncEventRecordFailure(
+                code: "automatic_scope_mismatch",
+                message: "Sync event recorder scope changed."
+            )
+        )
+    }
+
     private static func decodeResult(
         from data: Data,
         request: SyncEventRecordRequest
@@ -154,6 +271,15 @@ nonisolated struct SupabaseSyncEventLiveRecorder: SyncEventRecording, Sendable {
         guard let firstRow = response.rows.first else {
             throw SyncEventRecordError.schema(
                 SyncEventRecordFailure(code: "empty_response", message: "Sync event response contained no rows.")
+            )
+        }
+
+        guard response.rows.count == 1 else {
+            throw SyncEventRecordError.schema(
+                SyncEventRecordFailure(
+                    code: "unexpected_row_count",
+                    message: "Sync event response must contain exactly one row."
+                )
             )
         }
 

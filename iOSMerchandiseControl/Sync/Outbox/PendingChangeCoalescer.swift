@@ -31,6 +31,15 @@ nonisolated enum PendingChangeCoalescer {
         var result = current
         let mergedFields = mergeFields(current.changedFields, changedFields)
 
+        // A local edit that races an in-flight upload is new work. Keep the
+        // stable change/idempotency identity until the response can link a
+        // remote create, but never let the stale response treat the newer
+        // payload as still sent. The push service performs the final payload
+        // CAS and only acknowledges an unchanged fingerprint.
+        if !current.status.isTerminal {
+            result.status = .pending
+        }
+
         if current.operation == .create, incoming == .delete, current.entityRemoteID == nil {
             result.status = .superseded
         } else if incoming == .delete {

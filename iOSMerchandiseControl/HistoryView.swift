@@ -418,10 +418,41 @@ struct HistoryView: View {
     // MARK: - Azioni
 
     private func deleteEntry(_ entry: HistoryEntry) {
-        entry.markHistorySessionLocalDeletion()
-        recordHistoryDeletionPending(for: entry)
+        guard let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
+        let baselineFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+            for: HistorySessionPayloadSnapshotFactory.snapshot(
+                for: entry,
+                ensureRemoteID: false
+            )
+        )
         do {
-            try context.save()
+            let entryID = entry.persistentModelID
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: pendingOwnerUserID
+            ) { freshContext in
+                let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                    HistoryEntry.self,
+                    id: entryID,
+                    in: freshContext
+                )
+                guard freshEntry.remoteDeletedAt == nil,
+                      HistorySessionPayloadCodec.fingerprintHash(
+                        for: HistorySessionPayloadSnapshotFactory.snapshot(
+                            for: freshEntry,
+                            ensureRemoteID: false
+                        )
+                      ) == baselineFingerprint else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
+                freshEntry.markHistorySessionLocalDeletion()
+                try recordHistoryDeletionPending(
+                    for: freshEntry,
+                    context: freshContext,
+                    ownerUserID: pendingOwnerUserID
+                )
+                try freshContext.save()
+            }
         } catch {
             #if DEBUG
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
@@ -430,16 +461,49 @@ struct HistoryView: View {
     }
 
     private func deleteEntries(at offsets: IndexSet) {
-        // offsets si riferisce agli indici in filteredEntries, non in entries
-        for index in offsets {
-            guard filteredEntries.indices.contains(index) else { continue }
+        guard let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
+        let deletionTargets = offsets.compactMap { index -> (PersistentIdentifier, String)? in
+            guard filteredEntries.indices.contains(index) else { return nil }
             let entry = filteredEntries[index]
-            entry.markHistorySessionLocalDeletion()
-            recordHistoryDeletionPending(for: entry)
+            return (
+                entry.persistentModelID,
+                HistorySessionPayloadCodec.fingerprintHash(
+                    for: HistorySessionPayloadSnapshotFactory.snapshot(
+                        for: entry,
+                        ensureRemoteID: false
+                    )
+                )
+            )
         }
-
         do {
-            try context.save()
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: pendingOwnerUserID
+            ) { freshContext in
+                for (entryID, baselineFingerprint) in deletionTargets {
+                    let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                        HistoryEntry.self,
+                        id: entryID,
+                        in: freshContext
+                    )
+                    guard freshEntry.remoteDeletedAt == nil,
+                          HistorySessionPayloadCodec.fingerprintHash(
+                            for: HistorySessionPayloadSnapshotFactory.snapshot(
+                                for: freshEntry,
+                                ensureRemoteID: false
+                            )
+                          ) == baselineFingerprint else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    freshEntry.markHistorySessionLocalDeletion()
+                    try recordHistoryDeletionPending(
+                        for: freshEntry,
+                        context: freshContext,
+                        ownerUserID: pendingOwnerUserID
+                    )
+                }
+                try freshContext.save()
+            }
         } catch {
             #if DEBUG
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
@@ -447,25 +511,22 @@ struct HistoryView: View {
         }
     }
 
-    private func recordHistoryDeletionPending(for entry: HistoryEntry) {
-        guard let ownerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
-        do {
-            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
-            _ = try LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: ownerUserID,
-                storeIdentity: selectedShopID == nil ? .anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+    private func recordHistoryDeletionPending(
+        for entry: HistoryEntry,
+        context: ModelContext,
+        ownerUserID: UUID
+    ) throws {
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        _ = try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID,
+            storeIdentity: selectedShopID == nil ? .anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        )
+            .recordHistorySessionChange(
+                entry: entry,
+                operation: .delete,
+                changedFields: ["deleted_at"]
             )
-                .recordHistorySessionChange(
-                    entry: entry,
-                    operation: .delete,
-                    changedFields: ["deleted_at"]
-                )
-        } catch {
-            #if DEBUG
-            print("Errore durante la registrazione delete pending History: \(error)")
-            #endif
-        }
     }
     
     @MainActor
@@ -479,8 +540,25 @@ struct HistoryView: View {
             do {
                 let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
                 shareItem = ShareItem(url: url)
-                entry.wasExported = true
-                try? context.save()
+                do {
+                    let entryID = entry.persistentModelID
+                    try Task126OwnerStoreGate.withLocalMutationFence(
+                        modelContainer: context.container,
+                        ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+                    ) { freshContext in
+                        let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                            HistoryEntry.self,
+                            id: entryID,
+                            in: freshContext
+                        )
+                        guard freshEntry.remoteDeletedAt == nil else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        freshEntry.wasExported = true
+                        try freshContext.save()
+                    }
+                } catch {
+                }
             } catch {
                 #if DEBUG
                 print("Errore durante l'esportazione XLSX:", error)

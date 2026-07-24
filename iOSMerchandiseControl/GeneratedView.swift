@@ -197,12 +197,6 @@ struct GeneratedView: View {
         let data: [[String]]
         let editable: [[String]]
         let complete: [Bool]
-        let totalItems: Int
-        let orderTotal: Double
-        let paymentTotal: Double
-        let missingItems: Int
-        let syncStatus: HistorySyncStatus
-        let wasExported: Bool
     }
 
     @State private var pendingForceComplete: PendingForceComplete?
@@ -538,7 +532,10 @@ struct GeneratedView: View {
         }
         .sheet(item: $productForHistory) { product in
             NavigationStack {
-                ProductPriceHistoryView(product: product)
+                ProductPriceHistoryView(
+                    product: product,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
             }
         }
         .sheet(item: $rowDetail) { detail in
@@ -1198,12 +1195,24 @@ struct GeneratedView: View {
     private func persistJSONDecodeFaultIfNeeded(using snapshot: HistoryEntryJSONDecodeSnapshot) {
         guard snapshot.hasAnyFault, !entry.hasPersistedJSONDecodeFault else { return }
 
-        entry.hasPersistedJSONDecodeFault = true
-
         do {
-            try context.save()
+            let entryID = entry.persistentModelID
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: currentPendingOwnerUserID
+            ) { freshContext in
+                let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                    HistoryEntry.self,
+                    id: entryID,
+                    in: freshContext
+                )
+                guard freshEntry.remoteDeletedAt == nil else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
+                freshEntry.hasPersistedJSONDecodeFault = true
+                try freshContext.save()
+            }
         } catch {
-            entry.hasPersistedJSONDecodeFault = false
             #if DEBUG
             debugPrint(
                 "[HistoryEntry JSON persist] uid=\(entry.uid.uuidString) id=\(entry.id) error=\(error)"
@@ -1581,18 +1590,11 @@ struct GeneratedView: View {
     private func revertToOriginalSnapshot() {
         guard !originalData.isEmpty else { return }
 
-        let mergedSnapshot = mergedGridSnapshot(
-            dataGrid: originalData,
-            editableGrid: originalEditable,
-            completeFlags: originalComplete
-        )
-
         rowDetail = nil
         data = originalData
         editable = originalEditable
         complete = originalComplete
         evaluateParallelGridConsistency(context: "revertToOriginalSnapshot")
-        applyRuntimeSummary(mergedSnapshot.runtimeSummary)
         markDirtyAndScheduleAutosave()
     }
 
@@ -1631,13 +1633,7 @@ struct GeneratedView: View {
         let stateBackup = RevertImportStateBackup(
             data: data,
             editable: editable,
-            complete: complete,
-            totalItems: entry.totalItems,
-            orderTotal: entry.orderTotal,
-            paymentTotal: entry.paymentTotal,
-            missingItems: entry.missingItems,
-            syncStatus: entry.syncStatus,
-            wasExported: entry.wasExported
+            complete: complete
         )
 
         let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: snapshotData)
@@ -1646,11 +1642,17 @@ struct GeneratedView: View {
         editable = HistoryImportedGridSupport.editableTemplate(forGrid: snapshotData)
         complete = Array(repeating: false, count: snapshotData.count)
         evaluateParallelGridConsistency(context: "revertToImportSnapshot")
-        entry.orderTotal = initialSummary.orderTotal
-        entry.syncStatus = .notAttempted
-        entry.wasExported = false
 
-        if saveChanges() {
+        if saveChanges(
+            additionalMutation: { freshEntry in
+                freshEntry.orderTotal = initialSummary.orderTotal
+                freshEntry.syncStatus = .notAttempted
+                freshEntry.wasExported = false
+            },
+            changedFields: [
+                "data", "editable", "complete", "orderTotal", "syncStatus", "wasExported"
+            ]
+        ) {
             originalData = data
             originalEditable = editable
             originalComplete = complete
@@ -2112,19 +2114,6 @@ struct GeneratedView: View {
         editable = stateBackup.editable
         complete = stateBackup.complete
         evaluateParallelGridConsistency(context: "restoreRevertImportState")
-        entry.data = stateBackup.data
-        entry.editable = stateBackup.editable
-        entry.complete = stateBackup.complete
-        entry.orderTotal = stateBackup.orderTotal
-        applyRuntimeSummary(
-            HistoryEntryRuntimeSummary(
-                totalItems: stateBackup.totalItems,
-                missingItems: stateBackup.missingItems,
-                paymentTotal: stateBackup.paymentTotal
-            )
-        )
-        entry.syncStatus = stateBackup.syncStatus
-        entry.wasExported = stateBackup.wasExported
         restoreRevertImportUIState(from: uiBackup)
     }
 
@@ -2186,7 +2175,10 @@ struct GeneratedView: View {
         return (mergedData, runtimeSummary)
     }
 
-    private func applyRuntimeSummary(_ runtimeSummary: HistoryEntryRuntimeSummary) {
+    private func applyRuntimeSummary(
+        _ runtimeSummary: HistoryEntryRuntimeSummary,
+        to entry: HistoryEntry
+    ) {
         entry.totalItems = runtimeSummary.totalItems
         entry.paymentTotal = runtimeSummary.paymentTotal
         entry.missingItems = runtimeSummary.missingItems
@@ -2195,14 +2187,14 @@ struct GeneratedView: View {
     // MARK: - Salvataggio & sync
 
     @discardableResult
-    private func saveChanges() -> Bool {
+    private func saveChanges(
+        additionalMutation: ((HistoryEntry) -> Void)? = nil,
+        changedFields: [String] = ["data", "editable", "complete"]
+    ) -> Bool {
         guard !data.isEmpty, !gridParallelArraysFault else { return false }
 
         isSaving = true
         saveError = nil
-        let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
-            for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-        )
 
         let mergedSnapshot = mergedGridSnapshot(
             dataGrid: data,
@@ -2210,21 +2202,55 @@ struct GeneratedView: View {
             completeFlags: complete
         )
         let newData = mergedSnapshot.mergedData
-
-        // Scrive nella HistoryEntry
-        entry.data = newData
-        entry.editable = editable
-        entry.complete = complete
-        applyRuntimeSummary(mergedSnapshot.runtimeSummary)
-        let nextHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
-            for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-        )
-        if nextHistoryFingerprint != previousHistoryFingerprint {
-            recordHistorySessionPending(changedFields: ["data", "editable", "complete"])
-        }
+        let entryID = entry.persistentModelID
 
         do {
-            try context.save()
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: currentPendingOwnerUserID
+            ) { freshContext in
+                let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                    HistoryEntry.self,
+                    id: entryID,
+                    in: freshContext
+                )
+                var remoteChangedFields: [String] = []
+                if freshEntry.data != originalData { remoteChangedFields.append("data") }
+                if freshEntry.editable != originalEditable { remoteChangedFields.append("editable") }
+                if freshEntry.complete != originalComplete { remoteChangedFields.append("complete") }
+                guard Task126ConflictResolver.resolve(
+                    localChangedFields: changedFields,
+                    remoteChangedFields: remoteChangedFields,
+                    remoteDeleted: freshEntry.remoteDeletedAt != nil
+                ) == .autoMerge else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
+                let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+                    for: HistorySessionPayloadSnapshotFactory.snapshot(
+                        for: freshEntry,
+                        ensureRemoteID: false
+                    )
+                )
+                if changedFields.contains("data") { freshEntry.data = newData }
+                if changedFields.contains("editable") { freshEntry.editable = editable }
+                if changedFields.contains("complete") { freshEntry.complete = complete }
+                applyRuntimeSummary(mergedSnapshot.runtimeSummary, to: freshEntry)
+                additionalMutation?(freshEntry)
+                let nextHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+                    for: HistorySessionPayloadSnapshotFactory.snapshot(
+                        for: freshEntry,
+                        ensureRemoteID: false
+                    )
+                )
+                if nextHistoryFingerprint != previousHistoryFingerprint {
+                    try recordHistorySessionPending(
+                        entry: freshEntry,
+                        context: freshContext,
+                        changedFields: changedFields
+                    )
+                }
+                try freshContext.save()
+            }
         } catch {
             saveError = error.localizedDescription
         }
@@ -2232,6 +2258,9 @@ struct GeneratedView: View {
         if saveError == nil {
             hasUnsavedChanges = false
             lastSavedAt = Date()
+            originalData = newData
+            originalEditable = editable
+            originalComplete = complete
         }
 
         isSaving = false
@@ -2240,22 +2269,20 @@ struct GeneratedView: View {
         return saveError == nil
     }
 
-    private func recordHistorySessionPending(changedFields: [String]) {
+    private func recordHistorySessionPending(
+        entry: HistoryEntry,
+        context: ModelContext,
+        changedFields: [String]
+    ) throws {
         entry.markHistorySessionLocalMutation()
-        do {
-            _ = try LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: currentPendingOwnerUserID
-            ).recordHistorySessionChange(
-                entry: entry,
-                operation: .upsert,
-                changedFields: changedFields
-            )
-        } catch {
-            #if DEBUG
-            debugPrint("[HistorySession] pending record failed:", error)
-            #endif
-        }
+        _ = try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: currentPendingOwnerUserID
+        ).recordHistorySessionChange(
+            entry: entry,
+            operation: .upsert,
+            changedFields: changedFields
+        )
     }
 
     /// Applica i dati dell'inventario al database prodotti e aggiorna la griglia con gli errori.
@@ -2276,20 +2303,11 @@ struct GeneratedView: View {
         // 2) Esegui la sincronizzazione vera e propria
         do {
             let service = InventorySyncService(context: context)
-            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
-                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-            )
             let result = try service.sync(entry: entry, ownerUserID: currentPendingOwnerUserID)
-            if HistorySessionPayloadCodec.fingerprintHash(
-                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-            ) != previousHistoryFingerprint {
-                recordHistorySessionPending(changedFields: ["data", "syncStatus"])
-                try context.save()
-            }
 
             // Ricarichiamo la griglia dall'entry,
             // così la nuova colonna "SyncError" e i messaggi vengono mostrati
-            data = entry.data
+            data = result.updatedData
             evaluateParallelGridConsistency(context: "syncWithDatabase")
 
             // Prepariamo il riepilogo da mostrare all'utente
@@ -2340,21 +2358,12 @@ struct GeneratedView: View {
                 }
             }
 
-            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
-                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-            )
             let inventoryResult = try InventorySyncService(context: context).sync(
                 entry: entry,
                 ownerUserID: currentPendingOwnerUserID
             )
-            if HistorySessionPayloadCodec.fingerprintHash(
-                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
-            ) != previousHistoryFingerprint {
-                recordHistorySessionPending(changedFields: ["data", "syncStatus"])
-                try context.save()
-            }
 
-            data = entry.data
+            data = inventoryResult.updatedData
             evaluateParallelGridConsistency(context: "runUnifiedDatabaseUpdate")
 
             syncSummaryMessage = L(
@@ -2859,8 +2868,26 @@ struct GeneratedView: View {
                 let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
 
                 shareItem = ShareItem(url: url)
-                entry.wasExported = true
-                try? context.save()
+                do {
+                    let entryID = entry.persistentModelID
+                    try Task126OwnerStoreGate.withLocalMutationFence(
+                        modelContainer: context.container,
+                        ownerUserID: currentPendingOwnerUserID
+                    ) { freshContext in
+                        let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                            HistoryEntry.self,
+                            id: entryID,
+                            in: freshContext
+                        )
+                        guard freshEntry.remoteDeletedAt == nil else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        freshEntry.wasExported = true
+                        try freshContext.save()
+                    }
+                } catch {
+                    throw error
+                }
             } catch {
                 saveError = L("generated.error.export_xlsx", error.localizedDescription)
             }

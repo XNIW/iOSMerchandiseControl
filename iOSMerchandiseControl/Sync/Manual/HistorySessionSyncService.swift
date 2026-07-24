@@ -68,6 +68,12 @@ nonisolated final class HistorySessionSyncService {
             ownerUserID: ownerUserID
         )
         try Task.checkCancellation()
+        for row in readBackRows {
+            guard row.ownerUserID == ownerUserID else {
+                throw HistorySessionSyncError.ownerMismatch
+            }
+            try validateRemotePayloadDates(row)
+        }
         await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: uploadEntryCount), onProgress: onProgress)
         let readBackByRemoteID = Dictionary(uniqueKeysWithValues: readBackRows.map { ($0.remoteID, $0) })
 
@@ -89,8 +95,12 @@ nonisolated final class HistorySessionSyncService {
             }
             pair.entry.markHistorySessionRemoteApplied(
                 remoteID: readBack.remoteID,
-                remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.updatedAt),
-                remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.deletedAt),
+                remoteUpdatedAt: try HistorySessionPayloadCodec.parseUpdatedAtStrict(
+                    readBack.updatedAt
+                ),
+                remoteDeletedAt: try HistorySessionPayloadCodec.parseUpdatedAtStrict(
+                    readBack.deletedAt
+                ),
                 fingerprint: fingerprint,
                 syncedRevision: pair.revision
             )
@@ -98,6 +108,9 @@ nonisolated final class HistorySessionSyncService {
             try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
             result.uploadedCount += 1
             result.pushedRemoteIDs.insert(readBack.remoteID)
+            if pair.row.deletedAt != nil {
+                result.pushedTombstoneRemoteIDs.insert(readBack.remoteID)
+            }
             await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: uploadEntryCount), onProgress: onProgress)
         }
 
@@ -107,12 +120,22 @@ nonisolated final class HistorySessionSyncService {
     func pullHistorySessionsFromCloud(
         ownerUserID: UUID,
         context: ModelContext,
+        automaticScope: Task126VerifiedOwnerStoreScope? = nil,
+        automaticScopeValidator: @escaping @Sendable (Task126VerifiedOwnerStoreScope) throws -> Void = {
+            try Task126OwnerStoreGate.revalidateAutomaticScope($0)
+        },
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void = { _ in }
     ) async throws -> HistorySessionPullResult {
+        let pullScope = try resolvePullScope(
+            ownerUserID: ownerUserID,
+            automaticScope: automaticScope,
+            automaticScopeValidator: automaticScopeValidator
+        )
         var allRows: [RemoteSharedSheetSessionRow] = []
         var start = 0
         await publishProgress(HistorySessionSyncProgress(stage: .fetching, current: 0), onProgress: onProgress)
         while true {
+            try revalidate(pullScope, ownerUserID: ownerUserID)
             let end = start + pageSize - 1
             let page = try await remote.fetchSharedSheetSessionsPage(
                 ownerUserID: ownerUserID,
@@ -120,6 +143,8 @@ nonisolated final class HistorySessionSyncService {
                 to: end
             )
             try Task.checkCancellation()
+            try revalidate(pullScope, ownerUserID: ownerUserID)
+            try validateRemoteRows(page, ownerUserID: ownerUserID, pullScope: pullScope)
             allRows.append(contentsOf: page)
             let fetchedCount = allRows.count
             await publishProgress(HistorySessionSyncProgress(stage: .fetching, current: fetchedCount), onProgress: onProgress)
@@ -132,18 +157,27 @@ nonisolated final class HistorySessionSyncService {
             allRows,
             ownerUserID: ownerUserID,
             context: context,
+            pullScope: pullScope,
             onProgress: onProgress
         )
         var finalResult = result
+        try revalidateOrRollback(pullScope, ownerUserID: ownerUserID, context: context)
         let pruned = try pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
             remoteIDs: Set(allRows.map(\.remoteID)),
             ownerUserID: ownerUserID,
-            context: context
+            context: context,
+            selectedShopID: pullScope.selectedShopID,
+            storeIdentity: pullScope.storeIdentity
         )
         if pruned > 0 {
-            try context.save()
+            try saveOrRollback(
+                context: context,
+                pullScope: pullScope,
+                ownerUserID: ownerUserID
+            )
             finalResult.prunedMissingRemoteCount = pruned
         }
+        try revalidateOrRollback(pullScope, ownerUserID: ownerUserID, context: context)
         let totalRows = allRows.count
         await publishProgress(HistorySessionSyncProgress(stage: .completed, current: totalRows, total: totalRows), onProgress: onProgress)
         return finalResult
@@ -156,6 +190,12 @@ nonisolated final class HistorySessionSyncService {
     ) throws -> HistorySessionPullResult {
         var result = HistorySessionPullResult()
         guard !rows.isEmpty else { return result }
+        for row in rows {
+            guard row.ownerUserID == ownerUserID else {
+                throw HistorySessionSyncError.ownerMismatch
+            }
+            try validateRemotePayloadDates(row)
+        }
 
         let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
         let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
@@ -193,7 +233,7 @@ nonisolated final class HistorySessionSyncService {
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
             let logicalFingerprint = HistorySessionPayloadCodec.logicalFingerprintHash(for: row)
-            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+            let remoteDeletedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.deletedAt)
             let identityMatch = byRemoteID[row.remoteID] ?? byUID[row.remoteID]
             let logicalMatch = identityMatch == nil ? byLogicalFingerprint[logicalFingerprint] : nil
             if let existing = identityMatch ?? logicalMatch {
@@ -202,7 +242,7 @@ nonisolated final class HistorySessionSyncService {
                         result.skippedDirtyLocalCount += 1
                     } else {
                         existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                        applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
+                        try applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                     }
                     continue
@@ -211,7 +251,7 @@ nonisolated final class HistorySessionSyncService {
                 if logicalMatch != nil {
                     let previousRemoteID = existing.remoteID
                     existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                    apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                    try apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     try accumulator.acknowledgeHistorySessionChange(
                         entry: existing,
                         previousRemoteID: previousRemoteID
@@ -234,7 +274,7 @@ nonisolated final class HistorySessionSyncService {
                 }
 
                 existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                try apply(row: row, to: existing, fingerprint: remoteFingerprint)
                 result.updatedCount += 1
             } else {
                 if remoteDeletedAt != nil {
@@ -242,7 +282,7 @@ nonisolated final class HistorySessionSyncService {
                     continue
                 }
 
-                let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                let inserted = try makeEntry(from: row, fingerprint: remoteFingerprint)
                 inserted.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
@@ -259,13 +299,14 @@ nonisolated final class HistorySessionSyncService {
         _ rows: [RemoteSharedSheetSessionRow],
         ownerUserID: UUID,
         context: ModelContext,
+        pullScope: HistorySessionResolvedPullScope,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
     ) async throws -> HistorySessionPullResult {
         var result = HistorySessionPullResult()
         guard !rows.isEmpty else { return result }
 
-        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
-        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let selectedShopID = pullScope.selectedShopID
+        let storeIdentity = pullScope.storeIdentity
         let adoptableRemoteIDs = remoteHistoryIDsEligibleForScopeAdoption(rows, selectedShopID: selectedShopID)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>()).filter {
             $0.isCompatibleWithHistoryScope(
@@ -297,6 +338,7 @@ nonisolated final class HistorySessionSyncService {
         let batchSize = max(1, pageSize)
         let rowCount = rows.count
         await publishProgress(HistorySessionSyncProgress(stage: .applying, current: 0, total: rowCount), onProgress: onProgress)
+        try revalidateOrRollback(pullScope, ownerUserID: ownerUserID, context: context)
 
         for (index, row) in rows.enumerated() {
             try Task.checkCancellation()
@@ -306,7 +348,7 @@ nonisolated final class HistorySessionSyncService {
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
             let logicalFingerprint = HistorySessionPayloadCodec.logicalFingerprintHash(for: row)
-            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+            let remoteDeletedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.deletedAt)
             let identityMatch = byRemoteID[row.remoteID] ?? byUID[row.remoteID]
             let logicalMatch = identityMatch == nil ? byLogicalFingerprint[logicalFingerprint] : nil
             if let existing = identityMatch ?? logicalMatch {
@@ -315,14 +357,14 @@ nonisolated final class HistorySessionSyncService {
                         result.skippedDirtyLocalCount += 1
                     } else {
                         existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                        applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
+                        try applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                         mutationsSinceSave += 1
                     }
                 } else if logicalMatch != nil {
                     let previousRemoteID = existing.remoteID
                     existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                    apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                    try apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     try accumulator.acknowledgeHistorySessionChange(
                         entry: existing,
                         previousRemoteID: previousRemoteID
@@ -338,7 +380,7 @@ nonisolated final class HistorySessionSyncService {
                     result.skippedDirtyLocalCount += 1
                 } else {
                     existing.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
-                    apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                    try apply(row: row, to: existing, fingerprint: remoteFingerprint)
                     result.updatedCount += 1
                     mutationsSinceSave += 1
                 }
@@ -349,7 +391,7 @@ nonisolated final class HistorySessionSyncService {
                     continue
                 }
 
-                let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                let inserted = try makeEntry(from: row, fingerprint: remoteFingerprint)
                 inserted.assignHistoryScope(ownerUserID: ownerUserID, selectedShopID: row.shopID, storeIdentity: storeIdentity)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
@@ -362,7 +404,11 @@ nonisolated final class HistorySessionSyncService {
             await publishProgress(HistorySessionSyncProgress(stage: .applying, current: index + 1, total: rowCount), onProgress: onProgress)
             if mutationsSinceSave >= batchSize {
                 await publishProgress(HistorySessionSyncProgress(stage: .saving, current: index + 1, total: rowCount), onProgress: onProgress)
-                try context.save()
+                try saveOrRollback(
+                    context: context,
+                    pullScope: pullScope,
+                    ownerUserID: ownerUserID
+                )
                 mutationsSinceSave = 0
                 await Task.yield()
             } else if (index + 1).isMultiple(of: batchSize) {
@@ -372,7 +418,11 @@ nonisolated final class HistorySessionSyncService {
 
         if mutationsSinceSave > 0 {
             await publishProgress(HistorySessionSyncProgress(stage: .saving, current: rowCount, total: rowCount), onProgress: onProgress)
-            try context.save()
+            try saveOrRollback(
+                context: context,
+                pullScope: pullScope,
+                ownerUserID: ownerUserID
+            )
             await Task.yield()
         }
 
@@ -404,12 +454,12 @@ nonisolated final class HistorySessionSyncService {
     private func pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
         remoteIDs: Set<UUID>,
         ownerUserID: UUID,
-        context: ModelContext
+        context: ModelContext,
+        selectedShopID: UUID?,
+        storeIdentity: LocalStoreIdentity
     ) throws -> Int {
         let pendingKeys = try fetchActiveHistoryPendingKeys(context: context)
         let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
-        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
-        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
         var pruned = 0
         for entry in entries {
             guard let remoteID = entry.remoteID,
@@ -426,6 +476,114 @@ nonisolated final class HistorySessionSyncService {
         return pruned
     }
 
+    private func resolvePullScope(
+        ownerUserID: UUID,
+        automaticScope: Task126VerifiedOwnerStoreScope?,
+        automaticScopeValidator: @escaping @Sendable (Task126VerifiedOwnerStoreScope) throws -> Void
+    ) throws -> HistorySessionResolvedPullScope {
+        if let automaticScope {
+            guard automaticScope.ownerUserID == ownerUserID else {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
+            try automaticScopeValidator(automaticScope)
+            return HistorySessionResolvedPullScope(
+                selectedShopID: automaticScope.shopID,
+                storeIdentity: automaticScope.storeIdentity,
+                automaticScope: automaticScope,
+                automaticScopeValidator: automaticScopeValidator
+            )
+        }
+
+        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = selectedShopID == nil
+            ? LocalStoreIdentity.anonymous
+            : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        return HistorySessionResolvedPullScope(
+            selectedShopID: selectedShopID,
+            storeIdentity: storeIdentity,
+            automaticScope: nil,
+            automaticScopeValidator: automaticScopeValidator
+        )
+    }
+
+    private func validateRemoteRows(
+        _ rows: [RemoteSharedSheetSessionRow],
+        ownerUserID: UUID,
+        pullScope: HistorySessionResolvedPullScope
+    ) throws {
+        for row in rows {
+            guard row.ownerUserID == ownerUserID else {
+                throw HistorySessionSyncError.ownerMismatch
+            }
+            if let automaticScope = pullScope.automaticScope {
+                try Task126OwnerStoreGate.validateRemoteIdentity(
+                    ownerUserID: row.ownerUserID,
+                    shopID: row.shopID,
+                    scope: automaticScope
+                )
+            }
+            try validateRemotePayloadDates(row)
+        }
+    }
+
+    private func validateRemotePayloadDates(
+        _ row: RemoteSharedSheetSessionRow
+    ) throws {
+        guard try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.updatedAt) != nil else {
+            throw HistorySessionSyncError.invalidTimestamp
+        }
+        let deletedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.deletedAt)
+        if deletedAt == nil {
+            _ = try HistorySessionPayloadCodec.parseTimestampStrict(row.timestamp)
+        }
+    }
+
+    private func revalidate(
+        _ pullScope: HistorySessionResolvedPullScope,
+        ownerUserID: UUID
+    ) throws {
+        guard let automaticScope = pullScope.automaticScope else { return }
+        guard automaticScope.ownerUserID == ownerUserID else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        try pullScope.automaticScopeValidator(automaticScope)
+    }
+
+    private func revalidateOrRollback(
+        _ pullScope: HistorySessionResolvedPullScope,
+        ownerUserID: UUID,
+        context: ModelContext
+    ) throws {
+        do {
+            try revalidate(pullScope, ownerUserID: ownerUserID)
+        } catch {
+            if pullScope.automaticScope != nil {
+                context.rollback()
+            }
+            throw error
+        }
+    }
+
+    private func saveOrRollback(
+        context: ModelContext,
+        pullScope: HistorySessionResolvedPullScope,
+        ownerUserID: UUID
+    ) throws {
+        guard pullScope.automaticScope != nil else {
+            try context.save()
+            return
+        }
+        do {
+            try revalidate(pullScope, ownerUserID: ownerUserID)
+            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                try context.save()
+            }
+        } catch {
+            context.rollback()
+            throw error
+        }
+    }
+
     private func fetchActiveHistoryPendingKeys(context: ModelContext) throws -> Set<String> {
         let descriptor = FetchDescriptor<LocalPendingChange>()
         let historyKind = LocalPendingChangeEntityKind.historySession.rawValue
@@ -440,10 +598,10 @@ nonisolated final class HistorySessionSyncService {
         row: RemoteSharedSheetSessionRow,
         to entry: HistoryEntry,
         fingerprint: String
-    ) {
+    ) throws {
         entry.id = row.remoteID.uuidString.lowercased()
         entry.title = row.displayName
-        entry.timestamp = HistorySessionPayloadCodec.parseTimestamp(row.timestamp)
+        entry.timestamp = try HistorySessionPayloadCodec.parseTimestampStrict(row.timestamp)
         entry.supplier = row.supplier
         entry.category = row.category
         entry.isManualEntry = row.isManualEntry
@@ -460,9 +618,9 @@ nonisolated final class HistorySessionSyncService {
         entry.paymentTotal = summary.paymentTotal
         entry.missingItems = summary.missingItems
         entry.remoteID = row.remoteID
-        entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
+        entry.remoteUpdatedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.updatedAt)
         entry.remotePayloadFingerprint = fingerprint
-        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+        entry.remoteDeletedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.deletedAt)
         entry.lastSyncedLocalRevision = entry.localChangeRevision
         entry.syncStatus = .syncedSuccessfully
     }
@@ -471,10 +629,18 @@ nonisolated final class HistorySessionSyncService {
         row: RemoteSharedSheetSessionRow,
         to entry: HistoryEntry,
         fingerprint: String
-    ) {
+    ) throws {
         entry.remoteID = row.remoteID
-        entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
-        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt) ?? Date()
+        guard let remoteUpdatedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(
+            row.updatedAt
+        ),
+            let remoteDeletedAt = try HistorySessionPayloadCodec.parseUpdatedAtStrict(
+                row.deletedAt
+            ) else {
+            throw HistorySessionSyncError.invalidTimestamp
+        }
+        entry.remoteUpdatedAt = remoteUpdatedAt
+        entry.remoteDeletedAt = remoteDeletedAt
         entry.remotePayloadFingerprint = fingerprint
         entry.lastSyncedLocalRevision = entry.localChangeRevision
         entry.syncStatus = .syncedSuccessfully
@@ -492,13 +658,13 @@ nonisolated final class HistorySessionSyncService {
     private func makeEntry(
         from row: RemoteSharedSheetSessionRow,
         fingerprint: String
-    ) -> HistoryEntry {
+    ) throws -> HistoryEntry {
         let complete = row.sessionOverlay?.complete ?? []
         let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: row.data)
         let summary = HistoryEntryRuntimeSummary.compute(from: row.data, complete: complete)
         let entry = HistoryEntry(
             id: row.remoteID.uuidString.lowercased(),
-            timestamp: HistorySessionPayloadCodec.parseTimestamp(row.timestamp),
+            timestamp: try HistorySessionPayloadCodec.parseTimestampStrict(row.timestamp),
             isManualEntry: row.isManualEntry,
             data: row.data,
             originalDataJSON: try? JSONEncoder().encode(row.data),
@@ -514,12 +680,19 @@ nonisolated final class HistorySessionSyncService {
             wasExported: false,
             uid: row.remoteID,
             remoteID: row.remoteID,
-            remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt),
-            remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt),
+            remoteUpdatedAt: try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.updatedAt),
+            remoteDeletedAt: try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.deletedAt),
             remotePayloadFingerprint: fingerprint,
             lastSyncedLocalRevision: 0
         )
         entry.title = row.displayName
         return entry
     }
+}
+
+private nonisolated struct HistorySessionResolvedPullScope: Sendable {
+    let selectedShopID: UUID?
+    let storeIdentity: LocalStoreIdentity
+    let automaticScope: Task126VerifiedOwnerStoreScope?
+    let automaticScopeValidator: @Sendable (Task126VerifiedOwnerStoreScope) throws -> Void
 }

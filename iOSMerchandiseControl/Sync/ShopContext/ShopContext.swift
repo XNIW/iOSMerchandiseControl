@@ -185,7 +185,12 @@ nonisolated enum ShopContextResolver {
         let selectable = normalizedLinkedShops.filter(\.isValidSelection)
         guard !selectable.isEmpty else {
             return ShopContextResolution(
-                context: ShopContext(accountHash: accountHash, linkedShops: normalizedLinkedShops, selectedShop: nil),
+                context: ShopContext(
+                    accountHash: accountHash,
+                    linkedShops: normalizedLinkedShops,
+                    selectedShop: nil,
+                    syncAllowed: false
+                ),
                 selectedShopToPersist: nil
             )
         }
@@ -197,7 +202,15 @@ nonisolated enum ShopContextResolver {
         } else if selectable.count == 1 {
             selectedLinkedShop = selectable[0]
         } else {
-            selectedLinkedShop = selectable[0]
+            return ShopContextResolution(
+                context: ShopContext(
+                    accountHash: accountHash,
+                    linkedShops: normalizedLinkedShops,
+                    selectedShop: nil,
+                    syncAllowed: false
+                ),
+                selectedShopToPersist: nil
+            )
         }
 
         let selected = SelectedShop(linkedShop: selectedLinkedShop, selectedAt: now)
@@ -229,24 +242,29 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
     private let defaults: UserDefaults
     private let keyPrefix: String
     private let activeAccountKey: String
+    private let resolutionKeyPrefix: String
 
     init(
         defaults: UserDefaults = .standard,
         keyPrefix: String = "mobile.shopContext.selected.v1",
-        activeAccountKey: String = "mobile.shopContext.activeAccountHash.v1"
+        activeAccountKey: String = "mobile.shopContext.activeAccountHash.v1",
+        resolutionKeyPrefix: String = "mobile.shopContext.resolved.v1"
     ) {
         self.defaults = defaults
         self.keyPrefix = keyPrefix
         self.activeAccountKey = activeAccountKey
+        self.resolutionKeyPrefix = resolutionKeyPrefix
     }
 
     func noteActiveAccount(_ accountHash: String?) {
         let previous = defaults.string(forKey: activeAccountKey)
         guard previous != accountHash else { return }
-        if let accountHash {
-            defaults.set(accountHash, forKey: activeAccountKey)
-        } else {
-            defaults.removeObject(forKey: activeAccountKey)
+        Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            if let accountHash {
+                defaults.set(accountHash, forKey: activeAccountKey)
+            } else {
+                defaults.removeObject(forKey: activeAccountKey)
+            }
         }
     }
 
@@ -255,13 +273,48 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
         return try? JSONDecoder().decode(SelectedShop.self, from: data)
     }
 
-    func save(_ selectedShop: SelectedShop, accountHash: String) {
-        guard let data = try? JSONEncoder().encode(selectedShop) else { return }
-        defaults.set(data, forKey: key(accountHash: accountHash))
+    @discardableResult
+    func save(_ selectedShop: SelectedShop, accountHash: String) -> Bool {
+        guard let data = try? JSONEncoder().encode(selectedShop) else { return false }
+        Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            defaults.set(data, forKey: key(accountHash: accountHash))
+            defaults.set(true, forKey: resolutionKey(accountHash: accountHash))
+        }
+        return self.selectedShop(accountHash: accountHash) == selectedShop
+            && isResolutionReady(accountHash: accountHash)
     }
 
-    func clear(accountHash: String) {
-        defaults.removeObject(forKey: key(accountHash: accountHash))
+    @discardableResult
+    func clear(accountHash: String) -> Bool {
+        Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            defaults.removeObject(forKey: key(accountHash: accountHash))
+            defaults.removeObject(forKey: resolutionKey(accountHash: accountHash))
+        }
+        return selectedShop(accountHash: accountHash) == nil
+            && !isResolutionReady(accountHash: accountHash)
+    }
+
+    func isResolutionReady(accountHash: String) -> Bool {
+        defaults.bool(forKey: resolutionKey(accountHash: accountHash))
+    }
+
+    @discardableResult
+    func markResolutionReady(accountHash: String) -> Bool {
+        guard !isResolutionReady(accountHash: accountHash) else { return true }
+        Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            defaults.set(true, forKey: resolutionKey(accountHash: accountHash))
+        }
+        return isResolutionReady(accountHash: accountHash)
+    }
+
+    func markResolutionUnresolved(accountHash: String) {
+        guard isResolutionReady(accountHash: accountHash) else {
+            defaults.removeObject(forKey: resolutionKey(accountHash: accountHash))
+            return
+        }
+        Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            defaults.removeObject(forKey: resolutionKey(accountHash: accountHash))
+        }
     }
 
     func selectedShopID(ownerUserID: UUID) -> UUID? {
@@ -284,6 +337,10 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
 
     private func key(accountHash: String) -> String {
         "\(keyPrefix).account.\(accountHash)"
+    }
+
+    private func resolutionKey(accountHash: String) -> String {
+        "\(resolutionKeyPrefix).account.\(accountHash)"
     }
 }
 
@@ -486,6 +543,7 @@ final class ShopContextStore: ObservableObject {
     private let selectedStore: SelectedShopStore
     private let accountBindingStore: AccountBindingStore
     private let now: () -> Date
+    private var refreshGeneration = 0
 
     init(
         fetcher: any LinkedShopFetching = EmptyLinkedShopFetcher(),
@@ -501,6 +559,8 @@ final class ShopContextStore: ObservableObject {
     }
 
     func refresh(ownerUserID: UUID?) async {
+        refreshGeneration &+= 1
+        let expectedGeneration = refreshGeneration
         guard let ownerUserID else {
             selectedStore.noteActiveAccount(nil)
             context = .legacy
@@ -508,32 +568,68 @@ final class ShopContextStore: ObservableObject {
         }
 
         let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let persistedSelection = selectedStore.selectedShop(accountHash: accountHash)
         selectedStore.noteActiveAccount(accountHash)
+        selectedStore.markResolutionUnresolved(accountHash: accountHash)
+        if context.accountHash == accountHash {
+            context = context.blocked(message: nil)
+        } else {
+            context = .blocked(accountHash: accountHash, message: nil)
+        }
 
         do {
             let linkedShops = try await fetcher.fetchLinkedShops()
+            guard refreshGeneration == expectedGeneration else { return }
             let resolution = ShopContextResolver.resolve(
                 accountHash: accountHash,
                 linkedShops: linkedShops,
-                persistedSelection: selectedStore.selectedShop(accountHash: accountHash),
+                persistedSelection: persistedSelection,
                 now: now()
             )
+            let persisted: Bool
             if let selectedShop = resolution.selectedShopToPersist {
-                selectedStore.save(selectedShop, accountHash: accountHash)
+                persisted = selectedStore.save(selectedShop, accountHash: accountHash)
             } else {
-                selectedStore.clear(accountHash: accountHash)
+                persisted = selectedStore.clear(accountHash: accountHash)
             }
-            accountBindingStore.saveBinding(
-                accountHash: accountHash,
-                storeIdentity: resolution.context.localStoreIdentity
-            )
+            guard persisted else {
+                context = .blocked(accountHash: accountHash, message: nil)
+                return
+            }
             context = resolution.context
         } catch {
-            if context.accountHash == accountHash {
-                context = context.blocked(message: error.localizedDescription)
+            guard refreshGeneration == expectedGeneration else { return }
+            let restoredSelection: SelectedShop?
+            if let persistedSelection {
+                let scope = ProductImageScope(
+                    accountID: ownerUserID,
+                    shopID: persistedSelection.shopID
+                )
+                restoredSelection = ProductImageOwnerStoreGate.allows(
+                    scope: scope,
+                    selectedShop: persistedSelection,
+                    binding: accountBindingStore.currentBinding,
+                    hasPendingReplacement: accountBindingStore.hasPendingReplacementJournal
+                ) ? persistedSelection : nil
             } else {
-                context = .blocked(accountHash: accountHash, message: error.localizedDescription)
-                accountBindingStore.clearBinding()
+                restoredSelection = nil
+            }
+            if context.accountHash == accountHash {
+                context = ShopContext(
+                    accountHash: accountHash,
+                    linkedShops: context.linkedShops,
+                    selectedShop: restoredSelection,
+                    syncAllowed: false,
+                    errorMessage: error.localizedDescription
+                )
+            } else {
+                context = ShopContext(
+                    accountHash: accountHash,
+                    linkedShops: [],
+                    selectedShop: restoredSelection,
+                    syncAllowed: false,
+                    errorMessage: error.localizedDescription
+                )
             }
         }
     }
@@ -545,8 +641,8 @@ final class ShopContextStore: ObservableObject {
         }
         let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
         let selected = SelectedShop(linkedShop: linkedShop, selectedAt: now())
-        selectedStore.save(selected, accountHash: accountHash)
-        accountBindingStore.saveBinding(accountHash: accountHash, storeIdentity: selected.localStoreIdentity)
+        guard selectedStore.save(selected, accountHash: accountHash) else { return }
+        refreshGeneration &+= 1
         context = ShopContext(accountHash: accountHash, linkedShops: context.linkedShops, selectedShop: selected)
     }
 
@@ -556,8 +652,8 @@ final class ShopContextStore: ObservableObject {
             return
         }
         let selected = SelectedShop(linkedShop: linkedShop, selectedAt: now())
-        selectedStore.save(selected, accountHash: accountHash)
-        accountBindingStore.saveBinding(accountHash: accountHash, storeIdentity: selected.localStoreIdentity)
+        guard selectedStore.save(selected, accountHash: accountHash) else { return }
+        refreshGeneration &+= 1
         context = ShopContext(accountHash: accountHash, linkedShops: context.linkedShops, selectedShop: selected)
     }
 }

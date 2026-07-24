@@ -206,6 +206,125 @@ final class LocalPendingChange {
     }
 }
 
+/// Immutable optimistic-concurrency receipt for an outbound local mutation.
+/// It contains only redacted identifiers and value types, so it may cross an
+/// async network boundary while SwiftData models and contexts never do.
+nonisolated struct LocalPendingChangeCASToken: Equatable, Sendable {
+    let changeID: String
+    let recordSchemaVersion: Int
+    let ownerUserID: String?
+    let ownerHash: String?
+    let storeId: String?
+    let localStoreId: String?
+    let syncProtocolVersion: Int
+    let schemaVersion: Int
+    let storeEpoch: Int
+    let entityKindRaw: String
+    let operationRaw: String
+    let statusRaw: String
+    let originRaw: String
+    let logicalKey: String
+    let changedFieldsRaw: String
+    let baselineFingerprintHash: String?
+    let intendedFingerprintHash: String?
+    let baseRemoteUpdatedAt: Date?
+    let baseVersion: Int?
+    let baseEventId: String?
+    let idempotencyKey: String
+    let entityRemoteIDRaw: String?
+    let updatedAt: Date
+    let lastAttemptAt: Date?
+    let supersededByChangeID: String?
+
+    init(_ change: LocalPendingChange) {
+        changeID = change.changeID
+        recordSchemaVersion = change.recordSchemaVersion
+        ownerUserID = change.ownerUserID
+        ownerHash = change.ownerHash
+        storeId = change.storeId
+        localStoreId = change.localStoreId
+        syncProtocolVersion = change.syncProtocolVersion
+        schemaVersion = change.schemaVersion
+        storeEpoch = change.storeEpoch
+        entityKindRaw = change.entityKindRaw
+        operationRaw = change.operationRaw
+        statusRaw = change.statusRaw
+        originRaw = change.originRaw
+        logicalKey = change.logicalKey
+        changedFieldsRaw = change.changedFieldsRaw
+        baselineFingerprintHash = change.baselineFingerprintHash
+        intendedFingerprintHash = change.intendedFingerprintHash
+        baseRemoteUpdatedAt = change.baseRemoteUpdatedAt
+        baseVersion = change.baseVersion
+        baseEventId = change.baseEventId
+        idempotencyKey = change.idempotencyKey
+        entityRemoteIDRaw = change.entityRemoteIDRaw
+        updatedAt = change.updatedAt
+        lastAttemptAt = change.lastAttemptAt
+        supersededByChangeID = change.supersededByChangeID
+    }
+
+    func matches(_ change: LocalPendingChange) -> Bool {
+        self == LocalPendingChangeCASToken(change)
+    }
+
+    var eventFingerprint: String {
+        LocalPendingChangeLogicalKey.privacyHash([
+            changeID,
+            String(recordSchemaVersion),
+            ownerHash ?? "",
+            storeId ?? "",
+            localStoreId ?? "",
+            String(syncProtocolVersion),
+            String(schemaVersion),
+            String(storeEpoch),
+            entityKindRaw,
+            operationRaw,
+            statusRaw,
+            originRaw,
+            logicalKey,
+            changedFieldsRaw,
+            baselineFingerprintHash ?? "",
+            intendedFingerprintHash ?? "",
+            baseRemoteUpdatedAt.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "",
+            baseVersion.map(String.init) ?? "",
+            baseEventId ?? "",
+            idempotencyKey,
+            entityRemoteIDRaw ?? "",
+            String(updatedAt.timeIntervalSinceReferenceDate.bitPattern),
+            lastAttemptAt.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "",
+            supersededByChangeID ?? ""
+        ].joined(separator: "|"))
+    }
+}
+
+nonisolated enum LocalPendingChangeScopeMatcher {
+    static func matches(
+        _ change: LocalPendingChange,
+        ownerUserID: UUID,
+        accountHash: String,
+        storeIdentity: LocalStoreIdentity
+    ) -> Bool {
+        let owner = ownerUserID.uuidString.lowercased()
+        guard change.ownerUserID == owner,
+              change.ownerHash == accountHash,
+              let rawStore = change.storeId,
+              let rawLocalStore = change.localStoreId else {
+            return false
+        }
+        let store = Task126OwnerStoreScope.normalizedStoreId(rawStore)
+        let localStore = Task126OwnerStoreScope.normalizedLocalStoreId(
+            rawLocalStore,
+            storeId: store
+        )
+        return store == storeIdentity.storeId
+            && localStore == storeIdentity.localStoreId
+            && change.syncProtocolVersion == storeIdentity.syncProtocolVersion
+            && change.schemaVersion == storeIdentity.schemaVersion
+            && change.storeEpoch == storeIdentity.storeEpoch
+    }
+}
+
 nonisolated struct LocalPendingChangeSnapshot: Equatable, Sendable {
     var pendingCatalogChangeCount: Int
     var pendingProductPriceChangeCount: Int
@@ -251,6 +370,10 @@ nonisolated struct LocalPendingChangeSnapshot: Equatable, Sendable {
 nonisolated struct LocalPendingChangeImportBatchResult: Equatable, Sendable {
     var recordedCount: Int
     var cappedCount: Int
+}
+
+nonisolated enum LocalPendingChangeAccumulatorError: Error, Equatable, Sendable {
+    case activeChangeLimitExceeded(limit: Int)
 }
 
 nonisolated struct LocalPendingChangeReconciliationRecord: Sendable {
@@ -520,13 +643,18 @@ nonisolated final class LocalPendingChangeAccumulator {
                 operation: .upsert,
                 origin: .confirmedImport,
                 logicalKey: "import:\(LocalPendingChangeLogicalKey.privacyHash(logicalKey))",
-                changedFields: ["confirmedImport"]
+                changedFields: ["confirmedImport"],
+                failClosedOnCapacity: false
             ) != nil {
                 recordedCount += 1
             }
         }
 
-        let cappedCount = max(0, logicalKeys.count - cappedKeys.count)
+        // `recordChange(... failClosedOnCapacity: false)` reports a full
+        // active-change store as nil. Count those keys as capped too; otherwise
+        // an already-full store could return recorded=0/capped=0 and lose the
+        // durable fail-closed marker for the import.
+        let cappedCount = max(0, logicalKeys.count - recordedCount)
         if cappedCount > 0 {
             _ = try recordImportCapMarker(cappedCount: cappedCount)
         }
@@ -612,7 +740,8 @@ nonisolated final class LocalPendingChangeAccumulator {
         baselineFingerprintHash: String? = nil,
         intendedFingerprintHash: String? = nil,
         entityRemoteID: UUID? = nil,
-        enforceCap: Bool = true
+        enforceCap: Bool = true,
+        failClosedOnCapacity: Bool = true
     ) throws -> LocalPendingChange? {
         guard operation != .update || !changedFields.isEmpty else {
             return nil
@@ -644,7 +773,12 @@ nonisolated final class LocalPendingChangeAccumulator {
         }
 
         if enforceCap {
-            guard try canInsertNewActiveChange(origin: origin, timestamp: timestamp) else {
+            guard try hasCapacityForNewActiveChange() else {
+                if failClosedOnCapacity {
+                    throw LocalPendingChangeAccumulatorError.activeChangeLimitExceeded(
+                        limit: maxActiveChanges
+                    )
+                }
                 return nil
             }
         }
@@ -701,6 +835,7 @@ nonisolated final class LocalPendingChangeAccumulator {
         entityRemoteID: UUID?,
         timestamp: Date
     ) {
+        let wasRetryableNonPending = !change.status.isTerminal && change.status != .pending
         let coalesced = PendingChangeCoalescer.coalesce(
             current: PendingChangeCoalescer.State(
                 operation: change.operation,
@@ -721,12 +856,12 @@ nonisolated final class LocalPendingChangeAccumulator {
         change.baselineFingerprintHash = baselineFingerprintHash ?? change.baselineFingerprintHash
         change.intendedFingerprintHash = intendedFingerprintHash ?? change.intendedFingerprintHash
         change.updatedAt = timestamp
+        if wasRetryableNonPending, change.status == .pending {
+            change.lastAttemptAt = nil
+        }
     }
 
-    private func canInsertNewActiveChange(
-        origin: LocalPendingChangeOrigin,
-        timestamp: Date
-    ) throws -> Bool {
+    private func hasCapacityForNewActiveChange() throws -> Bool {
         let count: Int
         if let cachedActiveCount {
             count = cachedActiveCount
@@ -735,11 +870,7 @@ nonisolated final class LocalPendingChangeAccumulator {
             cachedActiveCount = fetched.count
             count = fetched.count
         }
-        guard count < maxActiveChanges else {
-            _ = try recordImportCapMarker(cappedCount: 1, timestamp: timestamp)
-            return false
-        }
-        return true
+        return count < maxActiveChanges
     }
 
     private func recordImportCapMarker(
@@ -787,12 +918,32 @@ nonisolated final class LocalPendingChangeAccumulator {
     private func isOwnerCompatible(_ change: LocalPendingChange) -> Bool {
         guard let ownerUserID = ownerUserID?.uuidString.lowercased() else {
             return change.ownerUserID == nil
+                && change.storeId != nil
+                && Task126OwnerStoreScope.normalizedStoreId(change.storeId) == storeIdentity.storeId
+                && change.localStoreId != nil
+                && Task126OwnerStoreScope.normalizedLocalStoreId(
+                    change.localStoreId,
+                    storeId: storeIdentity.storeId
+                ) == storeIdentity.localStoreId
+                && change.syncProtocolVersion == storeIdentity.syncProtocolVersion
+                && change.schemaVersion == storeIdentity.schemaVersion
+                && change.storeEpoch == storeIdentity.storeEpoch
         }
         guard change.ownerUserID == ownerUserID else {
             return false
         }
         let changeStore = Task126OwnerStoreScope.normalizedStoreId(change.storeId)
-        return changeStore == storeIdentity.storeId || change.storeId == nil
+        let changeLocalStore = Task126OwnerStoreScope.normalizedLocalStoreId(
+            change.localStoreId,
+            storeId: changeStore
+        )
+        return change.storeId != nil
+            && changeStore == storeIdentity.storeId
+            && change.localStoreId != nil
+            && changeLocalStore == storeIdentity.localStoreId
+            && change.syncProtocolVersion == storeIdentity.syncProtocolVersion
+            && change.schemaVersion == storeIdentity.schemaVersion
+            && change.storeEpoch == storeIdentity.storeEpoch
     }
 }
 
@@ -825,6 +976,12 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
 
         var snapshot = LocalPendingChangeSnapshot.empty
         for change in changes {
+            if change.status.isTerminal {
+                if change.status == .superseded {
+                    snapshot.supersededRetainedCount += 1
+                }
+                continue
+            }
             if change.entityKind == .importBatch,
                change.logicalKey.hasPrefix("import:cap:") {
                 snapshot.isCapped = true
@@ -865,9 +1022,9 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                 } else if change.entityKind == .historySession {
                     snapshot.pendingHistorySessionChangeCount += 1
                 }
-            case .superseded:
-                snapshot.supersededRetainedCount += 1
-            case .acknowledged:
+            case .superseded, .acknowledged:
+                // Filtered before cap detection so retained terminal import
+                // sentinels cannot permanently block same-scope recovery.
                 continue
             }
         }

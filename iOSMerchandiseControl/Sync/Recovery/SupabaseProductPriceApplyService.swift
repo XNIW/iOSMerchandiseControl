@@ -712,7 +712,15 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if inserted > 0 || remoteIdentityLinked > 0 {
             do {
-                try context.save()
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                    try context.save()
+                }
+            } catch is CancellationError {
+                context.rollback()
+                throw CancellationError()
+            } catch let error as Task126OwnerStoreGateError {
+                context.rollback()
+                throw error
             } catch {
                 context.rollback()
                 throw ProductPriceApplyError.saveFailed(message: String(describing: error))
@@ -938,12 +946,20 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
                 )
                 do {
                     let saveStartedAt = Date()
-                    try pageContext.save()
+                    try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                        try pageContext.save()
+                    }
                     let saveMS = Int(Date().timeIntervalSince(saveStartedAt) * 1_000)
                     await Task.yield()
                     debugPrint(
                         "[ProductPriceSync] page_save index=\(pageIndex + 1) mutations=\(pageMutations) total=\(totalConsidered) saveMs=\(saveMS)"
                     )
+                } catch is CancellationError {
+                    pageContext.rollback()
+                    throw CancellationError()
+                } catch let error as Task126OwnerStoreGateError {
+                    pageContext.rollback()
+                    throw error
                 } catch {
                     pageContext.rollback()
                     debugPrint(
@@ -1051,7 +1067,15 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if pruned > 0 {
             do {
-                try context.save()
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                    try context.save()
+                }
+            } catch is CancellationError {
+                context.rollback()
+                throw CancellationError()
+            } catch let error as Task126OwnerStoreGateError {
+                context.rollback()
+                throw error
             } catch {
                 context.rollback()
                 throw ProductPriceApplyError.saveFailed(message: String(describing: error))
@@ -1419,6 +1443,16 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         guard row.ownerUserID == sessionSnapshot.userID else {
             debugPrint("[ProductPriceSync] row_invalid id=\(redactedUUID(row.id)) reason=owner_mismatch")
             throw ProductPriceApplyError.invalidRemoteRow(reason: "owner_mismatch")
+        }
+        if let automaticScope = Task126OwnerStoreGate.currentAutomaticScope {
+            guard automaticScope.ownerUserID == sessionSnapshot.userID else {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
+            try Task126OwnerStoreGate.validateRemoteIdentity(
+                ownerUserID: row.ownerUserID,
+                shopID: row.shopID,
+                scope: automaticScope
+            )
         }
         guard seenRemoteIDs.insert(row.id).inserted else {
             debugPrint("[ProductPriceSync] row_invalid id=\(redactedUUID(row.id)) reason=duplicate_remote_id")

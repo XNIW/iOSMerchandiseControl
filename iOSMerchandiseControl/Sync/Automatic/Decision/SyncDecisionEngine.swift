@@ -11,6 +11,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
     var requestsLightReconcile: Bool
     var requiresBootstrap: Bool
     var requiresFullRecovery: Bool
+    var preservesPendingBeforeRecovery: Bool
     var fullRecoveryContext: SyncFullRecoveryContext
     var isSyncBusy: Bool
     var hasStateReadFailure: Bool
@@ -26,6 +27,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
         requestsLightReconcile: Bool = false,
         requiresBootstrap: Bool = false,
         requiresFullRecovery: Bool = false,
+        preservesPendingBeforeRecovery: Bool = false,
         fullRecoveryContext: SyncFullRecoveryContext = .normalForeground,
         isSyncBusy: Bool = false,
         hasStateReadFailure: Bool = false
@@ -40,6 +42,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
         self.requestsLightReconcile = requestsLightReconcile
         self.requiresBootstrap = requiresBootstrap
         self.requiresFullRecovery = requiresFullRecovery
+        self.preservesPendingBeforeRecovery = preservesPendingBeforeRecovery
         self.fullRecoveryContext = fullRecoveryContext
         self.isSyncBusy = isSyncBusy
         self.hasStateReadFailure = hasStateReadFailure
@@ -114,10 +117,19 @@ nonisolated enum SyncDecisionEngine {
             return .retryAfterBusy
         }
         if input.requiresBootstrap {
+            if input.preservesPendingBeforeRecovery, input.hasPendingLocalChanges {
+                return .sequence([.pushPending, .bootstrap])
+            }
             return .bootstrap
         }
         if input.requiresFullRecovery {
-            return input.fullRecoveryContext.allowsFullRecovery ? .fullRecovery : .requestRecovery
+            let recovery: SyncAction = input.fullRecoveryContext.allowsFullRecovery
+                ? .fullRecovery
+                : .requestRecovery
+            if input.preservesPendingBeforeRecovery, input.hasPendingLocalChanges {
+                return .sequence([.pushPending, recovery])
+            }
+            return recovery
         }
         if input.hasRemoteVerificationDrift {
             return input.hasPendingLocalChanges

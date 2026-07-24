@@ -4,8 +4,22 @@ protocol SupabaseSyncEventIncrementalFetching: Sendable {
     func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow]
 }
 
+/// Implemented only by the V6 server-authorized event adapter.  It keeps the
+/// durable opaque scope fence in lockstep with a locally committed watermark;
+/// it is deliberately a narrow persistence boundary, not another sync state
+/// machine or policy path.
+protocol ShopScopedIncrementalFencePersisting: Sendable {
+    func advanceDurableFence(
+        ownerUserID: UUID,
+        scope: Task126VerifiedOwnerStoreScope,
+        from watermark: Int64,
+        through newWatermark: Int64
+    ) async throws
+}
+
 nonisolated enum SupabaseSyncEventIncrementalLimits {
-    static let maximumLimit = 200
+    // Frozen V6 event-page contract: 150 rows maximum.
+    static let maximumLimit = 150
 }
 
 nonisolated enum RuntimeSyncExecutionType: String, Sendable, Equatable {

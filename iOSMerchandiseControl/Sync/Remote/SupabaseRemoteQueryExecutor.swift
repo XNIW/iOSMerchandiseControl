@@ -27,7 +27,7 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .from(table)
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+            if let selectedShopID = try selectedShopID(ownerUserID: ownerUserID) {
                 request = request.eq("shop_id", value: selectedShopID.uuidString)
             }
             return try await request
@@ -62,7 +62,7 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .from(table)
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+            if let selectedShopID = try selectedShopID(ownerUserID: ownerUserID) {
                 request = request.eq("shop_id", value: selectedShopID.uuidString)
             }
             return try await request
@@ -96,7 +96,7 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .select(columns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
-            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+            if let selectedShopID = try selectedShopID(ownerUserID: ownerUserID) {
                 request = allowLegacyNullShopRows
                     ? request.or("shop_id.eq.\(selectedShopID.uuidString),shop_id.is.null")
                     : request.eq("shop_id", value: selectedShopID.uuidString)
@@ -153,7 +153,7 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .update(payload)
                 .eq("id", value: id.uuidString)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-            if let selectedShopID = selectedShopID(ownerUserID: ownerUserID) {
+            if let selectedShopID = try selectedShopID(ownerUserID: ownerUserID) {
                 request = request.eq("shop_id", value: selectedShopID.uuidString)
             }
             return try await request
@@ -185,7 +185,7 @@ struct SupabaseRemoteQueryExecutor: Sendable {
                 .from(table)
                 .select("*", head: true, count: .exact)
                 .eq("owner_user_id", value: resolvedOwner.uuidString)
-            if let selectedShopID = selectedShopID(ownerUserID: resolvedOwner) {
+            if let selectedShopID = try selectedShopID(ownerUserID: resolvedOwner) {
                 query = query.eq("shop_id", value: selectedShopID.uuidString)
             }
             if activeOnly {
@@ -203,7 +203,12 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         }
     }
 
-    private func selectedShopID(ownerUserID: UUID) -> UUID? {
-        ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+    private func selectedShopID(ownerUserID: UUID) throws -> UUID? {
+        if Task126OwnerStoreGate.currentAutomaticScope != nil {
+            return try Task126OwnerStoreGate.requireCurrentAutomaticScope(
+                ownerUserID: ownerUserID
+            ).shopID
+        }
+        return ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
     }
 }

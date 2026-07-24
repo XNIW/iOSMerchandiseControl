@@ -31,6 +31,8 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     private static let freshRemoteCountVerificationInterval: TimeInterval = 60
     private static let refreshDebounceNanoseconds: UInt64 = 120_000_000
     private let now: () -> Date
+    private let bindingStore: AccountBindingStore
+    private let selectedShopStore: SelectedShopStore
     private var summaryTask: Task<Void, Never>?
     private var driftTask: Task<Void, Never>?
     private var driftTaskID: UUID?
@@ -40,9 +42,16 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     private var lastRemoteCountSnapshot: SyncInventoryCountSnapshot?
     private var isSignedIn = false
     private var currentUserID: UUID?
+    private var localStateReadFailed = false
 
-    init(now: @escaping () -> Date = Date.init) {
+    init(
+        now: @escaping () -> Date = Date.init,
+        bindingStore: AccountBindingStore = AccountBindingStore(),
+        selectedShopStore: SelectedShopStore = SelectedShopStore()
+    ) {
         self.now = now
+        self.bindingStore = bindingStore
+        self.selectedShopStore = selectedShopStore
     }
 
     deinit {
@@ -116,6 +125,9 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
         refreshReason: String
     ) {
+        // A decision is valid only for the exact auth/shop snapshot that
+        // produced it. Hide it synchronously while the new snapshot loads.
+        accountSyncDecision = nil
         updateAuthSnapshot(authSnapshot)
         scheduleSummaryRefresh(
             context: context,
@@ -172,8 +184,10 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 context: context,
                 currentUserUUID: currentUserID
             )
+            localDatabaseSummary.lastSuccessfulSync = supabaseBaselineSummary.appliedAt
         } catch {
             supabaseBaselineSummary = .absent
+            localStateReadFailed = true
         }
     }
 
@@ -185,10 +199,14 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 suppliers: snapshot.suppliers,
                 categories: snapshot.categories,
                 productPrices: snapshot.productPrices,
-                historySessions: snapshot.historySessions
+                historySessions: snapshot.historySessions,
+                pendingOutbox: localDatabaseSummary.pendingOutbox,
+                lastSuccessfulSync: localDatabaseSummary.lastSuccessfulSync
             )
+            localStateReadFailed = false
         } catch {
             localDatabaseSummary = .empty
+            localStateReadFailed = true
         }
     }
 
@@ -261,14 +279,12 @@ final class OptionsSyncSummaryProvider: ObservableObject {
 
     private func refreshLocalPendingAttentionCount(context: ModelContext) {
         do {
-            localPendingAttentionCount = try OptionsPendingAttentionCounter.count(
-                context: context,
-                ownerUserID: currentUserID,
-                storeIdentity: AccountBindingStore().currentBinding?.storeIdentity
-                    ?? LocalStoreIdentity(rawValue: Task126SyncPolicy.defaultStoreId)
-            )
+            localPendingAttentionCount = try OptionsPendingAttentionCounter.countAll(context: context)
+            localDatabaseSummary.pendingOutbox = localPendingAttentionCount
         } catch {
             localPendingAttentionCount = 0
+            localDatabaseSummary.pendingOutbox = 0
+            localStateReadFailed = true
             isStale = true
         }
     }
@@ -397,30 +413,53 @@ final class OptionsSyncSummaryProvider: ObservableObject {
             || localDatabaseSummary.categories > 0
             || localDatabaseSummary.productPrices > 0
             || localDatabaseSummary.historySessions > 0
-        let binding = AccountBindingStore().currentBinding
-        let localStore: LocalStoreAccountState
-        let trigger: AccountSyncTrigger
-
-        if let binding, binding.accountHash != accountHash {
-            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
-            trigger = .switchAccount(from: binding.accountHash, to: accountHash)
-        } else if let binding {
-            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
-            trigger = .reconnect(accountHash: accountHash)
-        } else {
-            localStore = .anonymous(hasData: hasLocalData)
-            trigger = .login(accountHash: accountHash)
-        }
-
-        let decision = AccountSwitchPolicy.decide(
-            AccountSyncPolicyInput(
-                trigger: trigger,
-                localStore: localStore,
-                remoteDataset: remoteDatasetState,
-                pendingOwner: pendingOwnerState(currentAccountHash: accountHash, binding: binding)
+            || localPendingAttentionCount > 0
+            || supabaseBaselineSummary.status != .absent
+        var resolution: OwnerStoreBindingResolution
+        if selectedShopStore.isResolutionReady(accountHash: accountHash),
+           let activeStoreIdentity = selectedShopStore
+            .selectedShop(accountHash: accountHash)?.localStoreIdentity {
+            resolution = bindingStore.resolveOwnerStoreBinding(
+                userID: userID,
+                activeStoreIdentity: activeStoreIdentity,
+                isLocalStoreCompletelyEmpty: !hasLocalData,
+                stateReadFailed: localStateReadFailed,
+                allowAutoBind: false
             )
+        } else {
+            resolution = .reviewRequired(.shopContextUnavailable)
+        }
+        resolution = Self.applyingBaselineAccountMismatch(
+            to: resolution,
+            baselineStatus: supabaseBaselineSummary.status
         )
-        accountSyncDecision = decision.requiresUserDecision ? decision : nil
+
+        guard case .reviewRequired(let reason) = resolution else {
+            accountSyncDecision = nil
+            return
+        }
+        accountSyncDecision = AccountSyncDecision(
+            action: .promptOwnerStoreReview(reason),
+            defaultSafeAction: .cancel,
+            remoteMutation: .blockedUntilUserDecision,
+            pendingHandling: reason == .unboundDirty
+                ? .keepUnboundUntilDecision
+                : .keepPendingWithOriginalOwner,
+            conflictPolicy: reason == .unboundDirty ? .noSilentMerge : .noCrossAccountMerge,
+            rollback: .cancelLeavesRemoteUntouched,
+            testID: "OWNER-STORE-\(reason.rawValue)"
+        )
+    }
+
+    static func applyingBaselineAccountMismatch(
+        to resolution: OwnerStoreBindingResolution,
+        baselineStatus: SupabaseCatalogBaselineDebugStatus
+    ) -> OwnerStoreBindingResolution {
+        guard resolution.allowsAutomaticSync,
+              baselineStatus == .accountMismatch else {
+            return resolution
+        }
+        return .reviewRequired(.accountMismatch)
     }
 
     private var remoteDatasetState: RemoteDatasetState {
@@ -455,6 +494,24 @@ private struct SummaryRefreshRequest {
 }
 
 nonisolated enum OptionsPendingAttentionCounter {
+    static func countAll(context: ModelContext) throws -> Int {
+        let terminalSuperseded = LocalPendingChangeStatus.superseded.rawValue
+        let terminalAcknowledged = LocalPendingChangeStatus.acknowledged.rawValue
+        let sent = SyncEventOutboxStatus.sent.rawValue
+        let pendingChanges = try context.fetchCount(FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { change in
+                change.statusRaw != terminalSuperseded
+                    && change.statusRaw != terminalAcknowledged
+            }
+        ))
+        let eventOutbox = try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>(
+            predicate: #Predicate<SyncEventOutboxEntry> { entry in
+                entry.statusRaw != sent
+            }
+        ))
+        return pendingChanges + eventOutbox
+    }
+
     static func count(
         context: ModelContext,
         ownerUserID: UUID?,

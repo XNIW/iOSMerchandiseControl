@@ -59,6 +59,7 @@ nonisolated struct ProductImageRemoveResponse: Decodable, Sendable {
 nonisolated struct ProductImageReadResponse: Decodable, Sendable {
     struct Item: Decodable, Sendable {
         let expiresAt: String?
+        let metadata: ProductImageMetadata?
         let productId: UUID
         let signedUrl: String?
         let status: String
@@ -84,7 +85,10 @@ private final class ProductImageNoRedirectDelegate: NSObject, URLSessionTaskDele
 }
 
 actor ProductImageAPIClient {
-    static let readURLBatchMaximum = 100
+    // Frozen V6 read contract: metadata-verified leases are bounded to 16
+    // references and the server preserves that request order exactly.
+    static let readURLBatchMaximum = 16
+    static let uploadResponseMaximumBytes = 4 * 1_024
 
     private enum SignedURLMode {
         case upload
@@ -253,8 +257,22 @@ actor ProductImageAPIClient {
         )
     }
 
-    func uploadJPEG(_ data: Data, signedURL: String) async throws {
-        let url = try validatedSignedURL(signedURL, mode: .upload)
+    func uploadJPEG(
+        _ data: Data,
+        signedURL: String,
+        expectedReference: ProductImageReference
+    ) async throws {
+        let url = try validatedSignedURL(
+            signedURL,
+            mode: .upload,
+            expectedReference: expectedReference
+        )
+        guard !data.isEmpty,
+              data.count <= expectedReference.variant.maxBytes,
+              ProductImageProcessor.isJPEG(data),
+              !ProductImageProcessor.containsForbiddenMetadata(data) else {
+            throw ProductImageError.encodeFailed
+        }
         let boundary = "task137-\(UUID().uuidString.lowercased())"
         var body = Data()
         body.appendUTF8("--\(boundary)\r\n")
@@ -275,19 +293,23 @@ actor ProductImageAPIClient {
         for attempt in 0...1 {
             try Task.checkCancellation()
             do {
-                let (_, response) = try await storageSession.data(for: request)
-                guard let http = response as? HTTPURLResponse else {
-                    throw ProductImageError.invalidResponse
+                _ = try await BoundedURLSessionDataLoader.data(
+                    for: request,
+                    configuration: storageSession.configuration,
+                    maximumBytes: Self.uploadResponseMaximumBytes
+                ) { http in
+                    guard (200..<300).contains(http.statusCode) else {
+                        throw ProductImageError.uploadFailed(status: http.statusCode)
+                    }
                 }
-                if (200..<300).contains(http.statusCode) {
-                    return
-                }
-                if attempt == 0, (500..<600).contains(http.statusCode) {
-                    continue
-                }
-                throw ProductImageError.uploadFailed(status: http.statusCode)
+                return
             } catch is CancellationError {
                 throw CancellationError()
+            } catch is BoundedHTTPBodyError {
+                throw ProductImageError.invalidResponse
+            } catch ProductImageError.uploadFailed(let status)
+                where attempt == 0 && (500..<600).contains(status) {
+                continue
             } catch let error as URLError where attempt == 0 && Self.isTransientUploadError(error) {
                 continue
             } catch {
@@ -299,29 +321,44 @@ actor ProductImageAPIClient {
 
     func downloadJPEG(
         signedURL: String,
-        maximumBytes: Int
+        expectedReference: ProductImageReference
     ) async throws -> Data {
-        let url = try validatedSignedURL(signedURL, mode: .read)
+        let maximumBytes = expectedReference.variant.maxBytes
+        let url = try validatedSignedURL(
+            signedURL,
+            mode: .read,
+            expectedReference: expectedReference
+        )
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        let (data, response) = try await storageSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw ProductImageError.invalidResponse
+        let data: Data
+        do {
+            let bounded = try await BoundedURLSessionDataLoader.data(
+                for: request,
+                configuration: storageSession.configuration,
+                maximumBytes: maximumBytes
+            ) { http in
+                guard (200..<300).contains(http.statusCode) else {
+                    throw ProductImageError.downloadFailed(status: http.statusCode)
+                }
+                let contentType = http.value(forHTTPHeaderField: "Content-Type")?
+                    .split(separator: ";", maxSplits: 1)
+                    .first?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased()
+                guard contentType == "image/jpeg" else {
+                    throw ProductImageError.downloadedImageInvalid
+                }
+            }
+            data = bounded.0
+        } catch is BoundedHTTPBodyError {
+            throw ProductImageError.downloadedImageInvalid
         }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ProductImageError.downloadFailed(status: http.statusCode)
-        }
-        let contentType = http.value(forHTTPHeaderField: "Content-Type")?
-            .split(separator: ";", maxSplits: 1)
-            .first?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        guard contentType == "image/jpeg",
-              !data.isEmpty,
+        guard !data.isEmpty,
               data.count <= maximumBytes,
               ProductImageProcessor.isJPEG(data),
-              !ProductImageProcessor.containsAPP1Metadata(data) else {
+              !ProductImageProcessor.containsForbiddenMetadata(data) else {
             throw ProductImageError.downloadedImageInvalid
         }
         return data
@@ -346,15 +383,20 @@ actor ProductImageAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await apiSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
+        let data: Data
+        do {
+            let bounded = try await BoundedURLSessionDataLoader.data(
+                for: request,
+                configuration: apiSession.configuration,
+                maximumBytes: 64 * 1_024
+            ) { http in
+                guard (200..<300).contains(http.statusCode) else {
+                    throw ProductImageError.requestFailed(status: http.statusCode)
+                }
+            }
+            data = bounded.0
+        } catch is BoundedHTTPBodyError {
             throw ProductImageError.invalidResponse
-        }
-        guard data.count <= 64 * 1_024 else {
-            throw ProductImageError.invalidResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ProductImageError.requestFailed(status: http.statusCode)
         }
         do {
             return try decoder.decode(Response.self, from: data)
@@ -363,7 +405,11 @@ actor ProductImageAPIClient {
         }
     }
 
-    private func validatedSignedURL(_ value: String, mode: SignedURLMode) throws -> URL {
+    private func validatedSignedURL(
+        _ value: String,
+        mode: SignedURLMode,
+        expectedReference: ProductImageReference
+    ) throws -> URL {
         guard let url = URL(string: value),
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               components.user == nil,
@@ -391,10 +437,19 @@ actor ProductImageAPIClient {
         case .read: "/storage/v1/object/sign/product-images/"
         }
         let objectPath = String(components.percentEncodedPath.dropFirst(marker.count))
-        let uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
-        let canonicalPattern = "^shops/\(uuid)/products/\(uuid)/primary/\(uuid)/(main|thumb)\\.jpg$"
+            .removingPercentEncoding?
+            .lowercased()
+        let expectedObjectPath = [
+            "shops",
+            expectedReference.scope.shopID.uuidString.lowercased(),
+            "products",
+            expectedReference.productID.uuidString.lowercased(),
+            "primary",
+            expectedReference.versionID.uuidString.lowercased(),
+            "\(expectedReference.variant.rawValue).jpg"
+        ].joined(separator: "/")
         guard components.percentEncodedPath.hasPrefix(marker),
-              objectPath.range(of: canonicalPattern, options: .regularExpression) != nil else {
+              objectPath == expectedObjectPath else {
             throw ProductImageError.signedURLInvalid
         }
         return url

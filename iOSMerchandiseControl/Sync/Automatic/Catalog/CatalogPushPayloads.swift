@@ -1,17 +1,20 @@
 import Foundation
 
 nonisolated struct SyncAutomaticSupplierCreatePayload: Encodable, Equatable, Sendable {
+    let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
     let name: String
 
-    init(ownerUserID: UUID, shopID: UUID? = nil, name: String) {
+    init(id: UUID, ownerUserID: UUID, shopID: UUID? = nil, name: String) {
+        self.id = id
         self.ownerUserID = ownerUserID
         self.shopID = shopID
         self.name = name
     }
 
     enum CodingKeys: String, CodingKey {
+        case id
         case ownerUserID = "owner_user_id"
         case shopID = "shop_id"
         case name
@@ -34,17 +37,20 @@ nonisolated struct SyncAutomaticSupplierUpdatePayload: Encodable, Equatable, Sen
 }
 
 nonisolated struct SyncAutomaticCategoryCreatePayload: Encodable, Equatable, Sendable {
+    let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
     let name: String
 
-    init(ownerUserID: UUID, shopID: UUID? = nil, name: String) {
+    init(id: UUID, ownerUserID: UUID, shopID: UUID? = nil, name: String) {
+        self.id = id
         self.ownerUserID = ownerUserID
         self.shopID = shopID
         self.name = name
     }
 
     enum CodingKeys: String, CodingKey {
+        case id
         case ownerUserID = "owner_user_id"
         case shopID = "shop_id"
         case name
@@ -67,6 +73,7 @@ nonisolated struct SyncAutomaticCategoryUpdatePayload: Encodable, Equatable, Sen
 }
 
 nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Sendable {
+    let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
     let barcode: String
@@ -80,6 +87,7 @@ nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Send
     let stockQuantity: Double?
 
     init(
+        id: UUID,
         ownerUserID: UUID,
         shopID: UUID? = nil,
         barcode: String,
@@ -92,6 +100,7 @@ nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Send
         categoryID: UUID?,
         stockQuantity: Double?
     ) {
+        self.id = id
         self.ownerUserID = ownerUserID
         self.shopID = shopID
         self.barcode = barcode
@@ -106,6 +115,7 @@ nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Send
     }
 
     enum CodingKeys: String, CodingKey {
+        case id
         case ownerUserID = "owner_user_id"
         case shopID = "shop_id"
         case barcode

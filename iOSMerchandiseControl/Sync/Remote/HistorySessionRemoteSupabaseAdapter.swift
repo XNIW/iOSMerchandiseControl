@@ -15,9 +15,14 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         ownerUserID: UUID
     ) async throws -> [RemoteSharedSheetSessionRow] {
         guard !rows.isEmpty else { return [] }
+        let automaticScope = try currentAutomaticScope(ownerUserID: ownerUserID)
+        let expectedShopID = automaticScope?.shopID
+            ?? rows.first?.shopID
+            ?? ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
         let authenticatedUserID = try await query.requireOwner()
         guard authenticatedUserID == ownerUserID,
-              rows.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+              let expectedShopID,
+              rows.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == expectedShopID }) else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
@@ -27,7 +32,6 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
 
         let client = await query.client()
         do {
-            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
             let readBack: [RemoteSharedSheetSessionRow] = try await client
                 .from("shared_sheet_sessions")
                 .upsert(rows, onConflict: "remote_id")
@@ -35,7 +39,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
                 .execute()
                 .value
             guard readBack.count == rows.count,
-                  readBack.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == selectedShopID }) else {
+                  readBack.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == expectedShopID }) else {
                 throw SupabaseTransportClientError.schemaDrift(message: "History/session read-back mismatch.")
             }
             return readBack
@@ -57,6 +61,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         from start: Int,
         to end: Int
     ) async throws -> [RemoteSharedSheetSessionRow] {
+        let automaticScope = try currentAutomaticScope(ownerUserID: ownerUserID)
         let authenticatedUserID = try await query.requireOwner()
         guard authenticatedUserID == ownerUserID else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(
@@ -71,7 +76,8 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
                 .from("shared_sheet_sessions")
                 .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-            if let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
+            if let selectedShopID = automaticScope?.shopID
+                ?? ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) {
                 request = request.eq("shop_id", value: selectedShopID.uuidString)
             }
             return try await request
@@ -95,6 +101,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         sessionIDs: Set<UUID>
     ) async throws -> [RemoteSharedSheetSessionRow] {
         guard !sessionIDs.isEmpty else { return [] }
+        let automaticScope = try currentAutomaticScope(ownerUserID: ownerUserID)
         let authenticatedUserID = try await query.requireOwner()
         guard authenticatedUserID == ownerUserID else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(
@@ -107,7 +114,8 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         let sortedIDs = sessionIDs.map { $0.uuidString.lowercased() }.sorted()
         let client = await query.client()
         do {
-            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+            let selectedShopID = automaticScope?.shopID
+                ?? ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
             var request = client
                 .from("shared_sheet_sessions")
                 .select(Self.sharedSheetSessionColumns)
@@ -142,5 +150,12 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         } catch {
             throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
+    }
+
+    private func currentAutomaticScope(
+        ownerUserID: UUID
+    ) throws -> Task126VerifiedOwnerStoreScope? {
+        guard Task126OwnerStoreGate.currentAutomaticScope != nil else { return nil }
+        return try Task126OwnerStoreGate.requireCurrentAutomaticScope(ownerUserID: ownerUserID)
     }
 }

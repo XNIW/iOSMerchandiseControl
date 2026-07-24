@@ -1,6 +1,6 @@
 import Foundation
 
-enum AccountSwitchPolicy {
+nonisolated enum AccountSwitchPolicy {
     static func decide(_ input: AccountSyncPolicyInput) -> AccountSyncDecision {
         switch input.trigger {
         case .login:
@@ -11,13 +11,23 @@ enum AccountSwitchPolicy {
             return sameAccountReconnect(testID: "AP-E-01")
         case .switchAccount:
             return AccountSyncDecision(
-                action: .promptSwitchStoreOrCreateStore,
+                action: .promptOwnerStoreReview(.accountMismatch),
                 defaultSafeAction: .cancel,
                 remoteMutation: .blockedUntilUserDecision,
                 pendingHandling: .keepPendingWithOriginalOwner,
                 conflictPolicy: .noCrossAccountMerge,
                 rollback: .switchBackToOriginalStore,
                 testID: "AP-D-01"
+            )
+        case .switchShop:
+            return AccountSyncDecision(
+                action: .promptOwnerStoreReview(.shopMismatch),
+                defaultSafeAction: .cancel,
+                remoteMutation: .blockedUntilUserDecision,
+                pendingHandling: .keepPendingWithOriginalOwner,
+                conflictPolicy: .noCrossAccountMerge,
+                rollback: .switchBackToOriginalStore,
+                testID: "AP-D-02"
             )
         case .remoteTombstone:
             if input.hasNewerLocalPending {
@@ -95,9 +105,9 @@ enum AccountSwitchPolicy {
         switch (input.localStore, input.remoteDataset) {
         case (.anonymous(let hasData), .empty) where hasData:
             return AccountSyncDecision(
-                action: .promptBootstrapUpload,
+                action: .promptOwnerStoreReview(.unboundDirty),
                 defaultSafeAction: .cancel,
-                remoteMutation: .allowedAfterUserConfirmation,
+                remoteMutation: .blockedUntilUserDecision,
                 pendingHandling: .keepUnboundUntilDecision,
                 conflictPolicy: .none,
                 rollback: .cancelLeavesLocalUnbound,
@@ -105,7 +115,7 @@ enum AccountSwitchPolicy {
             )
         case (.anonymous(let hasData), .nonEmpty) where hasData:
             return AccountSyncDecision(
-                action: .promptMergeReplaceUploadExportCancel,
+                action: .promptOwnerStoreReview(.unboundDirty),
                 defaultSafeAction: .cancel,
                 remoteMutation: .blockedUntilUserDecision,
                 pendingHandling: .keepUnboundUntilDecision,
@@ -115,7 +125,7 @@ enum AccountSwitchPolicy {
             )
         case (.anonymous(let hasData), .unknown) where hasData:
             return AccountSyncDecision(
-                action: .promptRemoteVerification,
+                action: .promptOwnerStoreReview(.unboundDirty),
                 defaultSafeAction: .cancel,
                 remoteMutation: .blockedUntilUserDecision,
                 pendingHandling: .keepUnboundUntilDecision,

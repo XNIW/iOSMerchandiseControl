@@ -7,7 +7,7 @@ nonisolated struct ProductImageLoadResult: Sendable {
     let source: String
 }
 
-private actor ProductImageDownloadGate {
+private actor ProductImageConcurrencyGate {
     private struct Waiter {
         let id: UUID
         let continuation: CheckedContinuation<UUID, Error>
@@ -66,12 +66,16 @@ actor ProductImageService {
     typealias ProgressHandler = @Sendable (ProductImageOperationStage) async -> Void
 
     static let defaultMaximumConcurrentDownloads = 4
+    static let defaultMaximumConcurrentReadRequests = 2
     static let readBatchDelayNanoseconds: UInt64 = 8_000_000
     static let defaultSignedURLSafetyWindow: TimeInterval = 30
+    static let defaultSignedURLTTLSeconds: TimeInterval = 300
+    static let defaultSignedURLClockSkewAllowance: TimeInterval = 30
     static let maximumSignedURLLeases = 1_000
 
     private struct SignedReadLease: Sendable {
         let expiresAt: Date
+        let metadata: ProductImageMetadata
         let signedURL: String
     }
 
@@ -98,15 +102,35 @@ actor ProductImageService {
         var scheduledFlush: Task<Void, Never>?
     }
 
+    private struct ActiveReadBatch {
+        var batch: PendingReadBatch
+        let references: [ProductImageReference]
+        let task: Task<Void, Never>
+    }
+
+    private struct ProductKey: Hashable {
+        let scope: ProductImageScope
+        let productID: UUID
+    }
+
     private let api: ProductImageAPIClient
     private let cache: ProductImageCache
-    private let downloadGate: ProductImageDownloadGate
+    private let downloadGate: ProductImageConcurrencyGate
     private let now: @Sendable () -> Date
     private let readBatchDelayNanoseconds: UInt64
+    private let readRequestGate: ProductImageConcurrencyGate
     private let sessionProvider: SessionProvider
     private let signedURLSafetyWindow: TimeInterval
+    private let signedURLTTLSeconds: TimeInterval
+    private let signedURLClockSkewAllowance: TimeInterval
+    private let scopeAuthorizationProvider: ProductImageScopeAuthorizationProvider
+    private var activeReadBatches: [UUID: ActiveReadBatch] = [:]
+    private var activeScope: ProductImageScope?
+    private var activeProductMutations: [ProductKey: UUID] = [:]
     private var inFlightLoads: [ProductImageReference: InFlightLoad] = [:]
+    private var lifecycleGeneration = 0
     private var pendingReadBatches: [ReadBatchKey: PendingReadBatch] = [:]
+    private var productLoadEpochs: [ProductKey: UInt64] = [:]
     private var signedURLLeases: [ProductImageReference: SignedReadLease] = [:]
     private var signedURLLeaseOrder: [ProductImageReference] = []
 
@@ -115,9 +139,13 @@ actor ProductImageService {
         storageBaseURL: URL,
         cache: ProductImageCache = ProductImageCache(),
         maximumConcurrentDownloads: Int = defaultMaximumConcurrentDownloads,
+        maximumConcurrentReadRequests: Int = defaultMaximumConcurrentReadRequests,
         readBatchDelayNanoseconds: UInt64 = ProductImageService.readBatchDelayNanoseconds,
         signedURLSafetyWindow: TimeInterval = defaultSignedURLSafetyWindow,
+        signedURLTTLSeconds: TimeInterval = defaultSignedURLTTLSeconds,
+        signedURLClockSkewAllowance: TimeInterval = defaultSignedURLClockSkewAllowance,
         now: @escaping @Sendable () -> Date = Date.init,
+        scopeAuthorizationProvider: @escaping ProductImageScopeAuthorizationProvider = { _ in true },
         sessionProvider: @escaping SessionProvider
     ) {
         self.api = ProductImageAPIClient(
@@ -125,10 +153,14 @@ actor ProductImageService {
             storageBaseURL: storageBaseURL
         )
         self.cache = cache
-        self.downloadGate = ProductImageDownloadGate(limit: maximumConcurrentDownloads)
+        self.downloadGate = ProductImageConcurrencyGate(limit: maximumConcurrentDownloads)
         self.readBatchDelayNanoseconds = readBatchDelayNanoseconds
+        self.readRequestGate = ProductImageConcurrencyGate(limit: maximumConcurrentReadRequests)
         self.signedURLSafetyWindow = max(0, signedURLSafetyWindow)
+        self.signedURLTTLSeconds = max(1, signedURLTTLSeconds)
+        self.signedURLClockSkewAllowance = max(0, signedURLClockSkewAllowance)
         self.now = now
+        self.scopeAuthorizationProvider = scopeAuthorizationProvider
         self.sessionProvider = sessionProvider
     }
 
@@ -136,22 +168,40 @@ actor ProductImageService {
         api: ProductImageAPIClient,
         cache: ProductImageCache,
         maximumConcurrentDownloads: Int = defaultMaximumConcurrentDownloads,
+        maximumConcurrentReadRequests: Int = defaultMaximumConcurrentReadRequests,
         readBatchDelayNanoseconds: UInt64 = ProductImageService.readBatchDelayNanoseconds,
         signedURLSafetyWindow: TimeInterval = defaultSignedURLSafetyWindow,
+        signedURLTTLSeconds: TimeInterval = defaultSignedURLTTLSeconds,
+        signedURLClockSkewAllowance: TimeInterval = defaultSignedURLClockSkewAllowance,
         now: @escaping @Sendable () -> Date = Date.init,
+        scopeAuthorizationProvider: @escaping ProductImageScopeAuthorizationProvider = { _ in true },
         sessionProvider: @escaping SessionProvider
     ) {
         self.api = api
         self.cache = cache
-        self.downloadGate = ProductImageDownloadGate(limit: maximumConcurrentDownloads)
+        self.downloadGate = ProductImageConcurrencyGate(limit: maximumConcurrentDownloads)
         self.readBatchDelayNanoseconds = readBatchDelayNanoseconds
+        self.readRequestGate = ProductImageConcurrencyGate(limit: maximumConcurrentReadRequests)
         self.signedURLSafetyWindow = max(0, signedURLSafetyWindow)
+        self.signedURLTTLSeconds = max(1, signedURLTTLSeconds)
+        self.signedURLClockSkewAllowance = max(0, signedURLClockSkewAllowance)
         self.now = now
+        self.scopeAuthorizationProvider = scopeAuthorizationProvider
         self.sessionProvider = sessionProvider
     }
 
     func load(_ reference: ProductImageReference) async throws -> ProductImageLoadResult {
         try Task.checkCancellation()
+        try authorize(reference.scope)
+        let expectedProductEpoch = productLoadEpoch(
+            scope: reference.scope,
+            productID: reference.productID
+        )
+        try ensureLoadAllowed(
+            expectedProductEpoch,
+            scope: reference.scope,
+            productID: reference.productID
+        )
         let expectedScope = Self.expectedCacheScope(accountID: reference.scope.accountID)
         let key = ProductImageCacheKey(
             cacheScope: expectedScope,
@@ -161,19 +211,35 @@ actor ProductImageService {
             variant: reference.variant
         )
         if let cached = try? await cache.read(key) {
+            let cachedIsValid: Bool
             do {
                 try await ProductImageProcessor.validateDownloadedJPEG(cached, variant: reference.variant)
-                try Task.checkCancellation()
-                return ProductImageLoadResult(cacheKey: key, data: cached, source: "cache")
+                cachedIsValid = true
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
                 try? await cache.remove(key)
+                cachedIsValid = false
+            }
+            if cachedIsValid {
+                try Task.checkCancellation()
+                try authorize(reference.scope)
+                try ensureLoadAllowed(
+                    expectedProductEpoch,
+                    scope: reference.scope,
+                    productID: reference.productID
+                )
+                return ProductImageLoadResult(cacheKey: key, data: cached, source: "cache")
             }
         }
 
         let waiterID = UUID()
         let task: Task<ProductImageLoadResult, Error>
+        try ensureLoadAllowed(
+            expectedProductEpoch,
+            scope: reference.scope,
+            productID: reference.productID
+        )
         if var existing = inFlightLoads[reference] {
             existing.waiterIDs.insert(waiterID)
             task = existing.task
@@ -183,7 +249,8 @@ actor ProductImageService {
                 try await self.performNetworkLoad(
                     reference,
                     key: key,
-                    expectedScope: expectedScope
+                    expectedScope: expectedScope,
+                    expectedProductEpoch: expectedProductEpoch
                 )
             }
             inFlightLoads[reference] = InFlightLoad(task: task, waiterIDs: [waiterID])
@@ -196,6 +263,12 @@ actor ProductImageService {
                 Task { await self.cancelLoadWaiter(reference: reference, waiterID: waiterID) }
             }
             try Task.checkCancellation()
+            try authorize(reference.scope)
+            try ensureLoadAllowed(
+                expectedProductEpoch,
+                scope: reference.scope,
+                productID: reference.productID
+            )
             releaseLoadWaiter(reference: reference, waiterID: waiterID, cancelTaskWhenEmpty: false)
             return result
         } catch {
@@ -205,11 +278,56 @@ actor ProductImageService {
     }
 
     func cancel(_ reference: ProductImageReference) {
-        guard let load = inFlightLoads.removeValue(forKey: reference) else { return }
-        load.task.cancel()
+        if let load = inFlightLoads.removeValue(forKey: reference) {
+            load.task.cancel()
+        }
+        cancelReadWaiters(matching: { $0 == reference })
     }
 
-    func deactivate(scope: ProductImageScope, purgeAccountScope: Bool) async {
+    func setActiveScope(_ scope: ProductImageScope?, generation: Int) async {
+        guard generation > lifecycleGeneration else { return }
+        let previousScope = activeScope
+        lifecycleGeneration = generation
+        activeScope = scope
+
+        // A published SwiftData generation is an image/cache boundary even
+        // when account and shop are unchanged. Cancel every pre-bound request,
+        // invalidate its epoch and lease, and remove bytes that may have been
+        // written by a non-cooperative transport before the new generation
+        // can serve an image.
+        for load in inFlightLoads.values {
+            load.task.cancel()
+        }
+        inFlightLoads.removeAll(keepingCapacity: true)
+        for key in Array(productLoadEpochs.keys) {
+            productLoadEpochs[key, default: 0] &+= 1
+        }
+        cancelAllReadBatches()
+        signedURLLeases.removeAll(keepingCapacity: true)
+        signedURLLeaseOrder.removeAll(keepingCapacity: true)
+        activeProductMutations.removeAll(keepingCapacity: true)
+
+        if let previousScope {
+            let cacheScope = Self.expectedCacheScope(accountID: previousScope.accountID)
+            try? await cache.purgeShop(
+                cacheScope: cacheScope,
+                shopID: previousScope.shopID
+            )
+        }
+    }
+
+    func deactivate(
+        scope: ProductImageScope,
+        purgeAccountScope: Bool,
+        lifecycleGeneration expectedLifecycleGeneration: Int? = nil
+    ) async {
+        if let expectedLifecycleGeneration {
+            guard expectedLifecycleGeneration == lifecycleGeneration,
+                  activeScope != scope,
+                  !Task.isCancelled else {
+                return
+            }
+        }
         let references = inFlightLoads.keys.filter { $0.scope == scope }
         for reference in references {
             cancel(reference)
@@ -217,6 +335,12 @@ actor ProductImageService {
         cancelPendingReadBatches(scope: scope)
         invalidateLeases(scope: scope, purgeAccountScope: purgeAccountScope)
 
+        guard expectedLifecycleGeneration == nil
+                || (expectedLifecycleGeneration == lifecycleGeneration
+                    && activeScope != scope
+                    && !Task.isCancelled) else {
+            return
+        }
         let cacheScope = Self.expectedCacheScope(accountID: scope.accountID)
         if purgeAccountScope {
             try? await cache.purgeScope(cacheScope: cacheScope)
@@ -232,13 +356,28 @@ actor ProductImageService {
         progress: ProgressHandler? = nil
     ) async throws -> ProductImageUploadResult {
         try Task.checkCancellation()
-        let session = try await validSession(for: scope)
+        try authorize(scope)
+        let expectedLifecycleGeneration = lifecycleGeneration
+        let mutationID = try beginProductMutation(scope: scope, productID: productID)
+        defer { finishProductMutation(scope: scope, productID: productID, mutationID: mutationID) }
+        let session = try await validMutationSession(
+            for: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
         let expectedScope = Self.expectedCacheScope(accountID: scope.accountID)
         let intent = try await api.createIntent(
             scope: scope,
             productID: productID,
             prepared: prepared,
             accessToken: session.accessToken
+        )
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
         )
         guard intent.ok == true,
               let versionID = intent.versionId,
@@ -248,14 +387,23 @@ actor ProductImageService {
 
         if intent.status == "noop" {
             try Task.checkCancellation()
-            await seedCache(
+            _ = try await validMutationSession(
+                for: scope,
+                productID: productID,
+                mutationID: mutationID,
+                expectedLifecycleGeneration: expectedLifecycleGeneration
+            )
+            invalidateProductLoads(scope: scope, productID: productID)
+            try await reconcileCommittedUploadCache(
                 prepared: prepared,
                 cacheScope: expectedScope,
                 scope: scope,
                 productID: productID,
-                versionID: versionID
+                versionID: versionID,
+                mutationID: mutationID,
+                expectedLifecycleGeneration: expectedLifecycleGeneration
             )
-            try Task.checkCancellation()
+            invalidateProductLoads(scope: scope, productID: productID)
             return ProductImageUploadResult(
                 imageUpdatedAt: nil,
                 metrics: prepared.metrics,
@@ -272,39 +420,87 @@ actor ProductImageService {
 
         try Task.checkCancellation()
         if let progress { await progress(.uploadingMain) }
-        _ = try await validSession(for: scope)
-        try await api.uploadJPEG(prepared.main.data, signedURL: mainUploadURL)
+        _ = try await validMutationSession(
+            for: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        try await api.uploadJPEG(
+            prepared.main.data,
+            signedURL: mainUploadURL,
+            expectedReference: ProductImageReference(
+                scope: scope,
+                productID: productID,
+                versionID: versionID,
+                variant: .main
+            )
+        )
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
         try Task.checkCancellation()
         if let progress { await progress(.uploadingThumb) }
-        _ = try await validSession(for: scope)
-        try await api.uploadJPEG(prepared.thumb.data, signedURL: thumbUploadURL)
+        _ = try await validMutationSession(
+            for: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        try await api.uploadJPEG(
+            prepared.thumb.data,
+            signedURL: thumbUploadURL,
+            expectedReference: ProductImageReference(
+                scope: scope,
+                productID: productID,
+                versionID: versionID,
+                variant: .thumb
+            )
+        )
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        try Task.checkCancellation()
+        let finalizeSession = try await validSession(for: scope)
         try Task.checkCancellation()
         if let progress { await progress(.finalizing) }
 
-        let finalizeSession = try await validSession(for: scope)
-        let finalized = try await api.finalize(
-            scope: scope,
-            productID: productID,
-            versionID: versionID,
-            accessToken: finalizeSession.accessToken
-        )
+        let api = self.api
+        let accessToken = finalizeSession.accessToken
+        let finalized = try await Task.detached(priority: .userInitiated) {
+            try await api.finalize(
+                scope: scope,
+                productID: productID,
+                versionID: versionID,
+                accessToken: accessToken
+            )
+        }.value
         guard finalized.ok == true,
               finalized.versionId == versionID,
               finalized.status == "finalized" || finalized.status == "already_finalized" else {
             throw ProductImageError.invalidResponse
         }
-        try Task.checkCancellation()
-        _ = try await validSession(for: scope)
-        try Task.checkCancellation()
-        invalidateLeases(scope: scope, productID: productID)
-        await seedCache(
+        _ = try await validCommittedSession(
+            for: scope,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        invalidateProductLoads(scope: scope, productID: productID)
+        try await reconcileCommittedUploadCache(
             prepared: prepared,
             cacheScope: expectedScope,
             scope: scope,
             productID: productID,
-            versionID: versionID
+            versionID: versionID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
         )
-        try Task.checkCancellation()
+        invalidateProductLoads(scope: scope, productID: productID)
         return ProductImageUploadResult(
             imageUpdatedAt: SupabaseRemoteDateParser.parse(finalized.imageUpdatedAt),
             metrics: prepared.metrics,
@@ -319,13 +515,21 @@ actor ProductImageService {
         versionID: UUID
     ) async throws -> ProductImageRemoveResult {
         try Task.checkCancellation()
+        try authorize(scope)
+        let expectedLifecycleGeneration = lifecycleGeneration
+        let mutationID = try beginProductMutation(scope: scope, productID: productID)
+        defer { finishProductMutation(scope: scope, productID: productID, mutationID: mutationID) }
         let session = try await validSession(for: scope)
-        let response = try await api.remove(
-            scope: scope,
-            productID: productID,
-            versionID: versionID,
-            accessToken: session.accessToken
-        )
+        let api = self.api
+        let accessToken = session.accessToken
+        let response = try await Task.detached(priority: .userInitiated) {
+            try await api.remove(
+                scope: scope,
+                productID: productID,
+                versionID: versionID,
+                accessToken: accessToken
+            )
+        }.value
         guard response.ok == true,
               let status = response.status,
               status == "removed" || status == "already_removed",
@@ -337,17 +541,22 @@ actor ProductImageService {
               response.currentImageVersionId == nil else {
             throw ProductImageError.invalidResponse
         }
-        try Task.checkCancellation()
-        let expectedScope = Self.expectedCacheScope(accountID: scope.accountID)
-        _ = try await validSession(for: scope)
-        try Task.checkCancellation()
-        invalidateLeases(scope: scope, productID: productID)
-        try? await cache.purgeProduct(
-            cacheScope: expectedScope,
-            shopID: scope.shopID,
-            productID: productID,
-            keeping: nil
+        _ = try await validCommittedSession(
+            for: scope,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
         )
+        let expectedScope = Self.expectedCacheScope(accountID: scope.accountID)
+        invalidateProductLoads(scope: scope, productID: productID)
+        let cache = self.cache
+        await Task.detached(priority: .utility) {
+            try? await cache.purgeProduct(
+                cacheScope: expectedScope,
+                shopID: scope.shopID,
+                productID: productID,
+                keeping: nil
+            )
+        }.value
+        invalidateProductLoads(scope: scope, productID: productID)
         return ProductImageRemoveResult(
             imageUpdatedAt: SupabaseRemoteDateParser.parse(response.imageUpdatedAt),
             status: status
@@ -362,50 +571,100 @@ actor ProductImageService {
     private func performNetworkLoad(
         _ reference: ProductImageReference,
         key: ProductImageCacheKey,
-        expectedScope: String
+        expectedScope: String,
+        expectedProductEpoch: UInt64
     ) async throws -> ProductImageLoadResult {
         try Task.checkCancellation()
+        try authorize(reference.scope)
+        try ensureLoadAllowed(
+            expectedProductEpoch,
+            scope: reference.scope,
+            productID: reference.productID
+        )
         let session = try await validSession(for: reference.scope)
-        let signedURL = try await resolveSignedReadURL(
+        let lease = try await resolveRuntimeSignedReadURL(
             reference: reference,
             accessToken: session.accessToken,
             expectedScope: expectedScope
-        ).signedURL
+        )
         try Task.checkCancellation()
+        try authorize(reference.scope)
+        try ensureLoadAllowed(
+            expectedProductEpoch,
+            scope: reference.scope,
+            productID: reference.productID
+        )
         let data: Data
+        let expectedMetadata: ProductImageMetadata
         do {
             data = try await downloadReadData(
-                signedURL: signedURL,
-                maximumBytes: reference.variant.maxBytes
+                signedURL: lease.signedURL,
+                reference: reference
             )
+            expectedMetadata = lease.metadata
         } catch ProductImageError.downloadFailed(let status) where status == 401 || status == 403 {
             try Task.checkCancellation()
             invalidateLease(reference)
             let refreshSession = try await validSession(for: reference.scope)
-            let refreshedURL = try await resolveSignedReadURL(
+            let refreshedLease = try await resolveSignedReadURL(
                 reference: reference,
                 accessToken: refreshSession.accessToken,
                 expectedScope: expectedScope,
                 forceRefresh: true
-            ).signedURL
-            try Task.checkCancellation()
-            data = try await downloadReadData(
-                signedURL: refreshedURL,
-                maximumBytes: reference.variant.maxBytes
             )
+            try Task.checkCancellation()
+            try authorize(reference.scope)
+            try ensureLoadAllowed(
+                expectedProductEpoch,
+                scope: reference.scope,
+                productID: reference.productID
+            )
+            data = try await downloadReadData(
+                signedURL: refreshedLease.signedURL,
+                reference: reference
+            )
+            expectedMetadata = refreshedLease.metadata
         }
-        try Task.checkCancellation()
-        try await ProductImageProcessor.validateDownloadedJPEG(data, variant: reference.variant)
+        try await ProductImageProcessor.validateDownloadedJPEG(
+            data,
+            variant: reference.variant,
+            expectedMetadata: expectedMetadata
+        )
         try Task.checkCancellation()
         _ = try await validSession(for: reference.scope)
         try Task.checkCancellation()
+        try ensureLoadAllowed(
+            expectedProductEpoch,
+            scope: reference.scope,
+            productID: reference.productID
+        )
         try await cache.write(data, for: key)
+        do {
+            try ensureLoadAllowed(
+                expectedProductEpoch,
+                scope: reference.scope,
+                productID: reference.productID
+            )
+        } catch {
+            try? await cache.remove(key)
+            throw error
+        }
         try await cache.purgeProduct(
             cacheScope: expectedScope,
             shopID: reference.scope.shopID,
             productID: reference.productID,
             keeping: reference.versionID
         )
+        do {
+            try ensureLoadAllowed(
+                expectedProductEpoch,
+                scope: reference.scope,
+                productID: reference.productID
+            )
+        } catch {
+            try? await cache.remove(key)
+            throw error
+        }
         return ProductImageLoadResult(cacheKey: key, data: data, source: "network")
     }
 
@@ -438,7 +697,7 @@ actor ProductImageService {
     ) async throws -> SignedReadLease {
         try Task.checkCancellation()
         if !forceRefresh, let lease = signedURLLeases[reference] {
-            if lease.expiresAt.timeIntervalSince(now()) > signedURLSafetyWindow {
+            if isRuntimeLeaseValid(lease, at: now()) {
                 touchLease(reference)
                 return lease
             }
@@ -469,6 +728,29 @@ actor ProductImageService {
                     waiterID: waiterID
                 )
             }
+        }
+    }
+
+    private func resolveRuntimeSignedReadURL(
+        reference: ProductImageReference,
+        accessToken: String,
+        expectedScope: String
+    ) async throws -> SignedReadLease {
+        do {
+            return try await resolveSignedReadURL(
+                reference: reference,
+                accessToken: accessToken,
+                expectedScope: expectedScope
+            )
+        } catch let error as ProductImageError where error == .signedURLInvalid {
+            try Task.checkCancellation()
+            invalidateLease(reference)
+            return try await resolveSignedReadURL(
+                reference: reference,
+                accessToken: accessToken,
+                expectedScope: expectedScope,
+                forceRefresh: true
+            )
         }
     }
 
@@ -516,24 +798,49 @@ actor ProductImageService {
             let rhsKey = "\(rhs.productID.uuidString)/\(rhs.versionID.uuidString)/\(rhs.variant.rawValue)"
             return lhsKey < rhsKey
         }
-        Task {
+        let batchID = UUID()
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.runReadBatch(id: batchID)
+        }
+        activeReadBatches[batchID] = ActiveReadBatch(
+            batch: batch,
+            references: references,
+            task: task
+        )
+    }
+
+    private func runReadBatch(id: UUID) async {
+        guard let active = activeReadBatches[id] else { return }
+        do {
+            try Task.checkCancellation()
+            try authorize(active.batch.scope)
+            let permit = try await readRequestGate.acquire()
+            let response: ProductImageReadResponse
             do {
-                let response = try await api.resolveReadURLs(
-                    references: references,
-                    accessToken: batch.accessToken
+                try Task.checkCancellation()
+                try authorize(active.batch.scope)
+                response = try await api.resolveReadURLs(
+                    references: active.references,
+                    accessToken: active.batch.accessToken
                 )
-                finishReadBatch(batch, references: references, response: response)
+                await readRequestGate.release(permit)
             } catch {
-                finishReadBatch(batch, error: error)
+                await readRequestGate.release(permit)
+                throw error
             }
+            try Task.checkCancellation()
+            try authorize(active.batch.scope)
+            finishReadBatch(id: id, response: response)
+        } catch {
+            finishReadBatch(id: id, error: error)
         }
     }
 
-    private func finishReadBatch(
-        _ batch: PendingReadBatch,
-        references: [ProductImageReference],
-        response: ProductImageReadResponse
-    ) {
+    private func finishReadBatch(id: UUID, response: ProductImageReadResponse) {
+        guard let active = activeReadBatches.removeValue(forKey: id) else { return }
+        let batch = active.batch
+        let references = active.references
         guard response.ok == true,
               response.cacheScope == batch.expectedCacheScope,
               ProductImageCache.isValidCacheScope(batch.expectedCacheScope),
@@ -543,43 +850,71 @@ actor ProductImageService {
             return
         }
 
-        let expected = Set(references)
         var leases: [ProductImageReference: SignedReadLease] = [:]
-        for item in items {
+        let receivedAt = now()
+        for (index, item) in items.enumerated() {
             let reference = ProductImageReference(
                 scope: batch.scope,
                 productID: item.productId,
                 versionID: item.versionId,
                 variant: item.variant
             )
-            guard expected.contains(reference),
-                  item.status == "ready",
-                  let signedURL = item.signedUrl,
-                  !signedURL.isEmpty,
-                  let expiresAtValue = item.expiresAt,
-                  let expiresAt = SupabaseRemoteDateParser.parse(expiresAtValue),
-                  leases.updateValue(
-                    SignedReadLease(expiresAt: expiresAt, signedURL: signedURL),
-                    forKey: reference
-                  ) == nil else {
+            // The server contract preserves request order.  A set comparison
+            // would permit a valid URL/metadata pair to be reassigned to a
+            // different product/version in the same batch.
+            guard reference == references[index] else {
                 finishReadBatch(batch, error: ProductImageError.invalidResponse)
                 return
             }
-        }
-        guard leases.count == expected.count else {
-            finishReadBatch(batch, error: ProductImageError.invalidResponse)
-            return
-        }
-        for (reference, waiters) in batch.waiters {
-            guard let lease = leases[reference] else {
-                waiters.forEach { $0.continuation.resume(throwing: ProductImageError.invalidResponse) }
+            if item.status == "not_found" {
+                guard item.signedUrl == nil,
+                      item.metadata == nil,
+                      item.expiresAt == nil else {
+                    finishReadBatch(batch, error: ProductImageError.invalidResponse)
+                    return
+                }
                 continue
             }
-            if lease.expiresAt.timeIntervalSince(now()) > signedURLSafetyWindow {
-                storeLease(lease, for: reference)
+            guard item.status == "ready",
+                  let signedURL = item.signedUrl,
+                  !signedURL.isEmpty,
+                  let metadata = item.metadata,
+                  metadata.isValid(for: reference.variant),
+                  let expiresAtValue = item.expiresAt,
+                  let expiresAt = SupabaseRemoteDateParser.parse(expiresAtValue) else {
+                finishReadBatch(batch, error: ProductImageError.invalidResponse)
+                return
             }
-            waiters.forEach { $0.continuation.resume(returning: lease) }
+            let lease = SignedReadLease(
+                        expiresAt: expiresAt,
+                        metadata: metadata,
+                        signedURL: signedURL
+                    )
+            guard isRuntimeLeaseValid(lease, at: receivedAt),
+                  leases.updateValue(lease, forKey: reference) == nil else {
+                finishReadBatch(batch, error: ProductImageError.signedURLInvalid)
+                return
+            }
         }
+        for (reference, waiters) in batch.waiters {
+            if let lease = leases[reference] {
+                storeLease(lease, for: reference)
+                waiters.forEach { $0.continuation.resume(returning: lease) }
+            } else {
+                waiters.forEach { $0.continuation.resume(throwing: ProductImageError.notFound) }
+            }
+        }
+    }
+
+    private func isRuntimeLeaseValid(_ lease: SignedReadLease, at referenceDate: Date) -> Bool {
+        let remainingLifetime = lease.expiresAt.timeIntervalSince(referenceDate)
+        return remainingLifetime > signedURLSafetyWindow
+            && remainingLifetime <= signedURLTTLSeconds + signedURLClockSkewAllowance
+    }
+
+    private func finishReadBatch(id: UUID, error: Error) {
+        guard let active = activeReadBatches.removeValue(forKey: id) else { return }
+        finishReadBatch(active.batch, error: error)
     }
 
     private func finishReadBatch(_ batch: PendingReadBatch, error: Error) {
@@ -593,23 +928,46 @@ actor ProductImageService {
         reference: ProductImageReference,
         waiterID: UUID
     ) {
-        guard var batch = pendingReadBatches[key],
-              var waiters = batch.waiters[reference],
-              let index = waiters.firstIndex(where: { $0.id == waiterID }) else {
+        if var batch = pendingReadBatches[key],
+           var waiters = batch.waiters[reference],
+           let index = waiters.firstIndex(where: { $0.id == waiterID }) {
+            let waiter = waiters.remove(at: index)
+            waiter.continuation.resume(throwing: CancellationError())
+            if waiters.isEmpty {
+                batch.waiters.removeValue(forKey: reference)
+            } else {
+                batch.waiters[reference] = waiters
+            }
+            if batch.waiters.isEmpty {
+                batch.scheduledFlush?.cancel()
+                pendingReadBatches.removeValue(forKey: key)
+            } else {
+                pendingReadBatches[key] = batch
+            }
             return
         }
-        let waiter = waiters.remove(at: index)
-        waiter.continuation.resume(throwing: CancellationError())
-        if waiters.isEmpty {
-            batch.waiters.removeValue(forKey: reference)
-        } else {
-            batch.waiters[reference] = waiters
-        }
-        if batch.waiters.isEmpty {
-            batch.scheduledFlush?.cancel()
-            pendingReadBatches.removeValue(forKey: key)
-        } else {
-            pendingReadBatches[key] = batch
+
+        for batchID in Array(activeReadBatches.keys) {
+            guard var active = activeReadBatches[batchID],
+                  active.batch.scope == key.scope,
+                  var waiters = active.batch.waiters[reference],
+                  let index = waiters.firstIndex(where: { $0.id == waiterID }) else {
+                continue
+            }
+            let waiter = waiters.remove(at: index)
+            waiter.continuation.resume(throwing: CancellationError())
+            if waiters.isEmpty {
+                active.batch.waiters.removeValue(forKey: reference)
+            } else {
+                active.batch.waiters[reference] = waiters
+            }
+            if active.batch.waiters.isEmpty {
+                activeReadBatches.removeValue(forKey: batchID)
+                active.task.cancel()
+            } else {
+                activeReadBatches[batchID] = active
+            }
+            return
         }
     }
 
@@ -620,6 +978,134 @@ actor ProductImageService {
             batch.scheduledFlush?.cancel()
             finishReadBatch(batch, error: CancellationError())
         }
+        let activeIDs = activeReadBatches.compactMap { id, active in
+            active.batch.scope == scope ? id : nil
+        }
+        for id in activeIDs {
+            guard let active = activeReadBatches.removeValue(forKey: id) else { continue }
+            active.task.cancel()
+            finishReadBatch(active.batch, error: CancellationError())
+        }
+    }
+
+    private func cancelAllReadBatches() {
+        for key in Array(pendingReadBatches.keys) {
+            guard let batch = pendingReadBatches.removeValue(forKey: key) else { continue }
+            batch.scheduledFlush?.cancel()
+            finishReadBatch(batch, error: CancellationError())
+        }
+        for id in Array(activeReadBatches.keys) {
+            guard let active = activeReadBatches.removeValue(forKey: id) else { continue }
+            active.task.cancel()
+            finishReadBatch(active.batch, error: CancellationError())
+        }
+    }
+
+    private func cancelReadWaiters(
+        matching predicate: (ProductImageReference) -> Bool
+    ) {
+        for key in Array(pendingReadBatches.keys) {
+            guard var batch = pendingReadBatches[key] else { continue }
+            let references = batch.waiters.keys.filter(predicate)
+            for reference in references {
+                guard let waiters = batch.waiters.removeValue(forKey: reference) else { continue }
+                waiters.forEach { $0.continuation.resume(throwing: CancellationError()) }
+            }
+            if batch.waiters.isEmpty {
+                batch.scheduledFlush?.cancel()
+                pendingReadBatches.removeValue(forKey: key)
+            } else {
+                pendingReadBatches[key] = batch
+            }
+        }
+
+        for id in Array(activeReadBatches.keys) {
+            guard var active = activeReadBatches[id] else { continue }
+            let references = active.batch.waiters.keys.filter(predicate)
+            for reference in references {
+                guard let waiters = active.batch.waiters.removeValue(forKey: reference) else { continue }
+                waiters.forEach { $0.continuation.resume(throwing: CancellationError()) }
+            }
+            if active.batch.waiters.isEmpty {
+                activeReadBatches.removeValue(forKey: id)
+                active.task.cancel()
+            } else {
+                activeReadBatches[id] = active
+            }
+        }
+    }
+
+    private func productLoadEpoch(scope: ProductImageScope, productID: UUID) -> UInt64 {
+        productLoadEpochs[ProductKey(scope: scope, productID: productID), default: 0]
+    }
+
+    private func ensureCurrentProductEpoch(
+        _ expectedEpoch: UInt64,
+        scope: ProductImageScope,
+        productID: UUID
+    ) throws {
+        guard productLoadEpoch(scope: scope, productID: productID) == expectedEpoch else {
+            throw CancellationError()
+        }
+    }
+
+    private func ensureLoadAllowed(
+        _ expectedEpoch: UInt64,
+        scope: ProductImageScope,
+        productID: UUID
+    ) throws {
+        try ensureCurrentProductEpoch(
+            expectedEpoch,
+            scope: scope,
+            productID: productID
+        )
+        guard activeProductMutations[ProductKey(scope: scope, productID: productID)] == nil else {
+            throw CancellationError()
+        }
+        guard lifecycleGeneration == 0 || activeScope == scope else {
+            throw ProductImageError.accountChanged
+        }
+    }
+
+    private func beginProductMutation(
+        scope: ProductImageScope,
+        productID: UUID
+    ) throws -> UUID {
+        let key = ProductKey(scope: scope, productID: productID)
+        guard activeProductMutations[key] == nil else {
+            throw ProductImageError.invalidResponse
+        }
+        let mutationID = UUID()
+        activeProductMutations[key] = mutationID
+        invalidateProductLoads(scope: scope, productID: productID)
+        return mutationID
+    }
+
+    private func finishProductMutation(
+        scope: ProductImageScope,
+        productID: UUID,
+        mutationID: UUID
+    ) {
+        let key = ProductKey(scope: scope, productID: productID)
+        guard activeProductMutations[key] == mutationID else { return }
+        activeProductMutations.removeValue(forKey: key)
+    }
+
+    private func invalidateProductLoads(scope: ProductImageScope, productID: UUID) {
+        let key = ProductKey(scope: scope, productID: productID)
+        productLoadEpochs[key, default: 0] &+= 1
+        let references = inFlightLoads.keys.filter {
+            $0.scope == scope && $0.productID == productID
+        }
+        for reference in references {
+            if let load = inFlightLoads.removeValue(forKey: reference) {
+                load.task.cancel()
+            }
+        }
+        cancelReadWaiters(matching: {
+            $0.scope == scope && $0.productID == productID
+        })
+        invalidateLeases(scope: scope, productID: productID)
     }
 
     private func storeLease(_ lease: SignedReadLease, for reference: ProductImageReference) {
@@ -656,13 +1142,15 @@ actor ProductImageService {
 
     private func downloadReadData(
         signedURL: String,
-        maximumBytes: Int
+        reference: ProductImageReference
     ) async throws -> Data {
         let permit = try await downloadGate.acquire()
         do {
+            try Task.checkCancellation()
+            try authorize(reference.scope)
             let data = try await api.downloadJPEG(
                 signedURL: signedURL,
-                maximumBytes: maximumBytes
+                expectedReference: reference
             )
             await downloadGate.release(permit)
             return data
@@ -676,13 +1164,140 @@ actor ProductImageService {
     }
 
     private func validSession(for scope: ProductImageScope) async throws -> ProductImageSessionSnapshot {
+        try authorize(scope)
         guard let session = await sessionProvider() else {
             throw ProductImageError.unauthenticated
         }
+        try Task.checkCancellation()
+        try authorize(scope)
         guard session.accountID == scope.accountID else {
             throw ProductImageError.accountChanged
         }
         return session
+    }
+
+    private func validMutationSession(
+        for scope: ProductImageScope,
+        productID: UUID,
+        mutationID: UUID,
+        expectedLifecycleGeneration: Int
+    ) async throws -> ProductImageSessionSnapshot {
+        try Task.checkCancellation()
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        let session = try await validSession(for: scope)
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        return session
+    }
+
+    private func ensureMutationCurrent(
+        scope: ProductImageScope,
+        productID: UUID,
+        mutationID: UUID,
+        expectedLifecycleGeneration: Int
+    ) throws {
+        guard lifecycleGeneration == expectedLifecycleGeneration,
+              expectedLifecycleGeneration == 0 || activeScope == scope,
+              activeProductMutations[ProductKey(scope: scope, productID: productID)] == mutationID,
+              scopeAuthorizationProvider(scope) else {
+            throw ProductImageError.accountChanged
+        }
+    }
+
+    /// Once finalize/remove has started, cancellation cannot make the remote
+    /// commit disappear. Revalidate owner/shop without inheriting the caller's
+    /// cancellation, while still refusing to publish into a scope that changed.
+    private func validCommittedSession(
+        for scope: ProductImageScope,
+        expectedLifecycleGeneration: Int
+    ) async throws -> ProductImageSessionSnapshot {
+        guard scopeAuthorizationProvider(scope),
+              lifecycleGeneration == expectedLifecycleGeneration,
+              expectedLifecycleGeneration == 0 || activeScope == scope else {
+            throw ProductImageError.accountChanged
+        }
+        guard let session = await sessionProvider() else {
+            throw ProductImageError.unauthenticated
+        }
+        guard scopeAuthorizationProvider(scope),
+              lifecycleGeneration == expectedLifecycleGeneration,
+              expectedLifecycleGeneration == 0 || activeScope == scope,
+              session.accountID == scope.accountID else {
+            throw ProductImageError.accountChanged
+        }
+        return session
+    }
+
+    private func authorize(_ scope: ProductImageScope) throws {
+        guard scopeAuthorizationProvider(scope) else {
+            throw ProductImageError.invalidScope
+        }
+    }
+
+    private func reconcileCommittedUploadCache(
+        prepared: PreparedProductImage,
+        cacheScope: String,
+        scope: ProductImageScope,
+        productID: UUID,
+        versionID: UUID,
+        mutationID: UUID,
+        expectedLifecycleGeneration: Int
+    ) async throws {
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        await seedCache(
+            prepared: prepared,
+            cacheScope: cacheScope,
+            scope: scope,
+            productID: productID,
+            versionID: versionID,
+            honorCancellation: false
+        )
+
+        do {
+            try ensureMutationCurrent(
+                scope: scope,
+                productID: productID,
+                mutationID: mutationID,
+                expectedLifecycleGeneration: expectedLifecycleGeneration
+            )
+        } catch {
+            await purgeProductCache(
+                cacheScope: cacheScope,
+                scope: scope,
+                productID: productID
+            )
+            throw error
+        }
+    }
+
+    private func purgeProductCache(
+        cacheScope: String,
+        scope: ProductImageScope,
+        productID: UUID
+    ) async {
+        let cache = self.cache
+        await Task.detached(priority: .utility) {
+            try? await cache.purgeProduct(
+                cacheScope: cacheScope,
+                shopID: scope.shopID,
+                productID: productID,
+                keeping: nil
+            )
+        }.value
     }
 
     private func seedCache(
@@ -690,9 +1305,9 @@ actor ProductImageService {
         cacheScope: String,
         scope: ProductImageScope,
         productID: UUID,
-        versionID: UUID
+        versionID: UUID,
+        honorCancellation: Bool = true
     ) async {
-        guard !Task.isCancelled else { return }
         let mainKey = ProductImageCacheKey(
             cacheScope: cacheScope,
             shopID: scope.shopID,
@@ -707,15 +1322,31 @@ actor ProductImageService {
             versionID: versionID,
             variant: .thumb
         )
-        try? await cache.write(prepared.main.data, for: mainKey)
-        guard !Task.isCancelled else { return }
-        try? await cache.write(prepared.thumb.data, for: thumbKey)
-        guard !Task.isCancelled else { return }
-        try? await cache.purgeProduct(
-            cacheScope: cacheScope,
-            shopID: scope.shopID,
-            productID: productID,
-            keeping: versionID
-        )
+        if honorCancellation {
+            guard !Task.isCancelled else { return }
+            try? await cache.write(prepared.main.data, for: mainKey)
+            guard !Task.isCancelled else { return }
+            try? await cache.write(prepared.thumb.data, for: thumbKey)
+            guard !Task.isCancelled else { return }
+            try? await cache.purgeProduct(
+                cacheScope: cacheScope,
+                shopID: scope.shopID,
+                productID: productID,
+                keeping: versionID
+            )
+            return
+        }
+
+        let cache = self.cache
+        await Task.detached(priority: .utility) {
+            try? await cache.write(prepared.main.data, for: mainKey)
+            try? await cache.write(prepared.thumb.data, for: thumbKey)
+            try? await cache.purgeProduct(
+                cacheScope: cacheScope,
+                shopID: scope.shopID,
+                productID: productID,
+                keeping: versionID
+            )
+        }.value
     }
 }

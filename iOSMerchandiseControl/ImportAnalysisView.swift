@@ -159,6 +159,8 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
     private let priceHistoryAlreadyPresent: Int
     private let priceHistoryUnresolved: Int
 
+    nonisolated deinit {}
+
     init(
         analysis: ProductImportAnalysisResult,
         nonProductSummary: NonProductDeltaSummary? = nil,

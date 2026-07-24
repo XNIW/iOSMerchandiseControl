@@ -1,6 +1,8 @@
 import Foundation
 
 actor AutomaticSyncCancellationPolicy {
+    static let processShared = AutomaticSyncCancellationPolicy()
+
     private var generation = 0
 
     func makeToken() -> Int {

@@ -20,6 +20,7 @@ nonisolated private struct ImportApplyPayload: Sendable {
     let pendingCategoryNames: [String]
     let recordPriceHistory: Bool
     let ownerUserID: UUID?
+    let verifiedScope: Task126VerifiedOwnerStoreScope?
 
     var productsTotalCount: Int {
         newProducts.count + updatedProducts.count
@@ -573,6 +574,7 @@ nonisolated private enum DatabaseImportPipeline {
     ) async throws -> ImportApplyResult {
         try await Task.detached(priority: .userInitiated) {
             let context = ModelContext(modelContainer)
+            context.autosaveEnabled = false
             let productsStartedAt = Date()
             let productsResult = try await applyImportAnalysis(
                 payload,
@@ -606,6 +608,7 @@ nonisolated private enum DatabaseImportPipeline {
                     alreadyPresentCount: payload.alreadyPresentPriceHistoryCount,
                     unresolvedCount: payload.unresolvedPriceHistoryCount,
                     ownerUserID: payload.ownerUserID,
+                    verifiedScope: payload.verifiedScope,
                     in: context,
                     onProgress: onProgress
                 )
@@ -903,26 +906,6 @@ nonisolated private enum DatabaseImportPipeline {
         in context: ModelContext,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> ImportApplyProductsResult {
-        let existingProducts = try context.fetch(FetchDescriptor<Product>())
-        var productsByBarcode = Dictionary(
-            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
-        )
-
-        let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
-        let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
-        let resolver = try ProductImportNamedEntityResolver(
-            context: context,
-            existingSuppliers: existingSuppliers,
-            existingCategories: existingCategories
-        )
-        let accumulator = LocalPendingChangeAccumulator(
-            context: context,
-            ownerUserID: payload.ownerUserID
-        )
-
-        var processedCount = 0
-        var insertedCount = 0
-        var updatedCount = 0
         let totalCount = payload.productsTotalCount
         await reportImportProgress(
             stage: .applyingProducts,
@@ -931,111 +914,301 @@ nonisolated private enum DatabaseImportPipeline {
             onProgress: onProgress,
             force: true
         )
+        try Task.checkCancellation()
+        let modelContainer = context.container
+        var insertedCount = 0
+        var updatedCount = 0
+        var createdSupplierKeys = Set<String>()
+        var createdCategoryKeys = Set<String>()
+        var processedCount = 0
 
-        resolver.preloadSuppliers(named: payload.pendingSupplierNames)
-        resolver.preloadCategories(named: payload.pendingCategoryNames)
-
-        for draft in payload.newProducts {
-            let result = autoreleasepool { () -> (Product, [ProductPrice]) in
-                var priceChanges: [ProductPrice] = []
-                let product = ProductImportCore.insertProduct(
-                    from: draft,
-                    in: context,
-                    resolver: resolver,
-                    recordPriceHistory: payload.recordPriceHistory,
-                    onPriceHistoryCreated: { priceChanges.append($0) }
-                )
-                productsByBarcode[draft.barcode] = product
-                return (product, priceChanges)
+        if !payload.pendingSupplierNames.isEmpty || !payload.pendingCategoryNames.isEmpty {
+            let createdNames = try withImportMutationFence(
+                verifiedScope: payload.verifiedScope,
+                modelContainer: modelContainer,
+                ownerUserID: payload.ownerUserID
+            ) { batchContext in
+                do {
+                    let resolver = try ProductImportNamedEntityResolver(
+                        context: batchContext,
+                        existingSuppliers: try batchContext.fetch(FetchDescriptor<Supplier>()),
+                        existingCategories: try batchContext.fetch(FetchDescriptor<ProductCategory>())
+                    )
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: batchContext,
+                        ownerUserID: payload.ownerUserID
+                    )
+                    try resolver.preloadSuppliers(named: payload.pendingSupplierNames)
+                    try resolver.preloadCategories(named: payload.pendingCategoryNames)
+                    try resolver.createdSuppliers.forEach {
+                        try accumulator.recordSupplierChange(
+                            supplier: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try resolver.createdCategories.forEach {
+                        try accumulator.recordCategoryChange(
+                            category: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try batchContext.save()
+                    return (
+                        resolver.createdSuppliers.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        },
+                        resolver.createdCategories.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        }
+                    )
+                } catch {
+                    batchContext.rollback()
+                    throw error
+                }
             }
-            try accumulator.recordProductChange(
-                product: result.0,
-                operation: .create,
-                origin: .confirmedImport,
-                changedFields: DatabaseView.createChangedFields
-            )
-            try result.1.forEach {
-                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
-            }
+            createdSupplierKeys.formUnion(createdNames.0)
+            createdCategoryKeys.formUnion(createdNames.1)
+        }
 
-            processedCount += 1
-            insertedCount += 1
+        for start in stride(from: 0, to: payload.newProducts.count, by: importSaveBatchSize) {
+            try Task.checkCancellation()
+            let end = min(start + importSaveBatchSize, payload.newProducts.count)
+            let batch = Array(payload.newProducts[start..<end])
+            let barcodes = batch.map(\.barcode)
+            let batchResult = try withImportMutationFence(
+                verifiedScope: payload.verifiedScope,
+                modelContainer: modelContainer,
+                ownerUserID: payload.ownerUserID
+            ) { batchContext in
+                do {
+                    let existingProducts = try batchContext.fetch(FetchDescriptor<Product>(
+                        predicate: #Predicate<Product> { barcodes.contains($0.barcode) }
+                    ))
+                    var productsByBarcode = Dictionary(
+                        existingProducts.map { ($0.barcode, $0) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                    let resolver = try ProductImportNamedEntityResolver(
+                        context: batchContext,
+                        existingSuppliers: try batchContext.fetch(FetchDescriptor<Supplier>()),
+                        existingCategories: try batchContext.fetch(FetchDescriptor<ProductCategory>())
+                    )
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: batchContext,
+                        ownerUserID: payload.ownerUserID
+                    )
+                    for draft in batch {
+                        guard productsByBarcode[draft.barcode] == nil else {
+                            throw NSError(
+                                domain: "ImportExcelApply",
+                                code: 7,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: "The local catalog changed after import analysis."
+                                ]
+                            )
+                        }
+                        let inserted = try autoreleasepool { () -> (Product, [ProductPrice]) in
+                            var priceChanges: [ProductPrice] = []
+                            let product = try ProductImportCore.insertProduct(
+                                from: draft,
+                                in: batchContext,
+                                resolver: resolver,
+                                recordPriceHistory: payload.recordPriceHistory,
+                                onPriceHistoryCreated: { priceChanges.append($0) }
+                            )
+                            productsByBarcode[draft.barcode] = product
+                            return (product, priceChanges)
+                        }
+                        try accumulator.recordProductChange(
+                            product: inserted.0,
+                            operation: .create,
+                            origin: .confirmedImport,
+                            changedFields: DatabaseView.createChangedFields
+                        )
+                        try inserted.1.forEach {
+                            try accumulator.recordProductPriceChange(
+                                price: $0,
+                                origin: .confirmedImport
+                            )
+                        }
+                    }
+                    try resolver.createdSuppliers.forEach {
+                        try accumulator.recordSupplierChange(
+                            supplier: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try resolver.createdCategories.forEach {
+                        try accumulator.recordCategoryChange(
+                            category: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try batchContext.save()
+                    return (
+                        batch.count,
+                        resolver.createdSuppliers.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        },
+                        resolver.createdCategories.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        }
+                    )
+                } catch {
+                    batchContext.rollback()
+                    throw error
+                }
+            }
+            insertedCount += batchResult.0
+            processedCount += batchResult.0
+            createdSupplierKeys.formUnion(batchResult.1)
+            createdCategoryKeys.formUnion(batchResult.2)
             await reportImportProgress(
                 stage: .applyingProducts,
                 processedCount: processedCount,
                 totalCount: totalCount,
                 onProgress: onProgress
             )
-            _ = try await saveImportProgressIfNeeded(after: processedCount, in: context)
         }
 
-        for update in payload.updatedProducts {
-            guard let product = productsByBarcode[update.barcode] else {
-                continue
+        for start in stride(from: 0, to: payload.updatedProducts.count, by: importSaveBatchSize) {
+            try Task.checkCancellation()
+            let end = min(start + importSaveBatchSize, payload.updatedProducts.count)
+            let batch = Array(payload.updatedProducts[start..<end])
+            let barcodes = batch.map(\.barcode)
+            let batchResult = try withImportMutationFence(
+                verifiedScope: payload.verifiedScope,
+                modelContainer: modelContainer,
+                ownerUserID: payload.ownerUserID
+            ) { batchContext in
+                do {
+                    let existingProducts = try batchContext.fetch(FetchDescriptor<Product>(
+                        predicate: #Predicate<Product> { barcodes.contains($0.barcode) }
+                    ))
+                    let productsByBarcode = Dictionary(
+                        existingProducts.map { ($0.barcode, $0) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                    let resolver = try ProductImportNamedEntityResolver(
+                        context: batchContext,
+                        existingSuppliers: try batchContext.fetch(FetchDescriptor<Supplier>()),
+                        existingCategories: try batchContext.fetch(FetchDescriptor<ProductCategory>())
+                    )
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: batchContext,
+                        ownerUserID: payload.ownerUserID
+                    )
+                    for update in batch {
+                        guard let product = productsByBarcode[update.barcode] else {
+                            throw NSError(
+                                domain: "ImportExcelApply",
+                                code: 8,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: "The product changed after import analysis."
+                                ]
+                            )
+                        }
+                        let currentDraft = ImportExistingProductSnapshot(product).draft
+                        guard product.remoteDeletedAt == nil,
+                              update.old.barcode == currentDraft.barcode,
+                              ProductUpdateDraft.computeChangedFields(
+                                old: update.old,
+                                new: currentDraft
+                              ).isEmpty else {
+                            throw NSError(
+                                domain: "ImportExcelApply",
+                                code: 9,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: "The product changed after import analysis."
+                                ]
+                            )
+                        }
+                        let baselineHash = LocalPendingChangeLogicalKey
+                            .productFingerprintHash(product)
+                        let priceChanges = try autoreleasepool {
+                            try ProductImportCore.applyUpdate(
+                                update,
+                                to: product,
+                                in: batchContext,
+                                resolver: resolver,
+                                recordPriceHistory: payload.recordPriceHistory
+                            )
+                        }
+                        try accumulator.recordProductChange(
+                            product: product,
+                            operation: .update,
+                            origin: .confirmedImport,
+                            changedFields: update.changedFields.map(\.rawValue),
+                            baselineFingerprintHash: baselineHash
+                        )
+                        try priceChanges.forEach {
+                            try accumulator.recordProductPriceChange(
+                                price: $0,
+                                origin: .confirmedImport
+                            )
+                        }
+                    }
+                    try resolver.createdSuppliers.forEach {
+                        try accumulator.recordSupplierChange(
+                            supplier: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try resolver.createdCategories.forEach {
+                        try accumulator.recordCategoryChange(
+                            category: $0,
+                            operation: .create,
+                            origin: .confirmedImport
+                        )
+                    }
+                    try batchContext.save()
+                    return (
+                        batch.count,
+                        resolver.createdSuppliers.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        },
+                        resolver.createdCategories.compactMap {
+                            ProductImportCore.normalizedRelationKey($0.name)
+                        }
+                    )
+                } catch {
+                    batchContext.rollback()
+                    throw error
+                }
             }
-
-            let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(update.old)
-            let priceChanges = autoreleasepool { () -> [ProductPrice] in
-                ProductImportCore.applyUpdate(
-                    update,
-                    to: product,
-                    in: context,
-                    resolver: resolver,
-                    recordPriceHistory: payload.recordPriceHistory
-                )
-            }
-            try accumulator.recordProductChange(
-                product: product,
-                operation: .update,
-                origin: .confirmedImport,
-                changedFields: update.changedFields.map(\.rawValue),
-                baselineFingerprintHash: baselineHash
-            )
-            try priceChanges.forEach {
-                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
-            }
-
-            processedCount += 1
-            updatedCount += 1
+            updatedCount += batchResult.0
+            processedCount += batchResult.0
+            createdSupplierKeys.formUnion(batchResult.1)
+            createdCategoryKeys.formUnion(batchResult.2)
             await reportImportProgress(
                 stage: .applyingProducts,
                 processedCount: processedCount,
                 totalCount: totalCount,
                 onProgress: onProgress
             )
-            _ = try await saveImportProgressIfNeeded(after: processedCount, in: context)
         }
 
-        try resolver.createdSuppliers.forEach {
-            try accumulator.recordSupplierChange(
-                supplier: $0,
-                operation: .create,
-                origin: .confirmedImport
-            )
-        }
-        try resolver.createdCategories.forEach {
-            try accumulator.recordCategoryChange(
-                category: $0,
-                operation: .create,
-                origin: .confirmedImport
-            )
-        }
+        let result = ImportApplyProductsResult(
+            productsInserted: insertedCount,
+            productsUpdated: updatedCount,
+            suppliersCreated: createdSupplierKeys.count,
+            categoriesCreated: createdCategoryKeys.count
+        )
 
-        try context.save()
         await reportImportProgress(
             stage: .applyingProducts,
-            processedCount: processedCount,
+            processedCount: result.productsInserted + result.productsUpdated,
             totalCount: totalCount,
             onProgress: onProgress,
             force: true
         )
         await Task.yield()
-        return ImportApplyProductsResult(
-            productsInserted: insertedCount,
-            productsUpdated: updatedCount,
-            suppliersCreated: resolver.suppliersCreatedCount,
-            categoriesCreated: resolver.categoriesCreatedCount
-        )
+        return result
     }
 
     private static func parsePendingPriceHistoryEntries(
@@ -1183,6 +1356,7 @@ nonisolated private enum DatabaseImportPipeline {
         alreadyPresentCount: Int,
         unresolvedCount: Int,
         ownerUserID: UUID?,
+        verifiedScope: Task126VerifiedOwnerStoreScope?,
         in context: ModelContext,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> ImportApplyPriceHistoryResult {
@@ -1195,79 +1369,121 @@ nonisolated private enum DatabaseImportPipeline {
         }
 
         var persistedCount = 0
+        var finalAlreadyPresentCount = alreadyPresentCount
         var finalUnresolvedCount = unresolvedCount
 
         do {
-            let existingProducts = try context.fetch(FetchDescriptor<Product>())
-            let productsByBarcode = Dictionary(
-                uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
-            )
-
-            let now = Date()
-            let accumulator = LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: ownerUserID
-            )
-            var processedCount = 0
-            var insertedCount = 0
             let totalCount = entries.count
             await reportImportProgress(
                 stage: .applyingPriceHistory,
-                processedCount: 0,
+                processedCount: persistedCount,
                 totalCount: totalCount,
                 onProgress: onProgress,
                 force: true
             )
+            let modelContainer = context.container
+            var processedCount = 0
+            for start in stride(from: 0, to: entries.count, by: importSaveBatchSize) {
+                try Task.checkCancellation()
+                let end = min(start + importSaveBatchSize, entries.count)
+                let batch = Array(entries[start..<end])
+                let barcodes = Array(Set(batch.map(\.barcode)))
+                let transactionResult = try withImportMutationFence(
+                    verifiedScope: verifiedScope,
+                    modelContainer: modelContainer,
+                    ownerUserID: ownerUserID
+                ) { batchContext in
+                    do {
+                        let existingProducts = try batchContext.fetch(FetchDescriptor<Product>(
+                            predicate: #Predicate<Product> { barcodes.contains($0.barcode) }
+                        ))
+                        let productsByBarcode = Dictionary(
+                            existingProducts.map { ($0.barcode, $0) },
+                            uniquingKeysWith: { first, _ in first }
+                        )
+                        var knownFingerprints = Set(
+                            existingProducts.flatMap(\.priceHistory).compactMap {
+                                history -> PriceHistoryFingerprint? in
+                                guard let barcode = history.product?.barcode
+                                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                                      !barcode.isEmpty else {
+                                    return nil
+                                }
+                                return makePriceHistoryFingerprint(
+                                    barcode: barcode,
+                                    type: history.type,
+                                    effectiveAt: history.effectiveAt,
+                                    price: history.price,
+                                    source: history.source
+                                )
+                            }
+                        )
+                        let now = Date()
+                        let accumulator = LocalPendingChangeAccumulator(
+                            context: batchContext,
+                            ownerUserID: ownerUserID
+                        )
+                        var insertedInBatch = 0
+                        var duplicatesInBatch = 0
+                        var unresolvedInBatch = 0
 
-            for entry in entries {
-                processedCount += 1
-
-                guard let product = productsByBarcode[entry.barcode] else {
-                    finalUnresolvedCount += 1
-                    await reportImportProgress(
-                        stage: .applyingPriceHistory,
-                        processedCount: processedCount,
-                        totalCount: totalCount,
-                        onProgress: onProgress
-                    )
-                    continue
+                        for entry in batch {
+                            guard let product = productsByBarcode[entry.barcode],
+                                  product.remoteDeletedAt == nil else {
+                                unresolvedInBatch += 1
+                                continue
+                            }
+                            let fingerprint = makePriceHistoryFingerprint(
+                                barcode: entry.barcode,
+                                type: entry.type,
+                                effectiveAt: entry.effectiveAt,
+                                price: entry.price,
+                                source: entry.source
+                            )
+                            guard knownFingerprints.insert(fingerprint).inserted else {
+                                duplicatesInBatch += 1
+                                continue
+                            }
+                            let history = autoreleasepool { () -> ProductPrice in
+                                let history = ProductPrice(
+                                    type: entry.type,
+                                    price: entry.price,
+                                    effectiveAt: entry.effectiveAt,
+                                    source: normalizedFullDatabasePriceHistorySource(entry.source),
+                                    note: nil,
+                                    createdAt: now,
+                                    product: product
+                                )
+                                batchContext.insert(history)
+                                return history
+                            }
+                            try accumulator.recordProductPriceChange(
+                                price: history,
+                                origin: .confirmedImport
+                            )
+                            insertedInBatch += 1
+                        }
+                        try batchContext.save()
+                        return (insertedInBatch, duplicatesInBatch, unresolvedInBatch)
+                    } catch {
+                        batchContext.rollback()
+                        throw error
+                    }
                 }
-
-                let history = autoreleasepool { () -> ProductPrice in
-                    let history = ProductPrice(
-                        type: entry.type,
-                        price: entry.price,
-                        effectiveAt: entry.effectiveAt,
-                        source: normalizedFullDatabasePriceHistorySource(entry.source),
-                        note: nil,
-                        createdAt: now,
-                        product: product
-                    )
-                    context.insert(history)
-                    return history
-                }
-                try accumulator.recordProductPriceChange(
-                    price: history,
-                    origin: .confirmedImport
-                )
-
-                insertedCount += 1
+                persistedCount += transactionResult.0
+                finalAlreadyPresentCount += transactionResult.1
+                finalUnresolvedCount += transactionResult.2
+                processedCount += batch.count
                 await reportImportProgress(
                     stage: .applyingPriceHistory,
                     processedCount: processedCount,
                     totalCount: totalCount,
                     onProgress: onProgress
                 )
-                if try await saveImportProgressIfNeeded(after: processedCount, in: context) {
-                    persistedCount = insertedCount
-                }
             }
-
-            try context.save()
-            persistedCount = insertedCount
             await reportImportProgress(
                 stage: .applyingPriceHistory,
-                processedCount: processedCount,
+                processedCount: entries.count,
                 totalCount: totalCount,
                 onProgress: onProgress,
                 force: true
@@ -1275,17 +1491,42 @@ nonisolated private enum DatabaseImportPipeline {
             await Task.yield()
             return ImportApplyPriceHistoryResult(
                 insertedCount: persistedCount,
-                alreadyPresentCount: alreadyPresentCount,
+                alreadyPresentCount: finalAlreadyPresentCount,
                 unresolvedCount: finalUnresolvedCount
             )
         } catch {
             throw PriceHistoryApplyFailure(
                 insertedCount: persistedCount,
-                alreadyPresentCount: alreadyPresentCount,
+                alreadyPresentCount: finalAlreadyPresentCount,
                 unresolvedCount: finalUnresolvedCount,
                 message: error.localizedDescription
             )
         }
+    }
+
+    private static func withImportMutationFence<Result>(
+        verifiedScope: Task126VerifiedOwnerStoreScope?,
+        modelContainer: ModelContainer,
+        ownerUserID: UUID?,
+        operation: (ModelContext) throws -> Result
+    ) throws -> Result {
+        if let verifiedScope {
+            return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                verifiedScope,
+                operation: {
+                    try Task126OwnerStoreGate
+                        .validateLocalMutationContainerWithLeaseHeld(modelContainer)
+                    let context = ModelContext(modelContainer)
+                    context.autosaveEnabled = false
+                    return try operation(context)
+                }
+            )
+        }
+        return try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: modelContainer,
+            ownerUserID: ownerUserID,
+            operation
+        )
     }
 
     private static func reportImportProgress(
@@ -1309,20 +1550,6 @@ nonisolated private enum DatabaseImportPipeline {
                 totalCount: totalCount
             )
         )
-    }
-
-    private static func saveImportProgressIfNeeded(
-        after processedCount: Int,
-        in context: ModelContext
-    ) async throws -> Bool {
-        guard processedCount > 0,
-              processedCount.isMultiple(of: importSaveBatchSize) else {
-            return false
-        }
-
-        try context.save()
-        await Task.yield()
-        return true
     }
 
     private static func createPriceHistoryForImport(
@@ -2202,6 +2429,7 @@ struct DatabaseView: View {
         let categories: [ProductCategory]
         let products: [Product]
         let pendingOwnerUserID: UUID?
+        private let initialName: String
 
         @State private var name: String
         @State private var validationMessage: String?
@@ -2233,6 +2461,7 @@ struct DatabaseView: View {
             case .category:
                 initialName = category?.name ?? ""
             }
+            self.initialName = initialName
             _name = State(initialValue: initialName)
         }
 
@@ -2427,34 +2656,88 @@ struct DatabaseView: View {
                 return
             }
 
-            let accumulator = LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: pendingOwnerUserID
-            )
-
             do {
-                switch kind {
-                case .supplier:
-                    try saveSupplier(accumulator: accumulator)
-                case .category:
-                    try saveCategory(accumulator: accumulator)
+                let supplierID = supplier?.persistentModelID
+                let categoryID = category?.persistentModelID
+                let didSave = try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
+                    ownerUserID: pendingOwnerUserID
+                ) { freshContext in
+                    guard !(try hasDuplicateNameInCurrentContext(
+                        trimmedName,
+                        currentID: supplierID ?? categoryID,
+                        context: freshContext
+                    )) else {
+                        return false
+                    }
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: freshContext,
+                        ownerUserID: pendingOwnerUserID
+                    )
+                    switch kind {
+                    case .supplier:
+                        let freshSupplier = try supplierID.map {
+                            try Task126OwnerStoreGate.requireLocalModel(
+                                Supplier.self,
+                                id: $0,
+                                in: freshContext
+                            )
+                        }
+                        try saveSupplier(
+                            freshSupplier,
+                            context: freshContext,
+                            accumulator: accumulator
+                        )
+                    case .category:
+                        let freshCategory = try categoryID.map {
+                            try Task126OwnerStoreGate.requireLocalModel(
+                                ProductCategory.self,
+                                id: $0,
+                                in: freshContext
+                            )
+                        }
+                        try saveCategory(
+                            freshCategory,
+                            context: freshContext,
+                            accumulator: accumulator
+                        )
+                    }
+                    try freshContext.save()
+                    return true
                 }
-                try context.save()
+                guard didSave else {
+                    validationMessage = L("database.entity.name_exists")
+                    return
+                }
                 dismiss()
             } catch {
-                context.rollback()
                 validationMessage = L("database.entity.save_failed")
             }
         }
 
-        private func saveSupplier(accumulator: LocalPendingChangeAccumulator) throws {
+        private func saveSupplier(
+            _ supplier: Supplier?,
+            context: ModelContext,
+            accumulator: LocalPendingChangeAccumulator
+        ) throws {
             if let supplier {
+                guard supplier.remoteDeletedAt == nil else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
                 let oldName = supplier.name
+                guard oldName == initialName else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
                 guard oldName != trimmedName else { return }
                 let baselineHash = kind.fingerprintHash(name: oldName)
                 supplier.name = trimmedName
 
-                if !(try retargetLocalOnlyCreateChange(oldName: oldName, newName: trimmedName, remoteID: supplier.remoteID)) {
+                if !(try retargetLocalOnlyCreateChange(
+                    oldName: oldName,
+                    newName: trimmedName,
+                    remoteID: supplier.remoteID,
+                    context: context
+                )) {
                     try accumulator.recordSupplierChange(
                         supplier: supplier,
                         operation: supplier.remoteID == nil ? .create : .update,
@@ -2474,14 +2757,29 @@ struct DatabaseView: View {
             }
         }
 
-        private func saveCategory(accumulator: LocalPendingChangeAccumulator) throws {
+        private func saveCategory(
+            _ category: ProductCategory?,
+            context: ModelContext,
+            accumulator: LocalPendingChangeAccumulator
+        ) throws {
             if let category {
+                guard category.remoteDeletedAt == nil else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
                 let oldName = category.name
+                guard oldName == initialName else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
                 guard oldName != trimmedName else { return }
                 let baselineHash = kind.fingerprintHash(name: oldName)
                 category.name = trimmedName
 
-                if !(try retargetLocalOnlyCreateChange(oldName: oldName, newName: trimmedName, remoteID: category.remoteID)) {
+                if !(try retargetLocalOnlyCreateChange(
+                    oldName: oldName,
+                    newName: trimmedName,
+                    remoteID: category.remoteID,
+                    context: context
+                )) {
                     try accumulator.recordCategoryChange(
                         category: category,
                         operation: category.remoteID == nil ? .create : .update,
@@ -2502,128 +2800,203 @@ struct DatabaseView: View {
         }
 
         private func deleteEntity(replacement: DatabaseNamedEntityReplacementTarget?) {
-            let accumulator = LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: pendingOwnerUserID
-            )
-
+            let supplierID = supplier?.persistentModelID
+            let categoryID = category?.persistentModelID
+            let replacementSupplierID: PersistentIdentifier?
+            let replacementCategoryID: PersistentIdentifier?
+            if case .supplier(let replacementSupplier) = replacement {
+                replacementSupplierID = replacementSupplier.persistentModelID
+            } else {
+                replacementSupplierID = nil
+            }
+            if case .category(let replacementCategory) = replacement {
+                replacementCategoryID = replacementCategory.persistentModelID
+            } else {
+                replacementCategoryID = nil
+            }
             do {
-                switch kind {
-                case .supplier:
-                    guard let supplier else { return }
-                    let baselineHash = kind.fingerprintHash(name: supplier.name)
-                    let replacementSupplier: Supplier?
-                    if case .supplier(let supplier) = replacement {
-                        replacementSupplier = supplier
-                    } else {
-                        replacementSupplier = nil
+                try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
+                    ownerUserID: pendingOwnerUserID
+                ) { freshContext in
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: freshContext,
+                        ownerUserID: pendingOwnerUserID
+                    )
+                    switch kind {
+                    case .supplier:
+                        guard let supplierID else { return }
+                        let supplier = try Task126OwnerStoreGate.requireLocalModel(
+                            Supplier.self,
+                            id: supplierID,
+                            in: freshContext
+                        )
+                        guard supplier.remoteDeletedAt == nil,
+                              supplier.name == initialName else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        let baselineHash = kind.fingerprintHash(name: supplier.name)
+                        let replacementSupplier = try replacementSupplierID.map {
+                            try Task126OwnerStoreGate.requireLocalModel(
+                                Supplier.self,
+                                id: $0,
+                                in: freshContext
+                            )
+                        }
+                        guard replacementSupplier?.remoteDeletedAt == nil else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        try reassignProductsFromSupplier(
+                            supplier,
+                            to: replacementSupplier,
+                            accumulator: accumulator,
+                            context: freshContext
+                        )
+                        try accumulator.recordSupplierChange(
+                            supplier: supplier,
+                            operation: .delete,
+                            origin: .manualCatalogSave,
+                            changedFields: ["tombstone"],
+                            baselineFingerprintHash: baselineHash
+                        )
+                        freshContext.delete(supplier)
+                    case .category:
+                        guard let categoryID else { return }
+                        let category = try Task126OwnerStoreGate.requireLocalModel(
+                            ProductCategory.self,
+                            id: categoryID,
+                            in: freshContext
+                        )
+                        guard category.remoteDeletedAt == nil,
+                              category.name == initialName else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        let baselineHash = kind.fingerprintHash(name: category.name)
+                        let replacementCategory = try replacementCategoryID.map {
+                            try Task126OwnerStoreGate.requireLocalModel(
+                                ProductCategory.self,
+                                id: $0,
+                                in: freshContext
+                            )
+                        }
+                        guard replacementCategory?.remoteDeletedAt == nil else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        try reassignProductsFromCategory(
+                            category,
+                            to: replacementCategory,
+                            accumulator: accumulator,
+                            context: freshContext
+                        )
+                        try accumulator.recordCategoryChange(
+                            category: category,
+                            operation: .delete,
+                            origin: .manualCatalogSave,
+                            changedFields: ["tombstone"],
+                            baselineFingerprintHash: baselineHash
+                        )
+                        freshContext.delete(category)
                     }
-                    try reassignProductsFromSupplier(
-                        supplier,
-                        to: replacementSupplier,
-                        accumulator: accumulator
-                    )
-                    try accumulator.recordSupplierChange(
-                        supplier: supplier,
-                        operation: .delete,
-                        origin: .manualCatalogSave,
-                        changedFields: ["tombstone"],
-                        baselineFingerprintHash: baselineHash
-                    )
-                    context.delete(supplier)
-                case .category:
-                    guard let category else { return }
-                    let baselineHash = kind.fingerprintHash(name: category.name)
-                    let replacementCategory: ProductCategory?
-                    if case .category(let category) = replacement {
-                        replacementCategory = category
-                    } else {
-                        replacementCategory = nil
-                    }
-                    try reassignProductsFromCategory(
-                        category,
-                        to: replacementCategory,
-                        accumulator: accumulator
-                    )
-                    try accumulator.recordCategoryChange(
-                        category: category,
-                        operation: .delete,
-                        origin: .manualCatalogSave,
-                        changedFields: ["tombstone"],
-                        baselineFingerprintHash: baselineHash
-                    )
-                    context.delete(category)
+                    try freshContext.save()
                 }
-
-                try context.save()
                 dismiss()
             } catch {
-                context.rollback()
                 validationMessage = L("database.entity.save_failed")
             }
         }
 
         private func createReplacementAndDelete(named replacementName: String) {
-            let accumulator = LocalPendingChangeAccumulator(
-                context: context,
-                ownerUserID: pendingOwnerUserID
-            )
-
+            let supplierID = supplier?.persistentModelID
+            let categoryID = category?.persistentModelID
             do {
-                switch kind {
-                case .supplier:
-                    guard let supplier else { return }
-                    let replacement = Supplier(name: replacementName)
-                    context.insert(replacement)
-                    try accumulator.recordSupplierChange(
-                        supplier: replacement,
-                        operation: .create,
-                        origin: .manualCatalogSave
+                try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
+                    ownerUserID: pendingOwnerUserID
+                ) { freshContext in
+                    guard !(try hasDuplicateNameInCurrentContext(
+                        replacementName,
+                        currentID: nil,
+                        context: freshContext
+                    )) else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: freshContext,
+                        ownerUserID: pendingOwnerUserID
                     )
-                    let baselineHash = kind.fingerprintHash(name: supplier.name)
-                    try reassignProductsFromSupplier(
-                        supplier,
-                        to: replacement,
-                        accumulator: accumulator
-                    )
-                    try accumulator.recordSupplierChange(
-                        supplier: supplier,
-                        operation: .delete,
-                        origin: .manualCatalogSave,
-                        changedFields: ["tombstone"],
-                        baselineFingerprintHash: baselineHash
-                    )
-                    context.delete(supplier)
+                    switch kind {
+                    case .supplier:
+                        guard let supplierID else { return }
+                        let supplier = try Task126OwnerStoreGate.requireLocalModel(
+                            Supplier.self,
+                            id: supplierID,
+                            in: freshContext
+                        )
+                        guard supplier.remoteDeletedAt == nil,
+                              supplier.name == initialName else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        let replacement = Supplier(name: replacementName)
+                        freshContext.insert(replacement)
+                        try accumulator.recordSupplierChange(
+                            supplier: replacement,
+                            operation: .create,
+                            origin: .manualCatalogSave
+                        )
+                        let baselineHash = kind.fingerprintHash(name: supplier.name)
+                        try reassignProductsFromSupplier(
+                            supplier,
+                            to: replacement,
+                            accumulator: accumulator,
+                            context: freshContext
+                        )
+                        try accumulator.recordSupplierChange(
+                            supplier: supplier,
+                            operation: .delete,
+                            origin: .manualCatalogSave,
+                            changedFields: ["tombstone"],
+                            baselineFingerprintHash: baselineHash
+                        )
+                        freshContext.delete(supplier)
 
-                case .category:
-                    guard let category else { return }
-                    let replacement = ProductCategory(name: replacementName)
-                    context.insert(replacement)
-                    try accumulator.recordCategoryChange(
-                        category: replacement,
-                        operation: .create,
-                        origin: .manualCatalogSave
-                    )
-                    let baselineHash = kind.fingerprintHash(name: category.name)
-                    try reassignProductsFromCategory(
-                        category,
-                        to: replacement,
-                        accumulator: accumulator
-                    )
-                    try accumulator.recordCategoryChange(
-                        category: category,
-                        operation: .delete,
-                        origin: .manualCatalogSave,
-                        changedFields: ["tombstone"],
-                        baselineFingerprintHash: baselineHash
-                    )
-                    context.delete(category)
+                    case .category:
+                        guard let categoryID else { return }
+                        let category = try Task126OwnerStoreGate.requireLocalModel(
+                            ProductCategory.self,
+                            id: categoryID,
+                            in: freshContext
+                        )
+                        guard category.remoteDeletedAt == nil,
+                              category.name == initialName else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        let replacement = ProductCategory(name: replacementName)
+                        freshContext.insert(replacement)
+                        try accumulator.recordCategoryChange(
+                            category: replacement,
+                            operation: .create,
+                            origin: .manualCatalogSave
+                        )
+                        let baselineHash = kind.fingerprintHash(name: category.name)
+                        try reassignProductsFromCategory(
+                            category,
+                            to: replacement,
+                            accumulator: accumulator,
+                            context: freshContext
+                        )
+                        try accumulator.recordCategoryChange(
+                            category: category,
+                            operation: .delete,
+                            origin: .manualCatalogSave,
+                            changedFields: ["tombstone"],
+                            baselineFingerprintHash: baselineHash
+                        )
+                        freshContext.delete(category)
+                    }
+                    try freshContext.save()
                 }
-
-                try context.save()
                 dismiss()
             } catch {
-                context.rollback()
                 validationMessage = L("database.entity.save_failed")
             }
         }
@@ -2631,17 +3004,20 @@ struct DatabaseView: View {
         private func reassignProductsFromSupplier(
             _ supplier: Supplier,
             to replacement: Supplier?,
-            accumulator: LocalPendingChangeAccumulator
+            accumulator: LocalPendingChangeAccumulator,
+            context: ModelContext
         ) throws {
-            for product in products where product.supplier?.persistentModelID == supplier.persistentModelID {
-                let oldDraft = DatabaseView.makeDraft(product)
+            for product in try context.fetch(FetchDescriptor<Product>())
+                where product.remoteDeletedAt == nil
+                    && product.supplier?.persistentModelID == supplier.persistentModelID {
+                let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(product)
                 product.supplier = replacement
                 try accumulator.recordProductChange(
                     product: product,
                     operation: .update,
                     origin: .manualCatalogSave,
                     changedFields: ["supplierName"],
-                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(oldDraft)
+                    baselineFingerprintHash: baselineHash
                 )
             }
         }
@@ -2649,17 +3025,20 @@ struct DatabaseView: View {
         private func reassignProductsFromCategory(
             _ category: ProductCategory,
             to replacement: ProductCategory?,
-            accumulator: LocalPendingChangeAccumulator
+            accumulator: LocalPendingChangeAccumulator,
+            context: ModelContext
         ) throws {
-            for product in products where product.category?.persistentModelID == category.persistentModelID {
-                let oldDraft = DatabaseView.makeDraft(product)
+            for product in try context.fetch(FetchDescriptor<Product>())
+                where product.remoteDeletedAt == nil
+                    && product.category?.persistentModelID == category.persistentModelID {
+                let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(product)
                 product.category = replacement
                 try accumulator.recordProductChange(
                     product: product,
                     operation: .update,
                     origin: .manualCatalogSave,
                     changedFields: ["categoryName"],
-                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(oldDraft)
+                    baselineFingerprintHash: baselineHash
                 )
             }
         }
@@ -2667,7 +3046,8 @@ struct DatabaseView: View {
         private func retargetLocalOnlyCreateChange(
             oldName: String,
             newName: String,
-            remoteID: UUID?
+            remoteID: UUID?,
+            context: ModelContext
         ) throws -> Bool {
             guard remoteID == nil else { return false }
 
@@ -2679,9 +3059,29 @@ struct DatabaseView: View {
                     $0.entityKindRaw == entityKindRaw && $0.logicalKey == oldKey
                 }
             )
+            let ownerRaw = pendingOwnerUserID?.uuidString.lowercased()
+            let storeIdentity = pendingOwnerUserID.map {
+                ShopContextSelection.localStoreIdentity(ownerUserID: $0)
+            } ?? .anonymous
 
             guard let change = try context.fetch(descriptor).first(where: { candidate in
-                candidate.operation == .create && !candidate.status.isTerminal
+                let candidateStore = Task126OwnerStoreScope.normalizedStoreId(
+                    candidate.storeId
+                )
+                let candidateLocalStore = Task126OwnerStoreScope.normalizedLocalStoreId(
+                    candidate.localStoreId,
+                    storeId: candidateStore
+                )
+                return candidate.operation == .create
+                    && !candidate.status.isTerminal
+                    && candidate.ownerUserID == ownerRaw
+                    && candidate.storeId != nil
+                    && candidateStore == storeIdentity.storeId
+                    && candidate.localStoreId != nil
+                    && candidateLocalStore == storeIdentity.localStoreId
+                    && candidate.syncProtocolVersion == storeIdentity.syncProtocolVersion
+                    && candidate.schemaVersion == storeIdentity.schemaVersion
+                    && candidate.storeEpoch == storeIdentity.storeEpoch
             }) else {
                 return false
             }
@@ -2710,6 +3110,35 @@ struct DatabaseView: View {
                         return false
                     }
                     return existing.name.compare(candidate, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                }
+            }
+        }
+
+        private func hasDuplicateNameInCurrentContext(
+            _ candidate: String,
+            currentID: PersistentIdentifier?,
+            context: ModelContext
+        ) throws -> Bool {
+            switch kind {
+            case .supplier:
+                return try context.fetch(FetchDescriptor<Supplier>()).contains { existing in
+                    if let currentID, existing.persistentModelID == currentID {
+                        return false
+                    }
+                    return existing.name.compare(
+                        candidate,
+                        options: [.caseInsensitive, .diacriticInsensitive]
+                    ) == .orderedSame
+                }
+            case .category:
+                return try context.fetch(FetchDescriptor<ProductCategory>()).contains { existing in
+                    if let currentID, existing.persistentModelID == currentID {
+                        return false
+                    }
+                    return existing.name.compare(
+                        candidate,
+                        options: [.caseInsensitive, .diacriticInsensitive]
+                    ) == .orderedSame
                 }
             }
         }
@@ -3313,6 +3742,10 @@ struct DatabaseView: View {
 
         }
         .navigationTitle(L("database.title"))
+        .onChange(of: imageScope) { previousScope, nextScope in
+            guard previousScope != nextScope else { return }
+            dismissProductPresentationsForImageScopeChange()
+        }
         .task(id: imageScope) {
             productImageStore.activate(scope: imageScope)
         }
@@ -3627,11 +4060,27 @@ struct DatabaseView: View {
     private var imageScope: ProductImageScope? {
         guard supabaseAuthViewModel.isSignedIn,
               let accountID = supabaseAuthViewModel.sessionInfo?.userID,
-              let selectedShop = shopContextStore.context.selectedShop,
-              selectedShop.isValidProductImageSelection else {
+              shopContextStore.context.accountHash == AccountBindingStore.accountHash(for: accountID),
+              let selectedShop = shopContextStore.context.selectedShop else {
             return nil
         }
-        return ProductImageScope(accountID: accountID, shopID: selectedShop.shopID)
+        let bindingStore = AccountBindingStore()
+        return ProductImageOwnerStoreGate.scope(
+            accountID: accountID,
+            selectedShop: selectedShop,
+            binding: bindingStore.currentBinding,
+            hasPendingReplacement: bindingStore.hasPendingReplacementJournal
+        )
+    }
+
+    private func dismissProductPresentationsForImageScopeChange() {
+        scannerFallbackFocusTask?.cancel()
+        scannerFallbackFocusTask = nil
+        showScanner = false
+        showAddSheet = false
+        productToEdit = nil
+        productForHistory = nil
+        pendingBarcodeForNewProduct = nil
     }
 
     private func handleDatabaseScan(_ code: String) {
@@ -3661,26 +4110,46 @@ struct DatabaseView: View {
 
     private func confirmDeleteProducts() {
         defer { productsPendingDeletion = [] }
+        let deletionTargets = productsPendingDeletion.map {
+            (
+                id: $0.persistentModelID,
+                fingerprint: LocalPendingChangeLogicalKey.productFingerprintHash($0)
+            )
+        }
 
-        let accumulator = LocalPendingChangeAccumulator(
-            context: context,
-            ownerUserID: currentPendingOwnerUserID
-        )
         do {
-            for product in productsPendingDeletion {
-                try accumulator.recordProductChange(
-                    product: product,
-                    operation: .delete,
-                    origin: .manualCatalogSave,
-                    changedFields: ["tombstone"],
-                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: currentPendingOwnerUserID
+            ) { freshContext in
+                let accumulator = LocalPendingChangeAccumulator(
+                    context: freshContext,
+                    ownerUserID: currentPendingOwnerUserID
                 )
-                try accumulator.supersedeProductPriceChanges(for: product)
-                context.delete(product)
+                for target in deletionTargets {
+                    let product = try Task126OwnerStoreGate.requireLocalModel(
+                        Product.self,
+                        id: target.id,
+                        in: freshContext
+                    )
+                    guard product.remoteDeletedAt == nil,
+                          LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                            == target.fingerprint else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    try accumulator.recordProductChange(
+                        product: product,
+                        operation: .delete,
+                        origin: .manualCatalogSave,
+                        changedFields: ["tombstone"],
+                        baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                    )
+                    try accumulator.supersedeProductPriceChanges(for: product)
+                    freshContext.delete(product)
+                }
+                try freshContext.save()
             }
-            try context.save()
         } catch {
-            context.rollback()
             #if DEBUG
             print("Errore durante l'eliminazione.")
             #endif
@@ -4017,7 +4486,11 @@ struct DatabaseView: View {
     }
 
     private func resolvedCurrentProduct(for product: Product) -> Product? {
-        context.model(for: product.persistentModelID) as? Product
+        let productID = product.persistentModelID
+        let descriptor = FetchDescriptor<Product>(
+            predicate: #Predicate<Product> { $0.persistentModelID == productID }
+        )
+        return try? context.fetch(descriptor).first
     }
 
     private func validateExportedProductsSheet(
@@ -4525,6 +4998,9 @@ struct DatabaseView: View {
                 ]
             )
         }
+        let verifiedScope = try ownerUserID.map {
+            try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: $0)
+        }
 
         return ImportApplyPayload(
             newProducts: session.newProducts,
@@ -4535,7 +5011,8 @@ struct DatabaseView: View {
             pendingSupplierNames: pendingFullImportContext?.pendingSupplierNames ?? [],
             pendingCategoryNames: pendingFullImportContext?.pendingCategoryNames ?? [],
             recordPriceHistory: !(pendingFullImportContext?.suppressAutomaticProductPriceHistory ?? false),
-            ownerUserID: ownerUserID
+            ownerUserID: ownerUserID,
+            verifiedScope: verifiedScope
         )
     }
 
@@ -4563,14 +5040,19 @@ struct DatabaseView: View {
                 throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: L("database.error.file_not_utf8")])
             }
 
-            try parseProductsCSV(content)
-            try context.save()
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: currentPendingOwnerUserID
+            ) { freshContext in
+                try parseProductsCSV(content, context: freshContext)
+                try freshContext.save()
+            }
         } catch {
             importError = L("database.error.import", error.localizedDescription)
         }
     }
 
-    private func parseProductsCSV(_ content: String) throws {
+    private func parseProductsCSV(_ content: String, context: ModelContext) throws {
         let lines = content.split(whereSeparator: \.isNewline)
         guard !lines.isEmpty else { return }
         let accumulator = LocalPendingChangeAccumulator(
@@ -4605,15 +5087,23 @@ struct DatabaseView: View {
             let supplierName = col(7).trimmingCharacters(in: .whitespacesAndNewlines)
             let categoryName = col(8).trimmingCharacters(in: .whitespacesAndNewlines)
 
-            let supplierResolution = supplierName.isEmpty ? nil : findOrCreateSupplier(named: supplierName)
-            let categoryResolution = categoryName.isEmpty ? nil : findOrCreateCategory(named: categoryName)
+            let supplierResolution = try supplierName.isEmpty
+                ? nil
+                : findOrCreateSupplier(named: supplierName, context: context)
+            let categoryResolution = try categoryName.isEmpty
+                ? nil
+                : findOrCreateCategory(named: categoryName, context: context)
             let supplier = supplierResolution?.entity
             let category = categoryResolution?.entity
 
             // Cerca prodotto esistente per barcode
             let descriptor = FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })
             let existing = try context.fetch(descriptor).first
+            guard existing?.remoteDeletedAt == nil else {
+                throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+            }
             let oldDraft = existing.map(Self.makeDraft)
+            let baselineHash = existing.map(LocalPendingChangeLogicalKey.productFingerprintHash)
 
             let product: Product
             let operation: LocalPendingChangeOperation
@@ -4671,7 +5161,7 @@ struct DatabaseView: View {
                 operation: operation,
                 origin: .confirmedImport,
                 changedFields: changedFields,
-                baselineFingerprintHash: oldDraft.map(LocalPendingChangeLogicalKey.productFingerprintHash)
+                baselineFingerprintHash: baselineHash
             )
         }
     }
@@ -4709,12 +5199,21 @@ struct DatabaseView: View {
         }
     }
 
-    private func findOrCreateSupplier(named name: String) -> (entity: Supplier, created: Bool)? {
+    private func findOrCreateSupplier(
+        named name: String,
+        context: ModelContext
+    ) throws -> (entity: Supplier, created: Bool)? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == trimmed })
-        if let existing = try? context.fetch(descriptor).first {
+        let key = ProductImportCore.normalizedRelationKey(trimmed)
+        let matches = try context.fetch(FetchDescriptor<Supplier>()).filter {
+            ProductImportCore.normalizedRelationKey($0.name) == key
+        }
+        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        if let existing = matches.first {
             return (existing, false)
         } else {
             let supplier = Supplier(name: trimmed)
@@ -4723,12 +5222,21 @@ struct DatabaseView: View {
         }
     }
 
-    private func findOrCreateCategory(named name: String) -> (entity: ProductCategory, created: Bool)? {
+    private func findOrCreateCategory(
+        named name: String,
+        context: ModelContext
+    ) throws -> (entity: ProductCategory, created: Bool)? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == trimmed })
-        if let existing = try? context.fetch(descriptor).first {
+        let key = ProductImportCore.normalizedRelationKey(trimmed)
+        let matches = try context.fetch(FetchDescriptor<ProductCategory>()).filter {
+            ProductImportCore.normalizedRelationKey($0.name) == key
+        }
+        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        if let existing = matches.first {
             return (existing, false)
         } else {
             let category = ProductCategory(name: trimmed)

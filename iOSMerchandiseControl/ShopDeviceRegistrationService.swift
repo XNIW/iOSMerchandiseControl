@@ -1,24 +1,242 @@
+import CryptoKit
 import Foundation
 import OSLog
 import Supabase
+#if canImport(Darwin)
+import Darwin
+@_silgen_name("flock")
+private nonisolated func mcSystemFlock(_ descriptor: Int32, _ operation: Int32) -> Int32
+#endif
+
+nonisolated enum DeviceInstallIDStoreError: Error, Sendable, Equatable {
+    case durableStorageUnavailable
+    case invalidDurableIdentity
+}
 
 nonisolated final class DeviceInstallIDStore: @unchecked Sendable {
-    private static let key = "shop.device.install.id"
-    private let defaults: UserDefaults
+    private struct DurableIdentity: Codable, Equatable {
+        static let schemaVersion = "device-install-identity-v1"
 
-    init(defaults: UserDefaults = .standard) {
+        let schemaVersion: String
+        let deviceIdentifier: String
+        let checksum: String
+    }
+
+    private static let key = "shop.device.install.id"
+    private static let lock = NSLock()
+    private static let maximumIdentityBytes = 4 * 1_024
+    private let defaults: UserDefaults
+    private let durableURL: URL?
+
+    init(
+        defaults: UserDefaults = .standard,
+        durableURL: URL? = nil
+    ) {
         self.defaults = defaults
+        self.durableURL = durableURL?.standardizedFileURL
+            ?? (defaults === UserDefaults.standard ? Self.defaultDurableURL() : nil)
     }
 
     var deviceInstallID: String {
-        if let existing = defaults.string(forKey: Self.key),
-           !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let durable = try? requireDeviceInstallID() {
+            return durable
+        }
+        // Non-sync diagnostics and legacy call sites cannot throw. The
+        // process-wide lock still guarantees one identity for this process;
+        // every owner/shop admission path uses the throwing API below and
+        // therefore fails closed if durable storage is unavailable.
+        Self.lock.lock()
+        defer { Self.lock.unlock() }
+        if let existing = Self.validIdentity(defaults.string(forKey: Self.key)) {
             return existing
         }
+        let fallback = UUID().uuidString.lowercased()
+        defaults.set(fallback, forKey: Self.key)
+        return fallback
+    }
 
-        let generated = UUID().uuidString.lowercased()
-        defaults.set(generated, forKey: Self.key)
-        return generated
+    func requireDeviceInstallID() throws -> String {
+        Self.lock.lock()
+        defer { Self.lock.unlock() }
+
+        let fileLock = try durableURL.map(Self.acquireFileLock(for:))
+        defer { Self.releaseFileLock(fileLock) }
+
+        let defaultsIdentity = Self.validIdentity(defaults.string(forKey: Self.key))
+        if let durableURL,
+           FileManager.default.fileExists(atPath: durableURL.path) {
+            let data = try Self.boundedData(at: durableURL)
+            guard let record = try? JSONDecoder().decode(DurableIdentity.self, from: data),
+                  record.schemaVersion == DurableIdentity.schemaVersion,
+                  let durableIdentity = Self.validIdentity(record.deviceIdentifier),
+                  record.checksum == Self.checksum(for: durableIdentity) else {
+                throw DeviceInstallIDStoreError.invalidDurableIdentity
+            }
+            if defaultsIdentity != durableIdentity {
+                defaults.set(durableIdentity, forKey: Self.key)
+            }
+            return durableIdentity
+        }
+
+        if defaultsIdentity == nil,
+           durableURL != nil,
+           Self.existingSyncStateRequiresIdentityRecovery() {
+            throw DeviceInstallIDStoreError.invalidDurableIdentity
+        }
+        let identity = defaultsIdentity ?? UUID().uuidString.lowercased()
+        if let durableURL {
+            try Self.persist(identity, to: durableURL)
+        }
+        defaults.set(identity, forKey: Self.key)
+        return identity
+    }
+
+    private static func validIdentity(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              raw.utf8.count <= 160,
+              !raw.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+            return nil
+        }
+        return raw
+    }
+
+    static func identityHash(for raw: String) -> String {
+        let canonical = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SHA256.hash(data: Data(canonical.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    private static func checksum(for identity: String) -> String {
+        let material = [DurableIdentity.schemaVersion, identity]
+            .map { "\($0.utf8.count):\($0)" }
+            .joined(separator: "\u{001F}")
+        return SHA256.hash(data: Data(material.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    private static func boundedData(at url: URL) throws -> Data {
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard values.isRegularFile == true,
+              let size = values.fileSize,
+              size > 0,
+              size <= maximumIdentityBytes else {
+            throw DeviceInstallIDStoreError.invalidDurableIdentity
+        }
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        guard data.count == size else {
+            throw DeviceInstallIDStoreError.invalidDurableIdentity
+        }
+        return data
+    }
+
+    private static func persist(_ identity: String, to url: URL) throws {
+        let directory = url.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            let record = DurableIdentity(
+                schemaVersion: DurableIdentity.schemaVersion,
+                deviceIdentifier: identity,
+                checksum: checksum(for: identity)
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let data = try encoder.encode(record)
+            guard data.count <= maximumIdentityBytes else {
+                throw DeviceInstallIDStoreError.invalidDurableIdentity
+            }
+            try data.write(to: url, options: [.atomic])
+            try? FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: url.path
+            )
+            try synchronizeFile(url)
+            try synchronizeDirectory(directory)
+            guard try boundedData(at: url) == data else {
+                throw DeviceInstallIDStoreError.durableStorageUnavailable
+            }
+        } catch {
+            throw DeviceInstallIDStoreError.durableStorageUnavailable
+        }
+    }
+
+    private static func defaultDurableURL() -> URL? {
+        FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first?
+            .appendingPathComponent("DeviceIdentity", isDirectory: true)
+            .appendingPathComponent("v1", isDirectory: true)
+            .appendingPathComponent("install-id", isDirectory: false)
+    }
+
+    private static func existingSyncStateRequiresIdentityRecovery() -> Bool {
+        guard let applicationSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else { return true }
+        let base = applicationSupport
+            .appendingPathComponent("SyncStoreGenerations", isDirectory: true)
+            .appendingPathComponent("v1", isDirectory: true)
+        return ["active-generation.json", "recovery-journal.json"]
+            .contains { FileManager.default.fileExists(atPath: base.appendingPathComponent($0).path) }
+    }
+
+    private static func acquireFileLock(for durableURL: URL) throws -> Int32 {
+        #if canImport(Darwin)
+        let lockURL = durableURL.appendingPathExtension("lock")
+        try FileManager.default.createDirectory(
+            at: lockURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let descriptor = Darwin.open(lockURL.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0, mcSystemFlock(descriptor, LOCK_EX) == 0 else {
+            if descriptor >= 0 { _ = Darwin.close(descriptor) }
+            throw DeviceInstallIDStoreError.durableStorageUnavailable
+        }
+        return descriptor
+        #else
+        return -1
+        #endif
+    }
+
+    private static func releaseFileLock(_ descriptor: Int32?) {
+        #if canImport(Darwin)
+        guard let descriptor, descriptor >= 0 else { return }
+        _ = mcSystemFlock(descriptor, LOCK_UN)
+        _ = Darwin.close(descriptor)
+        #endif
+    }
+
+    private static func synchronizeFile(_ url: URL) throws {
+        #if canImport(Darwin)
+        let descriptor = Darwin.open(url.path, O_RDONLY)
+        guard descriptor >= 0 else { throw DeviceInstallIDStoreError.durableStorageUnavailable }
+        defer { _ = Darwin.close(descriptor) }
+        guard Darwin.fsync(descriptor) == 0 else {
+            throw DeviceInstallIDStoreError.durableStorageUnavailable
+        }
+        #else
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        try handle.synchronize()
+        #endif
+    }
+
+    private static func synchronizeDirectory(_ url: URL) throws {
+        #if canImport(Darwin)
+        let descriptor = Darwin.open(url.path, O_RDONLY)
+        guard descriptor >= 0 else { throw DeviceInstallIDStoreError.durableStorageUnavailable }
+        defer { _ = Darwin.close(descriptor) }
+        guard Darwin.fsync(descriptor) == 0 else {
+            throw DeviceInstallIDStoreError.durableStorageUnavailable
+        }
+        #endif
     }
 }
 
@@ -71,8 +289,9 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
         }
 
         do {
+            let deviceInstallID = try installIDStore.requireDeviceInstallID()
             let params = ShopDeviceRegistrationDeviceInfo.rpcParameters(
-                deviceInstallID: installIDStore.deviceInstallID,
+                deviceInstallID: deviceInstallID,
                 reason: reason
             )
             let rpcName = selectedShopID == nil
@@ -174,8 +393,9 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
         }
 
         do {
+            let deviceInstallID = try installIDStore.requireDeviceInstallID()
             let params = ShopDeviceStatusRPCParameters(
-                pDeviceIdentifier: installIDStore.deviceInstallID
+                pDeviceIdentifier: deviceInstallID
             )
             let rpcName = selectedShopID == nil
                 ? "shop_device_status_current_owner"
@@ -187,7 +407,7 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
                         "shop_device_status_for_shop",
                         params: ShopDeviceStatusForShopRPCParameters(
                             shopID: selectedShopID,
-                            deviceIdentifier: installIDStore.deviceInstallID
+                            deviceIdentifier: deviceInstallID
                         )
                     )
                     .execute()

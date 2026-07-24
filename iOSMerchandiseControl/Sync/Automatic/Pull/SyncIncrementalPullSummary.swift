@@ -27,6 +27,10 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     var suppliersMissingRemoteTombstoned: Int = 0
     var categoriesMissingRemoteTombstoned: Int = 0
     var requiresFullRecoveryReason: String?
+    /// True only when a scope-fenced backend checkpoint and the local
+    /// generation digest/count proof were compared successfully in this run.
+    /// Event-page emptiness and count parity alone must leave this false.
+    var verifiedConvergence = false
     var eventPageFetchMs: Int = 0
     var catalogFetchMs: Int = 0
     var catalogApplyMs: Int = 0
@@ -69,4 +73,17 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
 
 protocol SyncIncrementalPullProviding: AnyObject {
     func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary
+    func applyIncrementalRemoteChanges(
+        ownerUserID: UUID,
+        forceLightReconcile: Bool
+    ) async throws -> SyncIncrementalPullSummary
+}
+
+extension SyncIncrementalPullProviding {
+    func applyIncrementalRemoteChanges(
+        ownerUserID: UUID,
+        forceLightReconcile: Bool
+    ) async throws -> SyncIncrementalPullSummary {
+        try await applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
+    }
 }

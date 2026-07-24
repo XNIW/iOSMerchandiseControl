@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 nonisolated enum Task126StoreScopeMode: String, Sendable, Equatable {
     case localDefaultStoreOnly
@@ -234,7 +235,342 @@ nonisolated enum Task126OwnerStoreGateDecision: Sendable, Equatable {
     case blocked(reason: Task126OwnerStoreGateReason)
 }
 
+nonisolated struct Task126VerifiedOwnerStoreScope: Sendable, Equatable {
+    let ownerUserID: UUID
+    let accountHash: String
+    let shopID: UUID
+    let storeIdentity: LocalStoreIdentity
+    let deviceInstallID: String
+    let deviceIdentityHash: String
+    let pendingReplacement: AccountBinding?
+    let leaseGeneration: UInt64
+}
+
+nonisolated enum Task126OwnerStoreGateError: Error, Sendable, Equatable {
+    case cancelled
+    case activeAccountMismatch
+    case shopContextUnavailable
+    case bindingMismatch
+    case replacementInterrupted
+    case scopeChanged
+    case retiredStoreGeneration
+    case localModelUnavailable
+    case localRemoteConflictRequiresReview
+}
+
 nonisolated enum Task126OwnerStoreGate {
+    @TaskLocal static var currentAutomaticScope: Task126VerifiedOwnerStoreScope?
+
+    private static let leaseStore = Task126AutomaticScopeLeaseStore()
+
+    private static let activeAccountKey = "mobile.shopContext.activeAccountHash.v1"
+    private static let blockedShopStatuses: Set<String> = [
+        "blocked",
+        "deleted",
+        "disabled",
+        "inactive",
+        "revoked",
+        "suspended"
+    ]
+
+    /// Captures the already-resolved owner/shop boundary used by automatic
+    /// providers. This deliberately has no default-shop or anonymous fallback.
+    static func captureAutomaticScope(
+        ownerUserID: UUID,
+        defaults: UserDefaults = .standard,
+        allowsPendingReplacement: Bool = false,
+        allowsPendingSameScopeRecovery: Bool = false
+    ) throws -> Task126VerifiedOwnerStoreScope {
+        try leaseStore.withCurrentLease { leaseGeneration in
+            guard !Task.isCancelled else {
+                throw Task126OwnerStoreGateError.cancelled
+            }
+
+            let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+            guard defaults.string(forKey: activeAccountKey) == accountHash else {
+                throw Task126OwnerStoreGateError.activeAccountMismatch
+            }
+
+            let selectedShopStore = SelectedShopStore(defaults: defaults)
+            guard selectedShopStore.isResolutionReady(accountHash: accountHash),
+                  let selectedShop = selectedShopStore.selectedShop(accountHash: accountHash),
+                  selectedShop.selectable,
+                  !blockedShopStatuses.contains(
+                    selectedShop.status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                  ) else {
+                throw Task126OwnerStoreGateError.shopContextUnavailable
+            }
+
+            let storeIdentity = selectedShop.localStoreIdentity
+            let bindingStore = AccountBindingStore(defaults: defaults)
+            let deviceInstallID = try DeviceInstallIDStore(defaults: defaults)
+                .requireDeviceInstallID()
+            let deviceIdentityHash = DeviceInstallIDStore.identityHash(for: deviceInstallID)
+
+            let pendingReplacement: AccountBinding?
+            if bindingStore.hasPendingReplacementJournal {
+                guard let recovery = bindingStore.pendingRecoveryJournal,
+                      (allowsPendingReplacement
+                        || (allowsPendingSameScopeRecovery
+                            && recovery.mode == .sameScopeRecovery)),
+                      let replacement = bindingStore.pendingReplacement,
+                      replacement.accountHash == accountHash,
+                      replacement.storeIdentity == storeIdentity,
+                      recovery.replacement == replacement,
+                      recovery.deviceIdentityHash == deviceIdentityHash else {
+                    throw Task126OwnerStoreGateError.replacementInterrupted
+                }
+                if recovery.mode == .sameScopeRecovery {
+                    guard let binding = bindingStore.currentBinding,
+                          binding.accountHash == accountHash,
+                          binding.storeIdentity == storeIdentity else {
+                        throw Task126OwnerStoreGateError.bindingMismatch
+                    }
+                }
+                pendingReplacement = replacement
+            } else {
+                guard let binding = bindingStore.currentBinding,
+                      binding.accountHash == accountHash,
+                      binding.storeIdentity == storeIdentity else {
+                    throw Task126OwnerStoreGateError.bindingMismatch
+                }
+                pendingReplacement = nil
+            }
+
+            return Task126VerifiedOwnerStoreScope(
+                ownerUserID: ownerUserID,
+                accountHash: accountHash,
+                shopID: selectedShop.shopID,
+                storeIdentity: storeIdentity,
+                deviceInstallID: deviceInstallID,
+                deviceIdentityHash: deviceIdentityHash,
+                pendingReplacement: pendingReplacement,
+                leaseGeneration: leaseGeneration
+            )
+        }
+    }
+
+    /// Re-reads every mutable identity component. A change while an async
+    /// remote call is suspended invalidates the captured scope before another
+    /// remote mutation or local commit can occur.
+    static func revalidateAutomaticScope(
+        _ expected: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults = .standard
+    ) throws {
+        guard !Task.isCancelled else {
+            throw Task126OwnerStoreGateError.cancelled
+        }
+        let current = try captureAutomaticScope(
+            ownerUserID: expected.ownerUserID,
+            defaults: defaults,
+            allowsPendingReplacement: expected.pendingReplacement != nil
+        )
+        guard current == expected else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+    }
+
+    /// Invalidates already-captured work synchronously. The orchestrator calls
+    /// this before asynchronous auth/shop refresh can update persisted state.
+    static func invalidateAutomaticScopeLease() {
+        leaseStore.invalidate()
+    }
+
+    static func withAutomaticScopeLeaseInvalidated<Result>(
+        _ mutation: () throws -> Result
+    ) rethrows -> Result {
+        try leaseStore.withInvalidatedLease(mutation)
+    }
+
+    /// Preferred writer primitive. The context is materialized only after the
+    /// mutation lease has been acquired, so its identity map cannot contain a
+    /// pre-incremental snapshot that would overwrite newer remote metadata.
+    static func withLocalMutationFence<Result>(
+        modelContainer: ModelContainer,
+        ownerUserID: UUID?,
+        defaults: UserDefaults = .standard,
+        _ mutation: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try leaseStore.withCurrentLease { _ in
+            switch leaseStore.localMutationContainerStateWithLeaseHeld(modelContainer) {
+            case .retired:
+                throw Task126OwnerStoreGateError.retiredStoreGeneration
+            case .active:
+                let bindingStore = AccountBindingStore(defaults: defaults)
+                guard !bindingStore.hasPendingReplacementJournal else {
+                    throw Task126OwnerStoreGateError.replacementInterrupted
+                }
+                if let ownerUserID {
+                    let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+                    guard defaults.string(forKey: activeAccountKey) == accountHash,
+                          let binding = bindingStore.currentBinding,
+                          binding.accountHash == accountHash,
+                          let selectedShop = SelectedShopStore(defaults: defaults)
+                            .selectedShop(accountHash: accountHash),
+                          selectedShop.selectable,
+                          !blockedShopStatuses.contains(
+                            selectedShop.status
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                                .lowercased()
+                          ),
+                          selectedShop.localStoreIdentity == binding.storeIdentity else {
+                        throw Task126OwnerStoreGateError.bindingMismatch
+                    }
+                } else {
+                    guard defaults.string(forKey: activeAccountKey) == nil,
+                          bindingStore.currentBinding == nil else {
+                        throw Task126OwnerStoreGateError.bindingMismatch
+                    }
+                }
+            case .unregistered:
+                // In-memory/unit-test and SwiftUI preview containers are not an
+                // application generation. They still receive a fresh context
+                // and the same serialization fence, but have no persisted
+                // account/shop state to validate. Every production root
+                // container is registered by SyncStoreGenerationController.
+                break
+            }
+            let freshContext = ModelContext(modelContainer)
+            freshContext.autosaveEnabled = false
+            return try mutation(freshContext)
+        }
+    }
+
+    /// Registers a generation container without making unrelated test or
+    /// preview containers invalid. Registrations are weak and are pruned on
+    /// every access, so repeated recovery generations remain bounded.
+    static func registerActiveGenerationContainer(_ container: ModelContainer) {
+        leaseStore.registerActiveContainer(container)
+    }
+
+    /// Must only be called while the Task126 lease is already held. Retiring
+    /// the old physical container in the same critical section as publication
+    /// makes queued writers fail closed after the atomic generation switch.
+    static func replaceActiveGenerationContainerWithLeaseHeld(
+        old: ModelContainer,
+        new: ModelContainer
+    ) {
+        leaseStore.replaceActiveContainerWithLeaseHeld(old: old, new: new)
+    }
+
+    /// Validates a background/batched writer that owns an explicit container
+    /// while its already-validated automatic scope lease is held.
+    static func validateLocalMutationContainerWithLeaseHeld(
+        _ container: ModelContainer
+    ) throws {
+        try leaseStore.validateLocalMutationContainerWithLeaseHeld(container)
+    }
+
+    /// Resolves an identity captured as a value before the lease inside the
+    /// newly-created writer context. Persistent model instances themselves
+    /// must never cross into the fenced closure.
+    static func requireLocalModel<Model: PersistentModel>(
+        _ type: Model.Type,
+        id: PersistentIdentifier,
+        in context: ModelContext
+    ) throws -> Model {
+        // `model(for:)` can return a typed fault after another context has
+        // physically deleted the row; touching that fault traps instead of
+        // throwing. An explicit fetch is existence-safe. The stable ID remains
+        // an anti-alias check; domain-specific callers additionally validate
+        // remote/logical identity where applicable.
+        let descriptor = FetchDescriptor<Model>(
+            predicate: #Predicate<Model> { $0.persistentModelID == id }
+        )
+        guard let model = try context.fetch(descriptor).first else {
+            throw Task126OwnerStoreGateError.localModelUnavailable
+        }
+        return model
+    }
+
+    /// Atomically rejects stale automatic work, invalidates its lease and then
+    /// performs the terminal scope mutation. This is used when a successful
+    /// recovery clears its journal so auth/shop drift cannot win between the
+    /// final validation and the durable clear.
+    static func withValidatedAutomaticScopeLeaseInvalidated<Result>(
+        expectedGeneration: UInt64,
+        _ mutation: () throws -> Result
+    ) throws -> Result {
+        try leaseStore.withValidatedInvalidatedLease(
+            expectedGeneration: expectedGeneration,
+            mutation: mutation
+        )
+    }
+
+    static func withAutomaticScope<Result>(
+        _ scope: Task126VerifiedOwnerStoreScope,
+        operation: () async throws -> Result
+    ) async rethrows -> Result {
+        try await $currentAutomaticScope.withValue(scope, operation: operation)
+    }
+
+    static func requireCurrentAutomaticScope(
+        ownerUserID: UUID,
+        defaults: UserDefaults = .standard
+    ) throws -> Task126VerifiedOwnerStoreScope {
+        guard let scope = currentAutomaticScope,
+              scope.ownerUserID == ownerUserID else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        try revalidateAutomaticScope(scope, defaults: defaults)
+        return scope
+    }
+
+    static func requireCurrentAutomaticScope(
+        defaults: UserDefaults = .standard
+    ) throws -> Task126VerifiedOwnerStoreScope {
+        guard let scope = currentAutomaticScope else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        try revalidateAutomaticScope(scope, defaults: defaults)
+        return scope
+    }
+
+    /// Linearizes a synchronous local commit with auth/shop invalidation. Manual
+    /// workflows have no automatic TaskLocal scope and therefore keep their
+    /// existing behavior.
+    static func withCurrentAutomaticScopeLeaseIfPresent<Result>(
+        _ operation: () throws -> Result
+    ) throws -> Result {
+        guard let scope = currentAutomaticScope else {
+            return try operation()
+        }
+        return try leaseStore.withValidatedLease(
+            expectedGeneration: scope.leaseGeneration,
+            operation: operation
+        )
+    }
+
+    /// Linearizes a synchronous commit made by work that carries an explicit
+    /// captured scope (for example a `Task.detached`, which has no TaskLocal).
+    /// Revalidation must happen before taking the non-recursive lease lock.
+    static func withValidatedAutomaticScopeLease<Result>(
+        _ scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults = .standard,
+        operation: () throws -> Result
+    ) throws -> Result {
+        try revalidateAutomaticScope(scope, defaults: defaults)
+        return try leaseStore.withValidatedLease(
+            expectedGeneration: scope.leaseGeneration,
+            operation: operation
+        )
+    }
+
+    static func revalidateCurrentAutomaticScopeLeaseIfPresent() throws {
+        try withCurrentAutomaticScopeLeaseIfPresent {}
+    }
+
+    static func validateRemoteIdentity(
+        ownerUserID: UUID,
+        shopID: UUID?,
+        scope: Task126VerifiedOwnerStoreScope
+    ) throws {
+        guard ownerUserID == scope.ownerUserID,
+              shopID == scope.shopID else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+    }
+
     static func validate(
         entry: SyncEventOutboxEntry,
         activeOwnerUserID: String,
@@ -270,6 +606,120 @@ nonisolated enum Task126OwnerStoreGate {
             return .blocked(reason: .schemaMismatch)
         }
         return .allowed
+    }
+}
+
+private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Sendable {
+    enum LocalMutationContainerState {
+        case active
+        case retired
+        case unregistered
+    }
+
+    private final class WeakContainerRegistration {
+        weak var container: ModelContainer?
+        var isRetired: Bool
+
+        init(container: ModelContainer, isRetired: Bool) {
+            self.container = container
+            self.isRetired = isRetired
+        }
+    }
+
+    private let lock = NSLock()
+    private var generation: UInt64 = 0
+    private var containerRegistrations: [ObjectIdentifier: WeakContainerRegistration] = [:]
+
+    func withCurrentLease<Result>(
+        _ operation: (UInt64) throws -> Result
+    ) rethrows -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return try operation(generation)
+    }
+
+    func invalidate() {
+        lock.lock()
+        generation &+= 1
+        lock.unlock()
+    }
+
+    func withInvalidatedLease<Result>(
+        _ mutation: () throws -> Result
+    ) rethrows -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        generation &+= 1
+        return try mutation()
+    }
+
+    func withValidatedInvalidatedLease<Result>(
+        expectedGeneration: UInt64,
+        mutation: () throws -> Result
+    ) throws -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        try Task.checkCancellation()
+        guard generation == expectedGeneration else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        generation &+= 1
+        return try mutation()
+    }
+
+    func withValidatedLease<Result>(
+        expectedGeneration: UInt64,
+        operation: () throws -> Result
+    ) throws -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        try Task.checkCancellation()
+        guard generation == expectedGeneration else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        return try operation()
+    }
+
+    func registerActiveContainer(_ container: ModelContainer) {
+        lock.lock()
+        defer { lock.unlock() }
+        pruneReleasedContainersWithLeaseHeld()
+        containerRegistrations[ObjectIdentifier(container)] = WeakContainerRegistration(
+            container: container,
+            isRetired: false
+        )
+    }
+
+    func replaceActiveContainerWithLeaseHeld(old: ModelContainer, new: ModelContainer) {
+        pruneReleasedContainersWithLeaseHeld()
+        containerRegistrations[ObjectIdentifier(old)] = WeakContainerRegistration(
+            container: old,
+            isRetired: true
+        )
+        containerRegistrations[ObjectIdentifier(new)] = WeakContainerRegistration(
+            container: new,
+            isRetired: false
+        )
+    }
+
+    func validateLocalMutationContainerWithLeaseHeld(_ container: ModelContainer) throws {
+        if localMutationContainerStateWithLeaseHeld(container) == .retired {
+            throw Task126OwnerStoreGateError.retiredStoreGeneration
+        }
+    }
+
+    func localMutationContainerStateWithLeaseHeld(
+        _ container: ModelContainer
+    ) -> LocalMutationContainerState {
+        pruneReleasedContainersWithLeaseHeld()
+        guard let registration = containerRegistrations[ObjectIdentifier(container)] else {
+            return .unregistered
+        }
+        return registration.isRetired ? .retired : .active
+    }
+
+    private func pruneReleasedContainersWithLeaseHeld() {
+        containerRegistrations = containerRegistrations.filter { $0.value.container != nil }
     }
 }
 

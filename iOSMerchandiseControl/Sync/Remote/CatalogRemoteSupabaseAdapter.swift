@@ -9,56 +9,109 @@ struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
     }
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
+        let scope = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
         let ownerUserID = try await query.requireOwner()
-        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+        guard ownerUserID == scope.ownerUserID,
+              payloads.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == scope.shopID }) else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
-        return try await query.insertRows(
-            payloads,
-            table: "inventory_suppliers",
-            columns: Self.supplierColumns
-        )
+        let client = await query.client()
+        do {
+            return try await client
+                .from("inventory_suppliers")
+                .upsert(payloads, onConflict: "id")
+                .select(Self.supplierColumns)
+                .execute()
+                .value
+        } catch {
+            throw await mappedCreateError(error)
+        }
     }
 
     func updateSupplier(id: UUID, payload: SyncAutomaticSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
-        try await query.updateRow(payload, table: "inventory_suppliers", columns: Self.supplierColumns, id: id)
+        _ = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
+        let row: RemoteInventorySupplierRow = try await query.updateRow(
+            payload,
+            table: "inventory_suppliers",
+            columns: Self.supplierColumns,
+            id: id
+        )
+        return row
     }
 
     func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
+        let scope = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
         let ownerUserID = try await query.requireOwner()
-        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+        guard ownerUserID == scope.ownerUserID,
+              payloads.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == scope.shopID }) else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
-        return try await query.insertRows(
-            payloads,
-            table: "inventory_categories",
-            columns: Self.categoryColumns
-        )
+        let client = await query.client()
+        do {
+            return try await client
+                .from("inventory_categories")
+                .upsert(payloads, onConflict: "id")
+                .select(Self.categoryColumns)
+                .execute()
+                .value
+        } catch {
+            throw await mappedCreateError(error)
+        }
     }
 
     func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
-        try await query.updateRow(payload, table: "inventory_categories", columns: Self.categoryColumns, id: id)
+        _ = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
+        let row: RemoteInventoryCategoryRow = try await query.updateRow(
+            payload,
+            table: "inventory_categories",
+            columns: Self.categoryColumns,
+            id: id
+        )
+        return row
     }
 
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
+        let scope = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
         let ownerUserID = try await query.requireOwner()
-        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+        guard ownerUserID == scope.ownerUserID,
+              payloads.allSatisfy({ $0.ownerUserID == ownerUserID && $0.shopID == scope.shopID }) else {
             throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
-        return try await query.insertRows(
-            payloads,
-            table: "inventory_products",
-            columns: Self.productColumns
-        )
+        let client = await query.client()
+        do {
+            return try await client
+                .from("inventory_products")
+                .upsert(payloads, onConflict: "id")
+                .select(Self.productColumns)
+                .execute()
+                .value
+        } catch {
+            throw await mappedCreateError(error)
+        }
     }
 
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
-        try await query.updateRow(
+        _ = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
+        let row: RemoteInventoryProductRow = try await query.updateRow(
             payload,
             table: "inventory_products",
             columns: Self.productColumns,
             id: id
         )
+        return row
+    }
+
+    private func mappedCreateError(_ error: Error) async -> Error {
+        if let error = error as? DecodingError {
+            return await remote.mapDecodingError(error)
+        }
+        if let error = error as? PostgrestError {
+            return await remote.mapPostgrestError(error)
+        }
+        if let error = error as? URLError {
+            return await remote.networkError(error)
+        }
+        return SupabaseTransportClientError.unknown(message: String(describing: error))
     }
 }
 
@@ -72,6 +125,7 @@ extension CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogIncrementalReading {
         categories: [RemoteInventoryCategoryRow],
         products: [RemoteInventoryProductRow]
     ) {
+        _ = try Task126OwnerStoreGate.requireCurrentAutomaticScope()
         async let suppliers = query.fetchRowsByIDs(
             table: "inventory_suppliers",
             columns: Self.supplierColumns,
@@ -125,11 +179,16 @@ extension CatalogRemoteSupabaseAdapter {
     }
 
     func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {
-        try await query.fetchRowsPage(
+        let rows: [RemoteInventoryProductRow] = try await query.fetchRowsPage(
             table: "inventory_products",
             columns: Self.productColumns,
             from: from,
             to: to
+        )
+        return try Task126AutomaticRemoteRowValidator.validate(
+            rows,
+            ownerUserID: \.ownerUserID,
+            shopID: \.shopID
         )
     }
 

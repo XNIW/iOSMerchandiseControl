@@ -1,53 +1,45 @@
 import Foundation
-import Supabase
 
+/// Foreground signal source for the sanitized shop-scoped event RPC.
+///
+/// `public.sync_events` can contain historical raw metadata and therefore no
+/// longer grants client SELECT. A Postgres Changes subscription would either
+/// fail after that security boundary or reintroduce the leakage. This bounded
+/// timer never reads event rows itself: it only asks the orchestrator to poll
+/// `shop_sync_event_page_v1`, where RLS, shop/device authorization and metadata
+/// redaction are enforced server-side.
 @MainActor
 final class SupabaseSyncEventSignalWatcher {
-    private let clientProvider: SupabaseClientProvider
+    private static let pollNanoseconds: UInt64 = 2_000_000_000
+
     private var ownerUserID: UUID?
     private var selectedShopID: UUID?
-    private var channel: RealtimeChannelV2?
-    private var subscriptionTask: Task<Void, Never>?
-    private var signalTask: Task<Void, Never>?
+    private var pollingTask: Task<Void, Never>?
 
-    init(clientProvider: SupabaseClientProvider) {
-        self.clientProvider = clientProvider
-    }
+    init(clientProvider _: SupabaseClientProvider) {}
 
     func start(
         ownerUserID: UUID,
-        selectedShopID: UUID?,
+        selectedShopID: UUID,
         onSignal: @escaping @MainActor @Sendable () -> Void
     ) {
         guard self.ownerUserID != ownerUserID || self.selectedShopID != selectedShopID else { return }
         stop()
-
-        let channelScope = selectedShopID?.uuidString.lowercased() ?? ownerUserID.uuidString.lowercased()
-        let channel = clientProvider.client.channel("sync-events-v1-\(channelScope)")
-        let insertions = channel.postgresChange(
-            InsertAction.self,
-            schema: "public",
-            table: "sync_events",
-            filter: selectedShopID.map { .eq("shop_id", value: $0) } ?? .eq("owner_user_id", value: ownerUserID)
-        )
-
         self.ownerUserID = ownerUserID
         self.selectedShopID = selectedShopID
-        self.channel = channel
-        subscriptionTask = Task { [weak self] in
-            do {
-                try await channel.subscribeWithError()
-                guard !Task.isCancelled else { return }
-                for await _ in insertions {
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        self?.scheduleSignal(after: 500_000_000, onSignal: onSignal)
-                    }
+        pollingTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: Self.pollNanoseconds)
+                } catch {
+                    return
                 }
-            } catch is CancellationError {
-                return
-            } catch {
-                debugPrint("[SyncEventsRealtime] subscribe_failed owner=\(ownerUserID.uuidString.prefix(8))-redacted error=\(error)")
+                guard !Task.isCancelled,
+                      self?.ownerUserID == ownerUserID,
+                      self?.selectedShopID == selectedShopID else {
+                    return
+                }
+                onSignal()
             }
         }
     }
@@ -55,26 +47,7 @@ final class SupabaseSyncEventSignalWatcher {
     func stop() {
         ownerUserID = nil
         selectedShopID = nil
-        signalTask?.cancel()
-        signalTask = nil
-        subscriptionTask?.cancel()
-        subscriptionTask = nil
-        guard let channel else { return }
-        self.channel = nil
-        Task {
-            await channel.unsubscribe()
-        }
-    }
-
-    private func scheduleSignal(
-        after delayNanoseconds: UInt64,
-        onSignal: @escaping @MainActor @Sendable () -> Void
-    ) {
-        signalTask?.cancel()
-        signalTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: delayNanoseconds)
-            guard !Task.isCancelled else { return }
-            onSignal()
-        }
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 }

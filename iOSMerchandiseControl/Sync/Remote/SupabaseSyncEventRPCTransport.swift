@@ -13,10 +13,26 @@ actor SupabaseSyncEventRPCTransport: SyncEventRPCTransport {
         params: SyncEventRPCRequestParameters
     ) async throws -> Data {
         do {
-            let response = try await clientProvider.client
-                .rpc(functionName, params: params)
-                .execute()
-            return response.data
+            if functionName == SyncEventRPCRequestMapper.legacyFunctionName {
+                guard let legacy = SyncEventRPCRequestMapper.legacyParametersIfCompatible(
+                    params,
+                    hasAutomaticShopScope: false
+                ) else {
+                    throw SyncEventRPCTransportError.postgrest(
+                        code: "legacy_incompatible",
+                        message: "Legacy sync-event writer is not compatible with this request."
+                    )
+                }
+                let response = try await clientProvider.client
+                    .rpc(functionName, params: legacy)
+                    .execute()
+                return response.data
+            } else {
+                let response = try await clientProvider.client
+                    .rpc(functionName, params: params)
+                    .execute()
+                return response.data
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as PostgrestError {

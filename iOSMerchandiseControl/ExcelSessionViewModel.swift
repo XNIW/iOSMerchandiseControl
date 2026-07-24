@@ -510,29 +510,55 @@ extension ExcelSessionViewModel {
     }
 
     /// Crea una HistoryEntry “vuota” per un inventario manuale
-    func createManualHistoryEntry(in context: ModelContext) throws -> HistoryEntry {
+    func createManualHistoryEntry(
+        in context: ModelContext,
+        ownerUserID: UUID? = nil
+    ) throws -> HistoryEntry {
         let now = Date()
         let id = "manual_\(Int(now.timeIntervalSince1970))"
-
-        let entry = HistoryEntry(
-            id: id,
-            timestamp: now,
-            isManualEntry: true,
-            supplier: "Inventario manuale",
-            category: "",
-            syncStatus: .notAttempted
-        )
-
-        context.insert(entry)
-        try context.save()
-
-        currentHistoryEntry = entry
-        return entry
+        do {
+            let entryPersistentID = try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: ownerUserID
+            ) { freshContext in
+                let entry = HistoryEntry(
+                    id: id,
+                    timestamp: now,
+                    isManualEntry: true,
+                    supplier: "Inventario manuale",
+                    category: "",
+                    syncStatus: .notAttempted
+                )
+                freshContext.insert(entry)
+                _ = try LocalPendingChangeAccumulator(
+                    context: freshContext,
+                    ownerUserID: ownerUserID
+                ).recordHistorySessionChange(
+                    entry: entry,
+                    operation: .create,
+                    changedFields: ["create"]
+                )
+                try freshContext.save()
+                return entry.persistentModelID
+            }
+            let entry = try Task126OwnerStoreGate.requireLocalModel(
+                HistoryEntry.self,
+                id: entryPersistentID,
+                in: context
+            )
+            currentHistoryEntry = entry
+            return entry
+        } catch {
+            throw error
+        }
     }
 
     /// Genera una HistoryEntry a partire dallo stato corrente (header/rows + supplier/category).
     /// È l'equivalente di generateFilteredWithOldPrices su Android.
-    func generateHistoryEntry(in context: ModelContext) throws -> HistoryEntry {
+    func generateHistoryEntry(
+        in context: ModelContext,
+        ownerUserID: UUID? = nil
+    ) throws -> HistoryEntry {
         // 1. Validazioni base
         guard !normalizedHeader.isEmpty, !rows.isEmpty else {
             throw GenerateHistoryError.emptySession
@@ -553,100 +579,112 @@ extension ExcelSessionViewModel {
         // Indice colonna barcode nell'header normalizzato
         let barcodeIndex = normalizedHeader.firstIndex(of: "barcode")
 
-        // 2. Mappa barcode → (oldPurchase, oldRetail) dal DB (Product)
-        let priceMap = try fetchOldPricesByBarcode(
-            barcodeIndex: barcodeIndex,
-            context: context
-        )
-
-        // 3. Costruzione matrice dati "filtrata"
-        var filteredData: [[String]] = []
-
-        // Header filtrato + colonne extra
-        var filteredHeader = selectedIndices.map { normalizedHeader[$0] }
-        filteredHeader.append(contentsOf: [
-            "oldPurchasePrice",
-            "oldRetailPrice",
-            "realQuantity",
-            "RetailPrice",
-            "complete"
-        ])
-        filteredData.append(filteredHeader)
-
-        // Righe dati (rows[0] è l'header originale)
-        for row in rows.dropFirst() {
-            var newRow: [String] = []
-
-            // Colonne selezionate dall'utente
-            for idx in selectedIndices {
-                let value = (idx < row.count) ? row[idx] : ""
-                newRow.append(value)
-            }
-
-            // Barcode della riga corrente
-            let barcode: String
-            if let bIndex = barcodeIndex, bIndex < row.count {
-                barcode = row[bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-            } else {
-                barcode = ""
-            }
-
-            let (oldPurchase, oldRetail) = priceMap[barcode] ?? (nil, nil)
-
-            // Colonne extra
-            newRow.append(formatPriceForInput(oldPurchase))  // oldPurchasePrice
-            newRow.append(formatPriceForInput(oldRetail))   // oldRetailPrice
-            newRow.append("")                               // realQuantity (vuota)
-            newRow.append("")                               // RetailPrice (vuota)
-            newRow.append("")                               // complete (vuota)
-
-            filteredData.append(newRow)
-        }
-
-        let originalDataJSON = try JSONEncoder().encode(filteredData)
-
-        // 4. editable/complete (come editableValues/completeStates su Android)
-        let editable = HistoryImportedGridSupport.editableTemplate(forGrid: filteredData)
-        let complete = Array(repeating: false, count: filteredData.count)
-
-        // 5. Riassunto iniziale: orderTotal dal fornitore, summary runtime dalla griglia inventario
-        let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: filteredData)
-        let runtimeSummary = HistoryEntryRuntimeSummary.compute(from: filteredData, complete: complete)
-
-        // ✅ salva (se necessario) fornitore/categoria nel DB per autocomplete futuro
-        try persistSupplierAndCategoryIfNeeded(in: context)
-
         let now = Date()
         let fileId = makeHistoryEntryId(supplier: supplierName, date: now)
-        
-        let entry = HistoryEntry(
-            id: fileId,
-            timestamp: now,
-            isManualEntry: false,
-            data: filteredData,
-            originalDataJSON: originalDataJSON,
-            editable: editable,
-            complete: complete,
-            supplier: supplierName,
-            category: categoryName,
-            totalItems: runtimeSummary.totalItems,
-            orderTotal: initialSummary.orderTotal,
-            paymentTotal: runtimeSummary.paymentTotal,
-            missingItems: runtimeSummary.missingItems,
-            syncStatus: .notAttempted,
-            wasExported: false
-        )
+        let supplierNameBackup = supplierName
+        let categoryNameBackup = categoryName
 
-        context.insert(entry)
-        try context.save()
+        do {
+            let entryPersistentID = try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: ownerUserID
+            ) { freshContext in
+                // Price baselines and the generated snapshot are derived only
+                // after this writer owns the lease. A pre-fence price map can
+                // otherwise embed values superseded by incremental apply.
+                let priceMap = try fetchOldPricesByBarcode(
+                    barcodeIndex: barcodeIndex,
+                    context: freshContext
+                )
+                var filteredData: [[String]] = []
+                var filteredHeader = selectedIndices.map { normalizedHeader[$0] }
+                filteredHeader.append(contentsOf: [
+                    "oldPurchasePrice",
+                    "oldRetailPrice",
+                    "realQuantity",
+                    "RetailPrice",
+                    "complete"
+                ])
+                filteredData.append(filteredHeader)
+                for row in rows.dropFirst() {
+                    var newRow = selectedIndices.map { $0 < row.count ? row[$0] : "" }
+                    let barcode = barcodeIndex.flatMap { $0 < row.count ? row[$0] : nil }?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let (oldPurchase, oldRetail) = priceMap[barcode] ?? (nil, nil)
+                    newRow.append(formatPriceForInput(oldPurchase))
+                    newRow.append(formatPriceForInput(oldRetail))
+                    newRow.append(contentsOf: ["", "", ""])
+                    filteredData.append(newRow)
+                }
+                let originalDataJSON = try JSONEncoder().encode(filteredData)
+                let editable = HistoryImportedGridSupport.editableTemplate(forGrid: filteredData)
+                let complete = Array(repeating: false, count: filteredData.count)
+                let initialSummary = HistoryImportedGridSupport.initialSummary(
+                    forGrid: filteredData
+                )
+                let runtimeSummary = HistoryEntryRuntimeSummary.compute(
+                    from: filteredData,
+                    complete: complete
+                )
+                let accumulator = LocalPendingChangeAccumulator(
+                    context: freshContext,
+                    ownerUserID: ownerUserID
+                )
+                if let supplier = try ensureSupplierExists(in: freshContext),
+                   supplier.remoteID == nil {
+                    try accumulator.recordSupplierChange(
+                        supplier: supplier,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                }
+                if let category = try ensureCategoryExists(in: freshContext),
+                   category.remoteID == nil {
+                    try accumulator.recordCategoryChange(
+                        category: category,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                }
 
-        self.currentHistoryEntry = entry
-        return entry
-    }
-    
-    private func persistSupplierAndCategoryIfNeeded(in context: ModelContext) throws {
-        _ = try ensureSupplierExists(in: context)
-        _ = try ensureCategoryExists(in: context)
+                let entry = HistoryEntry(
+                    id: fileId,
+                    timestamp: now,
+                    isManualEntry: false,
+                    data: filteredData,
+                    originalDataJSON: originalDataJSON,
+                    editable: editable,
+                    complete: complete,
+                    supplier: supplierName,
+                    category: categoryName,
+                    totalItems: runtimeSummary.totalItems,
+                    orderTotal: initialSummary.orderTotal,
+                    paymentTotal: runtimeSummary.paymentTotal,
+                    missingItems: runtimeSummary.missingItems,
+                    syncStatus: .notAttempted,
+                    wasExported: false
+                )
+                freshContext.insert(entry)
+                try accumulator.recordHistorySessionChange(
+                    entry: entry,
+                    operation: .create,
+                    changedFields: ["create"]
+                )
+                try freshContext.save()
+                return entry.persistentModelID
+            }
+            let entry = try Task126OwnerStoreGate.requireLocalModel(
+                HistoryEntry.self,
+                id: entryPersistentID,
+                in: context
+            )
+            currentHistoryEntry = entry
+            return entry
+        } catch {
+            supplierName = supplierNameBackup
+            categoryName = categoryNameBackup
+            throw error
+        }
     }
 
     @discardableResult
@@ -658,6 +696,9 @@ extension ExcelSessionViewModel {
 
         let suppliers = try context.fetch(FetchDescriptor<Supplier>())
         if let existing = suppliers.first(where: { Self.normalizedRelationKey($0.name) == key }) {
+            guard existing.remoteDeletedAt == nil else {
+                throw ProductImportNamedEntityResolverError.tombstonedRelation
+            }
             supplierName = existing.name
             return existing
         }
@@ -677,6 +718,9 @@ extension ExcelSessionViewModel {
 
         let categories = try context.fetch(FetchDescriptor<ProductCategory>())
         if let existing = categories.first(where: { Self.normalizedRelationKey($0.name) == key }) {
+            guard existing.remoteDeletedAt == nil else {
+                throw ProductImportNamedEntityResolverError.tombstonedRelation
+            }
             categoryName = existing.name
             return existing
         }
@@ -721,7 +765,7 @@ extension ExcelSessionViewModel {
             )
 
             let products = try context.fetch(descriptor)
-            for product in products {
+            for product in products where product.remoteDeletedAt == nil {
                 map[product.barcode] = (product.purchasePrice, product.retailPrice)
             }
         }

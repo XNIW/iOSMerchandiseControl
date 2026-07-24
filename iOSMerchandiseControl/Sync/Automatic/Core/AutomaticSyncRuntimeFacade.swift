@@ -8,6 +8,12 @@ protocol SyncAutomaticRuntimeProviding: AnyObject {
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult
     @MainActor
     func cancel()
+
+    @MainActor
+    func cancelAndWait() async
+
+    @MainActor
+    func resumeAfterStoreReplacement() async
 }
 
 @MainActor
@@ -19,6 +25,10 @@ final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
     }
 
     func cancel() {}
+
+    func cancelAndWait() async {}
+
+    func resumeAfterStoreReplacement() async {}
 }
 
 @MainActor
@@ -28,6 +38,7 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     private let deviceAuthorization: (any ShopDeviceAuthorizationChecking)?
     private let retryPolicy: AutomaticSyncRetryPolicy
     private let defaults: UserDefaults
+    private let authenticatedOwnerProvider: @MainActor () -> UUID?
     private var facadeIsRunning = false
 
     init(
@@ -40,12 +51,18 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
         activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
         deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil,
         defaults: UserDefaults = .standard,
-        retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy()
+        retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy(),
+        runAdmissionValidator: (@Sendable () async throws -> Void)? = nil,
+        authenticatedOwnerProvider: (@MainActor () -> UUID?)? = nil
     ) {
         self.authViewModel = authViewModel
         self.deviceAuthorization = deviceAuthorization
         self.retryPolicy = retryPolicy
         self.defaults = defaults
+        self.authenticatedOwnerProvider = authenticatedOwnerProvider ?? {
+            guard authViewModel.isSignedIn else { return nil }
+            return authViewModel.sessionInfo?.userID
+        }
         self.engine = AutomaticSyncEngine(
             catalogPushProvider: catalogPushProvider,
             productPriceProvider: productPriceProvider,
@@ -54,7 +71,10 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
             recoverySnapshotPullProvider: recoverySnapshotPullProvider,
             activityRegistrationProvider: activityRegistrationProvider,
             defaults: defaults,
-            retryPolicy: retryPolicy
+            singleFlight: .processShared,
+            cancellationPolicy: .processShared,
+            retryPolicy: retryPolicy,
+            runAdmissionValidator: runAdmissionValidator
         )
     }
 
@@ -63,11 +83,26 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     }
 
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
-        guard authViewModel.isSignedIn,
-              let ownerUserID = authViewModel.sessionInfo?.userID else {
+        guard let ownerUserID = authenticatedOwnerProvider() else {
             await engine.recordAuthBlocked()
             _ = retryPolicy.decisionForAuthBlocked()
             return .blocked(.authRequired)
+        }
+        let pendingRecovery = AccountBindingStore(defaults: defaults).pendingRecoveryJournal
+        if let pendingRecovery,
+           !action.allowsPendingRecoveryAdmission(mode: pendingRecovery.mode) {
+            return .recoveryRequired(didWork: false)
+        }
+        let scope: Task126VerifiedOwnerStoreScope
+        do {
+            scope = try Task126OwnerStoreGate.captureAutomaticScope(
+                ownerUserID: ownerUserID,
+                defaults: defaults,
+                allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
+                allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery
+            )
+        } catch {
+            return .blocked(.accountDecisionRequired)
         }
         if let deviceAuthorization {
             do {
@@ -82,17 +117,35 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
                 return .blocked(.deviceNotActive)
             }
         }
+        guard authenticatedOwnerProvider() == ownerUserID else {
+            return .blocked(.authRequired)
+        }
+        do {
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        } catch {
+            return .blocked(.accountDecisionRequired)
+        }
         facadeIsRunning = true
         defer {
             facadeIsRunning = false
         }
-        return await engine.run(action: action, source: source, ownerUserID: ownerUserID)
+        return await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            await engine.run(action: action, source: source, ownerUserID: ownerUserID)
+        }
     }
 
     func cancel() {
         Task {
             await engine.cancel()
         }
+    }
+
+    func cancelAndWait() async {
+        await engine.cancelAndWait()
+    }
+
+    func resumeAfterStoreReplacement() async {
+        await engine.resumeAfterStoreReplacement()
     }
 
     private func recordDeviceAuthorization(
@@ -116,5 +169,35 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
             }
         }
         #endif
+    }
+}
+
+private extension SyncAction {
+    nonisolated var isRecoveryOnlyAdmission: Bool {
+        switch self {
+        case .bootstrap, .fullRecovery, .requestRecovery:
+            return true
+        case .sequence(let actions):
+            return !actions.isEmpty && actions.allSatisfy(\.isRecoveryOnlyAdmission)
+        case .noOp, .pushPending, .drainEvents, .lightReconcile,
+             .retryAfterBusy, .blocked:
+            return false
+        }
+    }
+
+    /// A destructive account/shop replacement may only execute recovery work.
+    /// A same-scope journal may first drain its own pending writes, but only in
+    /// the coordinator's exact push-then-recover sequence. This keeps the
+    /// durable latch fail-closed without creating a retry deadlock.
+    nonisolated func allowsPendingRecoveryAdmission(
+        mode: AccountRecoveryJournalMode
+    ) -> Bool {
+        switch mode {
+        case .accountOrShopReplacement:
+            return isRecoveryOnlyAdmission
+        case .sameScopeRecovery:
+            if isRecoveryOnlyAdmission { return true }
+            return self == .sequence([.pushPending, .requestRecovery])
+        }
     }
 }

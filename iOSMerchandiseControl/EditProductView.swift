@@ -4,6 +4,7 @@ import SwiftData
 import UIKit
 
 struct EditProductView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -12,6 +13,8 @@ struct EditProductView: View {
 
     let existingProduct: Product?
     let pendingOwnerUserID: UUID?
+    let isCameraAvailable: Bool
+    private let initialDraft: ProductDraft?
 
     @Query(sort: \Supplier.name, order: .forward)
     private var suppliers: [Supplier]
@@ -36,11 +39,22 @@ struct EditProductView: View {
     @State private var showingCamera = false
     @State private var showingRemoveImageConfirmation = false
     @State private var isViewActive = false
+    @State private var isImportingSelectedImage = false
+    @State private var imageOperationID: UUID?
     @State private var imageOperationTask: Task<Void, Never>?
+    @State private var currentImageVersionID: UUID?
+    @State private var currentImageUpdatedAt: Date?
 
-    init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
+    init(
+        product: Product? = nil,
+        initialBarcode: String? = nil,
+        pendingOwnerUserID: UUID? = nil,
+        isCameraAvailable: Bool = UIImagePickerController.isSourceTypeAvailable(.camera)
+    ) {
         self.existingProduct = product
         self.pendingOwnerUserID = pendingOwnerUserID
+        self.isCameraAvailable = isCameraAvailable
+        self.initialDraft = product.map(Self.makeDraft)
 
         let initialCode = product?.barcode ?? initialBarcode ?? ""
 
@@ -53,6 +67,8 @@ struct EditProductView: View {
         _stockQuantity = State(initialValue: product?.stockQuantity.map { Self.format(number: $0) } ?? "")
         _supplierName = State(initialValue: product?.supplier?.name ?? "")
         _categoryName = State(initialValue: product?.category?.name ?? "")
+        _currentImageVersionID = State(initialValue: product?.primaryImageVersionID)
+        _currentImageUpdatedAt = State(initialValue: product?.primaryImageUpdatedAt)
     }
 
     private static func format(number: Double) -> String {
@@ -185,21 +201,40 @@ struct EditProductView: View {
         }
         .onChange(of: selectedImageItem) { _, item in
             guard let item else { return }
-            startImageOperation {
+            isImportingSelectedImage = true
+            startImageOperation { operationID in
+                defer {
+                    if imageOperationID == operationID {
+                        isImportingSelectedImage = false
+                        selectedImageItem = nil
+                    }
+                }
                 do {
                     guard let transfer = try await item.loadTransferable(type: ProductImageTransferFile.self) else {
                         imageMessage = L("product.image.error.input")
                         return
                     }
                     replacePendingImageURL(with: transfer.fileURL)
-                    await uploadPendingImage()
+                    if imageOperationID == operationID {
+                        isImportingSelectedImage = false
+                    }
+                    await uploadPendingImage(operationID: operationID)
                 } catch is CancellationError {
                     imageMessage = L("product.image.cancelled")
                 } catch {
                     imageMessage = L("product.image.error.input")
                 }
-                selectedImageItem = nil
             }
+        }
+        .onChange(of: imageScope) { previousScope, nextScope in
+            guard previousScope != nextScope else { return }
+            showingCamera = false
+            showingRemoveImageConfirmation = false
+            productForHistory = nil
+            cancelImageOperation(
+                scope: previousScope,
+                cancelStoreOperation: previousScope != nil
+            )
         }
         .task(id: imageScope) {
             productImageStore.activate(scope: imageScope)
@@ -207,15 +242,16 @@ struct EditProductView: View {
         .onAppear { isViewActive = true }
         .onDisappear {
             isViewActive = false
-            cancelImageOperation()
-            clearPendingImageURL()
+            _ = cancelImageOperation()
         }
         .sheet(isPresented: $showingCamera) {
             ProductImageCameraPicker(
                 onCapture: { url in
                     showingCamera = false
                     replacePendingImageURL(with: url)
-                    startImageOperation { await uploadPendingImage() }
+                    startImageOperation { operationID in
+                        await uploadPendingImage(operationID: operationID)
+                    }
                 },
                 onCancel: {
                     showingCamera = false
@@ -229,7 +265,9 @@ struct EditProductView: View {
             titleVisibility: .visible
         ) {
             Button(L("product.image.remove"), role: .destructive) {
-                startImageOperation { await removeCurrentImage() }
+                startImageOperation { operationID in
+                    await removeCurrentImage(operationID: operationID)
+                }
             }
             Button(L("common.cancel"), role: .cancel) {}
         }
@@ -256,23 +294,43 @@ struct EditProductView: View {
         Section(L("product.image.section")) {
             if let product = existingProduct,
                let productID = product.remoteID {
-                ProductImageRemoteView(
-                    scope: imageScope,
-                    productID: productID,
-                    versionID: product.primaryImageVersionID,
-                    variant: .main
-                )
+                ZStack {
+                    ProductImageRemoteView(
+                        scope: imageScope,
+                        productID: productID,
+                        versionID: currentImageVersionID,
+                        variant: .main
+                    )
+
+                    if let pendingPreviewImage {
+                        Image(uiImage: pendingPreviewImage)
+                            .resizable()
+                            .scaledToFit()
+                            .transition(.opacity)
+                            .accessibilityLabel(Text(L("product.image.pending_preview")))
+                            .accessibilityIdentifier("product.image.pending-preview")
+                    }
+                }
                 .frame(maxWidth: .infinity)
                 .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .animation(
+                    reduceMotion ? nil : .easeOut(duration: 0.18),
+                    value: pendingPreviewImage != nil
+                )
 
                 if isImageBusy {
                     HStack(spacing: 10) {
                         ProgressView()
+                            .accessibilityIdentifier("product.image.operation.progress")
                         Text(imageProgressLabel)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button(L("product.image.cancel"), role: .cancel) {
-                            cancelImageOperation()
+                        if isImageOperationCancellable {
+                            Button(L("product.image.cancel"), role: .cancel) {
+                                cancelImageOperation()
+                            }
+                            .accessibilityIdentifier("product.image.operation.cancel")
                         }
                     }
                 }
@@ -285,34 +343,23 @@ struct EditProductView: View {
                 }
 
                 if canWriteProductImage {
-                    HStack {
-                        PhotosPicker(selection: $selectedImageItem, matching: .images) {
-                            Label(L("product.image.library"), systemImage: "photo.on.rectangle")
-                        }
-                        .disabled(isImageBusy)
+                    productImageSourceActions
 
-                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                            Button {
-                                showingCamera = true
-                            } label: {
-                                Label(L("product.image.camera"), systemImage: "camera")
-                            }
-                            .disabled(isImageBusy)
-                        }
-                    }
-
-                    if product.primaryImageVersionID != nil {
+                    if currentImageVersionID != nil {
                         Button(L("product.image.remove"), role: .destructive) {
                             showingRemoveImageConfirmation = true
                         }
                         .disabled(isImageBusy)
+                        .accessibilityIdentifier("product.image.editor.remove")
                     }
 
                     if pendingImageURL != nil,
                        productImageStore.operationStage(productID: productID) == .failed {
                         HStack {
                             Button(L("product.image.retry")) {
-                                startImageOperation { await uploadPendingImage() }
+                                startImageOperation { operationID in
+                                    await uploadPendingImage(operationID: operationID)
+                                }
                             }
                             Button(L("common.cancel"), role: .cancel) {
                                 clearPendingImageURL()
@@ -335,14 +382,63 @@ struct EditProductView: View {
         }
     }
 
+    @ViewBuilder
+    private var productImageSourceActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                if isCameraAvailable {
+                    productImageCameraButton(expands: false)
+                }
+                productImageLibraryPicker(expands: false)
+            }
+
+            VStack(spacing: 10) {
+                if isCameraAvailable {
+                    productImageCameraButton(expands: true)
+                }
+                productImageLibraryPicker(expands: true)
+            }
+        }
+    }
+
+    private func productImageCameraButton(expands: Bool) -> some View {
+        Button {
+            showingCamera = true
+        } label: {
+            Label(L("product.image.camera"), systemImage: "camera")
+                .fixedSize(horizontal: !expands, vertical: false)
+                .frame(maxWidth: expands ? .infinity : nil, minHeight: 44)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(isImageBusy)
+        .accessibilityIdentifier("product.image.editor.camera")
+    }
+
+    private func productImageLibraryPicker(expands: Bool) -> some View {
+        PhotosPicker(selection: $selectedImageItem, matching: .images) {
+            Label(L("product.image.library"), systemImage: "photo.on.rectangle")
+                .fixedSize(horizontal: !expands, vertical: false)
+                .frame(maxWidth: expands ? .infinity : nil, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .disabled(isImageBusy)
+        .accessibilityIdentifier("product.image.editor.library")
+    }
+
     private var imageScope: ProductImageScope? {
         guard supabaseAuthViewModel.isSignedIn,
               let accountID = supabaseAuthViewModel.sessionInfo?.userID,
-              let selectedShop = shopContextStore.context.selectedShop,
-              selectedShop.isValidProductImageSelection else {
+              shopContextStore.context.accountHash == AccountBindingStore.accountHash(for: accountID),
+              let selectedShop = shopContextStore.context.selectedShop else {
             return nil
         }
-        return ProductImageScope(accountID: accountID, shopID: selectedShop.shopID)
+        let bindingStore = AccountBindingStore()
+        return ProductImageOwnerStoreGate.scope(
+            accountID: accountID,
+            selectedShop: selectedShop,
+            binding: bindingStore.currentBinding,
+            hasPendingReplacement: bindingStore.hasPendingReplacementJournal
+        )
     }
 
     private var canWriteProductImage: Bool {
@@ -357,6 +453,7 @@ struct EditProductView: View {
     }
 
     private var isImageBusy: Bool {
+        if isImportingSelectedImage { return true }
         guard let productID = existingProduct?.remoteID else { return false }
         switch productImageStore.operationStage(productID: productID) {
         case .processing, .uploadingMain, .uploadingThumb, .finalizing, .removing:
@@ -366,7 +463,14 @@ struct EditProductView: View {
         }
     }
 
+    private var isImageOperationCancellable: Bool {
+        if isImportingSelectedImage { return true }
+        guard let productID = existingProduct?.remoteID else { return false }
+        return productImageStore.operationStage(productID: productID).allowsCancellation
+    }
+
     private var imageProgressLabel: String {
+        if isImportingSelectedImage { return L("product.image.importing") }
         guard let productID = existingProduct?.remoteID else { return L("product.image.processing") }
         switch productImageStore.operationStage(productID: productID) {
         case .processing: return L("product.image.processing")
@@ -378,8 +482,16 @@ struct EditProductView: View {
         }
     }
 
-    private func uploadPendingImage() async {
-        guard canWriteProductImage,
+    private var pendingPreviewImage: UIImage? {
+        productImageStore.pendingPreview(
+            scope: imageScope,
+            productID: existingProduct?.remoteID
+        )
+    }
+
+    private func uploadPendingImage(operationID: UUID) async {
+        guard imageOperationID == operationID,
+              canWriteProductImage,
               let fileURL = pendingImageURL,
               let scope = imageScope,
               let product = existingProduct,
@@ -388,19 +500,47 @@ struct EditProductView: View {
             return
         }
         imageMessage = nil
+        let previousVersionID = currentImageVersionID
         do {
             let result = try await productImageStore.upload(
                 fileURL: fileURL,
                 scope: scope,
                 productID: productID,
-                previousVersionID: product.primaryImageVersionID
+                previousVersionID: previousVersionID,
+                retainMutationLeaseAfterResponse: true
             )
-            product.primaryImageVersionID = result.versionID
-            if let imageUpdatedAt = result.imageUpdatedAt {
-                product.primaryImageUpdatedAt = imageUpdatedAt
+            defer {
+                productImageStore.finishMutationLease(scope: scope, productID: productID)
             }
+            guard imageOperationID == operationID,
+                  imageScope == scope,
+                  canWriteProductImage,
+                  existingProduct?.remoteID == productID else { return }
             do {
-                try context.save()
+                let productPersistentID = product.persistentModelID
+                try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
+                    ownerUserID: pendingOwnerUserID
+                ) { freshContext in
+                    let freshProduct = try Task126OwnerStoreGate.requireLocalModel(
+                        Product.self,
+                        id: productPersistentID,
+                        in: freshContext
+                    )
+                    guard freshProduct.remoteID == productID,
+                          freshProduct.remoteDeletedAt == nil,
+                          freshProduct.primaryImageVersionID == previousVersionID
+                            || freshProduct.primaryImageVersionID == result.versionID else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    freshProduct.primaryImageVersionID = result.versionID
+                    if let imageUpdatedAt = result.imageUpdatedAt {
+                        freshProduct.primaryImageUpdatedAt = imageUpdatedAt
+                    }
+                    try freshContext.save()
+                }
+                currentImageVersionID = result.versionID
+                currentImageUpdatedAt = result.imageUpdatedAt ?? currentImageUpdatedAt
                 imageMessage = String(
                     format: L("product.image.success.metrics"),
                     result.metrics.mainBytes / 1_024,
@@ -408,14 +548,15 @@ struct EditProductView: View {
                     result.metrics.elapsedMilliseconds
                 )
             } catch {
-                context.rollback()
                 imageMessage = L("product.image.error.local_refresh")
             }
             clearPendingImageURL()
         } catch is CancellationError {
+            guard imageOperationID == operationID else { return }
             imageMessage = L("product.image.cancelled")
             clearPendingImageURL()
         } catch {
+            guard imageOperationID == operationID else { return }
             imageMessage = L("product.image.error.upload")
             if !isViewActive {
                 clearPendingImageURL()
@@ -423,12 +564,13 @@ struct EditProductView: View {
         }
     }
 
-    private func removeCurrentImage() async {
-        guard canWriteProductImage,
+    private func removeCurrentImage(operationID: UUID) async {
+        guard imageOperationID == operationID,
+              canWriteProductImage,
               let scope = imageScope,
               let product = existingProduct,
               let productID = product.remoteID,
-              let versionID = product.primaryImageVersionID else {
+              let versionID = currentImageVersionID else {
             return
         }
         imageMessage = nil
@@ -436,40 +578,95 @@ struct EditProductView: View {
             let result = try await productImageStore.remove(
                 scope: scope,
                 productID: productID,
-                versionID: versionID
+                versionID: versionID,
+                retainMutationLeaseAfterResponse: true
             )
-            product.primaryImageVersionID = nil
-            product.primaryImageUpdatedAt = result.imageUpdatedAt
+            defer {
+                productImageStore.finishMutationLease(scope: scope, productID: productID)
+            }
+            guard imageOperationID == operationID,
+                  imageScope == scope,
+                  canWriteProductImage,
+                  existingProduct?.remoteID == productID else { return }
             do {
-                try context.save()
+                let productPersistentID = product.persistentModelID
+                try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
+                    ownerUserID: pendingOwnerUserID
+                ) { freshContext in
+                    let freshProduct = try Task126OwnerStoreGate.requireLocalModel(
+                        Product.self,
+                        id: productPersistentID,
+                        in: freshContext
+                    )
+                    guard freshProduct.remoteID == productID,
+                          freshProduct.remoteDeletedAt == nil,
+                          freshProduct.primaryImageVersionID == versionID
+                            || freshProduct.primaryImageVersionID == nil else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    freshProduct.primaryImageVersionID = nil
+                    freshProduct.primaryImageUpdatedAt = result.imageUpdatedAt
+                    try freshContext.save()
+                }
+                currentImageVersionID = nil
+                currentImageUpdatedAt = result.imageUpdatedAt
                 imageMessage = L("product.image.remove.success")
             } catch {
-                context.rollback()
                 imageMessage = L("product.image.error.local_refresh")
             }
         } catch is CancellationError {
+            guard imageOperationID == operationID else { return }
             imageMessage = L("product.image.cancelled")
         } catch {
+            guard imageOperationID == operationID else { return }
             imageMessage = L("product.image.error.remove")
         }
     }
 
-    private func startImageOperation(_ operation: @escaping @MainActor () async -> Void) {
+    private func startImageOperation(
+        _ operation: @escaping @MainActor (_ operationID: UUID) async -> Void
+    ) {
+        let operationID = UUID()
         imageOperationTask?.cancel()
+        self.imageOperationID = operationID
         imageOperationTask = Task { @MainActor in
-            await operation()
+            await operation(operationID)
+            guard imageOperationID == operationID else { return }
+            imageOperationID = nil
             imageOperationTask = nil
         }
     }
 
-    private func cancelImageOperation() {
-        guard let imageOperationTask else { return }
-        imageOperationTask.cancel()
-        self.imageOperationTask = nil
+    @discardableResult
+    private func cancelImageOperation(
+        scope: ProductImageScope? = nil,
+        cancelStoreOperation: Bool = true
+    ) -> Bool {
         if let productID = existingProduct?.remoteID {
-            productImageStore.cancelOperation(productID: productID)
+            let stage = productImageStore.operationStage(productID: productID)
+            guard stage != .finalizing, stage != .removing else { return false }
         }
-        imageMessage = L("product.image.cancelled")
+        let hadOperation = imageOperationTask != nil
+            || pendingImageURL != nil
+            || isImportingSelectedImage
+        imageOperationID = nil
+        imageOperationTask?.cancel()
+        self.imageOperationTask = nil
+        isImportingSelectedImage = false
+        selectedImageItem = nil
+        if hadOperation, cancelStoreOperation,
+           let productID = existingProduct?.remoteID {
+            productImageStore.cancelOperation(
+                productID: productID,
+                scope: scope ?? imageScope
+            )
+        }
+        clearPendingImageURL()
+        if hadOperation {
+            imageMessage = L("product.image.cancelled")
+        }
+        return true
     }
 
     private func replacePendingImageURL(with url: URL) {
@@ -492,109 +689,189 @@ struct EditProductView: View {
         let purchase = Self.parseDouble(from: purchasePrice)
         let retail = Self.parseDouble(from: retailPrice)
         let stock = Self.parseDouble(from: stockQuantity)
-
-        // prezzi precedenti per storico
-        let oldPurchase = existingProduct?.purchasePrice
-        let oldRetail = existingProduct?.retailPrice
-        let oldDraft = existingProduct.map(Self.makeDraft)
-
-        let target: Product
-        let operation: LocalPendingChangeOperation
-        if let existingProduct {
-            target = existingProduct
-            operation = .update
-        } else {
-            target = Product(barcode: barcode)
-            context.insert(target)
-            operation = .create
-        }
-
-        target.barcode = trimmedBarcode
-        target.itemNumber = itemNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : itemNumber
-        target.productName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : name
-        target.secondProductName = secondName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : secondName
-        target.purchasePrice = purchase
-        target.retailPrice = retail
-        target.stockQuantity = stock
-
-        let trimmedSupplier = supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
-        var createdSupplier: Supplier?
-        if trimmedSupplier.isEmpty {
-            target.supplier = nil
-        } else if let existing = suppliers.first(where: {
-            $0.name.compare(trimmedSupplier, options: [.caseInsensitive]) == .orderedSame
-        }) {
-            target.supplier = existing
-        } else {
-            let newSupplier = Supplier(name: trimmedSupplier)
-            context.insert(newSupplier)
-            target.supplier = newSupplier
-            createdSupplier = newSupplier
-        }
-
-        let trimmedCategory = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-        var createdCategory: ProductCategory?
-        if trimmedCategory.isEmpty {
-            target.category = nil
-        } else if let existing = categories.first(where: {
-            $0.name.compare(trimmedCategory, options: [.caseInsensitive]) == .orderedSame
-        }) {
-            target.category = existing
-        } else {
-            let newCategory = ProductCategory(name: trimmedCategory)
-            context.insert(newCategory)
-            target.category = newCategory
-            createdCategory = newCategory
-        }
-
-        // storico prezzi automatico
-        let priceChanges = createPriceHistoryIfNeeded(
-            for: target,
-            oldPurchase: oldPurchase,
-            newPurchase: purchase,
-            oldRetail: oldRetail,
-            newRetail: retail
+        let formDraft = ProductDraft(
+            barcode: trimmedBarcode,
+            itemNumber: Self.optionalTrimmed(itemNumber),
+            productName: Self.optionalTrimmed(name),
+            secondProductName: Self.optionalTrimmed(secondName),
+            purchasePrice: purchase,
+            retailPrice: retail,
+            stockQuantity: stock,
+            supplierName: Self.optionalTrimmed(supplierName),
+            categoryName: Self.optionalTrimmed(categoryName)
         )
+        let existingID = existingProduct?.persistentModelID
 
         do {
-            let accumulator = LocalPendingChangeAccumulator(
-                context: context,
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
                 ownerUserID: pendingOwnerUserID
-            )
-            if let createdSupplier {
-                try accumulator.recordSupplierChange(
-                    supplier: createdSupplier,
-                    operation: .create,
-                    origin: .manualCatalogSave
+            ) { freshContext in
+                let currentSuppliers = try freshContext.fetch(FetchDescriptor<Supplier>())
+                let currentCategories = try freshContext.fetch(FetchDescriptor<ProductCategory>())
+                let target: Product
+                let operation: LocalPendingChangeOperation
+                let baselineDraft: ProductDraft?
+                let baselineFingerprintHash: String?
+                let userChangedFields: [String]
+                if let existingID {
+                    target = try Task126OwnerStoreGate.requireLocalModel(
+                        Product.self,
+                        id: existingID,
+                        in: freshContext
+                    )
+                    guard let initialDraft else {
+                        throw Task126OwnerStoreGateError.localModelUnavailable
+                    }
+                    let freshDraft = Self.makeDraft(target)
+                    let requestedUserChangedFields = Self.changedFieldNames(
+                        old: initialDraft,
+                        new: formDraft
+                    )
+                    userChangedFields = Self.changedFieldNames(
+                        old: freshDraft,
+                        new: formDraft
+                    ).filter { requestedUserChangedFields.contains($0) }
+                    let remoteChangedFields = Self.changedFieldNames(
+                        old: initialDraft,
+                        new: freshDraft
+                    )
+                    guard Task126ConflictResolver.resolve(
+                        localChangedFields: userChangedFields,
+                        remoteChangedFields: remoteChangedFields,
+                        remoteDeleted: target.remoteDeletedAt != nil
+                    ) == .autoMerge else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    baselineDraft = freshDraft
+                    baselineFingerprintHash = LocalPendingChangeLogicalKey
+                        .productFingerprintHash(target)
+                    operation = .update
+                } else {
+                    target = Product(barcode: barcode)
+                    freshContext.insert(target)
+                    baselineDraft = nil
+                    baselineFingerprintHash = nil
+                    userChangedFields = Self.createChangedFields
+                    operation = .create
+                }
+                let hasBarcodeConflict = try freshContext.fetch(
+                    FetchDescriptor<Product>()
+                ).contains(where: {
+                    $0.persistentModelID != target.persistentModelID
+                        && $0.barcode == formDraft.barcode
+                })
+                guard !hasBarcodeConflict else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
+
+                if userChangedFields.contains("barcode") { target.barcode = formDraft.barcode }
+                if userChangedFields.contains("itemNumber") { target.itemNumber = formDraft.itemNumber }
+                if userChangedFields.contains("productName") { target.productName = formDraft.productName }
+                if userChangedFields.contains("secondProductName") {
+                    target.secondProductName = formDraft.secondProductName
+                }
+                if userChangedFields.contains("purchasePrice") {
+                    target.purchasePrice = formDraft.purchasePrice
+                }
+                if userChangedFields.contains("retailPrice") {
+                    target.retailPrice = formDraft.retailPrice
+                }
+                if userChangedFields.contains("stockQuantity") {
+                    target.stockQuantity = formDraft.stockQuantity
+                }
+
+                var createdSupplier: Supplier?
+                if userChangedFields.contains("supplierName") {
+                    if let supplierName = formDraft.supplierName {
+                        let relationKey = ProductImportCore.normalizedRelationKey(supplierName)
+                        let matches = currentSuppliers.filter {
+                            ProductImportCore.normalizedRelationKey($0.name) == relationKey
+                        }
+                        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        if let existing = matches.first {
+                            target.supplier = existing
+                        } else {
+                            let newSupplier = Supplier(name: supplierName)
+                            freshContext.insert(newSupplier)
+                            target.supplier = newSupplier
+                            createdSupplier = newSupplier
+                        }
+                    } else {
+                        target.supplier = nil
+                    }
+                }
+
+                var createdCategory: ProductCategory?
+                if userChangedFields.contains("categoryName") {
+                    if let categoryName = formDraft.categoryName {
+                        let relationKey = ProductImportCore.normalizedRelationKey(categoryName)
+                        let matches = currentCategories.filter {
+                            ProductImportCore.normalizedRelationKey($0.name) == relationKey
+                        }
+                        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+                            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                        }
+                        if let existing = matches.first {
+                            target.category = existing
+                        } else {
+                            let newCategory = ProductCategory(name: categoryName)
+                            freshContext.insert(newCategory)
+                            target.category = newCategory
+                            createdCategory = newCategory
+                        }
+                    } else {
+                        target.category = nil
+                    }
+                }
+
+                let oldPurchase = baselineDraft?.purchasePrice
+                let oldRetail = baselineDraft?.retailPrice
+                let priceChanges = createPriceHistoryIfNeeded(
+                    for: target,
+                    oldPurchase: oldPurchase,
+                    newPurchase: userChangedFields.contains("purchasePrice") ? purchase : oldPurchase,
+                    oldRetail: oldRetail,
+                    newRetail: userChangedFields.contains("retailPrice") ? retail : oldRetail,
+                    context: freshContext
                 )
-            }
-            if let createdCategory {
-                try accumulator.recordCategoryChange(
-                    category: createdCategory,
-                    operation: .create,
-                    origin: .manualCatalogSave
+
+                let accumulator = LocalPendingChangeAccumulator(
+                    context: freshContext,
+                    ownerUserID: pendingOwnerUserID
                 )
+                if let createdSupplier {
+                    try accumulator.recordSupplierChange(
+                        supplier: createdSupplier,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                }
+                if let createdCategory {
+                    try accumulator.recordCategoryChange(
+                        category: createdCategory,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                }
+                if operation == .create || !userChangedFields.isEmpty {
+                    try accumulator.recordProductChange(
+                        product: target,
+                        operation: operation,
+                        origin: .manualCatalogSave,
+                        changedFields: userChangedFields,
+                        baselineFingerprintHash: baselineFingerprintHash
+                    )
+                }
+                try priceChanges.forEach {
+                    try accumulator.recordProductPriceChange(price: $0, origin: .productPriceSave)
+                }
+                try freshContext.save()
             }
-            let changedFields = operation == .create
-                ? Self.createChangedFields
-                : ProductUpdateDraft.computeChangedFields(
-                    old: oldDraft ?? Self.makeDraft(target),
-                    new: Self.makeDraft(target)
-                ).map(\.rawValue)
-            try accumulator.recordProductChange(
-                product: target,
-                operation: operation,
-                origin: .manualCatalogSave,
-                changedFields: changedFields,
-                baselineFingerprintHash: oldDraft.map(LocalPendingChangeLogicalKey.productFingerprintHash)
-            )
-            try priceChanges.forEach {
-                try accumulator.recordProductPriceChange(price: $0, origin: .productPriceSave)
-            }
-            try context.save()
             dismiss()
         } catch {
-            context.rollback()
             validationMessage = L("product.validation.save_failed")
             #if DEBUG
             print("Errore durante il salvataggio locale.")
@@ -607,7 +884,8 @@ struct EditProductView: View {
         oldPurchase: Double?,
         newPurchase: Double?,
         oldRetail: Double?,
-        newRetail: Double?
+        newRetail: Double?,
+        context: ModelContext
     ) -> [ProductPrice] {
         let now = Date()
         var created: [ProductPrice] = []
@@ -647,6 +925,11 @@ struct EditProductView: View {
         return Double(normalized)
     }
 
+    nonisolated private static func optionalTrimmed(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     nonisolated private static func makeDraft(_ product: Product) -> ProductDraft {
         ProductDraft(
             barcode: product.barcode,
@@ -659,6 +942,17 @@ struct EditProductView: View {
             supplierName: product.supplier?.name,
             categoryName: product.category?.name
         )
+    }
+
+    nonisolated private static func changedFieldNames(
+        old: ProductDraft,
+        new: ProductDraft
+    ) -> [String] {
+        var fields = ProductUpdateDraft.computeChangedFields(old: old, new: new).map(\.rawValue)
+        if old.barcode != new.barcode {
+            fields.insert("barcode", at: 0)
+        }
+        return fields
     }
 
     private static let createChangedFields = [

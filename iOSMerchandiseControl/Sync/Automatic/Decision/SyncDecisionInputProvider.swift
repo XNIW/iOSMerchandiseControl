@@ -5,12 +5,14 @@ nonisolated struct SyncDecisionInputSnapshot: Equatable, Sendable {
     var triggerSource: SyncAutomaticTriggerSource
     var isAuthenticated: Bool
     var ownerUserID: UUID?
+    var ownerStoreBindingResolution: OwnerStoreBindingResolution
     var accountBindingMatches: Bool
     var networkStatus: AutomaticSyncNetworkStatus
     var pendingLocalChanges: LocalPendingChangeSnapshot
     var pendingOutboxCount: Int
     var requiresBootstrap: Bool
     var requiresFullRecovery: Bool
+    var preservesPendingBeforeRecovery: Bool = false
     var hasRecoveryDrift: Bool
     var hasRealtimeEvent: Bool
     var isSyncBusy: Bool
@@ -40,6 +42,7 @@ nonisolated struct SyncDecisionInputSnapshot: Equatable, Sendable {
             requestsLightReconcile: requestsLightReconcile,
             requiresBootstrap: requiresBootstrap,
             requiresFullRecovery: requiresFullRecovery,
+            preservesPendingBeforeRecovery: preservesPendingBeforeRecovery,
             fullRecoveryContext: .normalForeground,
             isSyncBusy: isSyncBusy,
             hasStateReadFailure: hasStateReadFailure
@@ -60,14 +63,20 @@ protocol SyncDecisionInputProviding: AnyObject {
 
 actor SyncDecisionInputProvider: SyncDecisionInputProviding {
     private let modelContainer: ModelContainer
+    private let bindingStore: AccountBindingStore
+    private let selectedShopStore: SelectedShopStore
     private var networkStatus: AutomaticSyncNetworkStatus
     private var pendingRealtimeEvent = false
 
     init(
         modelContainer: ModelContainer,
-        initialNetworkStatus: AutomaticSyncNetworkStatus = .unknown
+        initialNetworkStatus: AutomaticSyncNetworkStatus = .unknown,
+        bindingStore: AccountBindingStore = AccountBindingStore(),
+        selectedShopStore: SelectedShopStore = SelectedShopStore()
     ) {
         self.modelContainer = modelContainer
+        self.bindingStore = bindingStore
+        self.selectedShopStore = selectedShopStore
         self.networkStatus = initialNetworkStatus
     }
 
@@ -85,16 +94,48 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         ownerUserID: UUID?,
         isSyncBusy: Bool
     ) async -> SyncDecisionInputSnapshot {
+        guard isAuthenticated, let ownerUserID else {
+            return SyncDecisionInputSnapshot(
+                triggerSource: triggerSource,
+                isAuthenticated: false,
+                ownerUserID: nil,
+                ownerStoreBindingResolution: .reviewRequired(.accountMismatch),
+                accountBindingMatches: false,
+                networkStatus: networkStatus,
+                pendingLocalChanges: .empty,
+                pendingOutboxCount: 0,
+                requiresBootstrap: false,
+                requiresFullRecovery: false,
+                hasRecoveryDrift: false,
+                hasRealtimeEvent: false,
+                isSyncBusy: isSyncBusy,
+                hasStateReadFailure: false,
+                requestsLightReconcile: triggerSource.requestsLightReconcile
+            )
+        }
         let context = ModelContext(modelContainer)
         let pendingChanges = loadPendingChanges(context: context, ownerUserID: ownerUserID)
         let outboxCount = loadPendingOutboxCount(context: context, ownerUserID: ownerUserID)
         let baselineSummary = loadBaselineSummary(context: context, ownerUserID: ownerUserID)
-        let localCatalogIsEmpty = loadLocalCatalogIsEmpty(context: context)
+        let localStoreIsCompletelyEmpty = loadLocalStoreIsCompletelyEmpty(context: context)
         let stateReadFailed = pendingChanges.failed
             || outboxCount.failed
             || baselineSummary.failed
-            || localCatalogIsEmpty.failed
-        let bindingState = accountBindingState(ownerUserID: ownerUserID)
+            || localStoreIsCompletelyEmpty.failed
+        var bindingResolution = ownerStoreBindingResolution(
+            ownerUserID: ownerUserID,
+            localStoreIsCompletelyEmpty: localStoreIsCompletelyEmpty.value,
+            stateReadFailed: stateReadFailed
+        )
+        if baselineSummary.value.status == .accountMismatch,
+           !bindingStore.hasPendingReplacementJournal {
+            bindingResolution = .reviewRequired(.accountMismatch)
+        }
+        let pendingRecoveryMode = exactPendingRecoveryMode(
+            ownerUserID: ownerUserID,
+            bindingResolution: bindingResolution
+        )
+        let requiresReplacementRecovery = pendingRecoveryMode != nil
         let realtimeEvent = pendingRealtimeEvent || triggerSource == .remoteSyncEvent
         if realtimeEvent {
             pendingRealtimeEvent = false
@@ -104,16 +145,24 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
             triggerSource: triggerSource,
             isAuthenticated: isAuthenticated,
             ownerUserID: ownerUserID,
-            accountBindingMatches: bindingState.matches,
+            ownerStoreBindingResolution: bindingResolution,
+            accountBindingMatches: bindingResolution.allowsAutomaticSync,
             networkStatus: networkStatus,
             pendingLocalChanges: pendingChanges.value,
             pendingOutboxCount: outboxCount.value,
-            requiresBootstrap: requiresBootstrap(
+            requiresBootstrap: requiresReplacementRecovery || requiresBootstrap(
                 baselineSummary: baselineSummary.value,
-                isAuthenticated: isAuthenticated
+                isAuthenticated: isAuthenticated,
+                localStoreIsCompletelyEmpty: localStoreIsCompletelyEmpty.value,
+                bindingResolution: bindingResolution
             ),
-            requiresFullRecovery: requiresFullRecovery(baselineSummary: baselineSummary.value),
-            hasRecoveryDrift: hasRecoveryDrift(baselineSummary: baselineSummary.value),
+            requiresFullRecovery: !requiresReplacementRecovery
+                && bindingResolution.allowsAutomaticSync
+                && requiresFullRecovery(baselineSummary: baselineSummary.value),
+            preservesPendingBeforeRecovery: pendingRecoveryMode == .sameScopeRecovery,
+            hasRecoveryDrift: !requiresReplacementRecovery
+                && bindingResolution.allowsAutomaticSync
+                && hasRecoveryDrift(baselineSummary: baselineSummary.value),
             hasRealtimeEvent: realtimeEvent,
             isSyncBusy: isSyncBusy,
             hasStateReadFailure: stateReadFailed,
@@ -150,9 +199,8 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
     ) -> ReadResult<LocalPendingChangeSnapshot> {
         do {
             let storeIdentity = ownerUserID.flatMap { owner in
-                ShopContextSelection.selectedShopID(ownerUserID: owner) == nil
-                    ? nil
-                    : ShopContextSelection.localStoreIdentity(ownerUserID: owner)
+                let accountHash = AccountBindingStore.accountHash(for: owner)
+                return selectedShopStore.selectedShop(accountHash: accountHash)?.localStoreIdentity
             }
             return .success(try LocalPendingChangeSnapshotProvider(context: context)
                 .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: storeIdentity)
@@ -168,13 +216,16 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
     ) -> ReadResult<Int> {
         guard let ownerUserID else { return .success(0) }
         do {
-            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+            let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+            let storeId = selectedShopStore.selectedShop(accountHash: accountHash)?.localStoreIdentity.storeId
             let counts = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
                 storeId: storeId,
                 now: Date()
             )
-            return .success(counts.pending + counts.failedRetryable + counts.retryable)
+            // `retryable` is a time/ownership subset of pending + failedRetryable,
+            // not an additional queue. Counting it again would duplicate work.
+            return .success(counts.pending + counts.failedRetryable)
         } catch {
             return .failure(0)
         }
@@ -194,47 +245,94 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         }
     }
 
-    private func loadLocalCatalogIsEmpty(context: ModelContext) -> ReadResult<Bool> {
+    private func loadLocalStoreIsCompletelyEmpty(context: ModelContext) -> ReadResult<Bool> {
         do {
             let productCount = try context.fetchCount(FetchDescriptor<Product>())
             let supplierCount = try context.fetchCount(FetchDescriptor<Supplier>())
             let categoryCount = try context.fetchCount(FetchDescriptor<ProductCategory>())
-            return .success(productCount == 0 && supplierCount == 0 && categoryCount == 0)
+            let productPriceCount = try context.fetchCount(FetchDescriptor<ProductPrice>())
+            let historyCount = try context.fetchCount(FetchDescriptor<HistoryEntry>())
+            let pendingChangeCount = try context.fetchCount(FetchDescriptor<LocalPendingChange>())
+            let outboxCount = try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>())
+            let baselineRunCount = try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRun>())
+            let baselineRecordCount = try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>())
+            return .success(
+                productCount == 0
+                    && supplierCount == 0
+                    && categoryCount == 0
+                    && productPriceCount == 0
+                    && historyCount == 0
+                    && pendingChangeCount == 0
+                    && outboxCount == 0
+                    && baselineRunCount == 0
+                    && baselineRecordCount == 0
+            )
         } catch {
             return .failure(false)
         }
     }
 
-    private struct AccountBindingState {
-        var matches: Bool
-    }
-
-    private func accountBindingState(ownerUserID: UUID?) -> AccountBindingState {
-        guard let ownerUserID,
-              let binding = AccountBindingStore().currentBinding else {
-            return AccountBindingState(
-                matches: true
-            )
+    private func ownerStoreBindingResolution(
+        ownerUserID: UUID,
+        localStoreIsCompletelyEmpty: Bool,
+        stateReadFailed: Bool
+    ) -> OwnerStoreBindingResolution {
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        if !bindingStore.hasPendingReplacementJournal,
+           let binding = bindingStore.currentBinding,
+           binding.accountHash != accountHash {
+            return .reviewRequired(.accountMismatch)
         }
-        let matchesCurrentAccount = binding.accountHash == AccountBindingStore.accountHash(for: ownerUserID)
-        return AccountBindingState(
-            matches: matchesCurrentAccount
+        guard selectedShopStore.isResolutionReady(accountHash: accountHash) else {
+            return .reviewRequired(.shopContextUnavailable)
+        }
+        guard let activeStoreIdentity = selectedShopStore
+            .selectedShop(accountHash: accountHash)?.localStoreIdentity else {
+            return .reviewRequired(.shopContextUnavailable)
+        }
+        return bindingStore.resolveOwnerStoreBinding(
+            userID: ownerUserID,
+            activeStoreIdentity: activeStoreIdentity,
+            isLocalStoreCompletelyEmpty: localStoreIsCompletelyEmpty,
+            stateReadFailed: stateReadFailed
         )
-    }
-
-    private nonisolated static func activeOutboxStoreId(ownerUserID: UUID) -> String? {
-        guard ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) != nil else {
-            return nil
-        }
-        return ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID).storeId
     }
 
     private func requiresBootstrap(
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
-        isAuthenticated: Bool
+        isAuthenticated: Bool,
+        localStoreIsCompletelyEmpty: Bool,
+        bindingResolution: OwnerStoreBindingResolution
     ) -> Bool {
         isAuthenticated
             && baselineSummary.status == .absent
+            && localStoreIsCompletelyEmpty
+            && bindingResolution.allowsAutomaticSync
+    }
+
+    private func exactPendingRecoveryMode(
+        ownerUserID: UUID,
+        bindingResolution: OwnerStoreBindingResolution
+    ) -> AccountRecoveryJournalMode? {
+        guard bindingResolution.allowsAutomaticSync else { return nil }
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        guard let pending = bindingStore.pendingReplacement,
+              pending.accountHash == accountHash,
+              let recovery = bindingStore.pendingRecoveryJournal,
+              recovery.replacement == pending,
+              selectedShopStore.isResolutionReady(accountHash: accountHash),
+              let selectedIdentity = selectedShopStore
+                .selectedShop(accountHash: accountHash)?.localStoreIdentity else {
+            return nil
+        }
+        guard selectedIdentity == pending.storeIdentity else { return nil }
+        if recovery.mode == .sameScopeRecovery {
+            guard bindingStore.currentBinding?.accountHash == accountHash,
+                  bindingStore.currentBinding?.storeIdentity == pending.storeIdentity else {
+                return nil
+            }
+        }
+        return recovery.mode
     }
 
     private func requiresFullRecovery(

@@ -8,8 +8,10 @@ enum SyncAutomaticRuntimeFactory {
         authViewModel: SupabaseAuthViewModel,
         supabaseTransportClient: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?,
+        storeGenerationController: SyncStoreGenerationController,
         deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil
     ) -> any SyncAutomaticRuntimeProviding {
+        let generationLease = storeGenerationController.captureLease(for: modelContainer)
         let catalogPushProvider: (any SyncCatalogPushProviding)? = supabaseTransportClient.map {
             CatalogPushService(
                 modelContainer: modelContainer,
@@ -36,20 +38,11 @@ enum SyncAutomaticRuntimeFactory {
             )
         }
         let recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = supabaseTransportClient.map {
-            AutomaticRecoverySnapshotPullService(
-                modelContainer: modelContainer,
-                previewService: SupabasePullPreviewService(
-                    inventoryService: RecoveryRemoteSupabaseAdapter(remote: $0),
-                    pageSize: 1_000,
-                    catalogRowBudget: nil,
-                    productPricePreviewSampleLimit: 1_000
-                ),
-                productPriceApplyService: SupabaseProductPriceApplyService(
-                    fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: $0),
-                    fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: false)
-                ),
-                historyRemote: HistorySessionRemoteSupabaseAdapter(remote: $0),
-                syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: $0)
+            AtomicGenerationRecoverySnapshotPullService(
+                storeGenerationController: storeGenerationController,
+                recoveryRemote: ShopSyncRecoveryRemoteAdapter(
+                    transport: SupabaseShopSyncRecoveryRPCTransport(remote: $0)
+                )
             )
         }
         let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = SyncActivityRegistrationService(
@@ -64,7 +57,15 @@ enum SyncAutomaticRuntimeFactory {
             incrementalPullProvider: incrementalPullProvider,
             recoverySnapshotPullProvider: recoverySnapshotPullProvider,
             activityRegistrationProvider: activityRegistrationProvider,
-            deviceAuthorization: deviceAuthorization
+            deviceAuthorization: deviceAuthorization,
+            runAdmissionValidator: {
+                guard let generationLease else {
+                    throw SyncStoreGenerationError.staleGenerationLease
+                }
+                try await MainActor.run {
+                    try storeGenerationController.validateLease(generationLease)
+                }
+            }
         )
     }
 }

@@ -22,7 +22,8 @@ nonisolated struct SyncProductPricePushPlan: Equatable, Sendable {
     }
 
     var hasWork: Bool {
-        pendingChangeCount > 0 && blockers.isEmpty
+        // A stale/blocked sibling is isolated; eligible pending prices may proceed.
+        pendingChangeCount > 0 && !blockers.contains("missingRemote")
     }
 }
 

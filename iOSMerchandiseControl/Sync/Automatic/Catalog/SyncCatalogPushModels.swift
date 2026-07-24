@@ -22,7 +22,9 @@ nonisolated struct SyncCatalogPushPlan: Equatable, Sendable {
     }
 
     var hasWork: Bool {
-        pendingChangeCount > 0 && blockers.isEmpty
+        // Row-level conflicts remain visible in `blockers`, but must not stop
+        // unrelated eligible rows in the same domain.
+        pendingChangeCount > 0 && !blockers.contains("missingRemote")
     }
 }
 

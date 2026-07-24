@@ -7,6 +7,7 @@ import SwiftData
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @StateObject private var productImageStore: ProductImageStore
+    @StateObject private var syncStoreGenerationController: SyncStoreGenerationController
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
@@ -16,20 +17,42 @@ struct iOSMerchandiseControlApp: App {
     init() {
         #if DEBUG
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
+        let isTask139AtomicCrashHarness = Self.task139AtomicCrashHarnessRequested
+        let isTask139PreboundHarness = Self.task139PreboundHarnessRequested
         #else
         let isTask138VisualHarness = false
+        let isTask139AtomicCrashHarness = false
+        let isTask139PreboundHarness = false
         #endif
-        let dependencies = Self.isRunningHostedXCTest || isTask138VisualHarness
+        let dependencies = Self.isRunningHostedXCTest
+            || isTask138VisualHarness
+            || isTask139AtomicCrashHarness
+            || isTask139PreboundHarness
             ? Self.makeHostedXCTestDependencies()
             : Self.makeSupabaseDependencies()
+        let generationController = Self.isRunningHostedXCTest
+            || isTask138VisualHarness
+            || isTask139AtomicCrashHarness
+            || isTask139PreboundHarness
+            ? SyncStoreGenerationController.ephemeral()
+            : SyncStoreGenerationController.shared
+        let productImageStore = dependencies.productImageStore
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
-        _productImageStore = StateObject(wrappedValue: dependencies.productImageStore)
+        _productImageStore = StateObject(wrappedValue: productImageStore)
+        _syncStoreGenerationController = StateObject(wrappedValue: generationController)
+        generationController.setPresentationBoundaryObserver { [weak productImageStore] presentationID in
+            productImageStore?.advanceStoreGeneration(presentationID: presentationID)
+        }
         supabaseTransportClient = dependencies.supabaseTransportClient
         supabasePullPreviewService = dependencies.pullPreviewService
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
-        if !isTask138VisualHarness {
+        if !Self.isRunningHostedXCTest,
+           !isTask138VisualHarness,
+           !isTask139AtomicCrashHarness,
+           !isTask139PreboundHarness,
+           generationController.loadFailureCode == nil {
             SyncBackgroundTaskScheduler.shared.register()
             SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
         }
@@ -37,32 +60,31 @@ struct iOSMerchandiseControlApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            if let task138VisualState = Self.task138ProductImageVisualState {
-                Task138ProductImageVisualHarness(state: task138VisualState)
-            } else {
+            Group {
+                #if DEBUG
+                if let task138VisualState = Self.task138ProductImageVisualState {
+                    Task138ProductImageVisualHarness(state: task138VisualState)
+                } else if Self.task139AtomicCrashHarnessRequested
+                            || Self.task139PreboundHarnessRequested {
+                    HostedXCTestRootView()
+                } else {
+                    standardRootView
+                }
+                #else
                 standardRootView
+                #endif
             }
-            #else
-            standardRootView
-            #endif
+            .environmentObject(syncStoreGenerationController)
+            .modelContainer(syncStoreGenerationController.modelContainer)
+            .id(syncStoreGenerationController.presentationID)
         }
-        .modelContainer(for: [
-            Product.self,
-            Supplier.self,
-            ProductCategory.self,
-            HistoryEntry.self,
-            ProductPrice.self,
-            SupabaseCatalogBaselineRun.self,
-            SupabaseCatalogBaselineRecord.self,
-            SyncEventOutboxEntry.self,
-            LocalPendingChange.self
-        ])
     }
 
     @ViewBuilder
     private var standardRootView: some View {
-        if let task126SmokeKind = Self.task126UISmokeKind {
+        if syncStoreGenerationController.loadFailureCode != nil {
+            SyncStoreGenerationFailureView()
+        } else if let task126SmokeKind = Self.task126UISmokeKind {
             Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
         } else if Self.isRunningHostedXCTest {
             HostedXCTestRootView()
@@ -98,6 +120,14 @@ struct iOSMerchandiseControlApp: App {
     }
 
     #if DEBUG
+    /// Lazy so the harness runs before any normal generation controller,
+    /// Supabase dependency or background task can touch app state.
+    private static let task139AtomicCrashHarnessRequested =
+        Task139AtomicGenerationCrashHarness.runIfRequested()
+
+    private static let task139PreboundHarnessRequested =
+        Task139PreboundResourceRuntimeHarness.runIfRequested()
+
     private static var task138ProductImageVisualState: Task138ProductImageVisualState? {
         Task138ProductImageVisualState(
             environmentValue: ProcessInfo.processInfo.environment["TASK138_PRODUCT_IMAGE_VISUAL_STATE"]
@@ -136,11 +166,26 @@ struct iOSMerchandiseControlApp: App {
                 transport: SupabaseSyncEventRPCTransport(clientProvider: provider)
             )
             let syncEventSignalWatcher = SupabaseSyncEventSignalWatcher(clientProvider: provider)
+            let productImageScopeAuthorization: ProductImageScopeAuthorizationProvider = { scope in
+                guard provider.client.auth.currentSession?.user.id == scope.accountID else {
+                    return false
+                }
+                let bindingStore = AccountBindingStore()
+                let accountHash = AccountBindingStore.accountHash(for: scope.accountID)
+                let selectedShop = SelectedShopStore().selectedShop(accountHash: accountHash)
+                return ProductImageOwnerStoreGate.allows(
+                    scope: scope,
+                    selectedShop: selectedShop,
+                    binding: bindingStore.currentBinding,
+                    hasPendingReplacement: bindingStore.hasPendingReplacementJournal
+                )
+            }
             let productImageStore = ProductImageStore(
                 service: config.productImageAPIBaseURL.map { apiBaseURL in
                     ProductImageService(
                         apiBaseURL: apiBaseURL,
-                        storageBaseURL: config.projectURL
+                        storageBaseURL: config.projectURL,
+                        scopeAuthorizationProvider: productImageScopeAuthorization
                     ) {
                         guard let session = provider.client.auth.currentSession,
                               !session.isExpired else {
@@ -151,7 +196,8 @@ struct iOSMerchandiseControlApp: App {
                             accessToken: session.accessToken
                         )
                     }
-                }
+                },
+                scopeAuthorizationProvider: productImageScopeAuthorization
             )
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(
@@ -196,6 +242,17 @@ struct iOSMerchandiseControlApp: App {
                 productImageStore: ProductImageStore(service: nil)
             )
         }
+    }
+}
+
+private struct SyncStoreGenerationFailureView: View {
+    var body: some View {
+        ContentUnavailableView(
+            L("options.supabase.automaticSync.phase.recoveryRequired"),
+            systemImage: "externaldrive.badge.exclamationmark",
+            description: Text(L("options.accountDecision.localStateUnavailable.detail"))
+        )
+        .accessibilityIdentifier("sync-store-generation-fail-closed")
     }
 }
 

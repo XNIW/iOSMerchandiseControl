@@ -13,6 +13,9 @@ struct ProductPriceHistoryView: View {
     /// Tipo di prezzo attualmente selezionato (come i tab Android)
     @State private var selectedType: PriceType = .purchase
     @State private var addPricePresentation: AddPricePresentation?
+    @State private var displayedPrices: [ProductPrice]?
+    @State private var displayedPurchasePrice: Double?
+    @State private var displayedRetailPrice: Double?
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     init(
@@ -23,6 +26,8 @@ struct ProductPriceHistoryView: View {
         self.product = product
         self.pendingOwnerUserID = pendingOwnerUserID
         self.onCurrentPriceUpdated = onCurrentPriceUpdated
+        _displayedPurchasePrice = State(initialValue: product.purchasePrice)
+        _displayedRetailPrice = State(initialValue: product.retailPrice)
     }
 
     private struct AddPricePresentation: Identifiable {
@@ -33,7 +38,7 @@ struct ProductPriceHistoryView: View {
 
     /// Storico completo, ordinato dal più recente
     private var prices: [ProductPrice] {
-        ProductPriceContract.sortedHistory(product.priceHistory)
+        displayedPrices ?? ProductPriceContract.sortedHistory(product.priceHistory)
     }
 
     private var purchasePrices: [ProductPrice] {
@@ -116,6 +121,7 @@ struct ProductPriceHistoryView: View {
             }
         }
         .id("product-price-history-list-\(resolvedLanguageCode)")
+        .onAppear { refreshDisplayedPrices() }
         .navigationTitle(L("product.history.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -133,6 +139,11 @@ struct ProductPriceHistoryView: View {
                     pendingOwnerUserID: pendingOwnerUserID,
                     onSaved: { type, value in
                         selectedType = type
+                        switch type {
+                        case .purchase: displayedPurchasePrice = value
+                        case .retail: displayedRetailPrice = value
+                        }
+                        refreshDisplayedPrices()
                         onCurrentPriceUpdated?(type, value)
                     }
                 )
@@ -150,10 +161,26 @@ struct ProductPriceHistoryView: View {
     }
 
     private func currentPriceText(for type: PriceType) -> String {
-        guard let value = ProductPriceContract.currentPrice(for: product, type: type) else {
+        let value = type == .purchase ? displayedPurchasePrice : displayedRetailPrice
+        guard let value else {
             return L("product.history.no_current_price")
         }
         return formatMoney(value)
+    }
+
+    private func refreshDisplayedPrices() {
+        let productID = product.persistentModelID
+        if let refreshedProduct = try? Task126OwnerStoreGate.requireLocalModel(
+            Product.self,
+            id: productID,
+            in: context
+        ) {
+            displayedPurchasePrice = refreshedProduct.purchasePrice
+            displayedRetailPrice = refreshedProduct.retailPrice
+            displayedPrices = ProductPriceContract.sortedHistory(
+                refreshedProduct.priceHistory
+            )
+        }
     }
 
     private func label(for type: PriceType) -> String {
@@ -203,9 +230,12 @@ struct ProductPriceHistoryView: View {
         let product: Product
         let pendingOwnerUserID: UUID?
         let onSaved: (PriceType, Double) -> Void
+        let initialPurchasePrice: Double?
+        let initialRetailPrice: Double?
 
         @State private var selectedType: PriceType
-        @State private var priceText: String
+        @State private var purchasePriceText: String
+        @State private var retailPriceText: String
         @State private var effectiveAt = Date()
         @State private var validationMessage: String?
 
@@ -218,16 +248,15 @@ struct ProductPriceHistoryView: View {
             self.product = product
             self.pendingOwnerUserID = pendingOwnerUserID
             self.onSaved = onSaved
+            self.initialPurchasePrice = product.purchasePrice
+            self.initialRetailPrice = product.retailPrice
             _selectedType = State(initialValue: initialType)
-
-            let currentPrice: Double?
-            switch initialType {
-            case .purchase:
-                currentPrice = product.purchasePrice
-            case .retail:
-                currentPrice = product.retailPrice
-            }
-            _priceText = State(initialValue: currentPrice.map(Self.format(number:)) ?? "")
+            _purchasePriceText = State(
+                initialValue: product.purchasePrice.map(Self.format(number:)) ?? ""
+            )
+            _retailPriceText = State(
+                initialValue: product.retailPrice.map(Self.format(number:)) ?? ""
+            )
         }
 
         var body: some View {
@@ -247,7 +276,7 @@ struct ProductPriceHistoryView: View {
                     }
                     .pickerStyle(.segmented)
 
-                    TextField(L("product.history.add.price"), text: $priceText)
+                    TextField(L("product.history.add.price"), text: selectedPriceText)
                         .keyboardType(.decimalPad)
                         .monospacedDigit()
                         .accessibilityLabel(Text(L("product.history.add.price")))
@@ -272,59 +301,98 @@ struct ProductPriceHistoryView: View {
                         .fontWeight(.semibold)
                 }
             }
-            .onChange(of: priceText) { _, _ in
+            .onChange(of: purchasePriceText) { _, _ in
+                validationMessage = nil
+            }
+            .onChange(of: retailPriceText) { _, _ in
                 validationMessage = nil
             }
         }
 
+        private var selectedPriceText: Binding<String> {
+            selectedType == .purchase ? $purchasePriceText : $retailPriceText
+        }
+
         private func save() {
-            guard let value = Self.parseDouble(from: priceText), value >= 0 else {
+            guard let value = Self.parseDouble(from: selectedPriceText.wrappedValue), value >= 0 else {
                 validationMessage = L("product.history.add.validation_invalid")
                 return
             }
 
-            let oldDraft = makeDraft(product)
-            let history = ProductPrice(
-                type: selectedType,
-                price: value,
-                effectiveAt: effectiveAt,
-                source: "EDIT_PRODUCT",
-                product: product
-            )
-            context.insert(history)
-
-            let changedFields: [String]
-            switch selectedType {
-            case .purchase:
-                let oldValue = product.purchasePrice
-                product.purchasePrice = value
-                changedFields = oldValue == value ? [] : ["purchasePrice"]
-            case .retail:
-                let oldValue = product.retailPrice
-                product.retailPrice = value
-                changedFields = oldValue == value ? [] : ["retailPrice"]
-            }
-
             do {
-                let accumulator = LocalPendingChangeAccumulator(
-                    context: context,
+                let productPersistentID = product.persistentModelID
+                try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: context.container,
                     ownerUserID: pendingOwnerUserID
-                )
-                if !changedFields.isEmpty {
-                    try accumulator.recordProductChange(
-                        product: product,
-                        operation: .update,
-                        origin: .manualCatalogSave,
-                        changedFields: changedFields,
-                        baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(oldDraft)
+                ) { freshContext in
+                    let freshProduct = try Task126OwnerStoreGate.requireLocalModel(
+                        Product.self,
+                        id: productPersistentID,
+                        in: freshContext
                     )
+                    guard freshProduct.remoteDeletedAt == nil else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    let initialValue = selectedType == .purchase
+                        ? initialPurchasePrice
+                        : initialRetailPrice
+                    let freshValue = selectedType == .purchase
+                        ? freshProduct.purchasePrice
+                        : freshProduct.retailPrice
+                    let field = selectedType == .purchase ? "purchasePrice" : "retailPrice"
+                    // Tapping Save is an explicit write intent whenever the
+                    // submitted value differs from the current fenced row,
+                    // even if the user left a stale prefilled value unchanged.
+                    let localChanged = freshValue == value ? [] : [field]
+                    let remoteChanged = initialValue == freshValue ? [] : [field]
+                    guard Task126ConflictResolver.resolve(
+                        localChangedFields: localChanged,
+                        remoteChangedFields: remoteChanged
+                    ) == .autoMerge else {
+                        throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                    }
+                    let baselineFingerprint = LocalPendingChangeLogicalKey
+                        .productFingerprintHash(freshProduct)
+                    let history = ProductPrice(
+                        type: selectedType,
+                        price: value,
+                        effectiveAt: effectiveAt,
+                        source: "EDIT_PRODUCT",
+                        product: freshProduct
+                    )
+                    freshContext.insert(history)
+
+                    let changedFields: [String]
+                    switch selectedType {
+                    case .purchase:
+                        let oldValue = freshProduct.purchasePrice
+                        freshProduct.purchasePrice = value
+                        changedFields = oldValue == value ? [] : ["purchasePrice"]
+                    case .retail:
+                        let oldValue = freshProduct.retailPrice
+                        freshProduct.retailPrice = value
+                        changedFields = oldValue == value ? [] : ["retailPrice"]
+                    }
+
+                    let accumulator = LocalPendingChangeAccumulator(
+                        context: freshContext,
+                        ownerUserID: pendingOwnerUserID
+                    )
+                    if !changedFields.isEmpty {
+                        try accumulator.recordProductChange(
+                            product: freshProduct,
+                            operation: .update,
+                            origin: .manualCatalogSave,
+                            changedFields: changedFields,
+                            baselineFingerprintHash: baselineFingerprint
+                        )
+                    }
+                    try accumulator.recordProductPriceChange(price: history, origin: .productPriceSave)
+                    try freshContext.save()
                 }
-                try accumulator.recordProductPriceChange(price: history, origin: .productPriceSave)
-                try context.save()
                 onSaved(selectedType, value)
                 dismiss()
             } catch {
-                context.rollback()
                 validationMessage = L("product.history.add.save_failed")
             }
         }

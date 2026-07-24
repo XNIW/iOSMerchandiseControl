@@ -11,6 +11,7 @@ struct PreGenerateView: View {
     @Environment(\.dismiss) private var dismiss
     
     @EnvironmentObject var excelSession: ExcelSessionViewModel
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @Environment(\.modelContext) private var context
 
     @Query(sort: \Supplier.name, order: .forward)
@@ -701,7 +702,12 @@ struct PreGenerateView: View {
 
         Task {
             do {
-                let entry = try excelSession.generateHistoryEntry(in: context)
+                let entry = try excelSession.generateHistoryEntry(
+                    in: context,
+                    ownerUserID: supabaseAuthViewModel.isSignedIn
+                        ? supabaseAuthViewModel.sessionInfo?.userID
+                        : nil
+                )
 
                 await MainActor.run {
                     // (generateHistoryEntry mette già currentHistoryEntry,
@@ -907,6 +913,7 @@ struct ColumnSelectionRow: View {
     NavigationStack {
         PreGenerateView()
             .environmentObject(ExcelSessionViewModel())
+            .environmentObject(SupabaseAuthViewModel(authService: nil))
     }
 }
 

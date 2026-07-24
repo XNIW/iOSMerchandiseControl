@@ -294,7 +294,7 @@ nonisolated enum ProductImportCore {
         resolver: ProductImportNamedEntityResolver,
         recordPriceHistory: Bool,
         onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
-    ) -> Product {
+    ) throws -> Product {
         let product = Product(
             barcode: draft.barcode,
             itemNumber: draft.itemNumber,
@@ -303,8 +303,8 @@ nonisolated enum ProductImportCore {
             purchasePrice: draft.purchasePrice,
             retailPrice: draft.retailPrice,
             stockQuantity: draft.stockQuantity,
-            supplier: resolver.resolveSupplier(named: draft.supplierName),
-            category: resolver.resolveCategory(named: draft.categoryName)
+            supplier: try resolver.resolveSupplier(named: draft.supplierName),
+            category: try resolver.resolveCategory(named: draft.categoryName)
         )
         context.insert(product)
 
@@ -333,7 +333,7 @@ nonisolated enum ProductImportCore {
         resolver: ProductImportNamedEntityResolver,
         recordPriceHistory: Bool,
         onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
-    ) -> [ProductPrice] {
+    ) throws -> [ProductPrice] {
         let newDraft = update.new
         let oldPurchase = product.purchasePrice
         let oldRetail = product.retailPrice
@@ -357,10 +357,10 @@ nonisolated enum ProductImportCore {
             product.stockQuantity = newDraft.stockQuantity
         }
         if update.changedFields.contains(.supplierName) {
-            product.supplier = resolver.resolveSupplier(named: newDraft.supplierName)
+            product.supplier = try resolver.resolveSupplier(named: newDraft.supplierName)
         }
         if update.changedFields.contains(.categoryName) {
-            product.category = resolver.resolveCategory(named: newDraft.categoryName)
+            product.category = try resolver.resolveCategory(named: newDraft.categoryName)
         }
 
         if recordPriceHistory {
@@ -952,6 +952,8 @@ nonisolated final class ProductImportNamedEntityResolver {
     private var createdCategoryNames: Set<String> = []
     private var createdSuppliersByName: [String: Supplier] = [:]
     private var createdCategoriesByName: [String: ProductCategory] = [:]
+    private var tombstonedSupplierNames: Set<String> = []
+    private var tombstonedCategoryNames: Set<String> = []
 
     init(
         context: ModelContext,
@@ -974,8 +976,18 @@ nonisolated final class ProductImportNamedEntityResolver {
             categories = try context.fetch(FetchDescriptor<ProductCategory>())
         }
 
+        tombstonedSupplierNames = Set(suppliers.compactMap { supplier in
+            guard supplier.remoteDeletedAt != nil else { return nil }
+            return ProductImportCore.normalizedRelationKey(supplier.name)
+        })
+        tombstonedCategoryNames = Set(categories.compactMap { category in
+            guard category.remoteDeletedAt != nil else { return nil }
+            return ProductImportCore.normalizedRelationKey(category.name)
+        })
+
         suppliersByName = Dictionary(
             suppliers.compactMap { supplier in
+                guard supplier.remoteDeletedAt == nil else { return nil }
                 guard let key = ProductImportCore.normalizedRelationKey(supplier.name) else {
                     return nil
                 }
@@ -986,6 +998,7 @@ nonisolated final class ProductImportNamedEntityResolver {
 
         categoriesByName = Dictionary(
             categories.compactMap { category in
+                guard category.remoteDeletedAt == nil else { return nil }
                 guard let key = ProductImportCore.normalizedRelationKey(category.name) else {
                     return nil
                 }
@@ -1011,19 +1024,19 @@ nonisolated final class ProductImportNamedEntityResolver {
         createdCategoriesByName.values.sorted { $0.name < $1.name }
     }
 
-    func preloadSuppliers(named names: [String]) {
+    func preloadSuppliers(named names: [String]) throws {
         for name in names {
-            _ = resolveSupplier(named: name)
+            _ = try resolveSupplier(named: name)
         }
     }
 
-    func preloadCategories(named names: [String]) {
+    func preloadCategories(named names: [String]) throws {
         for name in names {
-            _ = resolveCategory(named: name)
+            _ = try resolveCategory(named: name)
         }
     }
 
-    func resolveSupplier(named rawName: String?) -> Supplier? {
+    func resolveSupplier(named rawName: String?) throws -> Supplier? {
         guard let normalizedName = ProductImportCore.normalizedDisplayName(rawName),
               let key = ProductImportCore.normalizedRelationKey(normalizedName) else {
             return nil
@@ -1031,6 +1044,9 @@ nonisolated final class ProductImportNamedEntityResolver {
 
         if let existing = suppliersByName[key] {
             return existing
+        }
+        guard !tombstonedSupplierNames.contains(key) else {
+            throw ProductImportNamedEntityResolverError.tombstonedRelation
         }
 
         let supplier = Supplier(name: normalizedName)
@@ -1041,7 +1057,7 @@ nonisolated final class ProductImportNamedEntityResolver {
         return supplier
     }
 
-    func resolveCategory(named rawName: String?) -> ProductCategory? {
+    func resolveCategory(named rawName: String?) throws -> ProductCategory? {
         guard let normalizedName = ProductImportCore.normalizedDisplayName(rawName),
               let key = ProductImportCore.normalizedRelationKey(normalizedName) else {
             return nil
@@ -1049,6 +1065,9 @@ nonisolated final class ProductImportNamedEntityResolver {
 
         if let existing = categoriesByName[key] {
             return existing
+        }
+        guard !tombstonedCategoryNames.contains(key) else {
+            throw ProductImportNamedEntityResolverError.tombstonedRelation
         }
 
         let category = ProductCategory(name: normalizedName)
@@ -1058,4 +1077,8 @@ nonisolated final class ProductImportNamedEntityResolver {
         createdCategoriesByName[key] = category
         return category
     }
+}
+
+nonisolated enum ProductImportNamedEntityResolverError: Error, Equatable, Sendable {
+    case tombstonedRelation
 }

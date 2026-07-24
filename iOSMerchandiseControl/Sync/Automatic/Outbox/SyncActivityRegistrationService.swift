@@ -5,26 +5,34 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
     private let modelContainer: ModelContainer
     private let recorder: (any SyncEventRecording)?
     private let now: () -> Date
+    private let defaults: UserDefaults
 
     init(
         modelContainer: ModelContainer,
         recorder: (any SyncEventRecording)?,
+        defaults: UserDefaults = .standard,
         now: @escaping () -> Date = Date.init
     ) {
         self.modelContainer = modelContainer
         self.recorder = recorder
+        self.defaults = defaults
         self.now = now
     }
 
     func loadSyncActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SyncActivityRegistrationSnapshot {
         let modelContainer = self.modelContainer
         let now = self.now
+        let defaults = self.defaults
         return try await Task.detached(priority: .utility) {
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+                ownerUserID: ownerUserID,
+                defaults: defaults,
+                allowsPendingSameScopeRecovery: true
+            )
             let context = ModelContext(modelContainer)
-            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             let counts = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
-                storeId: storeId,
+                storeId: scope.storeIdentity.storeId,
                 now: now()
             )
             return SyncActivityRegistrationSnapshot(
@@ -44,12 +52,17 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
         }
         let modelContainer = self.modelContainer
         let now = self.now
+        let defaults = self.defaults
         return try await Task.detached(priority: .utility) {
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+                ownerUserID: ownerUserID,
+                defaults: defaults,
+                allowsPendingSameScopeRecovery: true
+            )
             let context = ModelContext(modelContainer)
-            let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             let before = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
-                storeId: storeId,
+                storeId: scope.storeIdentity.storeId,
                 now: now()
             )
             guard before.retryable > 0 else {
@@ -65,11 +78,14 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
             let outcome = try await SyncEventOutboxDrainer(
                 context: context,
                 recorder: recorder,
+                automaticScope: scope,
+                defaults: defaults,
                 now: now
             ).drainOnce(ownerUserID: ownerUserID)
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
             let after = try SyncEventOutboxLocalStore(context: context).fetchCounts(
                 ownerUserID: ownerUserID.uuidString.lowercased(),
-                storeId: storeId,
+                storeId: scope.storeIdentity.storeId,
                 now: now()
             )
             return SyncActivityRegistrationResult(
@@ -101,10 +117,4 @@ final class SyncActivityRegistrationService: SyncActivityRegistrationProviding {
         }
     }
 
-    nonisolated private static func activeOutboxStoreId(ownerUserID: UUID) -> String? {
-        guard ShopContextSelection.selectedShopID(ownerUserID: ownerUserID) != nil else {
-            return nil
-        }
-        return ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID).storeId
-    }
 }

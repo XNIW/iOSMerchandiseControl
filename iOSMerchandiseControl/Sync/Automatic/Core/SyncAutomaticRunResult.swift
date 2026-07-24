@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum SyncAutomaticRunStatus: String, CaseIterable, Equatable, Sendable, Hashable {
     case success
     case noWork
+    case recoveryRequired
     case blocked
     case busy
     case failed
@@ -16,27 +17,47 @@ nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
     var blockReason: SyncBlockReason?
     var errorCode: String?
     var scheduledRetryAfter: TimeInterval?
+    var verifiedConvergence: Bool
 
     init(
         status: SyncAutomaticRunStatus,
         didWork: Bool,
         blockReason: SyncBlockReason? = nil,
         errorCode: String? = nil,
-        scheduledRetryAfter: TimeInterval? = nil
+        scheduledRetryAfter: TimeInterval? = nil,
+        verifiedConvergence: Bool = false
     ) {
         self.status = status
         self.didWork = didWork
         self.blockReason = blockReason
         self.errorCode = errorCode
         self.scheduledRetryAfter = scheduledRetryAfter
+        self.verifiedConvergence = verifiedConvergence
     }
 
-    static func success(didWork: Bool) -> SyncAutomaticRunResult {
-        SyncAutomaticRunResult(status: .success, didWork: didWork)
+    static func success(
+        didWork: Bool,
+        verifiedConvergence: Bool = false
+    ) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(
+            status: .success,
+            didWork: didWork,
+            verifiedConvergence: verifiedConvergence
+        )
     }
 
-    static func noWork() -> SyncAutomaticRunResult {
-        SyncAutomaticRunResult(status: .noWork, didWork: false)
+    static func noWork(
+        verifiedConvergence: Bool = false
+    ) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(
+            status: .noWork,
+            didWork: false,
+            verifiedConvergence: verifiedConvergence
+        )
+    }
+
+    static func recoveryRequired(didWork: Bool = false) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .recoveryRequired, didWork: didWork)
     }
 
     static func blocked(_ reason: SyncBlockReason) -> SyncAutomaticRunResult {

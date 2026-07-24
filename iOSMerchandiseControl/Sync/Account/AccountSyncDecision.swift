@@ -1,9 +1,10 @@
 import Foundation
 
-enum AccountSyncTrigger: Equatable {
+nonisolated enum AccountSyncTrigger: Equatable, Sendable {
     case login(accountHash: String)
     case reconnect(accountHash: String)
     case switchAccount(from: String, to: String)
+    case switchShop(from: String, to: String)
     case sessionRestored(accountHash: String)
     case remoteTombstone
     case productPriceConflict
@@ -14,26 +15,26 @@ enum AccountSyncTrigger: Equatable {
     case logout
 }
 
-enum LocalStoreAccountState: Equatable {
+nonisolated enum LocalStoreAccountState: Equatable, Sendable {
     case empty
     case anonymous(hasData: Bool)
     case bound(accountHash: String, hasData: Bool)
 }
 
-enum RemoteDatasetState: Equatable {
+nonisolated enum RemoteDatasetState: Equatable, Sendable {
     case empty
     case nonEmpty
     case unknown
 }
 
-enum PendingOwnerState: Equatable {
+nonisolated enum PendingOwnerState: Equatable, Sendable {
     case none
     case anonymous
     case sameAccount
     case differentAccount
 }
 
-struct AccountSyncPolicyInput: Equatable {
+nonisolated struct AccountSyncPolicyInput: Equatable, Sendable {
     var trigger: AccountSyncTrigger
     var localStore: LocalStoreAccountState
     var remoteDataset: RemoteDatasetState
@@ -55,7 +56,7 @@ struct AccountSyncPolicyInput: Equatable {
     }
 }
 
-struct AccountSyncDecision: Equatable {
+nonisolated struct AccountSyncDecision: Equatable, Sendable {
     var action: AccountSyncDecisionAction
     var defaultSafeAction: AccountSyncSafeAction
     var remoteMutation: AccountRemoteMutationPolicy
@@ -70,6 +71,7 @@ struct AccountSyncDecision: Equatable {
              .promptMergeReplaceUploadExportCancel,
              .promptRemoteVerification,
              .promptSwitchStoreOrCreateStore,
+             .promptOwnerStoreReview,
              .markConflictStale:
             return true
         case .noOp,
@@ -84,13 +86,14 @@ struct AccountSyncDecision: Equatable {
     }
 }
 
-enum AccountSyncDecisionAction: Equatable {
+nonisolated enum AccountSyncDecisionAction: Equatable, Sendable {
     case noOp
     case promptBootstrapUpload
     case promptMergeReplaceUploadExportCancel
     case promptRemoteVerification
     case pushPendingDrainEventsLightReconcile
     case promptSwitchStoreOrCreateStore
+    case promptOwnerStoreReview(OwnerStoreBindingReviewReason)
     case markConflictStale
     case applyRemoteTombstone
     case dedupeHistoryFingerprint
@@ -99,19 +102,19 @@ enum AccountSyncDecisionAction: Equatable {
     case keepAnonymousOrPreviousOwnerBound
 }
 
-enum AccountSyncSafeAction: Equatable {
+nonisolated enum AccountSyncSafeAction: Equatable, Sendable {
     case proceed
     case cancel
 }
 
-enum AccountRemoteMutationPolicy: Equatable {
+nonisolated enum AccountRemoteMutationPolicy: Equatable, Sendable {
     case allowed
     case allowedAfterUserConfirmation
     case blockedUntilUserDecision
     case blocked
 }
 
-enum AccountPendingHandling: Equatable {
+nonisolated enum AccountPendingHandling: Equatable, Sendable {
     case none
     case keepUnboundUntilDecision
     case pushOwnerBoundPending
@@ -120,7 +123,7 @@ enum AccountPendingHandling: Equatable {
     case keepLocalOnly
 }
 
-enum AccountConflictPolicy: Equatable {
+nonisolated enum AccountConflictPolicy: Equatable, Sendable {
     case none
     case noSilentMerge
     case noCrossAccountMerge
@@ -131,7 +134,7 @@ enum AccountConflictPolicy: Equatable {
     case remoteSourceOfTruth
 }
 
-enum AccountRollbackPolicy: Equatable {
+nonisolated enum AccountRollbackPolicy: Equatable, Sendable {
     case none
     case cancelLeavesLocalUnbound
     case cancelLeavesRemoteUntouched

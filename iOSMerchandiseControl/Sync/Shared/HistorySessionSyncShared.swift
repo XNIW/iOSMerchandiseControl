@@ -102,7 +102,7 @@ nonisolated struct HistorySessionLocalPayloadSnapshot: Equatable, Sendable {
     let deletedAt: Date?
 }
 
-nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
+nonisolated struct RemoteSharedSheetSessionRow: Codable, Equatable, Sendable {
     let remoteID: UUID
     let payloadVersion: Int
     let displayName: String
@@ -114,6 +114,12 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
     let sessionOverlay: HistorySessionOverlayPayload?
     let ownerUserID: UUID
     let shopID: UUID?
+    /// Redacted PostgreSQL-jsonb digest emitted only by the recovery RPC.
+    /// It lets mobile verify the checkpoint without attempting to reproduce
+    /// PostgreSQL's jsonb textual representation locally.
+    let dataCheckpointDigest: String?
+    /// See `dataCheckpointDigest`; this covers the optional overlay payload.
+    let overlayCheckpointDigest: String?
     let updatedAt: String?
     let deletedAt: String?
 
@@ -129,6 +135,8 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
         sessionOverlay: HistorySessionOverlayPayload?,
         ownerUserID: UUID,
         shopID: UUID? = nil,
+        dataCheckpointDigest: String? = nil,
+        overlayCheckpointDigest: String? = nil,
         updatedAt: String?,
         deletedAt: String?
     ) {
@@ -143,6 +151,8 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
         self.sessionOverlay = sessionOverlay
         self.ownerUserID = ownerUserID
         self.shopID = shopID
+        self.dataCheckpointDigest = dataCheckpointDigest
+        self.overlayCheckpointDigest = overlayCheckpointDigest
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt
     }
@@ -159,6 +169,8 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
         case sessionOverlay = "session_overlay"
         case ownerUserID = "owner_user_id"
         case shopID = "shop_id"
+        case dataCheckpointDigest = "data_checkpoint_digest"
+        case overlayCheckpointDigest = "overlay_checkpoint_digest"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
     }
@@ -296,12 +308,29 @@ nonisolated enum HistorySessionPayloadCodec {
     }
 
     static func parseTimestamp(_ rawValue: String) -> Date {
+        parsedTimestamp(rawValue) ?? Date(timeIntervalSince1970: 0)
+    }
+
+    static func parseTimestampStrict(_ rawValue: String) throws -> Date {
+        guard let parsed = parsedTimestamp(rawValue) else {
+            throw HistorySessionSyncError.invalidTimestamp
+        }
+        return parsed
+    }
+
+    static func parseUpdatedAtStrict(_ rawValue: String?) throws -> Date? {
+        guard let rawValue else { return nil }
+        return try parseTimestampStrict(rawValue)
+    }
+
+    private static func parsedTimestamp(_ rawValue: String) -> Date? {
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let androidFormatter = DateFormatter()
         androidFormatter.calendar = Calendar(identifier: .gregorian)
         androidFormatter.locale = Locale(identifier: "en_US_POSIX")
         androidFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         androidFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        androidFormatter.isLenient = false
         if let date = androidFormatter.date(from: trimmed) {
             return date
         }
@@ -312,7 +341,7 @@ nonisolated enum HistorySessionPayloadCodec {
             return date
         }
         isoFormatter.formatOptions = [.withInternetDateTime]
-        return isoFormatter.date(from: trimmed) ?? Date(timeIntervalSince1970: 0)
+        return isoFormatter.date(from: trimmed)
     }
 
     static func parseUpdatedAt(_ rawValue: String?) -> Date? {
@@ -347,12 +376,15 @@ nonisolated enum HistorySessionPayloadCodec {
 nonisolated enum HistorySessionSyncError: Error, Equatable, Sendable {
     case ownerMismatch
     case overlayTooLarge
+    case payloadTooLarge
     case readBackMismatch
+    case invalidTimestamp
 }
 
 nonisolated struct HistorySessionPushResult: Equatable, Sendable {
     var uploadedCount: Int = 0
     var pushedRemoteIDs: Set<UUID> = []
+    var pushedTombstoneRemoteIDs: Set<UUID> = []
     var skippedCleanCount: Int = 0
     var skippedOversizedCount: Int = 0
 }

@@ -229,7 +229,8 @@ nonisolated struct SyncEventRecordValidationPolicy: Sendable, Equatable {
 }
 
 nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
-    private static let maxChangedCount = 100_000
+    private static let maxChangedCount = 250
+    private static let maxHistoryChangedCount = 25
     private static let maxClientEventIDLength = 160
     private static let maxSourceDeviceIDLength = 160
 
@@ -240,16 +241,25 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
     }
 
     func validate(_ request: SyncEventRecordRequest) throws {
-        guard !trimmed(request.domain).isEmpty else {
+        let domain = trimmed(request.domain)
+        guard !domain.isEmpty else {
             throw contract("missing_domain", "domain is required.")
         }
 
-        guard !trimmed(request.eventType).isEmpty else {
+        let eventType = trimmed(request.eventType)
+        guard !eventType.isEmpty else {
             throw contract("missing_event_type", "eventType is required.")
         }
+        try validateConfirmedDomain(domain, eventType: eventType)
 
-        guard (0...Self.maxChangedCount).contains(request.changedCount) else {
-            throw contract("changed_count_limit", "changedCount must be between 0 and 100000.")
+        let changedCountLimit = domain == "history"
+            ? Self.maxHistoryChangedCount
+            : Self.maxChangedCount
+        guard (0...changedCountLimit).contains(request.changedCount) else {
+            throw contract(
+                "changed_count_limit",
+                "changedCount exceeds the confirmed domain limit."
+            )
         }
 
         guard !trimmed(request.clientEventID).isEmpty else {
@@ -265,19 +275,49 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
             throw contract("source_device_id_length", "sourceDeviceID must be at most 160 characters.")
         }
 
-        try validateEntityIDsContract(request.entityIDs)
-        try validateMetadataContract(request.metadata)
         try validateJSON(request.entityIDs, fieldName: "entity_ids")
         try validateJSON(request.metadata, fieldName: "metadata")
+        try validateEntityIDsContract(
+            request.entityIDs,
+            domain: domain,
+            changedCount: request.changedCount
+        )
+        try validateMetadataContract(request.metadata)
     }
 
-    private func validateEntityIDsContract(_ value: SyncEventJSONValue) throws {
+    private func validateEntityIDsContract(
+        _ value: SyncEventJSONValue,
+        domain: String,
+        changedCount: Int
+    ) throws {
         switch value {
         case .null:
-            return
+            guard changedCount == 0 else {
+                throw contract(
+                    "entity_ids_completeness",
+                    "entity_ids must identify every changed entity."
+                )
+            }
         case .object(let object):
+            let allowedKeys: Set<String>
+            switch domain {
+            case "catalog":
+                allowedKeys = ["supplier_ids", "category_ids", "product_ids"]
+            case "prices":
+                allowedKeys = ["price_ids", "product_ids"]
+            case "history":
+                allowedKeys = ["session_ids"]
+            default:
+                allowedKeys = []
+            }
+
+            let arrayLimit = domain == "history"
+                ? min(policy.maxEntityIDsArrayElements, Self.maxHistoryChangedCount)
+                : policy.maxEntityIDsArrayElements
+            var counts: [String: Int] = [:]
+
             for (key, child) in object {
-                guard isAllowedEntityIDsKey(key) else {
+                guard allowedKeys.contains(key) else {
                     throw contract("entity_ids_key", "entity_ids contains an unsupported key.")
                 }
 
@@ -285,14 +325,54 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
                     throw contract("entity_ids_shape", "entity_ids values must be arrays.")
                 }
 
-                guard array.count <= policy.maxEntityIDsArrayElements else {
+                guard array.count <= arrayLimit else {
                     throw contract("entity_ids_array_budget", "entity_ids exceeds array element budget.")
                 }
 
+                var normalizedIDs = Set<String>()
                 for value in array {
                     guard case .string(let id) = value, isRPCUUID(id) else {
                         throw contract("entity_ids_uuid", "entity_ids values must be UUID strings.")
                     }
+                    let normalizedID = id.lowercased()
+                    guard !normalizedIDs.contains(normalizedID) else {
+                        throw contract("entity_ids_duplicate", "entity_ids values must be unique.")
+                    }
+                    normalizedIDs.formUnion([normalizedID])
+                }
+                counts[key] = array.count
+            }
+
+            let primaryCount: Int
+            switch domain {
+            case "catalog":
+                primaryCount = counts["supplier_ids", default: 0]
+                    + counts["category_ids", default: 0]
+                    + counts["product_ids", default: 0]
+            case "prices":
+                primaryCount = counts["price_ids", default: 0]
+            case "history":
+                primaryCount = counts["session_ids", default: 0]
+            default:
+                primaryCount = 0
+            }
+            guard primaryCount == changedCount else {
+                throw contract(
+                    "entity_ids_completeness",
+                    "entity_ids must identify every changed entity."
+                )
+            }
+
+            if domain == "prices" {
+                let productCount = counts["product_ids", default: 0]
+                let hasCompleteProductScope = changedCount == 0
+                    ? productCount == 0
+                    : (1...changedCount).contains(productCount)
+                guard hasCompleteProductScope else {
+                    throw contract(
+                        "entity_ids_product_scope",
+                        "price events must include their affected product IDs."
+                    )
                 }
             }
         case .array, .string, .number, .bool:
@@ -301,8 +381,117 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
     }
 
     private func validateMetadataContract(_ value: SyncEventJSONValue) throws {
-        guard case .object = value else {
+        guard case .object(let object) = value else {
             throw contract("metadata_shape", "metadata must be a JSON object.")
+        }
+        for (key, child) in object {
+            switch key {
+            case "actor_kind":
+                try requireString(child, key: key, allowed: ["personal_account", "platform_admin"])
+            case "atomic_rpc", "atomic_trigger", "retention_floor":
+                guard case .bool = child else {
+                    throw contract("metadata_value", "metadata contains an invalid value.")
+                }
+            case "catalog_scope":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: ["shop_scoped", "legacy_owner_bridge", "authorized_shop_plus_legacy"]
+                )
+            case "chunk_count", "chunk_index", "chunked_from_count",
+                 "price_count", "product_count", "uploaded_count":
+                guard case .number(let number) = child,
+                      number.isFinite,
+                      number.rounded(.towardZero) == number,
+                      (0...100_000).contains(number) else {
+                    throw contract("metadata_value", "metadata contains an invalid value.")
+                }
+            case "entity_type":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: ["supplier", "category", "product", "product_price", "history_session"]
+                )
+            case "operation":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: [
+                        "bulk_import", "insert", "update", "tombstone",
+                        "hard_delete", "image_finalize", "image_remove"
+                    ]
+                )
+            case "payload_version":
+                guard child == .number(1) else {
+                    throw contract("metadata_value", "metadata contains an invalid value.")
+                }
+            case "retained_through_id":
+                guard case .string(let retainedID) = child,
+                      retainedID.range(
+                        of: #"^(0|[1-9][0-9]{0,18})$"#,
+                        options: .regularExpression
+                      ) != nil else {
+                    throw contract("metadata_value", "metadata contains an invalid value.")
+                }
+            case "producer_epoch":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: ["database-atomic-complete-entity-ids-v1"]
+                )
+            case "source":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: [
+                        "admin_web", "android", "database_atomic", "ios",
+                        "pos_catalog_import_sync", "product_image_api", "supplier_excel"
+                    ]
+                )
+            case "status":
+                try requireString(
+                    child,
+                    key: key,
+                    allowed: ["accepted", "duplicate", "noop", "success"]
+                )
+            default:
+                throw contract("metadata_forbidden_key", "metadata contains a forbidden key.")
+            }
+        }
+    }
+
+    private func requireString(
+        _ value: SyncEventJSONValue,
+        key: String,
+        allowed: Set<String>
+    ) throws {
+        guard case .string(let string) = value, allowed.contains(string) else {
+            throw contract("metadata_value", "metadata contains an invalid value for \(key).")
+        }
+    }
+
+    private func validateConfirmedDomain(_ domain: String, eventType: String) throws {
+        let allowed: Set<String>
+        switch domain {
+        case "catalog":
+            allowed = ["catalog_changed", "catalog_tombstone"]
+        case "prices":
+            allowed = ["prices_changed"]
+        case "history":
+            allowed = ["history_changed", "history_tombstone"]
+        default:
+            throw contract("unsupported_domain", "domain is not supported by the confirmed RPC contract.")
+        }
+        guard allowed.contains(eventType) else {
+            let known: Set<String> = [
+                "catalog_changed", "catalog_tombstone",
+                "prices_changed",
+                "history_changed", "history_tombstone"
+            ]
+            let code = known.contains(eventType)
+                ? "event_type_domain_mismatch"
+                : "unsupported_event_type"
+            throw contract(code, "eventType is not supported by the confirmed RPC contract.")
         }
     }
 
@@ -385,15 +574,6 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
             }
         case .number, .bool, .null:
             break
-        }
-    }
-
-    private func isAllowedEntityIDsKey(_ value: String) -> Bool {
-        switch value {
-        case "supplier_ids", "category_ids", "product_ids", "price_ids", "session_ids":
-            return true
-        default:
-            return false
         }
     }
 
