@@ -268,6 +268,36 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
         XCTAssertTrue(snapshot.isCapped)
     }
 
+    func testConfirmedImportBatchAtExistingCapacityStillRecordsAggregateMarker() throws {
+        let context = try makeContext()
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerA,
+            maxActiveChanges: 1
+        )
+        let product = Product(barcode: "TASK139_CAP_PREFILL")
+        context.insert(product)
+        try accumulator.recordProductChange(
+            product: product,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode"]
+        )
+
+        let result = try accumulator.recordImportBatch(
+            logicalKeys: ["product-over-cap"],
+            maxLogicalKeys: 1
+        )
+
+        XCTAssertEqual(result.recordedCount, 0)
+        XCTAssertEqual(result.cappedCount, 1)
+        let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
+            .loadSnapshot(ownerUserID: ownerA)
+        XCTAssertTrue(snapshot.isCapped)
+        XCTAssertEqual(snapshot.blockedCount, 1)
+        XCTAssertEqual(snapshot.pendingCatalogChangeCount, 2)
+    }
+
     func testStateMachineAndCleanupRetainBoundedTerminalRows() throws {
         let context = try makeContext()
         let accumulator = LocalPendingChangeAccumulator(
@@ -445,6 +475,100 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
         )
         XCTAssertEqual(changes.first { $0.ownerUserID == ownerA.uuidString.lowercased() }?.operation, .update)
         XCTAssertEqual(changes.first { $0.ownerUserID == ownerB.uuidString.lowercased() }?.operation, .delete)
+    }
+
+    func testShopScopedChangeNeverAdoptsLegacyNilStorePending() throws {
+        let context = try makeContext()
+        let shopIdentity = LocalStoreIdentity(rawValue: UUID().uuidString.lowercased())
+        let remoteID = UUID()
+        let product = Product(
+            barcode: "TASK139-NIL-STORE",
+            remoteID: remoteID,
+            productName: "Local update"
+        )
+        context.insert(product)
+        let legacy = LocalPendingChange(
+            ownerUserID: ownerA,
+            storeId: "legacy-placeholder",
+            localStoreId: "local-legacy-placeholder",
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(
+                remoteID: remoteID,
+                barcode: product.barcode
+            ),
+            changedFields: ["itemNumber"]
+        )
+        legacy.storeId = nil
+        legacy.localStoreId = nil
+        context.insert(legacy)
+
+        try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerA,
+            storeIdentity: shopIdentity
+        ).recordProductChange(
+            product: product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            changedFields: ["productName"]
+        )
+
+        let changes = try fetchChanges(context)
+        XCTAssertEqual(changes.count, 2)
+        XCTAssertNil(changes.first(where: { $0.changeID == legacy.changeID })?.storeId)
+        let scoped = try XCTUnwrap(changes.first(where: { $0.changeID != legacy.changeID }))
+        XCTAssertEqual(scoped.storeId, shopIdentity.storeId)
+        XCTAssertEqual(scoped.localStoreId, shopIdentity.localStoreId)
+        XCTAssertEqual(scoped.changedFields, ["productname"])
+    }
+
+    func testActiveChangeCapFailsBeforeUntrackedBusinessMutationCanBeSaved() throws {
+        let seed = try makeContext()
+        let shopIdentity = LocalStoreIdentity(rawValue: UUID().uuidString.lowercased())
+        let first = Product(barcode: "TASK139-CAP-1")
+        seed.insert(first)
+        try LocalPendingChangeAccumulator(
+            context: seed,
+            ownerUserID: ownerA,
+            storeIdentity: shopIdentity,
+            maxActiveChanges: 1
+        ).recordProductChange(
+            product: first,
+            operation: .create,
+            origin: .confirmedImport,
+            changedFields: ["barcode"]
+        )
+        try seed.save()
+
+        let writer = ModelContext(seed.container)
+        writer.autosaveEnabled = false
+        let second = Product(barcode: "TASK139-CAP-2")
+        writer.insert(second)
+        XCTAssertThrowsError(try LocalPendingChangeAccumulator(
+            context: writer,
+            ownerUserID: ownerA,
+            storeIdentity: shopIdentity,
+            maxActiveChanges: 1
+        ).recordProductChange(
+            product: second,
+            operation: .create,
+            origin: .confirmedImport,
+            changedFields: ["barcode"]
+        )) { error in
+            XCTAssertEqual(
+                error as? LocalPendingChangeAccumulatorError,
+                .activeChangeLimitExceeded(limit: 1)
+            )
+        }
+
+        let read = ModelContext(seed.container)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<Product>()), 1)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<LocalPendingChange>()), 1)
+        XCTAssertFalse(try read.fetch(FetchDescriptor<Product>()).contains {
+            $0.barcode == second.barcode
+        })
     }
 
     private func recordRemoteProduct(

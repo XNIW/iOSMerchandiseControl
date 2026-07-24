@@ -182,10 +182,10 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         let plan = makePlan(
             baseline: baseline(fingerprints: [remoteID: local.catalogFingerprint]),
             products: [local],
-            simulatedChangedCount: 100_001
+            simulatedChangedCount: 251
         )
 
-        XCTAssertEqual(plan.futureEventChangedCount, 100_001)
+        XCTAssertEqual(plan.futureEventChangedCount, 251)
         XCTAssertTrue(plan.warnings.contains(.futureEventSplitRequired))
         XCTAssertEqual(PushWarning.futureEventSplitRequired.severity, .futureOnly)
         XCTAssertFalse(plan.isSendable)

@@ -21,8 +21,8 @@ final class ProductImageProcessorTests: XCTestCase {
         XCTAssertLessThanOrEqual(prepared.thumb.metadata.bytes, ProductImageProcessor.thumbMaximumBytes)
         XCTAssertEqual(prepared.main.metadata.mimeType, "image/jpeg")
         XCTAssertEqual(prepared.thumb.metadata.mimeType, "image/jpeg")
-        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.main.data))
-        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.thumb.data))
+        XCTAssertFalse(ProductImageProcessor.containsForbiddenMetadata(prepared.main.data))
+        XCTAssertFalse(ProductImageProcessor.containsForbiddenMetadata(prepared.thumb.data))
         try attachMetrics(name: "rotated-jpeg", prepared: prepared)
     }
 
@@ -96,19 +96,39 @@ final class ProductImageProcessorTests: XCTestCase {
         XCTAssertLessThanOrEqual(max(prepared.thumb.metadata.width, prepared.thumb.metadata.height), 384)
         XCTAssertLessThanOrEqual(prepared.main.metadata.bytes, ProductImageProcessor.mainMaximumBytes)
         XCTAssertLessThanOrEqual(prepared.thumb.metadata.bytes, ProductImageProcessor.thumbMaximumBytes)
-        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.main.data))
-        XCTAssertFalse(ProductImageProcessor.containsAPP1Metadata(prepared.thumb.data))
+        XCTAssertFalse(ProductImageProcessor.containsForbiddenMetadata(prepared.main.data))
+        XCTAssertFalse(ProductImageProcessor.containsForbiddenMetadata(prepared.thumb.data))
         try attachMetrics(name: "48-megapixel", prepared: prepared)
     }
 
     func testHighResolutionPreprocessPerformanceBaseline() throws {
         let input = try makeFixture(width: 5_000, height: 4_000, type: .jpeg, patterned: true)
         let options = XCTMeasureOptions()
-        options.iterationCount = 1
+        options.iterationCount = 5
+        var completedIterations = 0
 
         measure(metrics: [XCTClockMetric(), XCTMemoryMetric()], options: options) {
-            _ = try? ProductImageProcessor.prepare(data: input)
+            do {
+                let prepared = try ProductImageProcessor.prepare(data: input)
+                XCTAssertEqual(prepared.metrics.inputWidth, 5_000)
+                XCTAssertEqual(prepared.metrics.inputHeight, 4_000)
+                XCTAssertLessThanOrEqual(
+                    prepared.main.metadata.bytes,
+                    ProductImageProcessor.mainMaximumBytes
+                )
+                XCTAssertLessThanOrEqual(
+                    prepared.thumb.metadata.bytes,
+                    ProductImageProcessor.thumbMaximumBytes
+                )
+                XCTAssertGreaterThan(prepared.main.metadata.bytes, 0)
+                XCTAssertGreaterThan(prepared.thumb.metadata.bytes, 0)
+                completedIterations += 1
+            } catch {
+                XCTFail("High-resolution preprocess failed: \(error)")
+            }
         }
+        // XCTest may execute one warm-up in addition to the measured samples.
+        XCTAssertGreaterThanOrEqual(completedIterations, options.iterationCount)
     }
 
     func testOversizedAndUnsupportedInputsFailBeforeDecode() {

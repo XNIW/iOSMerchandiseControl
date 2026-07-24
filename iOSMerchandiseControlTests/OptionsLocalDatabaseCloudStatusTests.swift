@@ -55,7 +55,7 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
         XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
     }
 
-    func testStaleAccountDecisionWithAlignedCountsStaysNonBlocking() {
+    func testOwnerAccountDecisionStaysBlockingEvenWhenCountsAreAligned() {
         let input = makeInput(
             baselineStatus: .valid,
             hasAccountDecision: true,
@@ -64,8 +64,11 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
             lastOutcome: .failed
         )
 
-        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .upToDate)
-        XCTAssertTrue(LocalDatabaseCloudStatusResolver.isAlignedWithNonBlockingCloudEvent(input))
+        XCTAssertEqual(
+            LocalDatabaseCloudStatusResolver.resolve(input),
+            .requiresUserAction(.requiresChoice)
+        )
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.isAlignedWithNonBlockingCloudEvent(input))
         XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
     }
 

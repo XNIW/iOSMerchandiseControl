@@ -312,6 +312,35 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask139ProductImageAddendumLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "product.image.pending_preview",
+            "product.image.importing",
+            "inventory.shop.choose",
+            "options.accountDecision.choice.title",
+            "options.accountDecision.choice.detail",
+            "options.accountDecision.choice.keepLocal",
+            "options.accountDecision.choice.replaceWithCloud"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
+    func testTask139ItalianAccountMismatchDialogUsesExactRequestedCopy() throws {
+        let strings = try loadStrings(language: "it")
+
+        XCTAssertEqual(strings["options.accountDecision.choice.title"], "Scegli quali dati usare")
+        XCTAssertEqual(strings["options.accountDecision.choice.detail"], "Quali dati vuoi mantenere?")
+        XCTAssertEqual(strings["options.accountDecision.choice.keepLocal"], "Mantieni dati locali")
+        XCTAssertEqual(strings["options.accountDecision.choice.replaceWithCloud"], "Sostituisci con dati cloud")
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

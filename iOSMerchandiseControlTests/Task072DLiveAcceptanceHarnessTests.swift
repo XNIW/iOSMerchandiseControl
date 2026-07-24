@@ -51,6 +51,7 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
         try requireLiveAcceptanceEnabled()
         let fixture = try makeFixture()
         let runtime = try await makeRuntime()
+        try await selectPrimaryLinkedShop(runtime: runtime)
         let context = try makeTask072DContext()
         let runStarted = Date()
 
@@ -431,25 +432,28 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
         planFingerprint: String,
         logPrefix: String
     ) async throws {
-        let enqueue = SyncEventOutboxEnqueueService(context: context).enqueue(
-            .catalogManualPush(
+        let enqueueService = SyncEventOutboxEnqueueService(context: context)
+        let enqueues = SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(
                 result: result,
                 ownerUserID: runtime.session.userID,
                 currentOwnerUserID: runtime.session.userID,
                 planFingerprint: planFingerprint
             )
-        )
+            .map(enqueueService.enqueue)
         let confirmedCatalogChangeCount =
             result.supplierCreates + result.supplierUpdates + result.supplierLinks
             + result.categoryCreates + result.categoryUpdates + result.categoryLinks
             + result.productCreates + result.productUpdates + result.productLinks
         print(
-            "\(logPrefix)_SYNC_EVENT_ENQUEUE kind=\(enqueue.kind.rawValue) " +
-            "entryStatus=\(enqueue.entryStatus?.rawValue ?? "nil") error=\(enqueue.errorCode ?? "nil") " +
+            "\(logPrefix)_SYNC_EVENT_ENQUEUE kinds=\(enqueues.map(\.kind.rawValue).joined(separator: ",")) " +
+            "entryStatuses=\(enqueues.compactMap { $0.entryStatus?.rawValue }.joined(separator: ",")) " +
+            "errors=\(enqueues.compactMap(\.errorCode).joined(separator: ",")) " +
             "confirmed=\(confirmedCatalogChangeCount) suppliers=\(result.touchedIDs.suppliers.count) " +
             "categories=\(result.touchedIDs.categories.count) products=\(result.touchedIDs.products.count)"
         )
-        guard enqueue.kind == .enqueued || enqueue.kind == .duplicateNoOp || enqueue.kind == .skippedNoOp else {
+        guard enqueues.allSatisfy({
+            $0.kind == .enqueued || $0.kind == .duplicateNoOp || $0.kind == .skippedNoOp
+        }) else {
             throw HarnessError.unexpectedCatalogPushStatus("sync_event_enqueue_failed")
         }
 
@@ -468,7 +472,7 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
         if confirmedCatalogChangeCount > 0 {
             guard drain.sent > 0 else {
                 throw HarnessError.unexpectedCatalogPushStatus(
-                    "sync_event_drain_no_sent_status_\(drain.status.rawValue)_enqueue_\(enqueue.kind.rawValue)"
+                    "sync_event_drain_no_sent_status_\(drain.status.rawValue)_enqueue_\(enqueues.map(\.kind.rawValue).joined(separator: "_"))"
                 )
             }
         }
@@ -528,34 +532,41 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
         logPrefix: String
     ) async throws {
         guard result.uploadedCount > 0, !result.pushedRemoteIDs.isEmpty else { return }
-        let sortedIDs = result.pushedRemoteIDs.sorted { $0.uuidString < $1.uuidString }
+        let tombstones = result.pushedRemoteIDs.intersection(result.pushedTombstoneRemoteIDs)
+        let changed = result.pushedRemoteIDs.subtracting(tombstones)
+        let groups: [(eventType: String, ids: [UUID])] = [
+            ("history_changed", changed.sorted { $0.uuidString < $1.uuidString }),
+            ("history_tombstone", tombstones.sorted { $0.uuidString < $1.uuidString })
+        ]
         let recorder = SupabaseSyncEventLiveRecorder(
             configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
             sessionProvider: StaticSyncEventSessionProvider(session: runtime.session),
             transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
         )
-        let request = SyncEventRecordRequest(
-            domain: "history",
-            eventType: "history_changed",
-            changedCount: sortedIDs.count,
-            entityIDs: .object([
-                "session_ids": .array(sortedIDs.map { .string($0.uuidString.lowercased()) })
-            ]),
-            metadata: .object([
-                "source": .string("ios_history_session_push"),
-                "uploaded_count": .number(Double(sortedIDs.count))
-            ]),
-            shopID: ShopContextSelection.selectedShopID(ownerUserID: runtime.session.userID),
-            source: "ios_history_session_push",
-            sourceDeviceID: nil,
-            batchID: UUID(),
-            clientEventID: "\(logPrefix.lowercased())-ios-history-\(runtime.session.userID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
-        )
-        _ = try await recorder.record(request)
-        print(
-            "\(logPrefix)_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
-            "sessions=\(sortedIDs.count) fullPull=false"
-        )
+        for group in groups where !group.ids.isEmpty {
+            let request = SyncEventRecordRequest(
+                domain: "history",
+                eventType: group.eventType,
+                changedCount: group.ids.count,
+                entityIDs: .object([
+                    "session_ids": .array(group.ids.map { .string($0.uuidString.lowercased()) })
+                ]),
+                metadata: .object([
+                    "source": .string("ios"),
+                    "uploaded_count": .number(Double(group.ids.count))
+                ]),
+                shopID: ShopContextSelection.selectedShopID(ownerUserID: runtime.session.userID),
+                source: "ios_history_session_push",
+                sourceDeviceID: nil,
+                batchID: nil,
+                clientEventID: "\(logPrefix.lowercased())-ios-history-\(group.eventType)-\(hash(group.ids.map { $0.uuidString.lowercased() }.joined(separator: ",")))"
+            )
+            _ = try await recorder.record(request)
+            print(
+                "\(logPrefix)_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
+                "eventType=\(group.eventType) sessions=\(group.ids.count) fullPull=false"
+            )
+        }
     }
 
     private func applyProductCreate(
@@ -755,6 +766,33 @@ final class Task072DLiveAcceptanceHarnessTests: XCTestCase {
                 provider: nil,
                 isExpired: session.isExpired
             )
+        )
+    }
+
+    private func selectPrimaryLinkedShop(runtime: Runtime) async throws {
+        let linkedShops = try await MobileLinkedShopService(remote: runtime.inventory)
+            .fetchLinkedShops()
+            .filter(\.isValidSelection)
+            .sorted {
+                if $0.name != $1.name {
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+                return $0.shopID.uuidString < $1.shopID.uuidString
+            }
+        guard let linkedShop = linkedShops.first else {
+            throw HarnessError.unexpectedCatalogPushStatus("no_selectable_linked_shop")
+        }
+
+        let accountHash = AccountBindingStore.accountHash(for: runtime.session.userID)
+        let selectedStore = SelectedShopStore()
+        selectedStore.noteActiveAccount(accountHash)
+        guard selectedStore.save(SelectedShop(linkedShop: linkedShop), accountHash: accountHash),
+              selectedStore.selectedShopID(ownerUserID: runtime.session.userID) == linkedShop.shopID else {
+            throw HarnessError.unexpectedCatalogPushStatus("linked_shop_selection_not_persisted")
+        }
+        print(
+            "TASK072D_IOS_SHOP_CONTEXT owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "shop_hash=\(hash(linkedShop.shopID.uuidString.lowercased())) selectable_count=\(linkedShops.count)"
         )
     }
 

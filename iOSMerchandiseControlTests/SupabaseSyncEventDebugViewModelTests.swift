@@ -250,7 +250,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
     ) -> RemoteSyncEventRow {
         let json = """
         {
-          "id": \(id),
+          "id": "\(id)",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "domain": "catalog",
           "event_type": "catalog_changed",

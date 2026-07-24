@@ -9,6 +9,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let results: [SyncAutomaticRunResult] = [
             .success(didWork: true),
             .noWork(),
+            .recoveryRequired(),
             .blocked(.authRequired),
             .busy(),
             .failed(errorCode: "unit"),
@@ -19,7 +20,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(Set(results.map(\.status)), Set(SyncAutomaticRunStatus.allCases))
         XCTAssertTrue(results[0].didWork)
         XCTAssertFalse(results[1].didWork)
-        XCTAssertEqual(results[2].blockReason, .authRequired)
+        XCTAssertEqual(results[3].blockReason, .authRequired)
     }
 
     func testDecisionEngineBlocksInsteadOfNoOpWhenStateReadFails() {
@@ -67,14 +68,14 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         let store = SyncStateStore(defaults: defaults, keyPrefix: "task118")
 
-        store.recordRunResult(.success(didWork: true))
+        store.recordRunResult(.success(didWork: true, verifiedConvergence: true))
         XCTAssertEqual(store.state.phase, .idle)
         XCTAssertEqual(store.state.lastOutcome, .succeeded)
         XCTAssertNotNil(store.state.lastVerifiedAt)
         let verifiedAfterSuccess = store.state.lastVerifiedAt
 
         store.recordRunResult(.noWork())
-        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
         XCTAssertEqual(store.state.lastOutcome, .noWork)
         XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
 
@@ -111,11 +112,301 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "task136.lastRunErrorCode"), "networkError(redacted)")
 
         store.recordRunResult(.noWork())
-        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
         XCTAssertEqual(store.state.lastOutcome, .noWork)
         XCTAssertNil(store.state.lastVerifiedAt)
         XCTAssertNil(defaults.string(forKey: "task136.lastRunErrorCode"))
         XCTAssertNil(defaults.string(forKey: "task136.lastRunBlockReason"))
+
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+        XCTAssertNil(relaunched.state.lastVerifiedAt)
+
+        let verifiedAt = Date(timeIntervalSince1970: 1_000)
+        relaunched.recordRunResult(
+            .success(didWork: false, verifiedConvergence: true),
+            now: verifiedAt
+        )
+        XCTAssertEqual(relaunched.state.phase, .idle)
+        XCTAssertEqual(relaunched.state.lastVerifiedAt, verifiedAt)
+        relaunched.recordRunResult(
+            .noWork(verifiedConvergence: true),
+            now: verifiedAt.addingTimeInterval(100)
+        )
+        XCTAssertEqual(relaunched.state.phase, .idle)
+        XCTAssertEqual(relaunched.state.lastVerifiedAt, verifiedAt)
+
+        let verifiedRelaunch = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        XCTAssertEqual(verifiedRelaunch.state.phase, .idle)
+        XCTAssertEqual(verifiedRelaunch.state.lastVerifiedAt, verifiedAt)
+    }
+
+    @MainActor
+    func testLegacyUnversionedVerifiedTimestampIsNotTrustedAfterRelaunch() {
+        let suiteName = "Task139LegacyVerifiedTimestamp-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("success", forKey: "task139.legacy.lastRunStatus")
+        defaults.set("idle", forKey: "task139.legacy.phase")
+        defaults.set(500.0, forKey: "task139.legacy.lastVerifiedAt")
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.legacy")
+
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertNil(store.state.lastVerifiedAt)
+    }
+
+    @MainActor
+    func testAutomaticRecoveryAttemptBudgetPersistsBackoffAndExhaustionAcrossRelaunch() {
+        let suiteName = "Task139RecoveryBudget-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let identity = String(repeating: "a", count: 64)
+        let start = Date(timeIntervalSince1970: 10_000)
+
+        var store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
+        XCTAssertEqual(
+            store.automaticRecoveryAttemptEligibility(identity: identity, now: start),
+            .ready
+        )
+        XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identity, now: start), 1)
+        guard case .cooldown(let firstDelay) = store.automaticRecoveryAttemptEligibility(
+            identity: identity,
+            now: start
+        ) else {
+            return XCTFail("expected durable cooldown")
+        }
+        XCTAssertEqual(firstDelay, 2, accuracy: 0.001)
+
+        store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
+        XCTAssertEqual(
+            store.automaticRecoveryAttemptEligibility(
+                identity: identity,
+                now: start.addingTimeInterval(2)
+            ),
+            .ready
+        )
+        XCTAssertEqual(
+            store.beginAutomaticRecoveryAttempt(
+                identity: identity,
+                now: start.addingTimeInterval(2)
+            ),
+            2
+        )
+        XCTAssertEqual(
+            store.beginAutomaticRecoveryAttempt(
+                identity: identity,
+                now: start.addingTimeInterval(6)
+            ),
+            3
+        )
+
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
+        XCTAssertEqual(
+            relaunched.automaticRecoveryAttemptEligibility(
+                identity: identity,
+                now: start.addingTimeInterval(60)
+            ),
+            .exhausted
+        )
+    }
+
+    @MainActor
+    func testExplicitRecoveryResetAndJournalProgressUseFreshBoundedBudget() {
+        let suiteName = "Task139RecoveryBudgetReset-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let firstIdentity = String(repeating: "b", count: 64)
+        let nextPhaseIdentity = String(repeating: "c", count: 64)
+        let now = Date(timeIntervalSince1970: 20_000)
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budgetReset")
+
+        XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: firstIdentity, now: now), 1)
+        XCTAssertEqual(
+            store.automaticRecoveryAttemptEligibility(identity: nextPhaseIdentity, now: now),
+            .ready
+        )
+        store.resetAutomaticRecoveryAttemptBudget()
+        XCTAssertEqual(
+            store.automaticRecoveryAttemptEligibility(identity: firstIdentity, now: now),
+            .ready
+        )
+    }
+
+    @MainActor
+    func testAutomaticRecoveryIdentityStaysStableAcrossGenerationAndPhaseProgress() {
+        let boundAt = Date(timeIntervalSince1970: 30_000)
+        let storeIdentity = LocalStoreIdentity(
+            rawValue: "shop-a",
+            defaultStoreId: "default",
+            localStoreId: "local-a",
+            schemaVersion: 7,
+            syncProtocolVersion: 9,
+            storeEpoch: 3
+        )
+        let binding = AccountBinding(
+            accountHash: String(repeating: "d", count: 64),
+            storeIdentity: storeIdentity,
+            boundAt: boundAt
+        )
+        let prepared = AccountRecoveryJournalSnapshot(
+            replacement: binding,
+            mode: .sameScopeRecovery,
+            phase: .prepared,
+            deviceIdentityHash: String(repeating: "e", count: 64),
+            generationID: nil,
+            checkpointDigest: nil,
+            watermark: nil,
+            baselineRunID: nil
+        )
+        let progressed = AccountRecoveryJournalSnapshot(
+            replacement: binding,
+            mode: .sameScopeRecovery,
+            phase: .verified,
+            deviceIdentityHash: String(repeating: "e", count: 64),
+            generationID: UUID(),
+            checkpointDigest: String(repeating: "f", count: 64),
+            watermark: 42,
+            baselineRunID: UUID()
+        )
+        XCTAssertEqual(
+            SyncOrchestrator.automaticRecoveryResumeIdentity(for: prepared),
+            SyncOrchestrator.automaticRecoveryResumeIdentity(for: progressed)
+        )
+
+        let nextJournal = AccountRecoveryJournalSnapshot(
+            replacement: AccountBinding(
+                accountHash: binding.accountHash,
+                storeIdentity: binding.storeIdentity,
+                boundAt: boundAt.addingTimeInterval(1)
+            ),
+            mode: prepared.mode,
+            phase: .prepared,
+            deviceIdentityHash: prepared.deviceIdentityHash,
+            generationID: nil,
+            checkpointDigest: nil,
+            watermark: nil,
+            baselineRunID: nil
+        )
+        XCTAssertNotEqual(
+            SyncOrchestrator.automaticRecoveryResumeIdentity(for: prepared),
+            SyncOrchestrator.automaticRecoveryResumeIdentity(for: nextJournal)
+        )
+    }
+
+    @MainActor
+    func testStateStorePersistsRecoveryRequiredAcrossNoOpAndRelaunch() {
+        let suiteName = "Task139RecoveryRequired-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139")
+        store.recordRunResult(.recoveryRequired())
+
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(store.state.lastOutcome, .noWork)
+        XCTAssertEqual(defaults.string(forKey: "task139.phase"), "recoveryRequired")
+        XCTAssertEqual(defaults.string(forKey: "task139.lastRunStatus"), "recoveryRequired")
+
+        store.recordRunResult(.noWork())
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(defaults.string(forKey: "task139.lastRunStatus"), "recoveryRequired")
+
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139")
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+        XCTAssertEqual(relaunched.state.lastOutcome, .noWork)
+
+        relaunched.updatePhase(.reconciling)
+        relaunched.recordRunResult(.success(didWork: false, verifiedConvergence: true))
+        XCTAssertEqual(relaunched.state.phase, .idle)
+    }
+
+    @MainActor
+    func testRecoveryOriginPreservesCancellationFailureAndBlockUntilVerifiedSuccess() {
+        let suiteName = "Task139RecoveryCancellation-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel")
+        store.recordRunResult(.recoveryRequired())
+        store.updatePhase(.reconciling)
+        store.recordRunResult(.cancelled(), preserveRecoveryRequired: true)
+
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(store.state.lastOutcome, .cancelled)
+        XCTAssertEqual(defaults.string(forKey: "task139.cancel.phase"), "recoveryRequired")
+        XCTAssertEqual(defaults.string(forKey: "task139.cancel.lastRunStatus"), "cancelled")
+
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel")
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+        XCTAssertEqual(relaunched.state.lastOutcome, .cancelled)
+
+        relaunched.updatePhase(.reconciling)
+        relaunched.recordRunResult(
+            .failed(errorCode: "verified_failure"),
+            preserveRecoveryRequired: true
+        )
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+        XCTAssertEqual(relaunched.state.lastOutcome, .failed)
+
+        relaunched.updatePhase(.checking)
+        relaunched.recordRunResult(
+            .blocked(.networkUnavailable),
+            preserveRecoveryRequired: true
+        )
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+        XCTAssertEqual(relaunched.state.lastOutcome, .blocked(.networkUnavailable))
+
+        relaunched.updatePhase(.reconciling)
+        relaunched.recordRunResult(
+            .success(didWork: false, verifiedConvergence: true),
+            preserveRecoveryRequired: true
+        )
+        XCTAssertEqual(relaunched.state.phase, .idle)
+        XCTAssertEqual(relaunched.state.lastOutcome, .succeeded)
+    }
+
+    @MainActor
+    func testDurableRecoveryJournalDominatesEveryNonTerminalResultAndRelaunch() {
+        let suiteName = "Task139JournalLatch-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let journalStore = AccountBindingStore(defaults: defaults)
+        XCTAssertTrue(journalStore.beginReplacement(
+            accountHash: String(repeating: "a", count: 64),
+            storeIdentity: LocalStoreIdentity(rawValue: "shop:journal-latch")
+        ))
+        let store = SyncStateStore(
+            defaults: defaults,
+            keyPrefix: "task139.journal"
+        )
+
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        for result: SyncAutomaticRunResult in [
+            .noWork(),
+            .cancelled(),
+            .failed(errorCode: "redacted"),
+            .blocked(.networkUnavailable),
+            .busy(),
+            .scheduledRetry(after: 1),
+            .success(didWork: true)
+        ] {
+            store.updatePhase(.reconciling)
+            store.recordRunResult(result)
+            XCTAssertEqual(store.state.phase, .recoveryRequired)
+        }
+
+        let relaunched = SyncStateStore(
+            defaults: defaults,
+            keyPrefix: "task139.journal"
+        )
+        XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
+
+        journalStore.clearPendingReplacement()
+        relaunched.updatePhase(.reconciling)
+        relaunched.recordRunResult(.success(didWork: true, verifiedConvergence: true))
+        XCTAssertEqual(relaunched.state.phase, .idle)
+        XCTAssertEqual(relaunched.state.lastOutcome, .succeeded)
     }
 
     @MainActor
@@ -202,6 +493,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testCatalogPushServiceWritesAndAcknowledgesRequestedOwnerChanges() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let otherOwner = UUID()
         let context = ModelContext(container)
         let supplier = Supplier(name: "TASK118 Supplier")
@@ -218,6 +511,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         context.insert(
             LocalPendingChange(
                 ownerUserID: owner,
+                storeId: scopeFixture.storeIdentity.storeId,
+                localStoreId: scopeFixture.storeIdentity.localStoreId,
                 entityKind: .product,
                 operation: .update,
                 origin: .manualCatalogSave,
@@ -237,8 +532,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         )
         try context.save()
 
-        let remote = Task118CatalogRemote()
-        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID)
+        let result = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
 
         XCTAssertEqual(result.plan?.ownerUserID, owner)
@@ -256,9 +551,131 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogCreateRetryAfterCommittedResponseLossReusesDeterministicID() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
+        let context = ModelContext(container)
+        let product = Product(
+            barcode: "TASK139-IDEMPOTENT-CREATE",
+            productName: "Before response loss"
+        )
+        context.insert(product)
+        try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        ).recordProductChange(
+            product: product,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode", "productName"]
+        )
+        try context.save()
+        let remote = Task118CatalogRemote(
+            ownerUserID: owner,
+            shopID: scopeFixture.shopID,
+            failFirstProductCreateAfterCommit: true
+        )
+        let service = CatalogPushService(
+            modelContainer: container,
+            remote: remote,
+            defaults: scopeFixture.defaults
+        )
+
+        do {
+            _ = try await service.pushPendingCatalog(ownerUserID: owner)
+            XCTFail("Expected simulated committed response loss")
+        } catch Task118CatalogRemoteError.committedResponseLost {
+            // Expected: remote row exists, local CAS/outbox transaction did not run.
+        }
+        let afterLoss = ModelContext(container)
+        XCTAssertNil(try fetchProduct(
+            barcode: "TASK139-IDEMPOTENT-CREATE",
+            context: afterLoss
+        )?.remoteID)
+        XCTAssertEqual(try activeChangeCount(context: afterLoss, ownerUserID: owner), 1)
+        XCTAssertNil(try fetchOutboxEntry(
+            context: afterLoss,
+            ownerUserID: owner,
+            domain: "catalog"
+        ))
+        let rowsAfterLoss = await remote.remoteProductRowCount()
+        XCTAssertEqual(rowsAfterLoss, 1)
+
+        let retried = try await service.pushPendingCatalog(ownerUserID: owner)
+        let attemptedIDs = await remote.attemptedProductIDs()
+        let finalContext = ModelContext(container)
+        let linkedID = try XCTUnwrap(fetchProduct(
+            barcode: "TASK139-IDEMPOTENT-CREATE",
+            context: finalContext
+        )?.remoteID)
+
+        XCTAssertEqual(retried.productCreates, 1)
+        XCTAssertEqual(attemptedIDs.count, 2)
+        XCTAssertEqual(Set(attemptedIDs), [linkedID])
+        let rowsAfterRetry = await remote.remoteProductRowCount()
+        XCTAssertEqual(rowsAfterRetry, 1)
+        XCTAssertEqual(try activeChangeCount(context: finalContext, ownerUserID: owner), 0)
+        XCTAssertEqual(try fetchOutboxEntries(
+            context: finalContext,
+            ownerUserID: owner,
+            domain: "catalog"
+        ).count, 1)
+    }
+
+    @MainActor
+    func testCatalogPushIsolatesBlockedSiblingAndStillPushesEligibleRow() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
+        let context = ModelContext(container)
+        let product = Product(barcode: "TASK139-MIXED-CATALOG", productName: "Eligible")
+        context.insert(product)
+        context.insert(LocalPendingChange(
+            ownerUserID: owner,
+            storeId: scopeFixture.storeIdentity.storeId,
+            localStoreId: scopeFixture.storeIdentity.localStoreId,
+            entityKind: .product,
+            operation: .update,
+            status: .pending,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: product.barcode),
+            changedFields: ["productName"]
+        ))
+        context.insert(LocalPendingChange(
+            ownerUserID: owner,
+            storeId: scopeFixture.storeIdentity.storeId,
+            localStoreId: scopeFixture.storeIdentity.localStoreId,
+            entityKind: .supplier,
+            operation: .update,
+            status: .blocked,
+            origin: .manualCatalogSave,
+            logicalKey: "supplier:blocked-sibling",
+            changedFields: ["name"]
+        ))
+        try context.save()
+
+        let result = try await CatalogPushService(
+            modelContainer: container,
+            remote: Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID),
+            defaults: scopeFixture.defaults
+        ).pushPendingCatalog(ownerUserID: owner)
+
+        XCTAssertTrue(result.plan?.blockers.contains("blockedLocalChanges") == true)
+        XCTAssertTrue(result.plan?.hasWork == true)
+        XCTAssertEqual(result.productCreates, 1)
+        XCTAssertEqual(try activeChangeCount(context: ModelContext(container), ownerUserID: owner), 1)
+    }
+
+    @MainActor
     func testCatalogPushServiceTombstonesHardDeletedProductFromPendingRemoteID() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let remoteID = UUID()
         let context = ModelContext(container)
         let product = Product(
@@ -275,7 +692,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
         context.insert(product)
         context.insert(price)
 
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        )
         try accumulator.recordProductChange(
             product: product,
             operation: .delete,
@@ -286,8 +707,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         context.delete(product)
         try context.save()
 
-        let remote = Task118CatalogRemote()
-        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID)
+        let result = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
 
         XCTAssertEqual(result.productUpdates, 1)
@@ -311,7 +732,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(event?.eventType, "catalog_tombstone")
         XCTAssertEqual(event?.changedCount, 1)
 
-        let repeatResult = try await CatalogPushService(modelContainer: container, remote: remote)
+        let repeatResult = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
         XCTAssertEqual(repeatResult.totalChanged, 0)
         let repeatedUpdatedProductIDs = await remote.updatedProductIDs()
@@ -323,10 +744,14 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testCatalogPushServiceAcknowledgesLocalOnlyProductDeleteWithoutRemoteCall() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let context = ModelContext(container)
         context.insert(
             LocalPendingChange(
                 ownerUserID: owner,
+                storeId: scopeFixture.storeIdentity.storeId,
+                localStoreId: scopeFixture.storeIdentity.localStoreId,
                 entityKind: .product,
                 operation: .delete,
                 origin: .manualCatalogSave,
@@ -340,8 +765,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         )
         try context.save()
 
-        let remote = Task118CatalogRemote()
-        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID)
+        let result = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
 
         XCTAssertEqual(result.totalChanged, 0)
@@ -358,6 +783,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testCatalogPushServiceTombstonesHardDeletedSupplierAndCategoryFromPendingRemoteIDs() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let supplierRemoteID = UUID()
         let categoryRemoteID = UUID()
         let context = ModelContext(container)
@@ -365,7 +792,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let category = ProductCategory(name: "TASK069 Category Delete", remoteID: categoryRemoteID)
         context.insert(supplier)
         context.insert(category)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        )
         try accumulator.recordSupplierChange(
             supplier: supplier,
             operation: .delete,
@@ -384,8 +815,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         context.delete(category)
         try context.save()
 
-        let remote = Task118CatalogRemote()
-        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID)
+        let result = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
 
         XCTAssertEqual(result.supplierUpdates, 1)
@@ -404,15 +835,21 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertNil(try fetchSupplier(remoteID: supplierRemoteID, context: verifyContext))
         XCTAssertNil(try fetchCategory(remoteID: categoryRemoteID, context: verifyContext))
         XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
-        let event = try fetchOutboxEntry(context: verifyContext, ownerUserID: owner, domain: "catalog")
-        XCTAssertEqual(event?.eventType, "catalog_tombstone")
-        XCTAssertEqual(event?.changedCount, 2)
+        let events = try fetchOutboxEntries(
+            context: verifyContext,
+            ownerUserID: owner,
+            domain: "catalog"
+        )
+        XCTAssertEqual(Set(events.map(\.eventType)), ["catalog_tombstone"])
+        XCTAssertEqual(events.reduce(0) { $0 + $1.changedCount }, 2)
     }
 
     @MainActor
     func testCatalogPushServiceUsesDistinctSyncEventIDsForLaterSingleChange() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let remoteID = UUID()
         let context = ModelContext(container)
         let product = Product(
@@ -421,7 +858,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
             productName: "TASK135 Event ID Reuse"
         )
         context.insert(product)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        )
         product.productName = "TASK135 Event ID Reuse Updated"
         try accumulator.recordProductChange(
             product: product,
@@ -432,14 +873,18 @@ final class Task118AutomaticDomainTests: XCTestCase {
         )
         try context.save()
 
-        let remote = Task118CatalogRemote()
-        let first = try await CatalogPushService(modelContainer: container, remote: remote)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: scopeFixture.shopID)
+        let first = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
         XCTAssertEqual(first.totalChanged, 1)
 
         let deleteContext = ModelContext(container)
         let productToDelete = try XCTUnwrap(fetchProduct(barcode: "TASK135_EVENT_ID_REUSE", context: deleteContext))
-        let deleteAccumulator = LocalPendingChangeAccumulator(context: deleteContext, ownerUserID: owner)
+        let deleteAccumulator = LocalPendingChangeAccumulator(
+            context: deleteContext,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        )
         try deleteAccumulator.recordProductChange(
             product: productToDelete,
             operation: .delete,
@@ -451,7 +896,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         deleteContext.delete(productToDelete)
         try deleteContext.save()
 
-        let second = try await CatalogPushService(modelContainer: container, remote: remote)
+        let second = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
         XCTAssertEqual(second.totalChanged, 1)
 
@@ -467,6 +912,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let productID = UUID()
         let context = ModelContext(container)
         let product = Product(
@@ -485,6 +932,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
         context.insert(
             LocalPendingChange(
                 ownerUserID: owner,
+                storeId: scopeFixture.storeIdentity.storeId,
+                localStoreId: scopeFixture.storeIdentity.localStoreId,
                 entityKind: .productPrice,
                 operation: .upsert,
                 status: .pending,
@@ -501,7 +950,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         try context.save()
 
         let remote = Task118ProductPriceRemote()
-        let result = try await ProductPricePushService(modelContainer: container, remote: remote)
+        let result = try await ProductPricePushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingProductPrices(ownerUserID: owner)
 
         XCTAssertEqual(result.plan?.ownerUserID, owner)
@@ -516,12 +965,121 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(event?.eventType, "prices_changed")
         XCTAssertEqual(event?.changedCount, 1)
         XCTAssertEqual(event?.status, .pending)
+        let eventEntry = try XCTUnwrap(event)
+        let request = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(
+            from: eventEntry
+        )
+        let eventIDs = SyncEventEntityIDSet(json: request.entityIDs)
+        XCTAssertTrue(eventIDs.isCompletePrices(changedCount: 1))
+        XCTAssertEqual(eventIDs.productIDs, [productID])
+    }
+
+    @MainActor
+    func testAutomaticOutboxRejectsMissingOrOverBudgetEntityIDsWithoutPartialEntry() throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: scopeFixture.defaults
+        )
+        let context = ModelContext(container)
+
+        XCTAssertThrowsError(
+            try AutomaticSyncEventOutboxWriter.enqueue(
+                context: context,
+                ownerUserID: owner,
+                domain: "history",
+                eventType: "history_changed",
+                changedCount: 1,
+                entityIDs: .null,
+                metadata: .object(["source": .string("unit")]),
+                source: "unit",
+                entityIDsShape: "null",
+                metadataShape: "source=unit",
+                clientEventFingerprint: "missing",
+                scope: scope,
+                defaults: scopeFixture.defaults
+            )
+        )
+
+        let tooManyIDs = (0...250).map { _ in UUID() }
+        XCTAssertThrowsError(
+            try AutomaticSyncEventOutboxWriter.entityIDs([
+                "session_ids": tooManyIDs
+            ])
+        )
+        XCTAssertTrue(try context.fetch(FetchDescriptor<SyncEventOutboxEntry>()).isEmpty)
+    }
+
+    @MainActor
+    func testProductPricePushIsolatesStaleSiblingAndStillPushesEligibleRow() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
+        let context = ModelContext(container)
+        let product = Product(
+            barcode: "TASK139-MIXED-PRICE",
+            remoteID: UUID(),
+            productName: "Eligible price"
+        )
+        let price = ProductPrice(
+            type: .retail,
+            price: 19.99,
+            effectiveAt: Date(timeIntervalSince1970: 1_710_000_000),
+            product: product
+        )
+        context.insert(product)
+        context.insert(price)
+        context.insert(LocalPendingChange(
+            ownerUserID: owner,
+            storeId: scopeFixture.storeIdentity.storeId,
+            localStoreId: scopeFixture.storeIdentity.localStoreId,
+            entityKind: .productPrice,
+            operation: .upsert,
+            status: .pending,
+            origin: .productPriceSave,
+            logicalKey: LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: product.remoteID,
+                productBarcode: product.barcode,
+                type: price.type,
+                effectiveAt: price.effectiveAt
+            ),
+            changedFields: ["price"]
+        ))
+        context.insert(LocalPendingChange(
+            ownerUserID: owner,
+            storeId: scopeFixture.storeIdentity.storeId,
+            localStoreId: scopeFixture.storeIdentity.localStoreId,
+            entityKind: .productPrice,
+            operation: .upsert,
+            status: .staleBaseline,
+            origin: .productPriceSave,
+            logicalKey: "productPrice:stale-sibling",
+            changedFields: ["price"]
+        ))
+        try context.save()
+
+        let result = try await ProductPricePushService(
+            modelContainer: container,
+            remote: Task118ProductPriceRemote(),
+            defaults: scopeFixture.defaults
+        ).pushPendingProductPrices(ownerUserID: owner)
+
+        XCTAssertTrue(result.plan?.blockers.contains("staleBaselineLocalChanges") == true)
+        XCTAssertTrue(result.plan?.hasWork == true)
+        XCTAssertEqual(result.insertedCount, 1)
+        XCTAssertEqual(try activeChangeCount(context: ModelContext(container), ownerUserID: owner), 1)
     }
 
     @MainActor
     func testProductPricePushServiceSupersedesPendingPriceAfterProductCascadeDelete() async throws {
         let container = try makeContainer()
         let owner = UUID()
+        let scopeFixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { scopeFixture.cleanup() }
         let context = ModelContext(container)
         let product = Product(
             barcode: "TASK135_PRICE_CASCADE_DELETE",
@@ -536,13 +1094,17 @@ final class Task118AutomaticDomainTests: XCTestCase {
         )
         context.insert(product)
         context.insert(price)
-        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: owner,
+            storeIdentity: scopeFixture.storeIdentity
+        )
         try accumulator.recordProductPriceChange(price: price, origin: .productPriceSave)
         context.delete(product)
         try context.save()
 
         let remote = Task118ProductPriceRemote()
-        let result = try await ProductPricePushService(modelContainer: container, remote: remote)
+        let result = try await ProductPricePushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingProductPrices(ownerUserID: owner)
 
         XCTAssertEqual(result.insertedCount, 0)
@@ -570,7 +1132,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         XCTAssertTrue(background.contains("SyncDecisionInputProvider"))
         XCTAssertTrue(background.contains("SyncDecisionEngine.decide"))
-        XCTAssertTrue(background.contains("recoverySnapshotPullProvider: AutomaticRecoverySnapshotPullService"))
+        XCTAssertTrue(background.contains("recoverySnapshotPullProvider: AtomicGenerationRecoverySnapshotPullService"))
         XCTAssertFalse(background.contains(".sequence([.pushPending, .drainEvents])"))
     }
 
@@ -594,6 +1156,36 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousLastError"))
         XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousErrorNonBlocking"))
         XCTAssertTrue(options.contains("isTechnicalCloudEventNote"))
+    }
+
+    private func makeAutomaticScopeFixture(
+        ownerUserID: UUID
+    ) throws -> Task118AutomaticScopeFixture {
+        let suiteName = "Task118AutomaticScope-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let selectedShop = SelectedShop(
+            shopID: UUID(),
+            code: "TASK118",
+            name: "TASK118 fixture shop",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        selectedStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedStore.save(selectedShop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: selectedShop.localStoreIdentity
+        ))
+        return Task118AutomaticScopeFixture(
+            suiteName: suiteName,
+            defaults: defaults,
+            shopID: selectedShop.shopID,
+            storeIdentity: selectedShop.localStoreIdentity
+        )
     }
 
     private func readSource(_ relativePath: String) throws -> String {
@@ -684,14 +1276,53 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 }
 
+private struct Task118AutomaticScopeFixture {
+    let suiteName: String
+    let defaults: UserDefaults
+    let shopID: UUID
+    let storeIdentity: LocalStoreIdentity
+
+    func cleanup() {
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+}
+
+private enum Task118CatalogRemoteError: Error {
+    case committedResponseLost
+}
+
 private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
+    private let ownerUserID: UUID
+    private let shopID: UUID
+    private let failFirstProductCreateAfterCommit: Bool
+    private var didFailProductCreateAfterCommit = false
     private var createdProductPayloads: [SyncAutomaticProductCreatePayload] = []
+    private var persistedProductRows: [UUID: RemoteInventoryProductRow] = [:]
+    private var productCreateAttemptIDs: [UUID] = []
     private var supplierUpdateRequests: [(UUID, SyncAutomaticSupplierUpdatePayload)] = []
     private var categoryUpdateRequests: [(UUID, SyncAutomaticCategoryUpdatePayload)] = []
     private var productUpdateRequests: [(UUID, SyncAutomaticProductUpdatePayload)] = []
 
+    init(
+        ownerUserID: UUID,
+        shopID: UUID,
+        failFirstProductCreateAfterCommit: Bool = false
+    ) {
+        self.ownerUserID = ownerUserID
+        self.shopID = shopID
+        self.failFirstProductCreateAfterCommit = failFirstProductCreateAfterCommit
+    }
+
     func createdProductPayloadCount() -> Int {
         createdProductPayloads.count
+    }
+
+    func attemptedProductIDs() -> [UUID] {
+        productCreateAttemptIDs
+    }
+
+    func remoteProductRowCount() -> Int {
+        persistedProductRows.count
     }
 
     func updatedProductIDs() -> [UUID] {
@@ -721,8 +1352,9 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         payloads.map {
             RemoteInventorySupplierRow(
-                id: UUID(),
+                id: $0.id,
                 ownerUserID: $0.ownerUserID,
+                shopID: $0.shopID,
                 name: $0.name,
                 updatedAt: "2026-05-24T00:00:00Z",
                 deletedAt: nil
@@ -734,7 +1366,8 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
         supplierUpdateRequests.append((id, payload))
         return RemoteInventorySupplierRow(
             id: id,
-            ownerUserID: UUID(),
+            ownerUserID: ownerUserID,
+            shopID: shopID,
             name: payload.name ?? "Deleted Supplier",
             updatedAt: "2026-05-24T00:00:00Z",
             deletedAt: payload.deletedAt
@@ -744,8 +1377,9 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
         payloads.map {
             RemoteInventoryCategoryRow(
-                id: UUID(),
+                id: $0.id,
                 ownerUserID: $0.ownerUserID,
+                shopID: $0.shopID,
                 name: $0.name,
                 updatedAt: "2026-05-24T00:00:00Z",
                 deletedAt: nil
@@ -757,7 +1391,8 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
         categoryUpdateRequests.append((id, payload))
         return RemoteInventoryCategoryRow(
             id: id,
-            ownerUserID: UUID(),
+            ownerUserID: ownerUserID,
+            shopID: shopID,
             name: payload.name ?? "Deleted Category",
             updatedAt: "2026-05-24T00:00:00Z",
             deletedAt: payload.deletedAt
@@ -766,10 +1401,12 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
 
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
         createdProductPayloads.append(contentsOf: payloads)
-        return payloads.map {
+        productCreateAttemptIDs.append(contentsOf: payloads.map(\.id))
+        let rows = payloads.map {
             RemoteInventoryProductRow(
-                id: UUID(),
+                id: $0.id,
                 ownerUserID: $0.ownerUserID,
+                shopID: $0.shopID,
                 barcode: $0.barcode,
                 itemNumber: $0.itemNumber,
                 productName: $0.productName,
@@ -783,13 +1420,22 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
                 deletedAt: nil
             )
         }
+        for row in rows {
+            persistedProductRows[row.id] = row
+        }
+        if failFirstProductCreateAfterCommit, !didFailProductCreateAfterCommit {
+            didFailProductCreateAfterCommit = true
+            throw Task118CatalogRemoteError.committedResponseLost
+        }
+        return rows
     }
 
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
         productUpdateRequests.append((id, payload))
         return RemoteInventoryProductRow(
             id: id,
-            ownerUserID: UUID(),
+            ownerUserID: ownerUserID,
+            shopID: shopID,
             barcode: payload.barcode ?? "TASK118-BAR",
             itemNumber: payload.itemNumber,
             productName: payload.productName,
@@ -818,13 +1464,15 @@ private actor Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting 
             RemoteInventoryProductPriceRow(
                 id: $0.id,
                 ownerUserID: $0.ownerUserID,
+                shopID: $0.shopID,
                 productID: $0.productID,
                 type: $0.type,
                 price: $0.price,
                 effectiveAt: $0.effectiveAt,
                 source: $0.source,
                 note: $0.note,
-                createdAt: $0.createdAt
+                createdAt: $0.createdAt,
+                updatedAt: "2026-05-24T00:00:00Z"
             )
         }
     }

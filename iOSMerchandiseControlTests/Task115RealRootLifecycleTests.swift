@@ -8,6 +8,37 @@ import XCTest
 final class Task115RealRootLifecycleTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
+    func testSignedOutToSignedInBecomesBootstrapReadyAfterShopResolution() throws {
+        XCTAssertFalse(
+            SyncBootstrapReadiness.shouldStart(
+                isSignedIn: false,
+                isShopSyncAllowed: true
+            )
+        )
+        XCTAssertTrue(
+            SyncBootstrapReadiness.shouldStart(
+                isSignedIn: true,
+                isShopSyncAllowed: true
+            )
+        )
+        XCTAssertFalse(
+            SyncBootstrapReadiness.shouldStart(
+                isSignedIn: true,
+                isShopSyncAllowed: false
+            )
+        )
+
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("iOSMerchandiseControl/ContentView.swift"),
+            encoding: .utf8
+        )
+        let methodStart = try XCTUnwrap(source.range(of: "private func refreshShopContextAndResumeSync() async"))
+        let methodSource = String(source[methodStart.lowerBound...])
+
+        XCTAssertTrue(methodSource.contains("SyncBootstrapReadiness.shouldStart("))
+        XCTAssertTrue(methodSource.contains("await syncOrchestrator.bootstrap(scenePhase: scenePhase)"))
+    }
+
     func testRealContentRootStartsWithFakeDependenciesWithoutSupabaseLive() throws {
         setenv("TASK115_REAL_ROOT_LIFECYCLE_TEST", "1", 1)
         defer { unsetenv("TASK115_REAL_ROOT_LIFECYCLE_TEST") }
@@ -46,5 +77,11 @@ final class Task115RealRootLifecycleTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)
         return container
+    }
+
+    private var repositoryRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
     }
 }

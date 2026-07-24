@@ -3,6 +3,21 @@ import XCTest
 
 @MainActor
 final class AutomaticSyncReconnectSchedulerTests: XCTestCase {
+    func testInitialUnknownToOnlineSchedulesOneForegroundReconnectIntent() async throws {
+        var triggerCount = 0
+        let scheduler = AutomaticSyncReconnectScheduler(debounce: 0.01) {
+            triggerCount += 1
+        }
+
+        scheduler.setForeground(true)
+        scheduler.receive(.unknown)
+        scheduler.receive(.satisfied)
+        scheduler.receive(.satisfied)
+
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(triggerCount, 1)
+    }
+
     func testOfflineToOnlineSchedulesOneForegroundReconnectIntent() async throws {
         var triggerCount = 0
         let scheduler = AutomaticSyncReconnectScheduler(debounce: 0.01) {

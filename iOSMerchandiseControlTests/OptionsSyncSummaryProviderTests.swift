@@ -89,6 +89,68 @@ final class OptionsSyncSummaryProviderTests: XCTestCase {
         XCTAssertFalse(provider.isCheckingRemoteCounts)
     }
 
+    func testShopDiscoveryRefreshMovesFromUnavailableToConcreteMismatchWithoutDefaultFallback() async throws {
+        let context = try makeContext()
+        context.insert(Product(barcode: "TASK139_DELAYED_SHOP"))
+        try context.save()
+        let owner = UUID()
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let suiteName = "OptionsSyncSummaryProviderTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let selectedStore = SelectedShopStore(
+            defaults: defaults,
+            keyPrefix: "fixture.shop",
+            activeAccountKey: "fixture.active",
+            resolutionKeyPrefix: "fixture.resolved"
+        )
+        XCTAssertTrue(selectedStore.markResolutionReady(accountHash: accountHash))
+        let provider = OptionsSyncSummaryProvider(
+            now: { Date(timeIntervalSince1970: 2_100) },
+            bindingStore: AccountBindingStore(defaults: defaults, key: "fixture.binding"),
+            selectedShopStore: selectedStore
+        )
+
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: owner),
+            remoteCountFetcher: nil,
+            refreshReason: "unresolved-shop"
+        )
+        try await waitForDecision(provider, reason: .shopContextUnavailable)
+
+        XCTAssertTrue(selectedStore.save(
+            SelectedShop(
+                shopID: UUID(),
+                code: nil,
+                name: "Fixture shop",
+                role: "owner",
+                status: "active",
+                selectable: true,
+                canWrite: true
+            ),
+            accountHash: accountHash
+        ))
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: owner),
+            remoteCountFetcher: nil,
+            refreshReason: "shop-context-changed"
+        )
+        XCTAssertNil(provider.accountSyncDecision)
+        XCTAssertTrue(provider.isLoading || provider.isStale)
+        try await waitForDecision(provider, reason: .unboundDirty)
+        XCTAssertEqual(provider.refreshReason, "shop-context-changed")
+
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: false, userID: nil),
+            remoteCountFetcher: nil,
+            refreshReason: "signed-out"
+        )
+        XCTAssertNil(provider.accountSyncDecision)
+    }
+
     private func waitForSummary(_ provider: OptionsSyncSummaryProvider) async throws {
         try await waitForSummary(provider, expectedProductCount: nil)
     }
@@ -115,6 +177,20 @@ final class OptionsSyncSummaryProviderTests: XCTestCase {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("Timed out waiting for drift report.")
+    }
+
+    private func waitForDecision(
+        _ provider: OptionsSyncSummaryProvider,
+        reason: OwnerStoreBindingReviewReason
+    ) async throws {
+        for _ in 0..<120 {
+            if case .promptOwnerStoreReview(let actualReason)? = provider.accountSyncDecision?.action,
+               actualReason == reason {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for account decision \(reason).")
     }
 
     private func makeContext() throws -> ModelContext {
