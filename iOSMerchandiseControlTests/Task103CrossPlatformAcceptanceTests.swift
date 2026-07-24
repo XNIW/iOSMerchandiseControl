@@ -3251,10 +3251,12 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
 
+        @MainActor
         var productPriceRemote: ProductPriceReleaseRemoteSupabaseAdapter {
             ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
         }
 
+        @MainActor
         var recoveryRemote: RecoveryRemoteSupabaseAdapter {
             RecoveryRemoteSupabaseAdapter(remote: inventory)
         }

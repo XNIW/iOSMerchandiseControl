@@ -3032,10 +3032,13 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
                         throw AtomicProbeError.timedOut
                     }
                     writerAttempted.fulfill()
+                    guard let writerDefaults = UserDefaults(suiteName: suiteName) else {
+                        throw AtomicProbeError.missingFixture
+                    }
                     try Task126OwnerStoreGate.withLocalMutationFence(
                         modelContainer: container,
                         ownerUserID: owner,
-                        defaults: defaults
+                        defaults: writerDefaults
                     ) { freshContext in
                         guard let product = try freshContext
                             .fetch(FetchDescriptor<Product>())
@@ -4041,9 +4044,13 @@ private final class SyncEventThreadSafeErrorBox: @unchecked Sendable {
 
 private nonisolated enum SyncEventTestAsyncWait {
     static func wait(_ semaphore: DispatchSemaphore, timeout: TimeInterval) async -> Bool {
-        await Task.detached {
-            semaphore.wait(timeout: .now() + timeout) == .success
-        }.value
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(
+                    returning: semaphore.wait(timeout: .now() + timeout) == .success
+                )
+            }
+        }
     }
 }
 
