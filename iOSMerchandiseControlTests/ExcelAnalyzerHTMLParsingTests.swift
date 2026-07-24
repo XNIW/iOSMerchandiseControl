@@ -190,7 +190,14 @@ final class ExcelAnalyzerHTMLParsingTests: XCTestCase {
             header: result.normalizedHeader,
             row: 0,
             column: "purchasePrice",
-            equals: "2.50"
+            equals: "2.5"
+        )
+        assertRowValue(
+            result.dataRows,
+            header: result.normalizedHeader,
+            row: 0,
+            column: "totalPrice",
+            equals: "7.5"
         )
     }
 
