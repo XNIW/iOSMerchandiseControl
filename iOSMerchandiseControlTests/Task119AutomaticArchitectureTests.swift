@@ -120,6 +120,27 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testBackgroundSchedulerFailsClosedBeforeRegistration() throws {
+        let suiteName = "Task139BackgroundScheduler-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let scheduler = SyncBackgroundTaskScheduler(defaults: defaults)
+
+        scheduler.schedule(reason: .foregroundCompletion)
+
+        XCTAssertEqual(
+            defaults.string(forKey: "sync.runtime.background.lastScheduleReason"),
+            SyncBackgroundScheduleReason.foregroundCompletion.rawValue
+        )
+        XCTAssertEqual(
+            defaults.string(forKey: "sync.runtime.background.lastScheduleError"),
+            "background_not_registered"
+        )
+        XCTAssertFalse(defaults.bool(forKey: "sync.runtime.background.lastScheduleSucceeded"))
+        XCTAssertNotNil(defaults.object(forKey: "sync.runtime.background.lastScheduleFailedAt"))
+    }
+
     func testSingleFlightStaysClosedDuringCooperativeCancellation() async {
         let singleFlight = AutomaticSyncSingleFlight()
 

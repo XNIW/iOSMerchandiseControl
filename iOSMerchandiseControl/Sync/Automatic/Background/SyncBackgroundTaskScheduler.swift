@@ -51,6 +51,17 @@ final class SyncBackgroundTaskScheduler: SyncBackgroundTaskScheduling {
     }
 
     func schedule(reason: SyncBackgroundScheduleReason) {
+        guard isRegistered else {
+            defaults.set(reason.rawValue, forKey: "sync.runtime.background.lastScheduleReason")
+            defaults.set(Date().timeIntervalSince1970, forKey: "sync.runtime.background.lastScheduleFailedAt")
+            defaults.set(false, forKey: "sync.runtime.background.lastScheduleSucceeded")
+            defaults.set(
+                "background_not_registered",
+                forKey: "sync.runtime.background.lastScheduleError"
+            )
+            return
+        }
+
         let request = BGAppRefreshTaskRequest(identifier: SyncBackgroundTaskConstants.appRefreshIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         do {
