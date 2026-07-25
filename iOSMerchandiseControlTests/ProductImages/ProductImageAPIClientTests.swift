@@ -2422,8 +2422,12 @@ private final class ProductImageHeaderFirstURLProtocol: URLProtocol, @unchecked 
                 return true
             }
             if shouldSchedule {
+                // This delivery is a watchdog for a header-validation regression,
+                // not the normal path. Keep it well behind URLSession's delegate
+                // processing so a busy full-suite runner cannot race the body
+                // ahead of the response-disposition cancellation.
                 DispatchQueue.global(qos: .userInitiated).asyncAfter(
-                    deadline: .now() + 0.10,
+                    deadline: .now() + 5.0,
                     execute: delivery
                 )
             }
