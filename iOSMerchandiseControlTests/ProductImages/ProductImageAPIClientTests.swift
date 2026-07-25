@@ -705,6 +705,31 @@ final class ProductImageAPIClientTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(snapshot.stops, 1)
     }
 
+    func testBoundedLoaderCompletesWhenCallerIsAlreadyCancelled() async {
+        let request = URLRequest(url: URL(string: "https://cancelled.task139.invalid")!)
+        let completion = expectation(description: "Already-cancelled loader completes")
+
+        Task {
+            withUnsafeCurrentTask { task in
+                task?.cancel()
+            }
+            do {
+                _ = try await BoundedURLSessionDataLoader.data(
+                    for: request,
+                    configuration: .ephemeral,
+                    maximumBytes: 1
+                ) { _ in }
+                XCTFail("An already-cancelled caller must not start the request.")
+            } catch is CancellationError {
+                completion.fulfill()
+            } catch {
+                XCTFail("Expected CancellationError, received \(error).")
+            }
+        }
+
+        await fulfillment(of: [completion], timeout: 1)
+    }
+
     func testReadRefreshesExpiredSignedURLExactlyOnce() async throws {
         let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000041")!
         let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000042")!

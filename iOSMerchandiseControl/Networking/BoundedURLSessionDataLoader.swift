@@ -34,6 +34,7 @@ private final class Loader: NSObject, URLSessionDataDelegate, URLSessionTaskDele
         var data = Data()
         var response: HTTPURLResponse?
         var task: URLSessionDataTask?
+        var pendingResult: Result<(Data, HTTPURLResponse), Error>?
         var finished = false
         var cancelled = false
     }
@@ -66,12 +67,22 @@ private final class Loader: NSObject, URLSessionDataDelegate, URLSessionTaskDele
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 let task = session.dataTask(with: request)
-                let shouldStart = lock.withLock {
+                let installation: (
+                    shouldStart: Bool,
+                    pendingResult: Result<(Data, HTTPURLResponse), Error>?
+                ) = lock.withLock {
+                    if let pendingResult = state.pendingResult {
+                        state.pendingResult = nil
+                        return (shouldStart: false, pendingResult: pendingResult)
+                    }
                     state.continuation = continuation
                     state.task = task
-                    return !state.cancelled
+                    return (shouldStart: !state.cancelled, pendingResult: nil)
                 }
-                if shouldStart {
+                if let pendingResult = installation.pendingResult {
+                    session.finishTasksAndInvalidate()
+                    continuation.resume(with: pendingResult)
+                } else if installation.shouldStart {
                     task.resume()
                 } else {
                     complete(.failure(CancellationError()))
@@ -182,6 +193,9 @@ private final class Loader: NSObject, URLSessionDataDelegate, URLSessionTaskDele
             defer {
                 state.continuation = nil
                 state.task = nil
+            }
+            if state.continuation == nil {
+                state.pendingResult = result
             }
             return state.continuation
         }

@@ -187,19 +187,19 @@ struct Task138ProductImageVisualHarness: View {
             Text("Immagine prodotto")
                 .font(.headline)
             HStack(spacing: 12) {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Label("Libreria foto", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("task138.visual.editor.library")
-
                 Button(action: {}) {
                     Label("Fotocamera", systemImage: "camera")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("task138.visual.editor.camera")
+
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("Libreria foto", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("task138.visual.editor.library")
             }
             Text("Preparazione → main → thumbnail → finalizzazione")
                 .font(.caption)
