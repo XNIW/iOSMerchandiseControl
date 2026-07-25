@@ -35,10 +35,11 @@ jobs:
 
       - name: Select an available iPhone Simulator
         run: |
-          DEVICE_ID="$(xcodebuild \
+          DESTINATIONS="$(xcodebuild \
             -project iOSMerchandiseControl.xcodeproj \
             -scheme iOSMerchandiseControl \
-            -showdestinations | ruby -e '
+            -showdestinations 2>&1)"
+          if ! DEVICE_ID="$(printf '%s\n' "$DESTINATIONS" | ruby -e '
             device_id = nil
             STDIN.each_line do |line|
               match = line.match(/\{ platform:iOS Simulator,.*id:([^,}]+),.*name:iPhone/)
@@ -49,7 +50,10 @@ jobs:
             end
             abort "No scheme-compatible iPhone Simulator" unless device_id
             puts device_id
-          ')"
+          ')"; then
+            printf '%s\n' "$DESTINATIONS"
+            exit 1
+          fi
           echo "Selected compatible simulator: $DEVICE_ID"
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
