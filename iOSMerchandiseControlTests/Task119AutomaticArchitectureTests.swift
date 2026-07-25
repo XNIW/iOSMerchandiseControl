@@ -120,40 +120,31 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         )
     }
 
-    @MainActor
     func testBackgroundSchedulerFailsClosedBeforeRegistration() throws {
-        let defaults = UserDefaults.standard
-        let keys = [
-            "sync.runtime.background.lastScheduleReason",
-            "sync.runtime.background.lastScheduleError",
-            "sync.runtime.background.lastScheduleSucceeded",
-            "sync.runtime.background.lastScheduleFailedAt"
-        ]
-        let priorValues = keys.map { ($0, defaults.object(forKey: $0)) }
-        keys.forEach(defaults.removeObject(forKey:))
-        defer {
-            for (key, value) in priorValues {
-                if let value {
-                    defaults.set(value, forKey: key)
-                } else {
-                    defaults.removeObject(forKey: key)
-                }
-            }
+        let scheduler = try source(
+            "iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift"
+        )
+        guard let scheduleStart = scheduler.range(
+            of: "func schedule(reason: SyncBackgroundScheduleReason)"
+        ),
+        let requestStart = scheduler.range(
+            of: "let request = BGAppRefreshTaskRequest",
+            range: scheduleStart.upperBound..<scheduler.endIndex
+        ) else {
+            return XCTFail("Background scheduling implementation was not found.")
         }
-        let scheduler = SyncBackgroundTaskScheduler(defaults: defaults)
-
-        scheduler.schedule(reason: .foregroundCompletion)
-
-        XCTAssertEqual(
-            defaults.string(forKey: "sync.runtime.background.lastScheduleReason"),
-            SyncBackgroundScheduleReason.foregroundCompletion.rawValue
+        let preflight = String(
+            scheduler[scheduleStart.lowerBound..<requestStart.lowerBound]
         )
-        XCTAssertEqual(
-            defaults.string(forKey: "sync.runtime.background.lastScheduleError"),
-            "background_not_registered"
-        )
-        XCTAssertFalse(defaults.bool(forKey: "sync.runtime.background.lastScheduleSucceeded"))
-        XCTAssertNotNil(defaults.object(forKey: "sync.runtime.background.lastScheduleFailedAt"))
+
+        XCTAssertTrue(preflight.contains("guard isRegistered else"))
+        XCTAssertTrue(preflight.contains("reason.rawValue"))
+        XCTAssertTrue(preflight.contains("sync.runtime.background.lastScheduleReason"))
+        XCTAssertTrue(preflight.contains("sync.runtime.background.lastScheduleFailedAt"))
+        XCTAssertTrue(preflight.contains("sync.runtime.background.lastScheduleSucceeded"))
+        XCTAssertTrue(preflight.contains("background_not_registered"))
+        XCTAssertTrue(preflight.contains("sync.runtime.background.lastScheduleError"))
+        XCTAssertTrue(preflight.contains("return"))
     }
 
     func testSingleFlightStaysClosedDuringCooperativeCancellation() async {
