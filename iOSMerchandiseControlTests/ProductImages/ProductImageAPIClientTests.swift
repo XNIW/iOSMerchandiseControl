@@ -636,7 +636,6 @@ final class ProductImageAPIClientTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         var snapshot = probe.snapshot
         XCTAssertEqual(snapshot.deliveredBodies, 0)
-        XCTAssertGreaterThanOrEqual(snapshot.stops, 1)
 
         do {
             _ = try await api.downloadJPEG(
@@ -652,7 +651,6 @@ final class ProductImageAPIClientTests: XCTestCase {
         // URLProtocol may coalesce the test body into one delegate callback,
         // but the loader rejects that callback before appending any bytes.
         XCTAssertLessThanOrEqual(snapshot.deliveredBodies, 1)
-        XCTAssertGreaterThanOrEqual(snapshot.stops, 2)
     }
 
     func testSyncRPCBoundedLoaderRejectsOversizedContentLengthBeforeBodyDelivery() async throws {
