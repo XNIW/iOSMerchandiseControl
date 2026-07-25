@@ -35,12 +35,22 @@ jobs:
 
       - name: Select an available iPhone Simulator
         run: |
-          DEVICE_ID="$(xcrun simctl list devices available -j | ruby -rjson -e '
-            devices = JSON.parse(STDIN.read).fetch("devices").values.flatten
-            phone = devices.find { |device| device.fetch("name", "").start_with?("iPhone") && device["isAvailable"] != false }
-            abort "No available iPhone Simulator" unless phone
-            puts phone.fetch("udid")
+          DEVICE_ID="$(xcodebuild \
+            -project iOSMerchandiseControl.xcodeproj \
+            -scheme iOSMerchandiseControl \
+            -showdestinations | ruby -e '
+            device_id = nil
+            STDIN.each_line do |line|
+              match = line.match(/\{ platform:iOS Simulator,.*id:([^,}]+),.*name:iPhone/)
+              next unless match
+
+              device_id = match[1].strip
+              break
+            end
+            abort "No scheme-compatible iPhone Simulator" unless device_id
+            puts device_id
           ')"
+          echo "Selected compatible simulator: $DEVICE_ID"
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
