@@ -64,8 +64,16 @@ nonisolated struct SupabaseCatalogBaselineWriter {
     func commitLatestBaseline(
         context: ModelContext,
         ownerUserUUID: UUID,
-        source: SupabaseCatalogBaselineSource = .fullPullApply
+        source: SupabaseCatalogBaselineSource = .fullPullApply,
+        validateBeforeSave: () throws -> Void = {}
     ) throws -> SupabaseCatalogBaselineCommitResult {
+        func saveValidated() throws {
+            try validateBeforeSave()
+            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                try context.save()
+            }
+        }
+
         let createdAt = now()
         let runID = UUID()
         let run = SupabaseCatalogBaselineRun(
@@ -80,7 +88,7 @@ nonisolated struct SupabaseCatalogBaselineWriter {
         context.insert(run)
 
         do {
-            try context.save()
+            try saveValidated()
 
             let seeds = try makeRecordSeeds(
                 context: context,
@@ -95,7 +103,7 @@ nonisolated struct SupabaseCatalogBaselineWriter {
             run.categoryCount = seeds.filter { $0.entityType == .productCategory }.count
             run.tombstoneCount = seeds.filter { $0.remoteDeletedAt != nil }.count
             run.updatedAt = now()
-            try context.save()
+            try saveValidated()
 
             var nextIndex = seeds.startIndex
             while nextIndex < seeds.endIndex {
@@ -103,7 +111,7 @@ nonisolated struct SupabaseCatalogBaselineWriter {
                 for seed in seeds[nextIndex..<upperBound] {
                     context.insert(seed.makeRecord())
                 }
-                try context.save()
+                try saveValidated()
                 nextIndex = upperBound
             }
 
@@ -123,7 +131,7 @@ nonisolated struct SupabaseCatalogBaselineWriter {
             run.status = SupabaseCatalogBaselineStatus.valid.rawValue
             run.appliedAt = appliedAt
             run.updatedAt = appliedAt
-            try context.save()
+            try saveValidated()
 
             return SupabaseCatalogBaselineCommitResult(
                 baselineRunID: runID,
@@ -134,12 +142,16 @@ nonisolated struct SupabaseCatalogBaselineWriter {
                 categoryCount: run.categoryCount ?? 0,
                 tombstoneCount: run.tombstoneCount ?? 0
             )
-        } catch {
+        } catch let commitError {
             context.rollback()
-            run.status = SupabaseCatalogBaselineStatus.partialRejected.rawValue
-            run.updatedAt = now()
-            try? context.save()
-            throw error
+            do {
+                run.status = SupabaseCatalogBaselineStatus.partialRejected.rawValue
+                run.updatedAt = now()
+                try saveValidated()
+            } catch {
+                context.rollback()
+            }
+            throw commitError
         }
     }
 

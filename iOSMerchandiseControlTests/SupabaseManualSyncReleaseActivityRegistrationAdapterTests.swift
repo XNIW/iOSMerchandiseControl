@@ -150,8 +150,12 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
             domain: "catalog",
             eventType: "catalog_changed",
             changedCount: 1,
-            entityIDs: .null,
-            metadata: .object(["source": .string("ios_catalog_manual_push")]),
+            entityIDs: .object([
+                "product_ids": .array([
+                    .string("00000000-0000-4000-8000-000000000081")
+                ])
+            ]),
+            metadata: .object(["source": .string("ios")]),
             source: "ios_catalog_manual_push",
             sourceDeviceID: "device-task-081",
             batchID: nil,
@@ -177,7 +181,7 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
     private func row(id: Int64, clientEventID: String) throws -> RemoteSyncEventRow {
         let json = """
         {
-          "id": \(id),
+          "id": "\(id)",
           "owner_user_id": "\(ownerID.uuidString.lowercased())",
           "domain": "catalog",
           "event_type": "catalog_changed",

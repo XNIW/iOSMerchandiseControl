@@ -64,6 +64,8 @@ nonisolated enum SupabaseAuthEvent: Sendable {
 }
 
 final class SupabaseAuthService: @unchecked Sendable {
+    nonisolated static let mobileSignOutScope: SignOutScope = .local
+
     private let provider: SupabaseClientProvider
 
     init(provider: SupabaseClientProvider) {
@@ -88,7 +90,9 @@ final class SupabaseAuthService: @unchecked Sendable {
 
     func signOut() async throws {
         do {
-            try await provider.client.auth.signOut()
+            // The user-facing mobile logout must end only this device session.
+            // Global scope would also revoke Android/web refresh tokens.
+            try await provider.client.auth.signOut(scope: Self.mobileSignOutScope)
         } catch {
             throw mapAuthError(error)
         }

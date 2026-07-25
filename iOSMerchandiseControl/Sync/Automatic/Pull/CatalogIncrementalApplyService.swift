@@ -21,64 +21,214 @@ nonisolated struct CatalogIncrementalApplyResult {
     var catalogApplyMs = 0
 }
 
+nonisolated struct CatalogIncrementalFetchResult: Sendable {
+    var suppliers: [RemoteInventorySupplierRow] = []
+    var categories: [RemoteInventoryCategoryRow] = []
+    var products: [RemoteInventoryProductRow] = []
+    var fetchMs = 0
+}
+
+nonisolated struct CatalogIncrementalMutationRows: Sendable {
+    var suppliers: [RemoteInventorySupplierRow] = []
+    var categories: [RemoteInventoryCategoryRow] = []
+    var products: [RemoteInventoryProductRow] = []
+
+    var remoteActiveProductIDs: Set<UUID> {
+        Set(products.filter { $0.deletedAt == nil }.map(\.id))
+    }
+}
+
+nonisolated func catalogIncrementalMutationRows(
+    fetched: CatalogIncrementalFetchResult,
+    eventIDs: SyncEventEntityIDSet
+) throws -> CatalogIncrementalMutationRows {
+    let products = fetched.products.filter { eventIDs.productIDs.contains($0.id) }
+    let relatedSupplierIDs = Set(products.compactMap(\.supplierID))
+    let relatedCategoryIDs = Set(products.compactMap(\.categoryID))
+    let suppliers = fetched.suppliers.filter {
+        eventIDs.supplierIDs.contains($0.id) || relatedSupplierIDs.contains($0.id)
+    }
+    let categories = fetched.categories.filter {
+        eventIDs.categoryIDs.contains($0.id) || relatedCategoryIDs.contains($0.id)
+    }
+    guard eventIDs.supplierIDs.isSubset(of: Set(suppliers.map(\.id))),
+          eventIDs.categoryIDs.isSubset(of: Set(categories.map(\.id))),
+          eventIDs.productIDs.isSubset(of: Set(products.map(\.id))),
+          relatedSupplierIDs.isSubset(of: Set(suppliers.map(\.id))),
+          relatedCategoryIDs.isSubset(of: Set(categories.map(\.id))) else {
+        throw SyncEventIncrementalApplyError.dynamicPreflightRequired
+    }
+    return CatalogIncrementalMutationRows(
+        suppliers: suppliers,
+        categories: categories,
+        products: products
+    )
+}
+
+nonisolated func applyTargetedCatalogMutationRows(
+    _ rows: CatalogIncrementalMutationRows,
+    protected: IncrementalApplyProtectedRemoteIDs,
+    context: ModelContext,
+    localIdentityIndex: inout IncrementalLocalCatalogIdentityIndex
+) throws -> TargetedCatalogApplyResult {
+    var result = TargetedCatalogApplyResult()
+    var supplierCache: [UUID: Supplier] = [:]
+    var categoryCache: [UUID: ProductCategory] = [:]
+
+    for row in rows.suppliers where !protected.suppliers.contains(row.id) {
+        let applied = try applyTargetedSupplier(
+            row,
+            context: context,
+            localIdentityIndex: &localIdentityIndex
+        )
+        if let supplier = applied.supplier { supplierCache[row.id] = supplier }
+        result.suppliersCreated += applied.created ? 1 : 0
+        result.suppliersUpdated += applied.updated ? 1 : 0
+    }
+    for row in rows.categories where !protected.categories.contains(row.id) {
+        let applied = try applyTargetedCategory(
+            row,
+            context: context,
+            localIdentityIndex: &localIdentityIndex
+        )
+        if let category = applied.category { categoryCache[row.id] = category }
+        result.categoriesCreated += applied.created ? 1 : 0
+        result.categoriesUpdated += applied.updated ? 1 : 0
+    }
+    for row in rows.products {
+        if protected.products.contains(row.id) {
+            if try applyTargetedProductImageReference(row, context: context) {
+                result.productsUpdated += 1
+            }
+            continue
+        }
+        let supplier = try row.supplierID.flatMap { remoteID -> Supplier? in
+            if let cached = supplierCache[remoteID] { return cached }
+            if let existing = try fetchSupplier(remoteID: remoteID, context: context) {
+                supplierCache[remoteID] = existing
+                return existing
+            }
+            return nil
+        }
+        let category = try row.categoryID.flatMap { remoteID -> ProductCategory? in
+            if let cached = categoryCache[remoteID] { return cached }
+            if let existing = try fetchCategory(remoteID: remoteID, context: context) {
+                categoryCache[remoteID] = existing
+                return existing
+            }
+            return nil
+        }
+        let applied = try applyTargetedProduct(
+            row,
+            supplier: supplier,
+            category: category,
+            context: context,
+            localIdentityIndex: &localIdentityIndex
+        )
+        result.productsInserted += applied.inserted ? 1 : 0
+        result.productsUpdated += applied.updated ? 1 : 0
+        result.productsTombstoned += applied.tombstoned ? 1 : 0
+    }
+    return result
+}
+
+nonisolated func applyTargetedCatalogMutationRows(
+    _ rows: CatalogIncrementalMutationRows,
+    protected: IncrementalApplyProtectedRemoteIDs,
+    context: ModelContext
+) throws -> TargetedCatalogApplyResult {
+    var localIdentityIndex = try IncrementalLocalCatalogIdentityIndex(
+        context: context,
+        includeSuppliers: !rows.suppliers.isEmpty,
+        includeCategories: !rows.categories.isEmpty,
+        includeProducts: !rows.products.isEmpty
+            || !rows.suppliers.isEmpty
+            || !rows.categories.isEmpty
+    )
+    return try applyTargetedCatalogMutationRows(
+        rows,
+        protected: protected,
+        context: context,
+        localIdentityIndex: &localIdentityIndex
+    )
+}
+
 nonisolated struct CatalogIncrementalApplyService {
     private let remote: any SyncAutomaticCatalogIncrementalReading
+    private let scope: Task126VerifiedOwnerStoreScope
+    private let defaults: UserDefaults
 
-    init(remote: any SyncAutomaticCatalogIncrementalReading) {
+    init(
+        remote: any SyncAutomaticCatalogIncrementalReading,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults = .standard
+    ) {
         self.remote = remote
+        self.scope = scope
+        self.defaults = defaults
+    }
+
+    func fetch(
+        eventIDs: SyncEventEntityIDSet
+    ) async throws -> CatalogIncrementalFetchResult {
+        guard eventIDs.hasCatalogWork else { return CatalogIncrementalFetchResult() }
+        let catalogFetchStarted = mcNowMillis()
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let firstFetch = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            try await remote.fetchCatalogByIDs(
+                supplierIDs: eventIDs.supplierIDs,
+                categoryIDs: eventIDs.categoryIDs,
+                productIDs: eventIDs.productIDs
+            )
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        try validateRemoteRows(firstFetch)
+        let relatedSupplierIDs = Set(firstFetch.products.compactMap(\.supplierID))
+            .subtracting(Set(firstFetch.suppliers.map(\.id)))
+        let relatedCategoryIDs = Set(firstFetch.products.compactMap(\.categoryID))
+            .subtracting(Set(firstFetch.categories.map(\.id)))
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let relatedFetch = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            try await remote.fetchCatalogByIDs(
+                supplierIDs: relatedSupplierIDs,
+                categoryIDs: relatedCategoryIDs,
+                productIDs: []
+            )
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        try validateRemoteRows(relatedFetch)
+        let suppliers = mergeRows(firstFetch.suppliers, relatedFetch.suppliers)
+        let categories = mergeRows(firstFetch.categories, relatedFetch.categories)
+        return CatalogIncrementalFetchResult(
+            suppliers: suppliers,
+            categories: categories,
+            products: firstFetch.products,
+            fetchMs: mcNowMillis() - catalogFetchStarted
+        )
     }
 
     func apply(
+        fetched: CatalogIncrementalFetchResult,
         eventIDs: SyncEventEntityIDSet,
         ownerUserID: UUID,
         modelContainer: ModelContainer,
         isAuthenticated: Bool
     ) async throws -> CatalogIncrementalApplyResult {
-        let catalogFetchStarted = mcNowMillis()
-        let firstFetch = try await remote.fetchCatalogByIDs(
-            supplierIDs: eventIDs.supplierIDs,
-            categoryIDs: eventIDs.categoryIDs,
-            productIDs: eventIDs.productIDs
-        )
-        let relatedSupplierIDs = Set(firstFetch.products.compactMap(\.supplierID))
-            .subtracting(Set(firstFetch.suppliers.map(\.id)))
-        let relatedCategoryIDs = Set(firstFetch.products.compactMap(\.categoryID))
-            .subtracting(Set(firstFetch.categories.map(\.id)))
-        let relatedFetch = try await remote.fetchCatalogByIDs(
-            supplierIDs: relatedSupplierIDs,
-            categoryIDs: relatedCategoryIDs,
-            productIDs: []
-        )
-        let catalogFetchMs = mcNowMillis() - catalogFetchStarted
-
-        let suppliers = mergeRows(firstFetch.suppliers, relatedFetch.suppliers)
-        let categories = mergeRows(firstFetch.categories, relatedFetch.categories)
-        let products = firstFetch.products
-        let missingTargetSupplierIDs = eventIDs.supplierIDs.subtracting(Set(suppliers.map(\.id)))
-        let missingTargetCategoryIDs = eventIDs.categoryIDs.subtracting(Set(categories.map(\.id)))
-        let missingTargetProductIDs = eventIDs.productIDs.subtracting(Set(products.map(\.id)))
+        let rows = try catalogIncrementalMutationRows(fetched: fetched, eventIDs: eventIDs)
 
         let catalogApplyStarted = mcNowMillis()
         let result = try await applyTargetedCatalogRows(
-            suppliers: suppliers,
-            categories: categories,
-            products: products,
+            rows: rows,
             ownerUserID: ownerUserID,
-            modelContainer: modelContainer
+            modelContainer: modelContainer,
+            scope: scope,
+            defaults: defaults
         )
         let catalogApplyMs = mcNowMillis() - catalogApplyStarted
-        let missingResult = try await tombstoneMissingRemoteCatalog(
-            supplierIDs: missingTargetSupplierIDs,
-            categoryIDs: missingTargetCategoryIDs,
-            productIDs: missingTargetProductIDs,
-            ownerUserID: ownerUserID,
-            modelContainer: modelContainer
-        )
-
         return CatalogIncrementalApplyResult(
-            targetedSuppliersFetched: suppliers.count,
-            targetedCategoriesFetched: categories.count,
-            targetedProductsFetched: products.count,
+            targetedSuppliersFetched: rows.suppliers.count,
+            targetedCategoriesFetched: rows.categories.count,
+            targetedProductsFetched: rows.products.count,
             productsInserted: result.productsInserted,
             productsUpdated: result.productsUpdated,
             productsTombstoned: result.productsTombstoned,
@@ -86,89 +236,48 @@ nonisolated struct CatalogIncrementalApplyService {
             suppliersUpdated: result.suppliersUpdated,
             categoriesCreated: result.categoriesCreated,
             categoriesUpdated: result.categoriesUpdated,
-            productsMissingRemoteTombstoned: missingResult.products,
-            suppliersMissingRemoteTombstoned: missingResult.suppliers,
-            categoriesMissingRemoteTombstoned: missingResult.categories,
-            missingRemoteTargetCount: missingTargetSupplierIDs.count
-                + missingTargetCategoryIDs.count
-                + missingTargetProductIDs.count,
-            remoteActiveProductIDs: Set(products
-                .filter { SupabasePullPreviewNormalizer.semanticString($0.deletedAt) == nil }
-                .map(\.id)),
-            catalogFetchMs: catalogFetchMs,
+            productsMissingRemoteTombstoned: 0,
+            suppliersMissingRemoteTombstoned: 0,
+            categoriesMissingRemoteTombstoned: 0,
+            missingRemoteTargetCount: 0,
+            remoteActiveProductIDs: rows.remoteActiveProductIDs,
+            catalogFetchMs: fetched.fetchMs,
             catalogApplyMs: catalogApplyMs
         )
     }
 
     private func applyTargetedCatalogRows(
-        suppliers: [RemoteInventorySupplierRow],
-        categories: [RemoteInventoryCategoryRow],
-        products: [RemoteInventoryProductRow],
+        rows: CatalogIncrementalMutationRows,
         ownerUserID: UUID,
-        modelContainer: ModelContainer
+        modelContainer: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults
     ) async throws -> TargetedCatalogApplyResult {
         try await Task.detached(priority: .userInitiated) {
-            let context = ModelContext(modelContainer)
-            let protected = try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
-            var result = TargetedCatalogApplyResult()
-            var supplierCache: [UUID: Supplier] = [:]
-            var categoryCache: [UUID: ProductCategory] = [:]
-
-            for row in suppliers where !protected.suppliers.contains(row.id) {
-                let applied = try applyTargetedSupplier(row, context: context)
-                if let supplier = applied.supplier {
-                    supplierCache[row.id] = supplier
-                }
-                result.suppliersCreated += applied.created ? 1 : 0
-                result.suppliersUpdated += applied.updated ? 1 : 0
-            }
-            for row in categories where !protected.categories.contains(row.id) {
-                let applied = try applyTargetedCategory(row, context: context)
-                if let category = applied.category {
-                    categoryCache[row.id] = category
-                }
-                result.categoriesCreated += applied.created ? 1 : 0
-                result.categoriesUpdated += applied.updated ? 1 : 0
-            }
-
-            for row in products {
-                if protected.products.contains(row.id) {
-                    if try applyTargetedProductImageReference(row, context: context) {
-                        result.productsUpdated += 1
-                    }
-                    continue
-                }
-                let supplier = try row.supplierID.flatMap { remoteID -> Supplier? in
-                    if let cached = supplierCache[remoteID] { return cached }
-                    if let existing = try fetchSupplier(remoteID: remoteID, context: context) {
-                        supplierCache[remoteID] = existing
-                        return existing
-                    }
-                    return nil
-                }
-                let category = try row.categoryID.flatMap { remoteID -> ProductCategory? in
-                    if let cached = categoryCache[remoteID] { return cached }
-                    if let existing = try fetchCategory(remoteID: remoteID, context: context) {
-                        categoryCache[remoteID] = existing
-                        return existing
-                    }
-                    return nil
-                }
-                let applied = try applyTargetedProduct(
-                    row,
-                    supplier: supplier,
-                    category: category,
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
+                    modelContainer
+                )
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
+                let protected = try pendingRemoteIDs(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    storeIdentity: scope.storeIdentity
+                )
+                let result = try applyTargetedCatalogMutationRows(
+                    rows,
+                    protected: protected,
                     context: context
                 )
-                result.productsInserted += applied.inserted ? 1 : 0
-                result.productsUpdated += applied.updated ? 1 : 0
-                result.productsTombstoned += applied.tombstoned ? 1 : 0
+                if result.totalMutations > 0 {
+                    try context.save()
+                }
+                return result
             }
-
-            if result.totalMutations > 0 {
-                try context.save()
-            }
-            return result
         }.value
     }
 
@@ -177,49 +286,85 @@ nonisolated struct CatalogIncrementalApplyService {
         categoryIDs: Set<UUID>,
         productIDs: Set<UUID>,
         ownerUserID: UUID,
-        modelContainer: ModelContainer
+        modelContainer: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults
     ) async throws -> (suppliers: Int, categories: Int, products: Int) {
         guard !supplierIDs.isEmpty || !categoryIDs.isEmpty || !productIDs.isEmpty else {
             return (0, 0, 0)
         }
         return try await Task.detached(priority: .utility) {
-            let context = ModelContext(modelContainer)
-            let protected = try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
-            let now = Date()
-            var suppliers = 0
-            var categories = 0
-            var products = 0
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
+                    modelContainer
+                )
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
+                let protected = try pendingRemoteIDs(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    storeIdentity: scope.storeIdentity
+                )
+                let now = Date()
+                var suppliers = 0
+                var categories = 0
+                var products = 0
 
-            for remoteID in supplierIDs where !protected.suppliers.contains(remoteID) {
-                guard let supplier = try fetchSupplier(remoteID: remoteID, context: context),
-                      supplier.remoteDeletedAt == nil else { continue }
-                supplier.remoteDeletedAt = now
-                try detachSupplier(remoteID: remoteID, context: context)
-                suppliers += 1
+                for remoteID in supplierIDs where !protected.suppliers.contains(remoteID) {
+                    guard let supplier = try fetchSupplier(remoteID: remoteID, context: context),
+                          supplier.remoteDeletedAt == nil else { continue }
+                    supplier.remoteDeletedAt = now
+                    try detachSupplier(remoteID: remoteID, context: context)
+                    suppliers += 1
+                }
+                for remoteID in categoryIDs where !protected.categories.contains(remoteID) {
+                    guard let category = try fetchCategory(remoteID: remoteID, context: context),
+                          category.remoteDeletedAt == nil else { continue }
+                    category.remoteDeletedAt = now
+                    try detachCategory(remoteID: remoteID, context: context)
+                    categories += 1
+                }
+                for remoteID in productIDs where !protected.products.contains(remoteID) {
+                    guard let product = try fetchProduct(remoteID: remoteID, context: context),
+                          product.remoteDeletedAt == nil else { continue }
+                    product.remoteDeletedAt = now
+                    product.supplier = nil
+                    product.category = nil
+                    products += 1
+                }
+                if suppliers + categories + products > 0 {
+                    try context.save()
+                }
+                return (suppliers, categories, products)
             }
-            for remoteID in categoryIDs where !protected.categories.contains(remoteID) {
-                guard let category = try fetchCategory(remoteID: remoteID, context: context),
-                      category.remoteDeletedAt == nil else { continue }
-                category.remoteDeletedAt = now
-                try detachCategory(remoteID: remoteID, context: context)
-                categories += 1
-            }
-            for remoteID in productIDs where !protected.products.contains(remoteID) {
-                guard let product = try fetchProduct(remoteID: remoteID, context: context),
-                      product.remoteDeletedAt == nil else { continue }
-                product.remoteDeletedAt = now
-                product.supplier = nil
-                product.category = nil
-                products += 1
-            }
-            if suppliers + categories + products > 0 {
-                try context.save()
-            }
-            return (suppliers, categories, products)
         }.value
     }
 
     private func mergeRows<Row: Identifiable>(_ lhs: [Row], _ rhs: [Row]) -> [Row] where Row.ID == UUID {
-        Array(Dictionary(uniqueKeysWithValues: (lhs + rhs).map { ($0.id, $0) }).values)
+        // Preserve duplicate IDs so the ordered event preflight can fail
+        // closed with diagnostics. Dictionary(uniqueKeysWithValues:) traps
+        // before that safety boundary on a malformed/non-RPC response.
+        lhs + rhs
+    }
+
+    private func validateRemoteRows(
+        _ rows: (
+            suppliers: [RemoteInventorySupplierRow],
+            categories: [RemoteInventoryCategoryRow],
+            products: [RemoteInventoryProductRow]
+        )
+    ) throws {
+        for row in rows.suppliers {
+            try validateIncrementalReadIdentity(ownerUserID: row.ownerUserID, shopID: row.shopID, scope: scope, remote: remote)
+        }
+        for row in rows.categories {
+            try validateIncrementalReadIdentity(ownerUserID: row.ownerUserID, shopID: row.shopID, scope: scope, remote: remote)
+        }
+        for row in rows.products {
+            try validateIncrementalReadIdentity(ownerUserID: row.ownerUserID, shopID: row.shopID, scope: scope, remote: remote)
+        }
     }
 }

@@ -129,6 +129,74 @@ final class ProductImageCacheTests: XCTestCase {
         XCTAssertLessThanOrEqual(usage, budget)
     }
 
+    func testDiskLRUIsEntryBoundedAndPrunesEmptyAncestorsIdempotently() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let data = try jpegFixture()
+        let maximumEntries = 4
+        let cache = ProductImageCache(
+            rootDirectory: root,
+            maximumDiskBytes: data.count * 100,
+            maximumEntryCount: maximumEntries
+        )
+        let scope = String(repeating: "e", count: 64)
+        let shopID = UUID()
+        var keys: [ProductImageCacheKey] = []
+        for _ in 0..<12 {
+            let key = ProductImageCacheKey(
+                cacheScope: scope,
+                shopID: shopID,
+                productID: UUID(),
+                versionID: UUID(),
+                variant: .thumb
+            )
+            keys.append(key)
+            try await cache.write(data, for: key)
+        }
+
+        let abandonedDirectory = root
+            .appendingPathComponent("abandoned", isDirectory: true)
+            .appendingPathComponent("nested", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: abandonedDirectory,
+            withIntermediateDirectories: true
+        )
+        let abandonedTemporaryFile = abandonedDirectory
+            .appendingPathComponent(".atomic-write.tmp")
+        XCTAssertTrue(FileManager.default.createFile(
+            atPath: abandonedTemporaryFile.path,
+            contents: Data()
+        ))
+        let cleanupTrigger = ProductImageCacheKey(
+            cacheScope: scope,
+            shopID: shopID,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        keys.append(cleanupTrigger)
+        try await cache.write(data, for: cleanupTrigger)
+
+        let boundedEntryCount = try await cache.diskEntryCount()
+        XCTAssertEqual(boundedEntryCount, maximumEntries)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: abandonedTemporaryFile.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: abandonedDirectory.path))
+        for key in keys {
+            try await cache.remove(key)
+            try await cache.remove(key)
+        }
+        let finalEntryCount = try await cache.diskEntryCount()
+        XCTAssertEqual(finalEntryCount, 0)
+        let remainingRegularFiles = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )?.compactMap { $0 as? URL }.filter {
+            (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+        } ?? []
+        XCTAssertTrue(remainingRegularFiles.isEmpty)
+    }
+
     func testOfflineCacheHitDoesNotRequireAnAuthenticatedSession() async throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -180,6 +248,49 @@ final class ProductImageCacheTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? ProductImageError, .invalidScope)
         }
+    }
+
+    func testSymlinkedScopeFailsClosedForWriteAndPurgeWithoutTouchingSentinel() async throws {
+        let root = temporaryRoot()
+        let outside = temporaryRoot()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        let sentinel = outside.appendingPathComponent("sentinel.txt")
+        let sentinelData = Data("must-remain".utf8)
+        try sentinelData.write(to: sentinel)
+        let cacheScope = String(repeating: "f", count: 64)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent(cacheScope, isDirectory: true),
+            withDestinationURL: outside
+        )
+        let cache = ProductImageCache(rootDirectory: root)
+        let key = ProductImageCacheKey(
+            cacheScope: cacheScope,
+            shopID: UUID(),
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+
+        do {
+            try await cache.write(try jpegFixture(), for: key)
+            XCTFail("A symlinked cache scope must fail closed before write.")
+        } catch {
+            XCTAssertEqual(error as? ProductImageError, .invalidScope)
+        }
+        do {
+            try await cache.purgeScope(cacheScope: cacheScope)
+            XCTFail("A symlinked cache scope must fail closed before purge.")
+        } catch {
+            XCTAssertEqual(error as? ProductImageError, .invalidScope)
+        }
+
+        XCTAssertEqual(try Data(contentsOf: sentinel), sentinelData)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sentinel.path))
     }
 
     func testPersonalAccountCacheScopeMatchesServerContract() {

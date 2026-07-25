@@ -47,8 +47,14 @@ final class ProductImageStore: ObservableObject {
     static let memoryCostLimit = 48 * 1_024 * 1_024
 
     private struct InFlightLoad {
+        let id: UUID
         let task: Task<Void, Never>
         var waiterIDs: Set<UUID>
+    }
+
+    private struct PendingPreviewKey: Hashable {
+        let scope: ProductImageScope
+        let productID: UUID
     }
 
     @Published private(set) var revision = 0
@@ -57,6 +63,7 @@ final class ProductImageStore: ObservableObject {
     @Published private(set) var operationStages: [UUID: ProductImageOperationStage] = [:]
 
     private let service: ProductImageService?
+    private let scopeAuthorizationProvider: ProductImageScopeAuthorizationProvider
     private let memoryCache = NSCache<NSString, UIImage>()
     private var memoryCosts: [ProductImageReference: Int] = [:]
     private var totalMemoryCost = 0
@@ -65,11 +72,24 @@ final class ProductImageStore: ObservableObject {
     private var cachedReferenceOrder: [ProductImageReference] = []
     private var failedReferenceOrder: [ProductImageReference] = []
     private var inFlightLoads: [ProductImageReference: InFlightLoad] = [:]
+    private var loadIDs: [ProductImageReference: UUID] = [:]
+    private var pendingPreviews: [PendingPreviewKey: UIImage] = [:]
+    private var operationIDs: [UUID: UUID] = [:]
+    private var operationScopes: [UUID: ProductImageScope] = [:]
+    private var nonCancellableOperationIDs: Set<UUID> = []
     private var activeScope: ProductImageScope?
+    private var accountStoreReplacementLeaseActive = false
     private var generation = 0
+    private var storePresentationID: String?
+    private var scopeActivationTask: Task<Void, Never>?
+    private var scopeCleanupTask: Task<Void, Never>?
 
-    init(service: ProductImageService?) {
+    init(
+        service: ProductImageService?,
+        scopeAuthorizationProvider: @escaping ProductImageScopeAuthorizationProvider = { _ in true }
+    ) {
         self.service = service
+        self.scopeAuthorizationProvider = scopeAuthorizationProvider
         memoryCache.countLimit = Self.maximumTrackedReferences
         memoryCache.totalCostLimit = Self.memoryCostLimit
         memoryWarningCancellable = NotificationCenter.default.publisher(
@@ -83,37 +103,117 @@ final class ProductImageStore: ObservableObject {
         }
     }
 
+    nonisolated deinit {}
+
     var isAvailable: Bool { service != nil }
 
+    var canBeginAccountStoreReplacement: Bool {
+        !accountStoreReplacementLeaseActive && operationIDs.isEmpty
+    }
+
+    /// Prevents any new upload/remove from being admitted while the local
+    /// owner/shop store is being replaced. Existing mutations must finish
+    /// before the lease can be acquired.
+    @discardableResult
+    func beginAccountStoreReplacementLease() -> Bool {
+        guard canBeginAccountStoreReplacement else { return false }
+        accountStoreReplacementLeaseActive = true
+        objectWillChange.send()
+        return true
+    }
+
+    func endAccountStoreReplacementLease() {
+        guard accountStoreReplacementLeaseActive else { return }
+        accountStoreReplacementLeaseActive = false
+        objectWillChange.send()
+    }
+
     func activate(scope: ProductImageScope?) {
-        guard activeScope != scope else { return }
+        activate(scope: scope, forceGenerationBoundary: false)
+    }
+
+    /// Invalidates image state at the same publication boundary as the
+    /// SwiftData generation, including same-account/same-shop replacements.
+    func advanceStoreGeneration(presentationID: String) {
+        guard storePresentationID != presentationID else { return }
+        storePresentationID = presentationID
+        activate(scope: activeScope, forceGenerationBoundary: true)
+    }
+
+    private func activate(
+        scope: ProductImageScope?,
+        forceGenerationBoundary: Bool
+    ) {
+        let nextScope = scope.flatMap { scopeAuthorizationProvider($0) ? $0 : nil }
+        guard forceGenerationBoundary || activeScope != nextScope else { return }
         let previousScope = activeScope
-        activeScope = scope
+        activeScope = nextScope
         generation &+= 1
+        let expectedGeneration = generation
         for load in inFlightLoads.values {
             load.task.cancel()
         }
         inFlightLoads.removeAll()
+        loadIDs.removeAll()
         purgeMemoryCache(incrementRevision: false)
         failedReferenceOrder.removeAll()
         loadingReferences.removeAll()
         failedReferences.removeAll()
-        operationStages.removeAll()
+        let preservedProductIDs = Set(operationIDs.compactMap { productID, operationID in
+            nonCancellableOperationIDs.contains(operationID) ? productID : nil
+        })
+        operationStages = operationStages.filter { preservedProductIDs.contains($0.key) }
+        operationIDs = operationIDs.filter { preservedProductIDs.contains($0.key) }
+        operationScopes = operationScopes.filter { preservedProductIDs.contains($0.key) }
+        nonCancellableOperationIDs = Set(operationIDs.values)
+        pendingPreviews = pendingPreviews.filter { key, _ in
+            preservedProductIDs.contains(key.productID)
+                && operationScopes[key.productID] == key.scope
+        }
         revision &+= 1
-        if let previousScope, let service {
-            let purgeAccountScope = scope == nil || scope?.accountID != previousScope.accountID
-            Task {
+
+        scopeActivationTask?.cancel()
+        scopeCleanupTask?.cancel()
+        guard let service else {
+            scopeActivationTask = nil
+            scopeCleanupTask = nil
+            return
+        }
+        let activationTask = Task {
+            await service.setActiveScope(nextScope, generation: expectedGeneration)
+        }
+        scopeActivationTask = activationTask
+        if let previousScope {
+            let purgeAccountScope = nextScope == nil
+                || nextScope?.accountID != previousScope.accountID
+            scopeCleanupTask = Task { [weak self] in
+                await activationTask.value
+                do {
+                    try await Task.sleep(nanoseconds: 8_000_000)
+                } catch {
+                    return
+                }
+                guard let self,
+                      !Task.isCancelled,
+                      self.generation == expectedGeneration,
+                      self.activeScope == nextScope else {
+                    return
+                }
                 await service.deactivate(
                     scope: previousScope,
-                    purgeAccountScope: purgeAccountScope
+                    purgeAccountScope: purgeAccountScope,
+                    lifecycleGeneration: expectedGeneration
                 )
             }
+        } else {
+            scopeCleanupTask = nil
         }
     }
 
     func image(for reference: ProductImageReference) -> UIImage? {
         _ = revision
-        guard activeScope == reference.scope else { return nil }
+        guard activeScope == reference.scope,
+              scopeAuthorizationProvider(reference.scope) else { return nil }
         guard let image = memoryCache.object(forKey: Self.memoryKey(reference) as NSString) else {
             removeCachedMetadata(reference)
             return nil
@@ -135,6 +235,15 @@ final class ProductImageStore: ObservableObject {
 
     func operationStage(productID: UUID) -> ProductImageOperationStage {
         operationStages[productID] ?? .idle
+    }
+
+    func pendingPreview(scope: ProductImageScope?, productID: UUID?) -> UIImage? {
+        _ = revision
+        guard let scope,
+              let productID,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope) else { return nil }
+        return pendingPreviews[PendingPreviewKey(scope: scope, productID: productID)]
     }
 
     var cachedImageCostBytes: Int { totalMemoryCost }
@@ -162,10 +271,18 @@ final class ProductImageStore: ObservableObject {
 
     func load(_ reference: ProductImageReference) async {
         guard let service,
-              activeScope == reference.scope,
-              image(for: reference) == nil else {
+              scopeAuthorizationProvider(reference.scope) else {
             return
         }
+        if activeScope != reference.scope {
+            activate(scope: reference.scope)
+        }
+        let activationTask = scopeActivationTask
+        await activationTask?.value
+        guard activeScope == reference.scope,
+              generation > 0,
+              scopeAuthorizationProvider(reference.scope),
+              image(for: reference) == nil else { return }
 
         let waiterID = UUID()
         let task: Task<Void, Never>
@@ -175,6 +292,8 @@ final class ProductImageStore: ObservableObject {
             inFlightLoads[reference] = existing
         } else {
             let expectedGeneration = generation
+            let loadID = UUID()
+            loadIDs[reference] = loadID
             loadingReferences.insert(reference)
             removeFailure(reference)
             task = Task { [weak self] in
@@ -182,10 +301,12 @@ final class ProductImageStore: ObservableObject {
                 await self.performLoad(
                     reference,
                     service: service,
-                    expectedGeneration: expectedGeneration
+                    expectedGeneration: expectedGeneration,
+                    loadID: loadID
                 )
             }
             inFlightLoads[reference] = InFlightLoad(
+                id: loadID,
                 task: task,
                 waiterIDs: [waiterID]
             )
@@ -247,26 +368,76 @@ final class ProductImageStore: ObservableObject {
         await load(main)
     }
 
-    func cancelOperation(productID: UUID) {
+    @discardableResult
+    func cancelOperation(productID: UUID, scope: ProductImageScope? = nil) -> Bool {
+        guard let operationID = operationIDs[productID],
+              scope == nil || operationScopes[productID] == scope,
+              operationStages[productID, default: .idle].allowsCancellation,
+              !nonCancellableOperationIDs.contains(operationID) else {
+            return false
+        }
+        operationIDs[productID] = nil
+        operationScopes[productID] = nil
+        clearPendingPreview(scope: scope ?? activeScope, productID: productID)
         operationStages[productID] = .cancelled
+        return true
+    }
+
+    /// Releases the mutation admission only after the caller has synchronously
+    /// committed (or rolled back) the matching SwiftData reference update.
+    func finishMutationLease(scope: ProductImageScope, productID: UUID) {
+        guard operationScopes[productID] == scope,
+              operationStages[productID] == .completed else { return }
+        operationIDs[productID] = nil
+        operationScopes[productID] = nil
+        objectWillChange.send()
     }
 
     func upload(
         fileURL: URL,
         scope: ProductImageScope,
         productID: UUID,
-        previousVersionID: UUID?
+        previousVersionID: UUID?,
+        retainMutationLeaseAfterResponse: Bool = false
     ) async throws -> ProductImageUploadResult {
         guard let service else { throw ProductImageError.unavailable }
-        guard activeScope == scope else { throw ProductImageError.invalidScope }
+        guard !accountStoreReplacementLeaseActive else { throw ProductImageError.accountChanged }
+        guard scopeAuthorizationProvider(scope) else { throw ProductImageError.invalidScope }
+        await scopeActivationTask?.value
+        guard !accountStoreReplacementLeaseActive,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope) else {
+            throw ProductImageError.accountChanged
+        }
+        guard operationIDs[productID] == nil else {
+            throw ProductImageError.invalidResponse
+        }
         let expectedGeneration = generation
+        let operationID = UUID()
+        operationIDs[productID] = operationID
+        operationScopes[productID] = scope
         operationStages[productID] = .processing
 
         do {
             let prepared = try await ProductImageProcessor.prepare(fileURL: fileURL)
-            guard generation == expectedGeneration, activeScope == scope else {
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  operationIDs[productID] == operationID else {
                 throw ProductImageError.accountChanged
             }
+            async let decodedMain = ProductImageDownsampler.decode(prepared.main.data, variant: .main)
+            async let decodedThumb = ProductImageDownsampler.decode(prepared.thumb.data, variant: .thumb)
+            guard let main = try await decodedMain,
+                  let thumb = try await decodedThumb else {
+                throw ProductImageError.decodeFailed
+            }
+            try Task.checkCancellation()
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  operationIDs[productID] == operationID else {
+                throw ProductImageError.accountChanged
+            }
+            setPendingPreview(main.image, scope: scope, productID: productID)
             let result = try await service.upload(
                 prepared: prepared,
                 scope: scope,
@@ -276,29 +447,19 @@ final class ProductImageStore: ObservableObject {
                         stage,
                         productID: productID,
                         scope: scope,
-                        expectedGeneration: expectedGeneration
+                        expectedGeneration: expectedGeneration,
+                        operationID: operationID
                     )
                 }
             )
-            try Task.checkCancellation()
-            guard generation == expectedGeneration, activeScope == scope else {
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  scopeAuthorizationProvider(scope),
+                  operationScopes[productID] == scope,
+                  operationIDs[productID] == operationID else {
                 throw ProductImageError.accountChanged
             }
-            if let previousVersionID {
-                discard(
-                    scope: scope,
-                    productID: productID,
-                    versionID: previousVersionID
-                )
-            }
-            async let decodedMain = ProductImageDownsampler.decode(prepared.main.data, variant: .main)
-            async let decodedThumb = ProductImageDownsampler.decode(prepared.thumb.data, variant: .thumb)
-            let (main, thumb) = try await (decodedMain, decodedThumb)
-            try Task.checkCancellation()
-            guard generation == expectedGeneration, activeScope == scope else {
-                throw ProductImageError.accountChanged
-            }
-            if let main {
+            if activeScope == scope {
                 store(
                     main.image,
                     for: ProductImageReference(
@@ -309,8 +470,6 @@ final class ProductImageStore: ObservableObject {
                     ),
                     source: "local"
                 )
-            }
-            if let thumb {
                 store(
                     thumb.image,
                     for: ProductImageReference(
@@ -321,18 +480,48 @@ final class ProductImageStore: ObservableObject {
                     ),
                     source: "local"
                 )
+                if let previousVersionID, previousVersionID != result.versionID {
+                    discard(
+                        scope: scope,
+                        productID: productID,
+                        versionID: previousVersionID
+                    )
+                }
             }
+            clearPendingPreview(scope: scope, productID: productID)
             operationStages[productID] = .completed
+            nonCancellableOperationIDs.remove(operationID)
+            if !retainMutationLeaseAfterResponse {
+                finishMutationLease(scope: scope, productID: productID)
+            }
             return result
         } catch is CancellationError {
-            if generation == expectedGeneration, activeScope == scope {
+            if operationIDs[productID] == operationID {
+                clearPendingPreview(scope: scope, productID: productID)
                 operationStages[productID] = .cancelled
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
             }
+            scheduleReloadIfActive(
+                scope: scope,
+                productID: productID,
+                versionID: previousVersionID
+            )
             throw CancellationError()
         } catch {
-            if generation == expectedGeneration, activeScope == scope {
+            if operationIDs[productID] == operationID {
+                clearPendingPreview(scope: scope, productID: productID)
                 operationStages[productID] = .failed
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
             }
+            scheduleReloadIfActive(
+                scope: scope,
+                productID: productID,
+                versionID: previousVersionID
+            )
             throw error
         }
     }
@@ -340,11 +529,27 @@ final class ProductImageStore: ObservableObject {
     func remove(
         scope: ProductImageScope,
         productID: UUID,
-        versionID: UUID
+        versionID: UUID,
+        retainMutationLeaseAfterResponse: Bool = false
     ) async throws -> ProductImageRemoveResult {
         guard let service else { throw ProductImageError.unavailable }
-        guard activeScope == scope else { throw ProductImageError.invalidScope }
+        guard !accountStoreReplacementLeaseActive else { throw ProductImageError.accountChanged }
+        guard scopeAuthorizationProvider(scope) else { throw ProductImageError.invalidScope }
+        await scopeActivationTask?.value
+        guard !accountStoreReplacementLeaseActive,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope) else {
+            throw ProductImageError.accountChanged
+        }
+        guard operationIDs[productID] == nil else {
+            throw ProductImageError.invalidResponse
+        }
         let expectedGeneration = generation
+        let operationID = UUID()
+        operationIDs[productID] = operationID
+        operationScopes[productID] = scope
+        nonCancellableOperationIDs.insert(operationID)
+        clearPendingPreview(scope: scope, productID: productID)
         operationStages[productID] = .removing
         do {
             let result = try await service.remove(
@@ -352,21 +557,39 @@ final class ProductImageStore: ObservableObject {
                 productID: productID,
                 versionID: versionID
             )
-            guard generation == expectedGeneration, activeScope == scope else {
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  scopeAuthorizationProvider(scope),
+                  operationScopes[productID] == scope,
+                  operationIDs[productID] == operationID else {
                 throw ProductImageError.accountChanged
             }
-            discard(scope: scope, productID: productID, versionID: versionID)
+            if activeScope == scope {
+                discard(scope: scope, productID: productID, versionID: versionID)
+            }
             operationStages[productID] = .completed
+            nonCancellableOperationIDs.remove(operationID)
+            if !retainMutationLeaseAfterResponse {
+                finishMutationLease(scope: scope, productID: productID)
+            }
             return result
         } catch is CancellationError {
-            if generation == expectedGeneration, activeScope == scope {
+            if operationIDs[productID] == operationID {
                 operationStages[productID] = .cancelled
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
             }
+            scheduleReloadIfActive(scope: scope, productID: productID, versionID: versionID)
             throw CancellationError()
         } catch {
-            if generation == expectedGeneration, activeScope == scope {
+            if operationIDs[productID] == operationID {
                 operationStages[productID] = .failed
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
             }
+            scheduleReloadIfActive(scope: scope, productID: productID, versionID: versionID)
             throw error
         }
     }
@@ -396,23 +619,67 @@ final class ProductImageStore: ObservableObject {
         revision &+= 1
     }
 
+    private func setPendingPreview(
+        _ image: UIImage,
+        scope: ProductImageScope,
+        productID: UUID
+    ) {
+        guard activeScope == scope else { return }
+        pendingPreviews[PendingPreviewKey(scope: scope, productID: productID)] = image
+        revision &+= 1
+    }
+
+    private func clearPendingPreview(scope: ProductImageScope?, productID: UUID) {
+        guard let scope else { return }
+        let key = PendingPreviewKey(scope: scope, productID: productID)
+        guard pendingPreviews.removeValue(forKey: key) != nil else { return }
+        revision &+= 1
+    }
+
+    private func scheduleReloadIfActive(
+        scope: ProductImageScope,
+        productID: UUID,
+        versionID: UUID?
+    ) {
+        guard let versionID,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope) else {
+            return
+        }
+        Task { @MainActor [weak self] in
+            await self?.loadProgressively(
+                scope: scope,
+                productID: productID,
+                versionID: versionID
+            )
+        }
+    }
+
     private func updateOperationStage(
         _ stage: ProductImageOperationStage,
         productID: UUID,
         scope: ProductImageScope,
-        expectedGeneration: Int
+        expectedGeneration: Int,
+        operationID: UUID
     ) {
-        guard generation == expectedGeneration, activeScope == scope else { return }
+        guard generation == expectedGeneration,
+              activeScope == scope,
+              operationIDs[productID] == operationID else { return }
         operationStages[productID] = stage
+        if stage == .finalizing {
+            nonCancellableOperationIDs.insert(operationID)
+        }
     }
 
     private func performLoad(
         _ reference: ProductImageReference,
         service: ProductImageService,
-        expectedGeneration: Int
+        expectedGeneration: Int,
+        loadID: UUID
     ) async {
         defer {
-            if generation == expectedGeneration {
+            if loadIDs[reference] == loadID {
+                loadIDs[reference] = nil
                 loadingReferences.remove(reference)
             }
         }
@@ -421,7 +688,9 @@ final class ProductImageStore: ObservableObject {
             let result = try await service.load(reference)
             try Task.checkCancellation()
             guard generation == expectedGeneration,
-                  activeScope == reference.scope else {
+                  activeScope == reference.scope,
+                  scopeAuthorizationProvider(reference.scope),
+                  loadIDs[reference] == loadID else {
                 return
             }
             guard let decoded = try await ProductImageDownsampler.decode(
@@ -432,14 +701,18 @@ final class ProductImageStore: ObservableObject {
             }
             try Task.checkCancellation()
             guard generation == expectedGeneration,
-                  activeScope == reference.scope else {
+                  activeScope == reference.scope,
+                  scopeAuthorizationProvider(reference.scope),
+                  loadIDs[reference] == loadID else {
                 return
             }
             store(decoded.image, for: reference, source: result.source)
         } catch is CancellationError {
             return
         } catch {
-            guard generation == expectedGeneration, activeScope == reference.scope else { return }
+            guard generation == expectedGeneration,
+                  activeScope == reference.scope,
+                  loadIDs[reference] == loadID else { return }
             recordFailure(reference)
         }
     }
@@ -488,6 +761,13 @@ final class ProductImageStore: ObservableObject {
                 variant: variant
             )
             memoryCache.removeObject(forKey: Self.memoryKey(reference) as NSString)
+            if let load = inFlightLoads.removeValue(forKey: reference) {
+                load.task.cancel()
+            }
+            loadIDs[reference] = nil
+            if let service {
+                Task { await service.cancel(reference) }
+            }
             removeCachedMetadata(reference)
             removeFailure(reference)
             loadingReferences.remove(reference)

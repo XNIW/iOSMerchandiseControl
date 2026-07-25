@@ -75,6 +75,8 @@ struct SyncEventOutboxDrainService {
     private let fetchRetryable: (String, Date, Int?) throws -> [SyncEventOutboxEntry]
     private let saveChanges: () throws -> Void
     private let rollbackChanges: () -> Void
+    private let automaticScope: Task126VerifiedOwnerStoreScope?
+    private let defaults: UserDefaults
 
     init(
         context: ModelContext,
@@ -83,6 +85,8 @@ struct SyncEventOutboxDrainService {
         retryDelay: TimeInterval = Self.defaultRetryDelay,
         sendingStaleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
         sendingRecoveryScanLimit: Int = SyncEventOutboxLocalStore.defaultSendingRecoveryScanLimit,
+        automaticScope: Task126VerifiedOwnerStoreScope? = nil,
+        defaults: UserDefaults = .standard,
         clock: @escaping Clock = Date.init
     ) {
         let store = SyncEventOutboxLocalStore(context: context)
@@ -92,9 +96,12 @@ struct SyncEventOutboxDrainService {
             retryDelay: retryDelay,
             sendingStaleInterval: sendingStaleInterval,
             sendingRecoveryScanLimit: sendingRecoveryScanLimit,
+            automaticScope: automaticScope,
+            defaults: defaults,
             clock: clock,
             recoverStaleSending: { ownerUserID, now, staleInterval, scanLimit in
-                let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+                let storeId = automaticScope?.storeIdentity.storeId
+                    ?? Self.activeOutboxStoreId(ownerUserID: ownerUserID)
                 return try store.recoverStaleSending(
                     ownerUserID: ownerUserID,
                     storeId: storeId,
@@ -104,7 +111,8 @@ struct SyncEventOutboxDrainService {
                 )
             },
             fetchRetryable: { ownerUserID, now, limit in
-                let storeId = Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+                let storeId = automaticScope?.storeIdentity.storeId
+                    ?? Self.activeOutboxStoreId(ownerUserID: ownerUserID)
                 return try store.fetchRetryable(
                     ownerUserID: ownerUserID,
                     storeId: storeId,
@@ -127,6 +135,8 @@ struct SyncEventOutboxDrainService {
         retryDelay: TimeInterval = Self.defaultRetryDelay,
         sendingStaleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
         sendingRecoveryScanLimit: Int = SyncEventOutboxLocalStore.defaultSendingRecoveryScanLimit,
+        automaticScope: Task126VerifiedOwnerStoreScope? = nil,
+        defaults: UserDefaults = .standard,
         clock: @escaping Clock = Date.init,
         recoverStaleSending: @escaping SendingRecovery = { _, _, _, _ in
             SyncEventOutboxSendingRecoveryResult()
@@ -148,6 +158,8 @@ struct SyncEventOutboxDrainService {
         self.fetchRetryable = fetchRetryable
         self.saveChanges = saveChanges
         self.rollbackChanges = rollbackChanges
+        self.automaticScope = automaticScope
+        self.defaults = defaults
     }
 
     func drainOnce(
@@ -158,6 +170,7 @@ struct SyncEventOutboxDrainService {
         guard let ownerUserID = normalizedOwner(ownerUserID) else {
             throw SyncEventOutboxDrainError.invalidOwnerUserID
         }
+        try validateAutomaticScope(ownerUserID: ownerUserID)
 
         let batchLimit = min(max(0, limit), Self.hardLimit)
         guard batchLimit > 0 else {
@@ -211,7 +224,8 @@ struct SyncEventOutboxDrainService {
             guard entry.isRetryable(
                 now: now,
                 currentOwnerUserID: ownerUserID,
-                currentStoreId: Self.activeOutboxStoreId(ownerUserID: ownerUserID)
+                currentStoreId: automaticScope?.storeIdentity.storeId
+                    ?? Self.activeOutboxStoreId(ownerUserID: ownerUserID)
             ) else {
                 summary.skippedIneligible += 1
                 continue
@@ -221,6 +235,13 @@ struct SyncEventOutboxDrainService {
             let request: SyncEventRecordRequest
             do {
                 request = try entry.makeRecordRequestForReplay(validator: validator)
+                if let automaticScope {
+                    guard request.shopID == automaticScope.shopID else {
+                        throw Task126OwnerStoreGateError.scopeChanged
+                    }
+                }
+            } catch let error as Task126OwnerStoreGateError {
+                throw error
             } catch {
                 let failure = payloadReplayFailure(from: error)
                 entry.apply(
@@ -244,7 +265,21 @@ struct SyncEventOutboxDrainService {
             summary.attempted += 1
 
             do {
-                _ = try await recorder.record(request)
+                try validateAutomaticScope(ownerUserID: ownerUserID)
+                let result: SyncEventRecordResult
+                if let automaticScope {
+                    result = try await Task126OwnerStoreGate.withAutomaticScope(automaticScope) {
+                        try await recorder.record(request)
+                    }
+                    try Task126OwnerStoreGate.validateRemoteIdentity(
+                        ownerUserID: result.row.ownerUserID,
+                        shopID: result.row.shopID,
+                        scope: automaticScope
+                    )
+                } else {
+                    result = try await recorder.record(request)
+                }
+                try validateAutomaticScope(ownerUserID: ownerUserID)
             } catch is CancellationError {
                 entry.apply(snapshot)
                 try save(operation: "cancel_restore")
@@ -253,7 +288,15 @@ struct SyncEventOutboxDrainService {
                 entry.apply(snapshot)
                 try save(operation: "cancel_restore")
                 throw CancellationError()
+            } catch let error as Task126OwnerStoreGateError {
+                restoreSnapshotAfterAutomaticScopeFailure(snapshot, entry: entry)
+                throw error
             } catch let error as SyncEventRecordError {
+                if isAutomaticScopeMismatch(error) {
+                    applyRecordFailure(error, to: entry, summary: &summary)
+                    try save(operation: "automatic_scope_mismatch_transition")
+                    throw error
+                }
                 applyRecordFailure(error, to: entry, summary: &summary)
                 try save(operation: "record_failure_transition")
                 continue
@@ -282,6 +325,29 @@ struct SyncEventOutboxDrainService {
         }
 
         return summary.outcome()
+    }
+
+    private func restoreSnapshotAfterAutomaticScopeFailure(
+        _ snapshot: SyncEventOutboxState,
+        entry: SyncEventOutboxEntry
+    ) {
+        entry.apply(snapshot)
+        do {
+            try save(operation: "automatic_scope_restore")
+        } catch {
+            // save() has already rolled back the local context. Keep the
+            // owner/shop boundary error as the causal diagnostic.
+        }
+    }
+
+    private func isAutomaticScopeMismatch(_ error: SyncEventRecordError) -> Bool {
+        guard automaticScope != nil,
+              error.kind == .auth else {
+            return false
+        }
+        return error.failure.code?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() == "automatic_scope_mismatch"
     }
 
     private func applyRecordFailure(
@@ -357,11 +423,43 @@ struct SyncEventOutboxDrainService {
 
     private func save(operation: String) throws {
         do {
-            try saveChanges()
+            if let automaticScope {
+                try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                    automaticScope,
+                    defaults: defaults,
+                    operation: saveChanges
+                )
+            } else {
+                try saveChanges()
+            }
         } catch {
             rollbackChanges()
+            if automaticScope != nil {
+                if let gateError = error as? Task126OwnerStoreGateError {
+                    throw gateError
+                }
+                if error is CancellationError {
+                    throw error
+                }
+                if let urlError = error as? URLError,
+                   urlError.code == .cancelled {
+                    throw urlError
+                }
+            }
             throw SyncEventOutboxDrainError.localSaveFailed(operation: operation)
         }
+    }
+
+    private func validateAutomaticScope(ownerUserID: String?) throws {
+        guard let automaticScope else { return }
+        if let ownerUserID,
+           ownerUserID != automaticScope.ownerUserID.uuidString.lowercased() {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(
+            automaticScope,
+            defaults: defaults
+        )
     }
 
     private func resolvedFetchScanLimit(batchLimit: Int, fetchScanLimit: Int?) -> Int {

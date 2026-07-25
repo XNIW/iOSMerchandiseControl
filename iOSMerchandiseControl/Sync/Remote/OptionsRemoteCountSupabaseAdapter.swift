@@ -10,6 +10,9 @@ struct OptionsRemoteCountSupabaseAdapter: OptionsSyncRemoteCountFetching {
 
     func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
         let ownerUserID = try await query.requireOwner()
+        if Task126OwnerStoreGate.currentAutomaticScope != nil {
+            _ = try Task126OwnerStoreGate.requireCurrentAutomaticScope(ownerUserID: ownerUserID)
+        }
         async let products = query.exactRowCount(table: "inventory_products", ownerUserID: ownerUserID, activeOnly: true)
         async let suppliers = query.exactRowCount(table: "inventory_suppliers", ownerUserID: ownerUserID, activeOnly: true)
         async let categories = query.exactRowCount(table: "inventory_categories", ownerUserID: ownerUserID, activeOnly: true)
@@ -26,14 +29,17 @@ struct OptionsRemoteCountSupabaseAdapter: OptionsSyncRemoteCountFetching {
 
     private func fetchActiveProductPriceCount(ownerUserID: UUID) async throws -> Int? {
         let client = await query.client()
+        let selectedShopID = try selectedShopID(ownerUserID: ownerUserID)
         do {
-            return try await client
+            var request = client
                 .from("inventory_product_prices")
                 .select("id,inventory_products!inner(id)", head: true, count: .exact)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .is("inventory_products.deleted_at", value: nil)
-                .execute()
-                .count
+            if let selectedShopID {
+                request = request.eq("shop_id", value: selectedShopID.uuidString)
+            }
+            return try await request.execute().count
         } catch let error as DecodingError {
             throw await remote.mapDecodingError(error)
         } catch let error as PostgrestError {
@@ -48,17 +54,22 @@ struct OptionsRemoteCountSupabaseAdapter: OptionsSyncRemoteCountFetching {
     private func fetchActiveUserVisibleHistorySessionCount(ownerUserID: UUID) async throws -> Int? {
         let client = await query.client()
         let pageSize = 500
+        let selectedShopID = try selectedShopID(ownerUserID: ownerUserID)
         var start = 0
         var count = 0
 
         while true {
             let end = start + pageSize - 1
             do {
-                let rows: [RemoteHistorySessionCountRow] = try await client
+                var request = client
                     .from("shared_sheet_sessions")
                     .select("remote_id,display_name,deleted_at")
                     .eq("owner_user_id", value: ownerUserID.uuidString)
                     .is("deleted_at", value: nil)
+                if let selectedShopID {
+                    request = request.eq("shop_id", value: selectedShopID.uuidString)
+                }
+                let rows: [RemoteHistorySessionCountRow] = try await request
                     .order("remote_id", ascending: true)
                     .range(from: start, to: end)
                     .execute()
@@ -82,6 +93,15 @@ struct OptionsRemoteCountSupabaseAdapter: OptionsSyncRemoteCountFetching {
                 throw SupabaseTransportClientError.unknown(message: String(describing: error))
             }
         }
+    }
+
+    private func selectedShopID(ownerUserID: UUID) throws -> UUID? {
+        if Task126OwnerStoreGate.currentAutomaticScope != nil {
+            return try Task126OwnerStoreGate.requireCurrentAutomaticScope(
+                ownerUserID: ownerUserID
+            ).shopID
+        }
+        return ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
     }
 }
 

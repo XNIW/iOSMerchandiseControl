@@ -6,6 +6,7 @@ struct InventoryHomeView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @Environment(\.modelContext) private var context
 
     @State private var showFileImporter = false
@@ -124,7 +125,12 @@ struct InventoryHomeView: View {
                    current.isManualEntry {
                     entry = current
                 } else {
-                    entry = try excelSession.createManualHistoryEntry(in: context)
+                    entry = try excelSession.createManualHistoryEntry(
+                        in: context,
+                        ownerUserID: supabaseAuthViewModel.isSignedIn
+                            ? supabaseAuthViewModel.sessionInfo?.userID
+                            : nil
+                    )
                 }
 
                 excelSession.currentHistoryEntry = entry
@@ -305,6 +311,15 @@ struct InventoryHomeView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             }
+        } else if shopContextStore.context.validLinkedShops.count > 1 {
+            Button {
+                showShopPicker = true
+            } label: {
+                Label(L("inventory.shop.choose"), systemImage: "storefront")
+                    .font(.headline)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -411,6 +426,7 @@ struct InventoryHomeView: View {
     InventoryHomeView()
         .environmentObject(ExcelSessionViewModel())
         .environmentObject(ShopContextStore())
+        .environmentObject(SupabaseAuthViewModel(authService: nil))
         .modelContainer(for: [
             Product.self,
             Supplier.self,

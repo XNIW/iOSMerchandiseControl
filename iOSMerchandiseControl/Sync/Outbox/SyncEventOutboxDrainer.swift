@@ -8,11 +8,15 @@ struct SyncEventOutboxDrainer {
     init(
         context: ModelContext,
         recorder: any SyncEventRecording,
+        automaticScope: Task126VerifiedOwnerStoreScope? = nil,
+        defaults: UserDefaults = .standard,
         now: @escaping () -> Date = Date.init
     ) {
         self.service = SyncEventOutboxDrainService(
             context: context,
             recorder: recorder,
+            automaticScope: automaticScope,
+            defaults: defaults,
             clock: now
         )
     }

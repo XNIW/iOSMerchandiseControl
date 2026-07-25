@@ -86,6 +86,7 @@ nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
     let verification: ProductPriceManualPushVerificationResult
     let fingerprint: String
     let confirmedRemoteIDs: [UUID]
+    let confirmedProductIDs: [UUID]
     let needsTechnicalFollowUp: Bool
 
     var isVerifiedSuccess: Bool {
@@ -100,12 +101,14 @@ nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
         verification: ProductPriceManualPushVerificationResult,
         fingerprint: String,
         confirmedRemoteIDs: [UUID] = [],
+        confirmedProductIDs: [UUID] = [],
         needsTechnicalFollowUp: Bool = false
     ) {
         self.insertedCount = insertedCount
         self.verification = verification
         self.fingerprint = fingerprint
         self.confirmedRemoteIDs = confirmedRemoteIDs
+        self.confirmedProductIDs = confirmedProductIDs
         self.needsTechnicalFollowUp = needsTechnicalFollowUp
     }
 }
@@ -352,7 +355,8 @@ struct SupabaseProductPriceManualPushService: Sendable {
                         insertedCount: 0,
                         verification: verification,
                         fingerprint: snapshot.fingerprint,
-                        confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
+                        confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot),
+                        confirmedProductIDs: Self.confirmedProductIDs(for: verification, snapshot: snapshot)
                     )
                 }
             }
@@ -363,7 +367,8 @@ struct SupabaseProductPriceManualPushService: Sendable {
             insertedCount: insertedCount,
             verification: verification,
             fingerprint: snapshot.fingerprint,
-            confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
+            confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot),
+            confirmedProductIDs: Self.confirmedProductIDs(for: verification, snapshot: snapshot)
         )
     }
 
@@ -492,6 +497,15 @@ struct SupabaseProductPriceManualPushService: Sendable {
     ) -> [UUID] {
         guard case .exactMatch = verification else { return [] }
         return snapshot.payloads.map(\.id)
+    }
+
+    private static func confirmedProductIDs(
+        for verification: ProductPriceManualPushVerificationResult,
+        snapshot: ProductPriceManualPushSnapshot
+    ) -> [UUID] {
+        guard case .exactMatch = verification else { return [] }
+        return Array(Set(snapshot.payloads.map(\.productID)))
+            .sorted { $0.uuidString < $1.uuidString }
     }
 
     private func mismatchesFor(

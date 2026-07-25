@@ -32,10 +32,21 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
     }
 
     func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary {
+        try await applyIncrementalRemoteChanges(
+            ownerUserID: ownerUserID,
+            forceLightReconcile: false
+        )
+    }
+
+    func applyIncrementalRemoteChanges(
+        ownerUserID: UUID,
+        forceLightReconcile: Bool
+    ) async throws -> SyncIncrementalPullSummary {
         try await domainApplyServiceFactory(remote, defaults).applyNextEvents(
             ownerUserID: ownerUserID,
             modelContainer: modelContainer,
-            isAuthenticated: true
+            isAuthenticated: true,
+            forceLightReconcile: forceLightReconcile
         )
     }
 }

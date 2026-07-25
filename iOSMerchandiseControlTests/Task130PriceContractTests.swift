@@ -68,7 +68,7 @@ final class Task130PriceContractTests: XCTestCase {
             oldRetailPrice: 15
         )
 
-        let product = ProductImportCore.insertProduct(
+        let product = try ProductImportCore.insertProduct(
             from: draft,
             in: context,
             resolver: resolver,

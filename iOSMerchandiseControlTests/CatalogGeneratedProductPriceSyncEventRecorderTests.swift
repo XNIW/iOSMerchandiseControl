@@ -72,7 +72,15 @@ final class CatalogGeneratedProductPriceSyncEventRecorderTests: XCTestCase {
         XCTAssertEqual(entry.eventType, "prices_changed")
         XCTAssertEqual(entry.changedCount, 1)
         XCTAssertEqual(entry.entityIDsShape, "price_rows:count=1;products:count=1")
-        XCTAssertEqual(try entry.makeRecordRequestForReplay().source, "ios_catalog_generated_prices")
+        let replay = try entry.makeRecordRequestForReplay()
+        XCTAssertEqual(replay.source, "ios")
+        XCTAssertEqual(
+            replay.entityIDs,
+            .object([
+                "price_ids": .array([.string(priceID.uuidString.lowercased())]),
+                "product_ids": .array([.string(productID.uuidString.lowercased())])
+            ])
+        )
     }
 
     private func catalogResult(products: Set<UUID>) -> SupabaseManualPushResult {

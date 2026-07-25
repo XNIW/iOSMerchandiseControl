@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SwiftData
 
@@ -343,7 +344,8 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
                     try await Self.recordHistorySyncEvent(
                         recorder: recorder,
                         ownerUserID: ownerUserID,
-                        remoteIDs: push.pushedRemoteIDs
+                        remoteIDs: push.pushedRemoteIDs,
+                        tombstoneRemoteIDs: push.pushedTombstoneRemoteIDs
                     )
                 }
                 return SyncHistorySessionSummary(
@@ -381,7 +383,8 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
                 try await Self.recordHistorySyncEvent(
                     recorder: recorder,
                     ownerUserID: ownerUserID,
-                    remoteIDs: push.pushedRemoteIDs
+                    remoteIDs: push.pushedRemoteIDs,
+                    tombstoneRemoteIDs: push.pushedTombstoneRemoteIDs
                 )
             }
             return SyncHistorySessionSummary(
@@ -410,27 +413,49 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
     private nonisolated static func recordHistorySyncEvent(
         recorder: (any SyncEventRecording)?,
         ownerUserID: UUID,
-        remoteIDs: Set<UUID>
+        remoteIDs: Set<UUID>,
+        tombstoneRemoteIDs: Set<UUID>
     ) async throws {
         guard let recorder, !remoteIDs.isEmpty else { return }
-        let sortedIDs = remoteIDs.sorted { $0.uuidString < $1.uuidString }
-        let request = SyncEventRecordRequest(
-            domain: "history",
-            eventType: "history_changed",
-            changedCount: sortedIDs.count,
-            entityIDs: .object([
-                "session_ids": .array(sortedIDs.map { .string($0.uuidString.lowercased()) })
-            ]),
-            metadata: .object([
-                "source": .string("ios_history_session_push"),
-                "uploaded_count": .number(Double(sortedIDs.count))
-            ]),
-            source: "ios_history_session_push",
-            sourceDeviceID: DeviceInstallIDStore().deviceInstallID,
-            batchID: UUID(),
-            clientEventID: "ios-history-\(ownerUserID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
-        )
-        _ = try await recorder.record(request)
+        let tombstones = remoteIDs.intersection(tombstoneRemoteIDs)
+        let changed = remoteIDs.subtracting(tombstones)
+        let groups: [(eventType: String, ids: [UUID])] = [
+            ("history_changed", changed.sorted { $0.uuidString < $1.uuidString }),
+            ("history_tombstone", tombstones.sorted { $0.uuidString < $1.uuidString })
+        ]
+        let sourceDeviceID = try DeviceInstallIDStore().requireDeviceInstallID()
+
+        for group in groups where !group.ids.isEmpty {
+            for offset in stride(from: 0, to: group.ids.count, by: 25) {
+                let upperBound = min(offset + 25, group.ids.count)
+                let ids = Array(group.ids[offset..<upperBound])
+                let fingerprint = [
+                    ownerUserID.uuidString.lowercased(),
+                    group.eventType,
+                    ids.map { $0.uuidString.lowercased() }.joined(separator: ",")
+                ].joined(separator: "|")
+                let digest = SHA256.hash(data: Data(fingerprint.utf8))
+                    .map { String(format: "%02x", $0) }
+                    .joined()
+                let request = SyncEventRecordRequest(
+                    domain: "history",
+                    eventType: group.eventType,
+                    changedCount: ids.count,
+                    entityIDs: .object([
+                        "session_ids": .array(ids.map { .string($0.uuidString.lowercased()) })
+                    ]),
+                    metadata: .object([
+                        "source": .string("ios"),
+                        "uploaded_count": .number(Double(ids.count))
+                    ]),
+                    source: "ios_history_session_push",
+                    sourceDeviceID: sourceDeviceID,
+                    batchID: nil,
+                    clientEventID: "ios-history:\(group.eventType):\(digest)"
+                )
+                _ = try await recorder.record(request)
+            }
+        }
     }
 }
 
@@ -611,6 +636,7 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
                 verification: result.verification,
                 fingerprint: result.fingerprint,
                 confirmedRemoteIDs: result.confirmedRemoteIDs,
+                confirmedProductIDs: result.confirmedProductIDs,
                 needsTechnicalFollowUp: true
             )
         }
@@ -804,14 +830,14 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
         guard result.confirmedCatalogChangeCount > 0 else {
             return result
         }
-        let telemetry = SyncEventOutboxEnqueueService(context: context).enqueue(
-            .catalogManualPush(
+        let telemetryService = SyncEventOutboxEnqueueService(context: context)
+        let telemetryResults = SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(
                 result: result,
                 ownerUserID: ownerUserID,
                 currentOwnerUserID: ownerUserID,
                 planFingerprint: plan.planFingerprint
             )
-        )
+            .map(telemetryService.enqueue)
         let generatedPriceTelemetry: SyncEventOutboxProducerResult
         if let generatedPriceRemote {
             do {
@@ -832,7 +858,8 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
         } else {
             generatedPriceTelemetry = SyncEventOutboxProducerResult(kind: .skippedNoOp)
         }
-        if result.status == .completed, !telemetry.isAggregatedPushSuccess {
+        if result.status == .completed,
+           !telemetryResults.allSatisfy(\.isAggregatedPushSuccess) {
             return SupabaseManualPushResult(
                 status: .completedBaselineRefreshFailed,
                 supplierCreates: result.supplierCreates,
@@ -845,6 +872,7 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
                 productUpdates: result.productUpdates,
                 productLinks: result.productLinks,
                 touchedIDs: result.touchedIDs,
+                tombstoneIDs: result.tombstoneIDs,
                 baselineRunID: result.baselineRunID,
                 message: "Technical follow-up required after verified push."
             )
@@ -862,6 +890,7 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
                 productUpdates: result.productUpdates,
                 productLinks: result.productLinks,
                 touchedIDs: result.touchedIDs,
+                tombstoneIDs: result.tombstoneIDs,
                 baselineRunID: result.baselineRunID,
                 message: "Technical follow-up required after generated ProductPrice event."
             )

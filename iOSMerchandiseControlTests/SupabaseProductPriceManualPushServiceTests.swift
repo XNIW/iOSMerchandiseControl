@@ -109,6 +109,8 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         let upsertCalls = await remote.upsertCalls
 
         XCTAssertTrue(result.isVerifiedSuccess)
+        XCTAssertEqual(Set(result.confirmedRemoteIDs), Set(snapshot.payloads.map(\.id)))
+        XCTAssertEqual(Set(result.confirmedProductIDs), Set(snapshot.payloads.map(\.productID)))
         XCTAssertEqual(insertCalls, 1)
         XCTAssertEqual(upsertCalls, 0)
     }
@@ -129,6 +131,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         let readBackProductIDs = await remote.readBackProductIDs
 
         XCTAssertTrue(result.isVerifiedSuccess)
+        XCTAssertEqual(Set(result.confirmedProductIDs), Set(snapshot.payloads.map(\.productID)))
         XCTAssertEqual(readBackOwnerUserIDs, [snapshot.ownerUserID])
         XCTAssertEqual(Set(readBackProductIDs.flatMap { $0 }), Set(snapshot.payloads.map(\.productID)))
     }

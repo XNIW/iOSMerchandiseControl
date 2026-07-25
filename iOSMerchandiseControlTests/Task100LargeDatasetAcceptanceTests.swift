@@ -92,7 +92,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         let resolver = try ProductImportNamedEntityResolver(context: context)
         var insertedProducts = 0
         for draft in analysis.newProducts {
-            ProductImportCore.insertProduct(
+            try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
@@ -175,7 +175,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         var productIDByBarcode: [String: UUID] = [:]
         var insertedProducts = 0
         for (index, draft) in analysis.newProducts.enumerated() {
-            let product = ProductImportCore.insertProduct(
+            let product = try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
@@ -283,7 +283,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         let resolver = try ProductImportNamedEntityResolver(context: context)
         var insertedProducts = 0
         for draft in analysis.newProducts {
-            ProductImportCore.insertProduct(
+            try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
@@ -386,7 +386,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         let resolver = try ProductImportNamedEntityResolver(context: context)
         var insertedProducts = 0
         for draft in analysis.newProducts {
-            ProductImportCore.insertProduct(
+            try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,

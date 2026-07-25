@@ -53,7 +53,7 @@ final class Task105RealOpsClosureTests: XCTestCase {
         let merged = try XCTUnwrap(analysis.newProducts.first { $0.barcode == "TASK105_SMALL_001" })
         XCTAssertEqual(merged.itemNumber, "IT-001B")
         XCTAssertEqual(merged.productName, "Small product A updated")
-        XCTAssertEqual(merged.stockQuantity, 5)
+        XCTAssertEqual(merged.stockQuantity, 3)
         XCTAssertEqual(merged.purchasePrice, 10.5)
         XCTAssertEqual(merged.retailPrice, 15.9)
     }
@@ -175,7 +175,7 @@ final class Task105RealOpsClosureTests: XCTestCase {
         let resolver = try ProductImportNamedEntityResolver(context: context)
         var inserted = 0
         for draft in analysis.newProducts {
-            ProductImportCore.insertProduct(
+            try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,

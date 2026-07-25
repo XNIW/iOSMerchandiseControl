@@ -1,70 +1,150 @@
+import CryptoKit
 import Foundation
 import SwiftData
 
 final class CatalogPushService: SyncCatalogPushProviding {
     private let modelContainer: ModelContainer
     private let remote: (any SyncAutomaticCatalogRemoteWriting)?
+    private let defaults: UserDefaults
 
     init(
         modelContainer: ModelContainer,
-        remote: (any SyncAutomaticCatalogRemoteWriting)? = nil
+        remote: (any SyncAutomaticCatalogRemoteWriting)? = nil,
+        defaults: UserDefaults = .standard
     ) {
         self.modelContainer = modelContainer
         self.remote = remote
+        self.defaults = defaults
     }
 
     func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {
         let modelContainer = self.modelContainer
         let remote = self.remote
+        let defaults = self.defaults
         return try await Task.detached(priority: .utility) {
-            let context = ModelContext(modelContainer)
-            let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
-            let storeIdentity = ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
-            let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
-                .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: selectedShopID == nil ? nil : storeIdentity)
-            var blockers: [String] = []
-            if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
-            if snapshot.staleBaselineCount > 0 { blockers.append("staleBaselineLocalChanges") }
-            if snapshot.sentCount > 0 { blockers.append("sentChangesWaitingForRetry") }
-            if snapshot.isCapped { blockers.append("cappedPendingStore") }
-            if remote == nil, snapshot.pendingCatalogChangeCount > 0 { blockers.append("missingRemote") }
-            let plan = SyncCatalogPushPlan(
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(
                 ownerUserID: ownerUserID,
-                pendingChangeCount: snapshot.pendingCatalogChangeCount,
-                idempotencyKey: "catalog:\(ownerUserID.uuidString.lowercased()):\(snapshot.pendingCatalogChangeCount)",
-                blockers: SyncStringCollectionHelpers.uniquedSorted(blockers)
+                defaults: defaults,
+                allowsPendingSameScopeRecovery: true
             )
-            var result = SyncCatalogPushResult()
-            result.plan = plan
-            guard plan.hasWork,
+            let preparation = try Self.withFreshScopedContext(
+                modelContainer: modelContainer,
+                scope: scope,
+                defaults: defaults
+            ) { context -> (plan: SyncCatalogPushPlan, changeIDs: [String]) in
+                let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
+                    .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: scope.storeIdentity)
+                var blockers: [String] = []
+                if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
+                if snapshot.staleBaselineCount > 0 { blockers.append("staleBaselineLocalChanges") }
+                if snapshot.sentCount > 0 { blockers.append("sentChangesWaitingForRetry") }
+                if snapshot.isCapped { blockers.append("cappedPendingStore") }
+                if remote == nil, snapshot.pendingCatalogChangeCount > 0 {
+                    blockers.append("missingRemote")
+                }
+                let plan = SyncCatalogPushPlan(
+                    ownerUserID: ownerUserID,
+                    pendingChangeCount: snapshot.pendingCatalogChangeCount,
+                    idempotencyKey: "catalog:\(ownerUserID.uuidString.lowercased()):\(scope.shopID.uuidString.lowercased()):\(snapshot.pendingCatalogChangeCount)",
+                    blockers: SyncStringCollectionHelpers.uniquedSorted(blockers)
+                )
+                let changeIDs = try Self.pendingCatalogChanges(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    scope: scope
+                ).map(\.changeID)
+                return (plan, changeIDs)
+            }
+            var result = SyncCatalogPushResult(plan: preparation.plan)
+            guard preparation.plan.hasWork,
                   let remote else {
                 return result
             }
-            let changes = try Self.pendingCatalogChanges(
-                context: context,
-                ownerUserID: ownerUserID,
-                storeIdentity: selectedShopID == nil ? nil : storeIdentity
-            )
-            try Task.checkCancellation()
-            let push = try await Self.push(
-                changes: changes,
-                ownerUserID: ownerUserID,
-                context: context,
-                remote: remote,
-                plan: plan,
-                selectedShopID: selectedShopID
-            )
-            result = push.result
-            try Self.enqueueCatalogSyncEvent(
-                context: context,
-                ownerUserID: ownerUserID,
-                outcome: push
-            )
-            try context.save()
-            _ = try? SupabaseCatalogBaselineWriter().commitLatestBaseline(
-                context: context,
-                ownerUserUUID: ownerUserID
-            )
+
+            for changeID in preparation.changeIDs {
+                guard let mutation = try Self.withFreshScopedContext(
+                    modelContainer: modelContainer,
+                    scope: scope,
+                    defaults: defaults,
+                    { context in
+                        try Self.prepareMutation(
+                            changeID: changeID,
+                            context: context,
+                            ownerUserID: ownerUserID,
+                            scope: scope
+                        )
+                    }
+                ) else { continue }
+
+                switch mutation.action {
+                case .acknowledgeLocalOnly:
+                    try Self.withFreshScopedContext(
+                        modelContainer: modelContainer,
+                        scope: scope,
+                        defaults: defaults
+                    ) { context in
+                        guard let change = try Self.fetchPendingChange(
+                            changeID: mutation.pending.changeID,
+                            context: context
+                        ), mutation.pending.matches(change),
+                              LocalPendingChangeScopeMatcher.matches(
+                                change,
+                                ownerUserID: ownerUserID,
+                                accountHash: scope.accountHash,
+                                storeIdentity: scope.storeIdentity
+                              ) else { return }
+                        change.status = .acknowledged
+                        change.updatedAt = Date()
+                        try context.save()
+                    }
+                case .remote(let call):
+                    let readBack = try await Self.execute(
+                        call,
+                        remote: remote,
+                        scope: scope,
+                        defaults: defaults
+                    )
+                    let outcome = try Self.withFreshScopedContext(
+                        modelContainer: modelContainer,
+                        scope: scope,
+                        defaults: defaults
+                    ) { context in
+                        try Self.applyReadBack(
+                            readBack,
+                            mutation: mutation,
+                            context: context,
+                            ownerUserID: ownerUserID,
+                            plan: preparation.plan,
+                            scope: scope
+                        )
+                    }
+                    result.supplierCreates += outcome.result.supplierCreates
+                    result.supplierUpdates += outcome.result.supplierUpdates
+                    result.categoryCreates += outcome.result.categoryCreates
+                    result.categoryUpdates += outcome.result.categoryUpdates
+                    result.productCreates += outcome.result.productCreates
+                    result.productUpdates += outcome.result.productUpdates
+                }
+            }
+
+            _ = try? Self.withFreshScopedContext(
+                modelContainer: modelContainer,
+                scope: scope,
+                defaults: defaults
+            ) { context -> SupabaseCatalogBaselineCommitResult? in
+                let finalSnapshot = try LocalPendingChangeSnapshotProvider(context: context)
+                    .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: scope.storeIdentity)
+                guard finalSnapshot.pendingCatalogChangeCount == 0,
+                      finalSnapshot.blockedCount == 0,
+                      finalSnapshot.staleBaselineCount == 0,
+                      finalSnapshot.sentCount == 0,
+                      !finalSnapshot.isCapped else { return nil }
+                return try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+                    context: context,
+                    ownerUserUUID: ownerUserID,
+                    validateBeforeSave: {}
+                )
+            }
             return result
         }.value
     }
@@ -72,7 +152,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
     nonisolated private static func pendingCatalogChanges(
         context: ModelContext,
         ownerUserID: UUID,
-        storeIdentity: LocalStoreIdentity?
+        scope: Task126VerifiedOwnerStoreScope
     ) throws -> [LocalPendingChange] {
         let owner = ownerUserID.uuidString.lowercased()
         let pending = LocalPendingChangeStatus.pending.rawValue
@@ -86,7 +166,13 @@ final class CatalogPushService: SyncCatalogPushProviding {
             ]
         )
         return try context.fetch(descriptor).filter {
-            $0.entityKind.isCatalogKind && isStoreCompatible($0, storeIdentity: storeIdentity)
+            $0.entityKind.isCatalogKind
+                && LocalPendingChangeScopeMatcher.matches(
+                    $0,
+                    ownerUserID: ownerUserID,
+                    accountHash: scope.accountHash,
+                    storeIdentity: scope.storeIdentity
+                )
         }
     }
 
@@ -101,169 +187,659 @@ final class CatalogPushService: SyncCatalogPushProviding {
         var changeIDs: [String] = []
     }
 
-    nonisolated private static func push(
-        changes: [LocalPendingChange],
-        ownerUserID: UUID,
+    nonisolated private enum CatalogPushError: Error, Sendable, Equatable {
+        case responseMismatch
+        case invalidIdempotencyKey
+    }
+
+    nonisolated private enum CatalogEntityReference: Sendable {
+        case supplier(PersistentIdentifier)
+        case category(PersistentIdentifier)
+        case product(PersistentIdentifier)
+    }
+
+    nonisolated private enum CatalogRemoteCall: Sendable {
+        case createSupplier(SyncAutomaticSupplierCreatePayload)
+        case updateSupplier(UUID, SyncAutomaticSupplierUpdatePayload)
+        case createCategory(SyncAutomaticCategoryCreatePayload)
+        case updateCategory(UUID, SyncAutomaticCategoryUpdatePayload)
+        case createProduct(SyncAutomaticProductCreatePayload)
+        case updateProduct(UUID, SyncAutomaticProductUpdatePayload)
+    }
+
+    nonisolated private enum CatalogMutationAction: Sendable {
+        case acknowledgeLocalOnly
+        case remote(CatalogRemoteCall)
+    }
+
+    nonisolated private enum CatalogReadBack: Sendable {
+        case supplier(RemoteInventorySupplierRow)
+        case category(RemoteInventoryCategoryRow)
+        case product(RemoteInventoryProductRow)
+    }
+
+    nonisolated private struct PreparedCatalogMutation: Sendable {
+        let pending: LocalPendingChangeCASToken
+        let entity: CatalogEntityReference?
+        let businessFingerprint: String?
+        let action: CatalogMutationAction
+        let isCreate: Bool
+        let isTombstone: Bool
+    }
+
+    nonisolated private static func withFreshScopedContext<Result>(
+        modelContainer: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults,
+        _ body: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+            scope,
+            defaults: defaults
+        ) {
+            try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
+                modelContainer
+            )
+            let context = ModelContext(modelContainer)
+            context.autosaveEnabled = false
+            return try body(context)
+        }
+    }
+
+    nonisolated private static func fetchPendingChange(
+        changeID: String,
+        context: ModelContext
+    ) throws -> LocalPendingChange? {
+        var descriptor = FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { $0.changeID == changeID }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    nonisolated private static func prepareMutation(
+        changeID: String,
         context: ModelContext,
-        remote: any SyncAutomaticCatalogRemoteWriting,
-        plan: SyncCatalogPushPlan,
-        selectedShopID: UUID?
-    ) async throws -> CatalogPushOutcome {
-        var outcome = CatalogPushOutcome(result: SyncCatalogPushResult(plan: plan))
-        var acknowledgedChangeIDs: [String] = []
+        ownerUserID: UUID,
+        scope: Task126VerifiedOwnerStoreScope
+    ) throws -> PreparedCatalogMutation? {
+        guard let change = try fetchPendingChange(changeID: changeID, context: context),
+              change.status == .pending,
+              LocalPendingChangeScopeMatcher.matches(
+                change,
+                ownerUserID: ownerUserID,
+                accountHash: scope.accountHash,
+                storeIdentity: scope.storeIdentity
+              ) else { return nil }
+        let token = LocalPendingChangeCASToken(change)
 
-        for change in changes where change.entityKind == .supplier {
+        switch change.entityKind {
+        case .supplier:
+            let supplier = try findSupplier(for: change, context: context)
             if change.operation == .delete {
-                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
-                    if change.logicalKey.hasPrefix("supplier:local:") {
-                        acknowledgedChangeIDs.append(change.changeID)
-                        outcome.changeIDs.append(change.changeID)
-                    }
-                    continue
+                guard let remoteID = change.entityRemoteID
+                        ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    return change.logicalKey.hasPrefix("supplier:local:")
+                        ? PreparedCatalogMutation(
+                            pending: token,
+                            entity: supplier.map { .supplier($0.persistentModelID) },
+                            businessFingerprint: nil,
+                            action: .acknowledgeLocalOnly,
+                            isCreate: false,
+                            isTombstone: true
+                        )
+                        : nil
                 }
-                let row = try await remote.updateSupplier(
-                    id: remoteID,
-                    payload: SyncAutomaticSupplierUpdatePayload(deletedAt: Self.timestamp(Date()))
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: supplier.map { .supplier($0.persistentModelID) },
+                    businessFingerprint: nil,
+                    action: .remote(.updateSupplier(
+                        remoteID,
+                        SyncAutomaticSupplierUpdatePayload(deletedAt: timestamp(Date()))
+                    )),
+                    isCreate: false,
+                    isTombstone: true
                 )
-                if let supplier = try findSupplier(for: change, context: context) {
-                    apply(row, to: supplier)
-                }
-                outcome.result.supplierUpdates += 1
-                outcome.supplierIDs.append(row.id)
-                outcome.supplierTombstoneIDs.append(row.id)
-                acknowledgedChangeIDs.append(change.changeID)
-                outcome.changeIDs.append(change.changeID)
-                continue
             }
-
-            guard let supplier = try findSupplier(for: change, context: context) else { continue }
+            guard let supplier else { return nil }
+            let fingerprint = LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier)
             if let remoteID = supplier.remoteID {
-                let row = try await remote.updateSupplier(
-                    id: remoteID,
-                    payload: SyncAutomaticSupplierUpdatePayload(name: supplier.name)
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: .supplier(supplier.persistentModelID),
+                    businessFingerprint: fingerprint,
+                    action: .remote(.updateSupplier(
+                        remoteID,
+                        SyncAutomaticSupplierUpdatePayload(name: supplier.name)
+                    )),
+                    isCreate: false,
+                    isTombstone: false
                 )
-                apply(row, to: supplier)
-                outcome.result.supplierUpdates += 1
-                outcome.supplierIDs.append(row.id)
-            } else {
-                let rows = try await remote.createSuppliers([
-                    SyncAutomaticSupplierCreatePayload(ownerUserID: ownerUserID, shopID: selectedShopID, name: supplier.name)
-                ])
-                guard let row = rows.first else { continue }
-                apply(row, to: supplier)
-                outcome.result.supplierCreates += 1
-                outcome.supplierIDs.append(row.id)
-                acknowledgedChangeIDs.append(change.changeID)
-                outcome.changeIDs.append(change.changeID)
-                continue
             }
-            acknowledgedChangeIDs.append(change.changeID)
-            outcome.changeIDs.append(change.changeID)
-        }
+            return PreparedCatalogMutation(
+                pending: token,
+                entity: .supplier(supplier.persistentModelID),
+                businessFingerprint: fingerprint,
+                action: .remote(.createSupplier(SyncAutomaticSupplierCreatePayload(
+                    id: try deterministicCreateID(
+                        token: token,
+                        ownerUserID: ownerUserID,
+                        shopID: scope.shopID,
+                        entityKind: .supplier
+                    ),
+                    ownerUserID: ownerUserID,
+                    shopID: scope.shopID,
+                    name: supplier.name
+                ))),
+                isCreate: true,
+                isTombstone: false
+            )
 
-        for change in changes where change.entityKind == .productCategory {
+        case .productCategory:
+            let category = try findCategory(for: change, context: context)
             if change.operation == .delete {
-                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
-                    if change.logicalKey.hasPrefix("category:local:") {
-                        acknowledgedChangeIDs.append(change.changeID)
-                        outcome.changeIDs.append(change.changeID)
-                    }
-                    continue
+                guard let remoteID = change.entityRemoteID
+                        ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    return change.logicalKey.hasPrefix("category:local:")
+                        ? PreparedCatalogMutation(
+                            pending: token,
+                            entity: category.map { .category($0.persistentModelID) },
+                            businessFingerprint: nil,
+                            action: .acknowledgeLocalOnly,
+                            isCreate: false,
+                            isTombstone: true
+                        )
+                        : nil
                 }
-                let row = try await remote.updateCategory(
-                    id: remoteID,
-                    payload: SyncAutomaticCategoryUpdatePayload(deletedAt: Self.timestamp(Date()))
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: category.map { .category($0.persistentModelID) },
+                    businessFingerprint: nil,
+                    action: .remote(.updateCategory(
+                        remoteID,
+                        SyncAutomaticCategoryUpdatePayload(deletedAt: timestamp(Date()))
+                    )),
+                    isCreate: false,
+                    isTombstone: true
                 )
-                if let category = try findCategory(for: change, context: context) {
-                    apply(row, to: category)
-                }
-                outcome.result.categoryUpdates += 1
-                outcome.categoryIDs.append(row.id)
-                outcome.categoryTombstoneIDs.append(row.id)
-                acknowledgedChangeIDs.append(change.changeID)
-                outcome.changeIDs.append(change.changeID)
-                continue
             }
-
-            guard let category = try findCategory(for: change, context: context) else { continue }
+            guard let category else { return nil }
+            let fingerprint = LocalPendingChangeLogicalKey.categoryFingerprintHash(category)
             if let remoteID = category.remoteID {
-                let row = try await remote.updateCategory(
-                    id: remoteID,
-                    payload: SyncAutomaticCategoryUpdatePayload(name: category.name)
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: .category(category.persistentModelID),
+                    businessFingerprint: fingerprint,
+                    action: .remote(.updateCategory(
+                        remoteID,
+                        SyncAutomaticCategoryUpdatePayload(name: category.name)
+                    )),
+                    isCreate: false,
+                    isTombstone: false
                 )
-                apply(row, to: category)
-                outcome.result.categoryUpdates += 1
-                outcome.categoryIDs.append(row.id)
-            } else {
-                let rows = try await remote.createCategories([
-                    SyncAutomaticCategoryCreatePayload(ownerUserID: ownerUserID, shopID: selectedShopID, name: category.name)
-                ])
-                guard let row = rows.first else { continue }
-                apply(row, to: category)
-                outcome.result.categoryCreates += 1
-                outcome.categoryIDs.append(row.id)
-                acknowledgedChangeIDs.append(change.changeID)
-                outcome.changeIDs.append(change.changeID)
-                continue
             }
-            acknowledgedChangeIDs.append(change.changeID)
-            outcome.changeIDs.append(change.changeID)
-        }
+            return PreparedCatalogMutation(
+                pending: token,
+                entity: .category(category.persistentModelID),
+                businessFingerprint: fingerprint,
+                action: .remote(.createCategory(SyncAutomaticCategoryCreatePayload(
+                    id: try deterministicCreateID(
+                        token: token,
+                        ownerUserID: ownerUserID,
+                        shopID: scope.shopID,
+                        entityKind: .productCategory
+                    ),
+                    ownerUserID: ownerUserID,
+                    shopID: scope.shopID,
+                    name: category.name
+                ))),
+                isCreate: true,
+                isTombstone: false
+            )
 
-        for change in changes where change.entityKind == .product {
+        case .product:
+            let product = try findProduct(for: change, context: context)
             if change.operation == .delete {
-                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
-                    if change.logicalKey.hasPrefix("product:local:") {
-                        acknowledgedChangeIDs.append(change.changeID)
-                        outcome.changeIDs.append(change.changeID)
-                    }
-                    continue
+                guard let remoteID = change.entityRemoteID
+                        ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    return change.logicalKey.hasPrefix("product:local:")
+                        ? PreparedCatalogMutation(
+                            pending: token,
+                            entity: product.map { .product($0.persistentModelID) },
+                            businessFingerprint: nil,
+                            action: .acknowledgeLocalOnly,
+                            isCreate: false,
+                            isTombstone: true
+                        )
+                        : nil
                 }
-                let row = try await remote.updateProduct(
-                    id: remoteID,
-                    payload: makeProductTombstonePayload()
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: product.map { .product($0.persistentModelID) },
+                    businessFingerprint: nil,
+                    action: .remote(.updateProduct(remoteID, makeProductTombstonePayload())),
+                    isCreate: false,
+                    isTombstone: true
                 )
-                if let product = try findProduct(for: change, context: context) {
-                    apply(row, to: product)
-                }
-                outcome.result.productUpdates += 1
-                outcome.productIDs.append(row.id)
-                outcome.productTombstoneIDs.append(row.id)
-                acknowledgedChangeIDs.append(change.changeID)
-                outcome.changeIDs.append(change.changeID)
-                continue
+            }
+            guard let product else { return nil }
+            let fingerprint = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            if let remoteID = product.remoteID {
+                return PreparedCatalogMutation(
+                    pending: token,
+                    entity: .product(product.persistentModelID),
+                    businessFingerprint: fingerprint,
+                    action: .remote(.updateProduct(
+                        remoteID,
+                        makeProductUpdatePayload(product, changedFields: change.changedFields)
+                    )),
+                    isCreate: false,
+                    isTombstone: false
+                )
+            }
+            return PreparedCatalogMutation(
+                pending: token,
+                entity: .product(product.persistentModelID),
+                businessFingerprint: fingerprint,
+                action: .remote(.createProduct(makeProductCreatePayload(
+                    product,
+                    id: try deterministicCreateID(
+                        token: token,
+                        ownerUserID: ownerUserID,
+                        shopID: scope.shopID,
+                        entityKind: .product
+                    ),
+                    ownerUserID: ownerUserID,
+                    shopID: scope.shopID
+                ))),
+                isCreate: true,
+                isTombstone: false
+            )
+
+        case .productPrice, .historySession, .importBatch:
+            return nil
+        }
+    }
+
+    nonisolated private static func execute(
+        _ call: CatalogRemoteCall,
+        remote: any SyncAutomaticCatalogRemoteWriting,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults
+    ) async throws -> CatalogReadBack {
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let readBack: CatalogReadBack
+        switch call {
+        case .createSupplier(let payload):
+            let rows = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.createSuppliers([payload])
+            }
+            guard rows.count == 1, let row = rows.first, row.id == payload.id else {
+                throw CatalogPushError.responseMismatch
+            }
+            readBack = .supplier(row)
+        case .updateSupplier(let id, let payload):
+            let row = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.updateSupplier(id: id, payload: payload)
+            }
+            guard row.id == id else { throw CatalogPushError.responseMismatch }
+            readBack = .supplier(row)
+        case .createCategory(let payload):
+            let rows = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.createCategories([payload])
+            }
+            guard rows.count == 1, let row = rows.first, row.id == payload.id else {
+                throw CatalogPushError.responseMismatch
+            }
+            readBack = .category(row)
+        case .updateCategory(let id, let payload):
+            let row = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.updateCategory(id: id, payload: payload)
+            }
+            guard row.id == id else { throw CatalogPushError.responseMismatch }
+            readBack = .category(row)
+        case .createProduct(let payload):
+            let rows = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.createProducts([payload])
+            }
+            guard rows.count == 1, let row = rows.first, row.id == payload.id else {
+                throw CatalogPushError.responseMismatch
+            }
+            readBack = .product(row)
+        case .updateProduct(let id, let payload):
+            let row = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.updateProduct(id: id, payload: payload)
+            }
+            guard row.id == id else { throw CatalogPushError.responseMismatch }
+            readBack = .product(row)
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        switch readBack {
+        case .supplier(let row):
+            try Task126OwnerStoreGate.validateRemoteIdentity(
+                ownerUserID: row.ownerUserID,
+                shopID: row.shopID,
+                scope: scope
+            )
+        case .category(let row):
+            try Task126OwnerStoreGate.validateRemoteIdentity(
+                ownerUserID: row.ownerUserID,
+                shopID: row.shopID,
+                scope: scope
+            )
+        case .product(let row):
+            try Task126OwnerStoreGate.validateRemoteIdentity(
+                ownerUserID: row.ownerUserID,
+                shopID: row.shopID,
+                scope: scope
+            )
+        }
+        guard readBackMatches(readBack, call: call) else {
+            throw CatalogPushError.responseMismatch
+        }
+        return readBack
+    }
+
+    nonisolated private static func readBackMatches(
+        _ readBack: CatalogReadBack,
+        call: CatalogRemoteCall
+    ) -> Bool {
+        switch (readBack, call) {
+        case (.supplier(let row), .createSupplier(let payload)):
+            return row.id == payload.id
+                && SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && row.name == payload.name
+                && SupabaseRemoteDateParser.parse(row.deletedAt) == nil
+        case (.supplier(let row), .updateSupplier(_, let payload)):
+            return SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && (payload.name == nil || row.name == payload.name)
+                && (payload.deletedAt == nil
+                    || SupabaseRemoteDateParser.parse(row.deletedAt) != nil)
+        case (.category(let row), .createCategory(let payload)):
+            return row.id == payload.id
+                && SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && row.name == payload.name
+                && SupabaseRemoteDateParser.parse(row.deletedAt) == nil
+        case (.category(let row), .updateCategory(_, let payload)):
+            return SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && (payload.name == nil || row.name == payload.name)
+                && (payload.deletedAt == nil
+                    || SupabaseRemoteDateParser.parse(row.deletedAt) != nil)
+        case (.product(let row), .createProduct(let payload)):
+            return row.id == payload.id
+                && SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && row.barcode == payload.barcode
+                && row.itemNumber == payload.itemNumber
+                && row.productName == payload.productName
+                && row.secondProductName == payload.secondProductName
+                && equal(row.purchasePrice, payload.purchasePrice)
+                && equal(row.retailPrice, payload.retailPrice)
+                && row.supplierID == payload.supplierID
+                && row.categoryID == payload.categoryID
+                && equal(row.stockQuantity, payload.stockQuantity)
+                && SupabaseRemoteDateParser.parse(row.deletedAt) == nil
+        case (.product(let row), .updateProduct(_, let payload)):
+            return SupabaseRemoteDateParser.parse(row.updatedAt) != nil
+                && (payload.barcode == nil || row.barcode == payload.barcode)
+                && (payload.itemNumber == nil || row.itemNumber == payload.itemNumber)
+                && (payload.productName == nil || row.productName == payload.productName)
+                && (payload.secondProductName == nil
+                    || row.secondProductName == payload.secondProductName)
+                && (payload.purchasePrice == nil
+                    || equal(row.purchasePrice, payload.purchasePrice))
+                && (payload.retailPrice == nil
+                    || equal(row.retailPrice, payload.retailPrice))
+                && (payload.supplierID == nil || row.supplierID == payload.supplierID)
+                && (payload.categoryID == nil || row.categoryID == payload.categoryID)
+                && (payload.stockQuantity == nil
+                    || equal(row.stockQuantity, payload.stockQuantity))
+                && (payload.deletedAt == nil
+                    || SupabaseRemoteDateParser.parse(row.deletedAt) != nil)
+        default:
+            return false
+        }
+    }
+
+    nonisolated private static func equal(_ lhs: Double?, _ rhs: Double?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case (.some(let lhs), .some(let rhs)):
+            return lhs.bitPattern == rhs.bitPattern
+        default:
+            return false
+        }
+    }
+
+    nonisolated private static func applyReadBack(
+        _ readBack: CatalogReadBack,
+        mutation: PreparedCatalogMutation,
+        context: ModelContext,
+        ownerUserID: UUID,
+        plan: SyncCatalogPushPlan,
+        scope: Task126VerifiedOwnerStoreScope
+    ) throws -> CatalogPushOutcome {
+        guard let change = try fetchPendingChange(
+            changeID: mutation.pending.changeID,
+            context: context
+        ), LocalPendingChangeScopeMatcher.matches(
+            change,
+            ownerUserID: ownerUserID,
+            accountHash: scope.accountHash,
+            storeIdentity: scope.storeIdentity
+        ) else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        let tokenMatches = mutation.pending.matches(change)
+        var metadataAccepted = false
+        var currentBusinessFingerprint: String?
+        var outcome = CatalogPushOutcome(result: SyncCatalogPushResult(plan: plan))
+        outcome.changeIDs = [mutation.pending.eventFingerprint]
+
+        switch (readBack, mutation.entity) {
+        case (.supplier(let row), .supplier(let id)):
+            let supplier = try? Task126OwnerStoreGate.requireLocalModel(
+                Supplier.self,
+                id: id,
+                in: context
+            )
+            currentBusinessFingerprint = supplier.map(
+                LocalPendingChangeLogicalKey.supplierFingerprintHash
+            )
+            if let supplier, tokenMatches || mutation.isCreate {
+                metadataAccepted = try mergeRemoteMetadata(row, into: supplier)
+            }
+            outcome.result.supplierCreates = mutation.isCreate ? 1 : 0
+            outcome.result.supplierUpdates = mutation.isCreate ? 0 : 1
+            outcome.supplierIDs = [row.id]
+            if mutation.isTombstone { outcome.supplierTombstoneIDs = [row.id] }
+            if mutation.isCreate, !tokenMatches {
+                linkConcurrentCreate(change, remoteID: row.id, kind: .supplier)
             }
 
-            guard let product = try findProduct(for: change, context: context) else { continue }
-            if let remoteID = product.remoteID {
-                let row = try await remote.updateProduct(
-                    id: remoteID,
-                    payload: makeProductUpdatePayload(product, changedFields: change.changedFields)
-                )
-                apply(row, to: product)
-                outcome.result.productUpdates += 1
-                outcome.productIDs.append(row.id)
-            } else {
-                let rows = try await remote.createProducts([
-                    makeProductCreatePayload(product, ownerUserID: ownerUserID, shopID: selectedShopID)
-                ])
-                guard let row = rows.first else { continue }
-                apply(row, to: product)
-                outcome.result.productCreates += 1
-                outcome.productIDs.append(row.id)
+        case (.category(let row), .category(let id)):
+            let category = try? Task126OwnerStoreGate.requireLocalModel(
+                ProductCategory.self,
+                id: id,
+                in: context
+            )
+            currentBusinessFingerprint = category.map(
+                LocalPendingChangeLogicalKey.categoryFingerprintHash
+            )
+            if let category, tokenMatches || mutation.isCreate {
+                metadataAccepted = try mergeRemoteMetadata(row, into: category)
             }
-            acknowledgedChangeIDs.append(change.changeID)
-            outcome.changeIDs.append(change.changeID)
+            outcome.result.categoryCreates = mutation.isCreate ? 1 : 0
+            outcome.result.categoryUpdates = mutation.isCreate ? 0 : 1
+            outcome.categoryIDs = [row.id]
+            if mutation.isTombstone { outcome.categoryTombstoneIDs = [row.id] }
+            if mutation.isCreate, !tokenMatches {
+                linkConcurrentCreate(change, remoteID: row.id, kind: .productCategory)
+            }
+
+        case (.product(let row), .product(let id)):
+            let product = try? Task126OwnerStoreGate.requireLocalModel(
+                Product.self,
+                id: id,
+                in: context
+            )
+            currentBusinessFingerprint = product.map(
+                LocalPendingChangeLogicalKey.productFingerprintHash
+            )
+            if let product, tokenMatches || mutation.isCreate {
+                metadataAccepted = try mergeRemoteMetadata(row, into: product)
+            }
+            outcome.result.productCreates = mutation.isCreate ? 1 : 0
+            outcome.result.productUpdates = mutation.isCreate ? 0 : 1
+            outcome.productIDs = [row.id]
+            if mutation.isTombstone { outcome.productTombstoneIDs = [row.id] }
+            if mutation.isCreate, !tokenMatches {
+                linkConcurrentCreate(change, remoteID: row.id, kind: .product)
+            }
+
+        case (.supplier(let row), nil):
+            outcome.result.supplierUpdates = 1
+            outcome.supplierIDs = [row.id]
+            if mutation.isTombstone { outcome.supplierTombstoneIDs = [row.id] }
+            metadataAccepted = tokenMatches && mutation.isTombstone
+        case (.category(let row), nil):
+            outcome.result.categoryUpdates = 1
+            outcome.categoryIDs = [row.id]
+            if mutation.isTombstone { outcome.categoryTombstoneIDs = [row.id] }
+            metadataAccepted = tokenMatches && mutation.isTombstone
+        case (.product(let row), nil):
+            outcome.result.productUpdates = 1
+            outcome.productIDs = [row.id]
+            if mutation.isTombstone { outcome.productTombstoneIDs = [row.id] }
+            metadataAccepted = tokenMatches && mutation.isTombstone
+        default:
+            throw CatalogPushError.responseMismatch
         }
 
-        acknowledge(changeIDs: acknowledgedChangeIDs, changes: changes)
+        let businessMatches = mutation.isTombstone
+            || currentBusinessFingerprint == mutation.businessFingerprint
+        if tokenMatches, businessMatches, metadataAccepted {
+            change.status = .acknowledged
+            change.updatedAt = Date()
+        }
+        try enqueueCatalogSyncEventWithLeaseHeld(
+            context: context,
+            ownerUserID: ownerUserID,
+            outcome: outcome,
+            scope: scope
+        )
+        try context.save()
         return outcome
     }
 
-    nonisolated private static func enqueueCatalogSyncEvent(
+    nonisolated private static func linkConcurrentCreate(
+        _ change: LocalPendingChange,
+        remoteID: UUID,
+        kind: LocalPendingChangeEntityKind
+    ) {
+        change.entityRemoteID = remoteID
+        change.logicalKey = LocalPendingChangeLogicalKey.remoteEntity(
+            kind: kind,
+            remoteID: remoteID
+        )
+        if change.status == .superseded {
+            change.operation = .delete
+            change.status = .pending
+            change.changedFields = ["tombstone"]
+        } else if change.operation == .create {
+            change.operation = .update
+            change.status = .pending
+        }
+        change.idempotencyKey = UUID().uuidString.lowercased()
+        change.lastAttemptAt = nil
+        change.updatedAt = Date()
+    }
+
+    nonisolated private static func mergeRemoteMetadata(
+        _ row: RemoteInventorySupplierRow,
+        into supplier: Supplier
+    ) throws -> Bool {
+        try mergeRemoteMetadata(
+            remoteID: row.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(row.deletedAt),
+            currentRemoteID: supplier.remoteID,
+            currentUpdatedAt: supplier.remoteUpdatedAt,
+            currentDeletedAt: supplier.remoteDeletedAt
+        ) { id, updatedAt, deletedAt in
+            supplier.remoteID = id
+            supplier.remoteUpdatedAt = updatedAt
+            supplier.remoteDeletedAt = deletedAt
+        }
+    }
+
+    nonisolated private static func mergeRemoteMetadata(
+        _ row: RemoteInventoryCategoryRow,
+        into category: ProductCategory
+    ) throws -> Bool {
+        try mergeRemoteMetadata(
+            remoteID: row.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(row.deletedAt),
+            currentRemoteID: category.remoteID,
+            currentUpdatedAt: category.remoteUpdatedAt,
+            currentDeletedAt: category.remoteDeletedAt
+        ) { id, updatedAt, deletedAt in
+            category.remoteID = id
+            category.remoteUpdatedAt = updatedAt
+            category.remoteDeletedAt = deletedAt
+        }
+    }
+
+    nonisolated private static func mergeRemoteMetadata(
+        _ row: RemoteInventoryProductRow,
+        into product: Product
+    ) throws -> Bool {
+        // Catalog push never owns primary-image metadata. A concurrent image
+        // replace/remove therefore cannot be undone by a stale catalog row.
+        try mergeRemoteMetadata(
+            remoteID: row.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(row.deletedAt),
+            currentRemoteID: product.remoteID,
+            currentUpdatedAt: product.remoteUpdatedAt,
+            currentDeletedAt: product.remoteDeletedAt
+        ) { id, updatedAt, deletedAt in
+            product.remoteID = id
+            product.remoteUpdatedAt = updatedAt
+            product.remoteDeletedAt = deletedAt
+        }
+    }
+
+    nonisolated private static func mergeRemoteMetadata(
+        remoteID: UUID,
+        remoteUpdatedAt: Date?,
+        remoteDeletedAt: Date?,
+        currentRemoteID: UUID?,
+        currentUpdatedAt: Date?,
+        currentDeletedAt: Date?,
+        apply: (UUID, Date?, Date?) -> Void
+    ) throws -> Bool {
+        if let currentRemoteID, currentRemoteID != remoteID {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        if let currentUpdatedAt, let remoteUpdatedAt {
+            if currentUpdatedAt > remoteUpdatedAt { return false }
+            if currentUpdatedAt == remoteUpdatedAt,
+               currentDeletedAt != remoteDeletedAt {
+                return false
+            }
+        }
+        apply(remoteID, remoteUpdatedAt ?? currentUpdatedAt, remoteDeletedAt)
+        return true
+    }
+
+    nonisolated private static func enqueueCatalogSyncEventWithLeaseHeld(
         context: ModelContext,
         ownerUserID: UUID,
-        outcome: CatalogPushOutcome
+        outcome: CatalogPushOutcome,
+        scope: Task126VerifiedOwnerStoreScope
     ) throws {
         guard outcome.result.totalChanged > 0 else { return }
         let supplierTombstoneIDs = Set(outcome.supplierTombstoneIDs)
@@ -278,12 +854,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
             (!outcome.supplierTombstoneIDs.isEmpty ||
                 !outcome.categoryTombstoneIDs.isEmpty ||
                 !outcome.productTombstoneIDs.isEmpty) ? "catalog_tombstone" : "catalog_changed"
-        let entityIDs = AutomaticSyncEventOutboxWriter.entityIDs([
+        let entityIDs = try AutomaticSyncEventOutboxWriter.entityIDs([
             "supplier_ids": outcome.supplierIDs,
             "category_ids": outcome.categoryIDs,
             "product_ids": outcome.productIDs
         ])
-        try AutomaticSyncEventOutboxWriter.enqueue(
+        try AutomaticSyncEventOutboxWriter.enqueueWithValidatedScopeLeaseHeld(
             context: context,
             ownerUserID: ownerUserID,
             domain: "catalog",
@@ -291,13 +867,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
             changedCount: outcome.result.totalChanged,
             entityIDs: entityIDs,
             metadata: .object([
-                "source": .string("ios_catalog_automatic_push"),
-                "supplier_count": .number(Double(outcome.result.supplierCreates + outcome.result.supplierUpdates)),
-                "category_count": .number(Double(outcome.result.categoryCreates + outcome.result.categoryUpdates)),
-                "product_count": .number(Double(outcome.result.productCreates + outcome.result.productUpdates)),
-                "supplier_tombstone_count": .number(Double(outcome.supplierTombstoneIDs.count)),
-                "category_tombstone_count": .number(Double(outcome.categoryTombstoneIDs.count)),
-                "product_tombstone_count": .number(Double(outcome.productTombstoneIDs.count))
+                "source": .string("ios")
             ]),
             source: "ios_catalog_automatic_push",
             entityIDsShape: "supplier_ids:count=\(outcome.supplierIDs.count);category_ids:count=\(outcome.categoryIDs.count);product_ids:count=\(outcome.productIDs.count)",
@@ -305,7 +875,8 @@ final class CatalogPushService: SyncCatalogPushProviding {
             clientEventFingerprint: catalogEventFingerprint(
                 eventType: eventType,
                 outcome: outcome
-            )
+            ),
+            scope: scope
         )
     }
 
@@ -377,10 +948,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
 
     nonisolated private static func makeProductCreatePayload(
         _ product: Product,
+        id: UUID,
         ownerUserID: UUID,
         shopID: UUID?
     ) -> SyncAutomaticProductCreatePayload {
         SyncAutomaticProductCreatePayload(
+            id: id,
             ownerUserID: ownerUserID,
             shopID: shopID,
             barcode: product.barcode,
@@ -393,6 +966,35 @@ final class CatalogPushService: SyncCatalogPushProviding {
             categoryID: product.category?.remoteID,
             stockQuantity: product.stockQuantity
         )
+    }
+
+    nonisolated private static func deterministicCreateID(
+        token: LocalPendingChangeCASToken,
+        ownerUserID: UUID,
+        shopID: UUID,
+        entityKind: LocalPendingChangeEntityKind
+    ) throws -> UUID {
+        let idempotencyKey = token.idempotencyKey
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !idempotencyKey.isEmpty else {
+            throw CatalogPushError.invalidIdempotencyKey
+        }
+        let material = [
+            "catalog-create-v1",
+            ownerUserID.uuidString.lowercased(),
+            shopID.uuidString.lowercased(),
+            entityKind.rawValue,
+            idempotencyKey
+        ].joined(separator: "|")
+        var bytes = Array(SHA256.hash(data: Data(material.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 
     nonisolated private static func makeProductTombstonePayload() -> SyncAutomaticProductUpdatePayload {

@@ -40,7 +40,14 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
         let requests = await recorder.requests()
         XCTAssertEqual(requests.first?.clientEventID, "client-success")
-        XCTAssertEqual(requests.first?.entityIDs, .null)
+        XCTAssertEqual(
+            requests.first?.entityIDs,
+            .object([
+                "product_ids": .array([
+                    .string("00000000-0000-4000-8000-000000000059")
+                ])
+            ])
+        )
     }
 
     func testDrainRecoversStaleSendingBeforeProcessing() async throws {
@@ -142,8 +149,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         let context = try makeContext()
         let productID = "11111111-1111-4111-8111-111111111111"
         let metadata = SyncEventJSONValue.object([
-            "source": .string("ios_catalog_manual_push"),
-            "partial": .bool(false)
+            "source": .string("ios")
         ])
         let entityIDs = SyncEventJSONValue.object([
             "product_ids": .array([.string(productID)])
@@ -164,7 +170,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         let requests = await recorder.requests()
         XCTAssertEqual(requests.first?.entityIDs, entityIDs)
         XCTAssertEqual(requests.first?.metadata, metadata)
-        XCTAssertEqual(requests.first?.source, "ios_catalog_manual_push")
+        XCTAssertEqual(requests.first?.source, "ios")
         XCTAssertEqual(entry.status, .sent)
     }
 
@@ -218,16 +224,16 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
     func testChangedCountAboveContractBlocksBeforeRecorderCall() async throws {
         let context = try makeContext()
         let entry = SyncEventOutboxEntry(
-            id: "entry-count-100001",
+            id: "entry-count-251",
             ownerUserID: ownerID,
-            clientEventID: "client-count-100001",
+            clientEventID: "client-count-251",
             domain: "catalog",
             eventType: "catalog_changed",
-            changedCount: 100_001,
-            entityIDsShape: "product_ids:count=100001",
-            metadataShape: "source=ios_catalog_manual_push",
+            changedCount: 251,
+            entityIDsShape: "product_ids:count=251",
+            metadataShape: "source=ios",
             entityIDsPayloadJSON: "null",
-            metadataPayloadJSON: #"{"source":"ios_catalog_manual_push"}"#,
+            metadataPayloadJSON: #"{"source":"ios"}"#,
             status: .pending,
             nextRetryAt: now,
             createdAt: now,
@@ -235,7 +241,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             sourceDeviceID: "device-g2"
         )
         try insert([entry], in: context)
-        let recorder = FakeDrainRecorder([.success(try row(id: 4, clientEventID: "client-count-100001"))])
+        let recorder = FakeDrainRecorder([.success(try row(id: 4, clientEventID: "client-count-251"))])
         let service = makeService(context: context, recorder: recorder)
 
         let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
@@ -540,6 +546,335 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(callCount, 0)
     }
 
+    func testAutomaticRecoverySaveScopeChangeRollsBackAndPreservesGateError() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        var fetchCalls = 0
+        var saveCalls = 0
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                Task126OwnerStoreGate.invalidateAutomaticScopeLease()
+                return SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in
+                fetchCalls += 1
+                return []
+            },
+            saveChanges: {
+                saveCalls += 1
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected automatic scope change.")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .scopeChanged)
+        } catch {
+            XCTFail("Expected Task126OwnerStoreGateError.scopeChanged, got \(error).")
+        }
+
+        XCTAssertEqual(saveCalls, 0)
+        XCTAssertEqual(rollbackCalls, 1)
+        XCTAssertEqual(fetchCalls, 0)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testAutomaticRecoverySaveCancellationRollsBackAndPreservesCancellation() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        var fetchCalls = 0
+        var saveCalls = 0
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in
+                fetchCalls += 1
+                return []
+            },
+            saveChanges: {
+                saveCalls += 1
+                throw CancellationError()
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected cancellation.")
+        } catch is CancellationError {
+            // Expected: automatic cancellation remains distinguishable from a local save failure.
+        } catch {
+            XCTFail("Expected CancellationError, got \(error).")
+        }
+
+        XCTAssertEqual(saveCalls, 1)
+        XCTAssertEqual(rollbackCalls, 1)
+        XCTAssertEqual(fetchCalls, 0)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testAutomaticRecoverySaveGateCancellationRollsBackAndPreservesGateError() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in [] },
+            saveChanges: {
+                throw Task126OwnerStoreGateError.cancelled
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected automatic gate cancellation.")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .cancelled)
+        } catch {
+            XCTFail("Expected Task126OwnerStoreGateError.cancelled, got \(error).")
+        }
+
+        XCTAssertEqual(rollbackCalls, 1)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testAutomaticRecoverySaveBindingMismatchRollsBackAndPreservesGateError() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in [] },
+            saveChanges: {
+                throw Task126OwnerStoreGateError.bindingMismatch
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected automatic binding mismatch.")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .bindingMismatch)
+        } catch {
+            XCTFail("Expected Task126OwnerStoreGateError.bindingMismatch, got \(error).")
+        }
+
+        XCTAssertEqual(rollbackCalls, 1)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testManualRecoverySaveCancellationKeepsLocalSaveFailureMapping() async throws {
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in [] },
+            saveChanges: {
+                throw CancellationError()
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected local save failure.")
+        } catch let error as SyncEventOutboxDrainError {
+            XCTAssertEqual(error, .localSaveFailed(operation: "sending_stale_recovery"))
+        } catch {
+            XCTFail("Expected SyncEventOutboxDrainError, got \(error).")
+        }
+
+        XCTAssertEqual(rollbackCalls, 1)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testAutomaticForeignResultRestoresSnapshotAndStopsBatch() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let context = try makeContext()
+        let first = try makeEntry(
+            id: "entry-a-foreign-result",
+            clientEventID: "client-foreign-result",
+            shopID: fixture.scope.shopID
+        )
+        let second = try makeEntry(
+            id: "entry-b-after-foreign-result",
+            clientEventID: "client-after-foreign-result",
+            shopID: fixture.scope.shopID
+        )
+        let firstSnapshot = first.state
+        let secondSnapshot = second.state
+        try insert([first, second], in: context)
+        let foreignOwner = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
+        let recorder = FakeDrainRecorder([
+            .success(try row(
+                id: 30,
+                clientEventID: "client-foreign-result",
+                ownerUserID: foreignOwner,
+                shopID: fixture.scope.shopID
+            )),
+            .success(try row(
+                id: 31,
+                clientEventID: "client-after-foreign-result",
+                shopID: fixture.scope.shopID
+            ))
+        ])
+        let service = SyncEventOutboxDrainService(
+            context: context,
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 2)
+            XCTFail("Expected foreign automatic result to abort the batch.")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .scopeChanged)
+        } catch {
+            XCTFail("Expected Task126OwnerStoreGateError.scopeChanged, got \(error).")
+        }
+
+        XCTAssertEqual(first.state, firstSnapshot)
+        XCTAssertEqual(second.state, secondSnapshot)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 1)
+        let requests = await recorder.requests()
+        XCTAssertEqual(requests.map(\.clientEventID), ["client-foreign-result"])
+
+        let verificationContext = ModelContext(context.container)
+        let persisted = try verificationContext.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        let persistedStates = Dictionary(uniqueKeysWithValues: persisted.map { ($0.id, $0.state) })
+        XCTAssertEqual(persistedStates[first.id], firstSnapshot)
+        XCTAssertEqual(persistedStates[second.id], secondSnapshot)
+    }
+
+    func testAutomaticRecorderScopeMismatchBlocksFirstEntryAndStopsBatch() async throws {
+        let fixture = try makeAutomaticScopeFixture(testName: #function)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let context = try makeContext()
+        let first = try makeEntry(
+            id: "entry-a-recorder-scope-mismatch",
+            clientEventID: "client-recorder-scope-mismatch",
+            shopID: fixture.scope.shopID
+        )
+        let second = try makeEntry(
+            id: "entry-b-after-recorder-scope-mismatch",
+            clientEventID: "client-after-recorder-scope-mismatch",
+            shopID: fixture.scope.shopID
+        )
+        let firstSnapshot = first.state
+        let secondSnapshot = second.state
+        try insert([first, second], in: context)
+        let mismatch = SyncEventRecordError.auth(
+            SyncEventRecordFailure(
+                code: "automatic_scope_mismatch",
+                message: "Sync event recorder scope changed."
+            )
+        )
+        let recorder = FakeDrainRecorder([
+            .failure(mismatch),
+            .success(try row(
+                id: 32,
+                clientEventID: "client-after-recorder-scope-mismatch",
+                shopID: fixture.scope.shopID
+            ))
+        ])
+        let service = SyncEventOutboxDrainService(
+            context: context,
+            recorder: recorder,
+            automaticScope: fixture.scope,
+            defaults: fixture.defaults,
+            clock: { self.now }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 2)
+            XCTFail("Expected recorder scope mismatch to abort the batch.")
+        } catch let error as SyncEventRecordError {
+            XCTAssertEqual(error, mismatch)
+            XCTAssertEqual(error.kind, .auth)
+            XCTAssertEqual(error.failure.code, "automatic_scope_mismatch")
+        } catch {
+            XCTFail("Expected SyncEventRecordError.auth, got \(error).")
+        }
+
+        XCTAssertEqual(first.status, .blockedAuth)
+        XCTAssertEqual(first.attemptCount, firstSnapshot.attemptCount + 1)
+        XCTAssertEqual(first.lastErrorKind, .auth)
+        XCTAssertEqual(first.lastErrorCode, "automatic_scope_mismatch")
+        XCTAssertNil(first.sentAt)
+        XCTAssertFalse(first.isRetryable(
+            now: now,
+            currentOwnerUserID: ownerID,
+            currentStoreId: fixture.scope.storeIdentity.storeId
+        ))
+        XCTAssertEqual(second.state, secondSnapshot)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 1)
+        let requests = await recorder.requests()
+        XCTAssertEqual(requests.map(\.clientEventID), ["client-recorder-scope-mismatch"])
+
+        let verificationContext = ModelContext(context.container)
+        let persisted = try verificationContext.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        let persistedStates = Dictionary(uniqueKeysWithValues: persisted.map { ($0.id, $0.state) })
+        XCTAssertEqual(persistedStates[first.id]?.status, .blockedAuth)
+        XCTAssertEqual(persistedStates[first.id]?.lastErrorKind, .auth)
+        XCTAssertEqual(persistedStates[first.id]?.lastErrorCode, "automatic_scope_mismatch")
+        XCTAssertEqual(persistedStates[second.id], secondSnapshot)
+    }
+
     func testSecondDrainForSameOwnerIsNoOpWhileFirstIsRunning() async throws {
         let context = try makeContext()
         let entry = try makeEntry(id: "entry-reentrant", clientEventID: "client-reentrant")
@@ -676,6 +1011,41 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         case saveFailed
     }
 
+    private struct AutomaticScopeFixture {
+        let suiteName: String
+        let defaults: UserDefaults
+        let scope: Task126VerifiedOwnerStoreScope
+    }
+
+    private func makeAutomaticScopeFixture(testName: String) throws -> AutomaticScopeFixture {
+        let suiteName = "SyncEventOutboxDrainServiceTests.automatic.\(testName).\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let owner = try XCTUnwrap(UUID(uuidString: ownerID))
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shop = SelectedShop(
+            shopID: UUID(),
+            code: "TASK139-OUTBOX",
+            name: "TASK139 outbox fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(shop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shop.localStoreIdentity
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+        return AutomaticScopeFixture(suiteName: suiteName, defaults: defaults, scope: scope)
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             SyncEventOutboxEntry.self
@@ -707,8 +1077,13 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         id: String,
         clientEventID: String,
         changedCount: Int = 1,
-        entityIDs: SyncEventJSONValue = .null,
-        metadata: SyncEventJSONValue = .object(["source": .string("ios_catalog_manual_push")])
+        shopID: UUID? = nil,
+        entityIDs: SyncEventJSONValue = .object([
+            "product_ids": .array([
+                .string("00000000-0000-4000-8000-000000000059")
+            ])
+        ]),
+        metadata: SyncEventJSONValue = .object(["source": .string("ios")])
     ) throws -> SyncEventOutboxEntry {
         let request = SyncEventRecordRequest(
             domain: "catalog",
@@ -716,6 +1091,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             changedCount: changedCount,
             entityIDs: entityIDs,
             metadata: metadata,
+            shopID: shopID,
             source: "ios_catalog_manual_push",
             sourceDeviceID: "device-g2",
             batchID: nil,
@@ -724,6 +1100,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         let payload = try SyncEventOutboxPayloadCodec.makePayloadJSON(for: request)
         return try SyncEventOutboxFactory.makeEntry(
             ownerUserID: ownerID,
+            storeId: shopID?.uuidString.lowercased(),
             domain: request.domain,
             eventType: request.eventType,
             changedCount: request.changedCount,
@@ -738,11 +1115,19 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         )
     }
 
-    private func row(id: Int, clientEventID: String) throws -> RemoteSyncEventRow {
+    private func row(
+        id: Int,
+        clientEventID: String,
+        ownerUserID: UUID? = nil,
+        shopID: UUID? = nil
+    ) throws -> RemoteSyncEventRow {
+        let resolvedOwnerUserID = ownerUserID?.uuidString.lowercased() ?? ownerID
+        let encodedShopID = shopID.map { "\"\($0.uuidString.lowercased())\"" } ?? "null"
         let json = """
         {
-          "id": \(id),
-          "owner_user_id": "\(ownerID)",
+          "id": "\(id)",
+          "owner_user_id": "\(resolvedOwnerUserID)",
+          "shop_id": \(encodedShopID),
           "domain": "catalog",
           "event_type": "catalog_changed",
           "source": "ios",

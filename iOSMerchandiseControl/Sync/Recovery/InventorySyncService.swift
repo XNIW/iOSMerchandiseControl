@@ -18,6 +18,7 @@ struct InventorySyncService {
         let failed: Int
         let priceRowsInserted: Int
         let pendingCloudChanges: Int
+        let updatedData: [[String]]
 
         init(
             processedRows: Int,
@@ -25,7 +26,8 @@ struct InventorySyncService {
             succeeded: Int,
             failed: Int,
             priceRowsInserted: Int = 0,
-            pendingCloudChanges: Int = 0
+            pendingCloudChanges: Int = 0,
+            updatedData: [[String]] = []
         ) {
             self.processedRows = processedRows
             self.attemptedUpdates = attemptedUpdates
@@ -33,6 +35,7 @@ struct InventorySyncService {
             self.failed = failed
             self.priceRowsInserted = priceRowsInserted
             self.pendingCloudChanges = pendingCloudChanges
+            self.updatedData = updatedData
         }
 
         /// Testo pronto da mostrare in UI
@@ -55,10 +58,48 @@ struct InventorySyncService {
     /// - Aggiorna entry.syncStatus
     /// - Scrive errori riga-per-riga nella colonna "SyncError"
     func sync(entry: HistoryEntry, ownerUserID: UUID? = nil) throws -> SyncResult {
+        let entryID = entry.persistentModelID
+        return try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: context.container,
+            ownerUserID: ownerUserID
+        ) { freshContext in
+            let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                HistoryEntry.self,
+                id: entryID,
+                in: freshContext
+            )
+            return try syncWhileFenced(
+                entry: freshEntry,
+                ownerUserID: ownerUserID,
+                context: freshContext
+            )
+        }
+    }
+
+    private func syncWhileFenced(
+        entry: HistoryEntry,
+        ownerUserID: UUID?,
+        context: ModelContext
+    ) throws -> SyncResult {
+        guard entry.remoteDeletedAt == nil else {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+            for: HistorySessionPayloadSnapshotFactory.snapshot(
+                for: entry,
+                ensureRemoteID: false
+            )
+        )
         // Copia modificabile della griglia
         var grid = entry.data
         guard !grid.isEmpty else {
-            return SyncResult(processedRows: 0, attemptedUpdates: 0, succeeded: 0, failed: 0)
+            return SyncResult(
+                processedRows: 0,
+                attemptedUpdates: 0,
+                succeeded: 0,
+                failed: 0,
+                updatedData: entry.data
+            )
         }
         let pendingAccumulator = ownerUserID.map { owner in
             let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: owner)
@@ -99,7 +140,20 @@ struct InventorySyncService {
         // Se non c'è barcode, non si può fare nulla
         guard let bIndex = barcodeIndex else {
             entry.data = grid
-            return SyncResult(processedRows: 0, attemptedUpdates: 0, succeeded: 0, failed: 0)
+            let historyPending = try recordHistoryPendingIfChanged(
+                entry: entry,
+                previousFingerprint: previousHistoryFingerprint,
+                accumulator: pendingAccumulator
+            )
+            try context.save()
+            return SyncResult(
+                processedRows: 0,
+                attemptedUpdates: 0,
+                succeeded: 0,
+                failed: 0,
+                pendingCloudChanges: historyPending ? 1 : 0,
+                updatedData: grid
+            )
         }
 
         var processed = 0
@@ -178,8 +232,16 @@ struct InventorySyncService {
                 grid[rowIndex] = row
                 continue
             }
+            guard product.remoteDeletedAt == nil else {
+                row[errorColumnIndex] = "Prodotto eliminato nel cloud"
+                failed += 1
+                grid[rowIndex] = row
+                continue
+            }
 
             var changedFields: [String] = []
+            let baselineFingerprint = LocalPendingChangeLogicalKey
+                .productFingerprintHash(product)
             let oldRetailPrice = product.retailPrice
             if !Self.doublesEqual(product.stockQuantity, quantity) {
                 changedFields.append("stockQuantity")
@@ -224,7 +286,8 @@ struct InventorySyncService {
                         product: product,
                         operation: .update,
                         origin: .confirmedImport,
-                        changedFields: changedFields
+                        changedFields: changedFields,
+                        baselineFingerprintHash: baselineFingerprint
                     ) != nil {
                         pendingCloudChanges += 1
                     }
@@ -242,6 +305,13 @@ struct InventorySyncService {
 
         // Se nessuna riga aveva una quantità → non cambiamo lo stato di sync
         guard attempted > 0 else {
+            if try recordHistoryPendingIfChanged(
+                entry: entry,
+                previousFingerprint: previousHistoryFingerprint,
+                accumulator: pendingAccumulator
+            ) {
+                pendingCloudChanges += 1
+            }
             try context.save()
             return SyncResult(
                 processedRows: processed,
@@ -249,7 +319,8 @@ struct InventorySyncService {
                 succeeded: 0,
                 failed: failed,
                 priceRowsInserted: priceRowsInserted,
-                pendingCloudChanges: pendingCloudChanges
+                pendingCloudChanges: pendingCloudChanges,
+                updatedData: grid
             )
         }
 
@@ -260,6 +331,14 @@ struct InventorySyncService {
             entry.syncStatus = .attemptedWithErrors
         }
 
+        if try recordHistoryPendingIfChanged(
+            entry: entry,
+            previousFingerprint: previousHistoryFingerprint,
+            accumulator: pendingAccumulator
+        ) {
+            pendingCloudChanges += 1
+        }
+
         try context.save()
 
         return SyncResult(
@@ -268,8 +347,31 @@ struct InventorySyncService {
             succeeded: succeeded,
             failed: failed,
             priceRowsInserted: priceRowsInserted,
-            pendingCloudChanges: pendingCloudChanges
+            pendingCloudChanges: pendingCloudChanges,
+            updatedData: grid
         )
+    }
+
+    private func recordHistoryPendingIfChanged(
+        entry: HistoryEntry,
+        previousFingerprint: String,
+        accumulator: LocalPendingChangeAccumulator?
+    ) throws -> Bool {
+        guard let accumulator,
+              HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(
+                    for: entry,
+                    ensureRemoteID: false
+                )
+              ) != previousFingerprint else {
+            return false
+        }
+        entry.markHistorySessionLocalMutation()
+        return try accumulator.recordHistorySessionChange(
+            entry: entry,
+            operation: .upsert,
+            changedFields: ["data", "syncStatus"]
+        ) != nil
     }
 
     /// Sostituisce la virgola con il punto e trimma gli spazi.

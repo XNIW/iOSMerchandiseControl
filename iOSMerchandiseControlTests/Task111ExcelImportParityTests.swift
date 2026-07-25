@@ -437,8 +437,8 @@ final class Task111ExcelImportParityTests: XCTestCase {
         try context.save()
 
         let resolver = try ProductImportNamedEntityResolver(context: context)
-        let resolvedSupplier = resolver.resolveSupplier(named: " task111 supplier ")
-        let resolvedCategory = resolver.resolveCategory(named: "TASK111 CATEGORY")
+        let resolvedSupplier = try resolver.resolveSupplier(named: " task111 supplier ")
+        let resolvedCategory = try resolver.resolveCategory(named: "TASK111 CATEGORY")
 
         XCTAssertTrue(resolvedSupplier === supplier)
         XCTAssertTrue(resolvedCategory === category)
@@ -655,7 +655,7 @@ final class Task111ExcelImportParityTests: XCTestCase {
             oldRetailPrice: 12
         )
 
-        let product = ProductImportCore.insertProduct(
+        let product = try ProductImportCore.insertProduct(
             from: draft,
             in: context,
             resolver: resolver,

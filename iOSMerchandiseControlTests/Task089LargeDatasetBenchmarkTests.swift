@@ -12,7 +12,8 @@ final class Task089LargeDatasetBenchmarkTests: XCTestCase {
         let fetcher = Task089InventoryFetcherFake(dataset: dataset)
         let service = SupabasePullPreviewService(
             inventoryService: fetcher,
-            pageSize: spec.pageSize
+            pageSize: spec.pageSize,
+            productPricePreviewSampleLimit: nil
         )
 
         let started = DispatchTime.now().uptimeNanoseconds

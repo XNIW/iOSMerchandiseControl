@@ -53,6 +53,7 @@ nonisolated enum SyncEventOutboxProducerOutcome: Sendable, Equatable {
         let ownerUserID: String?
         let currentOwnerUserID: String?
         let terminalStatus: SyncEventOutboxProducerTerminalStatus
+        let eventType: String
         let suppliersConfirmed: Int
         let categoriesConfirmed: Int
         let productsConfirmed: Int
@@ -68,6 +69,7 @@ nonisolated enum SyncEventOutboxProducerOutcome: Sendable, Equatable {
             ownerUserID: String?,
             currentOwnerUserID: String? = nil,
             terminalStatus: SyncEventOutboxProducerTerminalStatus,
+            eventType: String = "catalog_changed",
             suppliersConfirmed: Int,
             categoriesConfirmed: Int,
             productsConfirmed: Int,
@@ -82,6 +84,7 @@ nonisolated enum SyncEventOutboxProducerOutcome: Sendable, Equatable {
             self.ownerUserID = ownerUserID
             self.currentOwnerUserID = currentOwnerUserID
             self.terminalStatus = terminalStatus
+            self.eventType = eventType
             self.suppliersConfirmed = max(0, suppliersConfirmed)
             self.categoriesConfirmed = max(0, categoriesConfirmed)
             self.productsConfirmed = max(0, productsConfirmed)
@@ -460,8 +463,8 @@ struct SyncEventOutboxEnqueueService {
 private enum SyncEventOutboxProducerMapper {
     private static let catalogDomain = "catalog"
     private static let pricesDomain = "prices"
-    private static let catalogEventType = "catalog_changed"
     private static let pricesEventType = "prices_changed"
+    private static let v6MetadataSource = "ios"
     private static let catalogSource = "ios_catalog_manual_push"
     private static let pricesSource = "ios_prices_manual_push"
     private static let catalogGeneratedPricesSource = "ios_catalog_generated_prices"
@@ -485,11 +488,7 @@ private enum SyncEventOutboxProducerMapper {
         let baselineRefreshFailed = outcome.terminalStatus == .completedBaselineRefreshFailed
         let entityIDs = outcome.validationEntityIDs ?? .null
         let metadata = outcome.validationMetadata ?? .object([
-            "source": .string(catalogSource),
-            "partial": .bool(isPartial),
-            "baseline_refresh_failed": .bool(baselineRefreshFailed),
-            "skipped_count": .number(Double(outcome.skippedCount)),
-            "failed_count": .number(Double(outcome.failedCount))
+            "source": .string(v6MetadataSource)
         ])
 
         return MappedEvent(
@@ -498,7 +497,7 @@ private enum SyncEventOutboxProducerMapper {
             clientEventID: outcome.clientEventID,
             terminalStatus: outcome.terminalStatus,
             domain: catalogDomain,
-            eventType: catalogEventType,
+            eventType: outcome.eventType,
             changedCount: changedCount,
             entityIDs: entityIDs,
             metadata: metadata,
@@ -514,10 +513,7 @@ private enum SyncEventOutboxProducerMapper {
         let isPartial = outcome.terminalStatus == .partial
         let entityIDs = outcome.validationEntityIDs ?? .null
         let metadata = outcome.validationMetadata ?? .object([
-            "source": .string(pricesSource),
-            "partial": .bool(isPartial),
-            "skipped_count": .number(Double(outcome.skippedCount)),
-            "failed_count": .number(Double(outcome.failedCount))
+            "source": .string(v6MetadataSource)
         ])
 
         return MappedEvent(
@@ -544,11 +540,8 @@ private enum SyncEventOutboxProducerMapper {
         let isPartial = outcome.terminalStatus == .partial
         let entityIDs = outcome.validationEntityIDs ?? .null
         let metadata = outcome.validationMetadata ?? .object([
-            "source": .string(catalogGeneratedPricesSource),
-            "partial": .bool(isPartial),
-            "product_count": .number(Double(outcome.productCount)),
-            "skipped_count": .number(Double(outcome.skippedCount)),
-            "failed_count": .number(Double(outcome.failedCount))
+            "source": .string(v6MetadataSource),
+            "product_count": .number(Double(outcome.productCount))
         ])
 
         return MappedEvent(

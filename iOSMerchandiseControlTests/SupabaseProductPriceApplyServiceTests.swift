@@ -631,6 +631,92 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
     }
 
+    func testAutomaticPagedFullPullRejectsSameOwnerRowFromDifferentShopWithoutCommitOrPrune() async throws {
+        let context = try makeContext()
+        let productID = uuid(975_200)
+        let product = try insertProduct(
+            context: context,
+            barcode: "TASK139-PRICE-SHOP-SCOPE",
+            remoteID: productID
+        )
+        let staleRemoteID = uuid(975_201)
+        context.insert(
+            ProductPrice(
+                remoteID: staleRemoteID,
+                type: .retail,
+                price: 9.9,
+                effectiveAt: try date("2026-05-02 10:30:00"),
+                product: product
+            )
+        )
+        try context.save()
+
+        let shopAID = uuid(975_210)
+        let shopBID = uuid(975_211)
+        let mismatchedRow = remotePrice(
+            id: uuid(975_212),
+            shopID: shopBID,
+            productID: productID
+        )
+        let pagedService = SupabaseProductPriceApplyService(
+            fetcher: ProductPriceKeysetFetcherFake(rows: [mismatchedRow]),
+            fetchOptions: ProductPriceApplyFetchOptions(
+                fullPullSafetyLimit: nil,
+                replaceLocalSnapshot: true
+            )
+        )
+        let plan = try pagedService.prepareApplyPlan(
+            remoteRows: [mismatchedRow],
+            context: context,
+            sessionSnapshot: session
+        )
+
+        let suiteName = "SupabaseProductPriceApplyServiceTests.shop-scope.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let accountHash = AccountBindingStore.accountHash(for: session.userID)
+        let selectedShop = SelectedShop(
+            shopID: shopAID,
+            code: "TASK139-A",
+            name: "TASK139 price scope fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(selectedShop, accountHash: accountHash))
+        XCTAssertTrue(
+            AccountBindingStore(defaults: defaults).saveBinding(
+                accountHash: accountHash,
+                storeIdentity: selectedShop.localStoreIdentity
+            )
+        )
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: session.userID,
+            defaults: defaults
+        )
+
+        do {
+            _ = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await pagedService.applyPagedFullPull(
+                    plan: plan,
+                    context: context,
+                    currentSessionSnapshot: session
+                )
+            }
+            XCTFail("Expected automatic ProductPrice shop scope mismatch")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .scopeChanged)
+        }
+
+        let verifyContext = ModelContext(context.container)
+        let prices = try verifyContext.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.remoteID, staleRemoteID)
+    }
+
     func testPagedFullPullPrunesRemoteLinkedPricesMissingFromCompleteSnapshot() async throws {
         let context = try makeContext()
         let productID = uuid(976_000)
@@ -927,6 +1013,7 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
     private func remotePrice(
         id: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!,
         ownerUserID: UUID? = nil,
+        shopID: UUID? = nil,
         productID: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000201")!,
         type: String = "PURCHASE",
         price: Double = 2.5,
@@ -936,6 +1023,7 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         RemoteInventoryProductPriceRow(
             id: id,
             ownerUserID: ownerUserID ?? session.userID,
+            shopID: shopID,
             productID: productID,
             type: type,
             price: price,

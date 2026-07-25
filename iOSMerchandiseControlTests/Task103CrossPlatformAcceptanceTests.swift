@@ -1189,7 +1189,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var importedProducts: [Product] = []
         let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: runtime.session.userID)
         for draft in analysis.newProducts {
-            let product = ProductImportCore.insertProduct(
+            let product = try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
@@ -1871,33 +1871,40 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         logPrefix: String
     ) async throws {
         guard result.uploadedCount > 0, result.pushedRemoteIDs.isEmpty == false else { return }
-        let sortedIDs = result.pushedRemoteIDs.sorted { $0.uuidString < $1.uuidString }
+        let tombstones = result.pushedRemoteIDs.intersection(result.pushedTombstoneRemoteIDs)
+        let changed = result.pushedRemoteIDs.subtracting(tombstones)
+        let groups: [(eventType: String, ids: [UUID])] = [
+            ("history_changed", changed.sorted { $0.uuidString < $1.uuidString }),
+            ("history_tombstone", tombstones.sorted { $0.uuidString < $1.uuidString })
+        ]
         let recorder = SupabaseSyncEventLiveRecorder(
             configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
             sessionProvider: Task115StaticSyncEventSessionProvider(session: runtime.session),
             transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
         )
-        let request = SyncEventRecordRequest(
-            domain: "history",
-            eventType: "history_changed",
-            changedCount: sortedIDs.count,
-            entityIDs: .object([
-                "session_ids": .array(sortedIDs.map { .string($0.uuidString.lowercased()) })
-            ]),
-            metadata: .object([
-                "source": .string("ios_history_session_push"),
-                "uploaded_count": .number(Double(sortedIDs.count))
-            ]),
-            source: "ios_history_session_push",
-            sourceDeviceID: nil,
-            batchID: UUID(),
-            clientEventID: "\(logPrefix.lowercased())-ios-history-\(runtime.session.userID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
-        )
-        _ = try await recorder.record(request)
-        print(
-            "\(logPrefix)_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
-            "sessions=\(sortedIDs.count) fullPull=false"
-        )
+        for group in groups where !group.ids.isEmpty {
+            let request = SyncEventRecordRequest(
+                domain: "history",
+                eventType: group.eventType,
+                changedCount: group.ids.count,
+                entityIDs: .object([
+                    "session_ids": .array(group.ids.map { .string($0.uuidString.lowercased()) })
+                ]),
+                metadata: .object([
+                    "source": .string("ios"),
+                    "uploaded_count": .number(Double(group.ids.count))
+                ]),
+                source: "ios_history_session_push",
+                sourceDeviceID: nil,
+                batchID: nil,
+                clientEventID: "\(logPrefix.lowercased())-ios-history-\(group.eventType)-\(hash(group.ids.map { $0.uuidString.lowercased() }.joined(separator: ",")))"
+            )
+            _ = try await recorder.record(request)
+            print(
+                "\(logPrefix)_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
+                "eventType=\(group.eventType) sessions=\(group.ids.count) fullPull=false"
+            )
+        }
     }
 
     private func matrixProduct(
@@ -3244,10 +3251,12 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
 
+        @MainActor
         var productPriceRemote: ProductPriceReleaseRemoteSupabaseAdapter {
             ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
         }
 
+        @MainActor
         var recoveryRemote: RecoveryRemoteSupabaseAdapter {
             RecoveryRemoteSupabaseAdapter(remote: inventory)
         }

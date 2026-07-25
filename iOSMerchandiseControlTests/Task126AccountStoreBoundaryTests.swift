@@ -79,6 +79,201 @@ final class Task126AccountStoreBoundaryTests: XCTestCase {
         XCTAssertEqual(Task126OwnerStoreGate.validate(entry: otherOwner, activeOwnerUserID: "owner-a", activeStoreId: "store-a"), .blocked(reason: .ownerMismatch))
     }
 
+    func testAutomaticLeaseRejectsCommitAfterScopeInvalidationAndIsNoopForManualWork() async throws {
+        let suiteName = "Task126AccountStoreBoundaryTests.lease.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shop = SelectedShop(
+            shopID: UUID(),
+            code: "TASK126",
+            name: "TASK126 lease fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        selectedStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedStore.save(shop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shop.localStoreIdentity
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+
+        var manualCommitCount = 0
+        try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+            manualCommitCount += 1
+        }
+        XCTAssertEqual(manualCommitCount, 1)
+
+        var automaticCommitCount = 0
+        try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                automaticCommitCount += 1
+            }
+            Task126OwnerStoreGate.invalidateAutomaticScopeLease()
+            XCTAssertThrowsError(
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                    automaticCommitCount += 1
+                }
+            ) { error in
+                XCTAssertEqual(error as? Task126OwnerStoreGateError, .scopeChanged)
+            }
+        }
+        XCTAssertEqual(automaticCommitCount, 1)
+    }
+
+    func testExplicitAutomaticLeaseProtectsDetachedCommitAndRejectsStaleGeneration() async throws {
+        let suiteName = "Task126AccountStoreBoundaryTests.detachedLease.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shop = SelectedShop(
+            shopID: UUID(),
+            code: "TASK126-DETACHED",
+            name: "TASK126 detached lease fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        selectedStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedStore.save(shop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shop.localStoreIdentity
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+
+        let committed = try await Task.detached {
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {
+                true
+            }
+        }.value
+        XCTAssertTrue(committed)
+
+        Task126OwnerStoreGate.invalidateAutomaticScopeLease()
+        do {
+            _ = try await Task.detached {
+                try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                    scope,
+                    defaults: defaults
+                ) {
+                    true
+                }
+            }.value
+            XCTFail("Expected stale detached scope to be rejected.")
+        } catch let error as Task126OwnerStoreGateError {
+            XCTAssertEqual(error, .scopeChanged)
+        }
+    }
+
+    func testExplicitAutomaticLeaseSerializesConcurrentInvalidationUntilCommitFinishes() throws {
+        let suiteName = "Task126AccountStoreBoundaryTests.interleavedLease.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shop = SelectedShop(
+            shopID: UUID(),
+            code: "TASK126-INTERLEAVED",
+            name: "TASK126 interleaved lease fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        selectedStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedStore.save(shop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shop.localStoreIdentity
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+
+        let commitEntered = DispatchSemaphore(value: 0)
+        let allowCommitToFinish = DispatchSemaphore(value: 0)
+        let commitOperationFinished = DispatchSemaphore(value: 0)
+        let commitSucceeded = DispatchSemaphore(value: 0)
+        let commitFailed = DispatchSemaphore(value: 0)
+        let commitThreadFinished = DispatchSemaphore(value: 0)
+        let invalidationAttempted = DispatchSemaphore(value: 0)
+        let invalidationFinished = DispatchSemaphore(value: 0)
+        defer { allowCommitToFinish.signal() }
+
+        let commitThread = Thread {
+            defer { commitThreadFinished.signal() }
+            do {
+                guard let commitDefaults = UserDefaults(suiteName: suiteName) else {
+                    throw Task126OwnerStoreGateError.shopContextUnavailable
+                }
+                try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                    scope,
+                    defaults: commitDefaults
+                ) {
+                    commitEntered.signal()
+                    guard allowCommitToFinish.wait(timeout: .now() + 5) == .success else {
+                        throw Task126OwnerStoreGateError.cancelled
+                    }
+                    commitOperationFinished.signal()
+                }
+                commitSucceeded.signal()
+            } catch {
+                commitFailed.signal()
+            }
+        }
+        commitThread.qualityOfService = .userInitiated
+        commitThread.start()
+
+        XCTAssertEqual(commitEntered.wait(timeout: .now() + 5), .success)
+
+        let invalidationThread = Thread {
+            invalidationAttempted.signal()
+            Task126OwnerStoreGate.invalidateAutomaticScopeLease()
+            invalidationFinished.signal()
+        }
+        invalidationThread.qualityOfService = .userInitiated
+        invalidationThread.start()
+
+        XCTAssertEqual(invalidationAttempted.wait(timeout: .now() + 5), .success)
+        XCTAssertEqual(
+            invalidationFinished.wait(timeout: .now() + 0.25),
+            .timedOut,
+            "Invalidation must remain blocked while the commit owns the lease."
+        )
+
+        allowCommitToFinish.signal()
+        XCTAssertEqual(commitOperationFinished.wait(timeout: .now() + 5), .success)
+        XCTAssertEqual(commitThreadFinished.wait(timeout: .now() + 5), .success)
+        XCTAssertEqual(commitSucceeded.wait(timeout: .now()), .success)
+        XCTAssertEqual(commitFailed.wait(timeout: .now()), .timedOut)
+        XCTAssertEqual(invalidationFinished.wait(timeout: .now() + 5), .success)
+
+        XCTAssertThrowsError(
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {}
+        ) { error in
+            XCTAssertEqual(error as? Task126OwnerStoreGateError, .scopeChanged)
+        }
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([SyncEventOutboxEntry.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)

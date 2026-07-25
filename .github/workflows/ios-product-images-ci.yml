@@ -1,0 +1,79 @@
+name: iOS Product Images CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ios-product-images-ci.yml"
+      - "contracts/**"
+      - "iOSMerchandiseControl/**"
+      - "iOSMerchandiseControlTests/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ios-product-images-ci.yml"
+      - "contracts/**"
+      - "iOSMerchandiseControl/**"
+      - "iOSMerchandiseControlTests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-product-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  product-images:
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify shared contract hashes
+        run: shasum -a 256 -c contracts/product-image-v1.sha256
+
+      - name: Select an available iPhone Simulator
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices available -j | ruby -rjson -e '
+            devices = JSON.parse(STDIN.read).fetch("devices").values.flatten
+            phone = devices.find { |device| device.fetch("name", "").start_with?("iPhone") && device["isAvailable"] != false }
+            abort "No available iPhone Simulator" unless phone
+            puts phone.fetch("udid")
+          ')"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+
+      - name: Build Debug
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Debug
+          -destination "platform=iOS Simulator,id=$DEVICE_ID"
+          CODE_SIGNING_ALLOWED=NO build
+
+      - name: XCTest full suite
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Debug
+          -destination "platform=iOS Simulator,id=$DEVICE_ID"
+          -resultBundlePath "$RUNNER_TEMP/ios-merchandise-control-tests.xcresult"
+          CODE_SIGNING_ALLOWED=NO test
+
+      - name: Analyze
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Debug
+          -destination "generic/platform=iOS Simulator"
+          CODE_SIGNING_ALLOWED=NO analyze
+
+      - name: Secret scan
+        run: >-
+          ./tools/agent/mc-agent.sh scan sensitive
+          iOSMerchandiseControl
+          iOSMerchandiseControlTests
+          contracts
+          .github/workflows/ios-product-images-ci.yml

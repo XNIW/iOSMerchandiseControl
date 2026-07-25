@@ -15,11 +15,87 @@ nonisolated struct ProductPriceIncrementalApplyServiceResult {
     var applyMs = 0
 }
 
+nonisolated func applyTargetedProductPriceMutationRows(
+    _ priceRows: [RemoteInventoryProductPriceRow],
+    protected: IncrementalApplyProtectedRemoteIDs,
+    context: ModelContext
+) throws -> ProductPriceApplyResult {
+    guard protected.prices.isDisjoint(with: Set(priceRows.map(\.id))) else {
+        throw SyncEventIncrementalApplyError.dynamicPreflightRequired
+    }
+    let productIDs = Set(priceRows.map(\.productID))
+    var productsByRemoteID: [UUID: Product] = [:]
+    for remoteID in productIDs {
+        guard let product = try fetchProduct(remoteID: remoteID, context: context),
+              product.remoteDeletedAt == nil else {
+            throw SyncEventIncrementalApplyError.dynamicPreflightRequired
+        }
+        productsByRemoteID[remoteID] = product
+    }
+
+    var currentPricesByKey: [TargetedProductPriceLogicalKey: [TargetedProductPriceCurrentInfo]] = [:]
+    for (remoteID, product) in productsByRemoteID {
+        for price in product.priceHistory {
+            guard let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: price.price) else {
+                continue
+            }
+            let key = TargetedProductPriceLogicalKey(
+                productID: product.remoteID ?? remoteID,
+                type: price.type.rawValue,
+                effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                    from: price.effectiveAt
+                )
+            )
+            currentPricesByKey[key, default: []].append(
+                TargetedProductPriceCurrentInfo(
+                    canonicalPrice: canonicalPrice,
+                    remoteID: price.remoteID,
+                    productPriceIDToLink: price.remoteID == nil ? price.persistentModelID : nil
+                )
+            )
+        }
+    }
+
+    var inserted = 0
+    var remoteIdentityLinked = 0
+    var skippedExisting = 0
+    var seenRemoteIDs = Set<UUID>()
+    for row in priceRows {
+        guard seenRemoteIDs.insert(row.id).inserted else {
+            throw ProductPriceApplyError.policyBlocked([.conflicts])
+        }
+        let product = productsByRemoteID[row.productID]!
+        let outcome = try applyTargetedProductPriceRow(
+            row,
+            product: product,
+            currentPricesByKey: &currentPricesByKey,
+            context: context
+        )
+        inserted += outcome.inserted
+        remoteIdentityLinked += outcome.remoteIdentityLinked
+        skippedExisting += outcome.skippedExisting
+    }
+    return ProductPriceApplyResult(
+        inserted: inserted,
+        remoteIdentityLinked: remoteIdentityLinked,
+        skippedExisting: skippedExisting,
+        totalConsidered: priceRows.count
+    )
+}
+
 nonisolated struct ProductPriceIncrementalApplyService {
     private let remote: any SyncAutomaticProductPriceIncrementalReading
+    private let scope: Task126VerifiedOwnerStoreScope
+    private let defaults: UserDefaults
 
-    init(remote: any SyncAutomaticProductPriceIncrementalReading) {
+    init(
+        remote: any SyncAutomaticProductPriceIncrementalReading,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults = .standard
+    ) {
         self.remote = remote
+        self.scope = scope
+        self.defaults = defaults
     }
 
     func fetchTargetedRows(
@@ -27,10 +103,17 @@ nonisolated struct ProductPriceIncrementalApplyService {
         ownerUserID: UUID
     ) async throws -> ProductPriceIncrementalFetchResult {
         let started = mcNowMillis()
-        let rows = try await remote.fetchProductPricesByIDs(
-            ownerUserID: ownerUserID,
-            priceIDs: priceIDs
-        )
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let rows = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            try await remote.fetchProductPricesByIDs(
+                ownerUserID: ownerUserID,
+                priceIDs: priceIDs
+            )
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        for row in rows {
+            try validateIncrementalReadIdentity(ownerUserID: row.ownerUserID, shopID: row.shopID, scope: scope, remote: remote)
+        }
         return ProductPriceIncrementalFetchResult(
             rows: rows,
             fetchMs: mcNowMillis() - started
@@ -44,11 +127,15 @@ nonisolated struct ProductPriceIncrementalApplyService {
         ownerUserID: UUID,
         modelContainer: ModelContainer
     ) async throws -> ProductPriceIncrementalApplyServiceResult {
-        let applicableRows: [RemoteInventoryProductPriceRow]
-        if let remoteActiveProductIDs {
-            applicableRows = priceRows.filter { remoteActiveProductIDs.contains($0.productID) }
-        } else {
-            applicableRows = priceRows
+        let applicableRows = priceRows.filter { requestedPriceIDs.contains($0.id) }
+        guard requestedPriceIDs.isSubset(of: Set(applicableRows.map(\.id))),
+              let remoteActiveProductIDs,
+              applicableRows.allSatisfy({ remoteActiveProductIDs.contains($0.productID) }) else {
+            // A targeted price event is all-or-recovery. In particular, a
+            // price whose product is tombstoned belongs to the full recovery
+            // ledger and must never be silently skipped while the event is
+            // marked applied.
+            throw SyncEventIncrementalApplyError.dynamicPreflightRequired
         }
 
         let applyStarted = mcNowMillis()
@@ -59,23 +146,18 @@ nonisolated struct ProductPriceIncrementalApplyService {
             applyResult = try await applyProductPriceRows(
                 applicableRows,
                 ownerUserID: ownerUserID,
-                modelContainer: modelContainer
+                modelContainer: modelContainer,
+                scope: scope,
+                defaults: defaults
             )
         }
-
-        let missingPriceIDs = requestedPriceIDs.subtracting(Set(priceRows.map(\.id)))
-        let pruned = try await pruneMissingRemotePrices(
-            priceIDs: missingPriceIDs,
-            ownerUserID: ownerUserID,
-            modelContainer: modelContainer
-        )
 
         return ProductPriceIncrementalApplyServiceResult(
             inserted: applyResult.inserted,
             remoteIdentityLinked: applyResult.remoteIdentityLinked,
             skippedExisting: applyResult.skippedExisting,
-            missingRemotePruned: pruned,
-            missingRemoteCount: missingPriceIDs.count,
+            missingRemotePruned: 0,
+            missingRemoteCount: 0,
             applyMs: mcNowMillis() - applyStarted
         )
     }
@@ -83,101 +165,72 @@ nonisolated struct ProductPriceIncrementalApplyService {
     private func applyProductPriceRows(
         _ priceRows: [RemoteInventoryProductPriceRow],
         ownerUserID: UUID,
-        modelContainer: ModelContainer
+        modelContainer: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults
     ) async throws -> ProductPriceApplyResult {
         try await Task.detached(priority: .utility) {
-            let context = ModelContext(modelContainer)
-            let protected = try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
-            let productIDs = Set(priceRows.map(\.productID))
-            var productsByRemoteID: [UUID: Product] = [:]
-            for remoteID in productIDs {
-                if let product = try fetchProduct(remoteID: remoteID, context: context),
-                   product.remoteDeletedAt == nil {
-                    productsByRemoteID[remoteID] = product
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
+                    modelContainer
+                )
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
+                let protected = try pendingRemoteIDs(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    storeIdentity: scope.storeIdentity
+                )
+                let result = try applyTargetedProductPriceMutationRows(
+                    priceRows,
+                    protected: protected,
+                    context: context
+                )
+                if result.inserted > 0 || result.remoteIdentityLinked > 0 {
+                    try context.save()
                 }
+                return result
             }
-
-            var currentPricesByKey: [TargetedProductPriceLogicalKey: [TargetedProductPriceCurrentInfo]] = [:]
-            for (remoteID, product) in productsByRemoteID {
-                for price in product.priceHistory {
-                    guard let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: price.price) else { continue }
-                    let key = TargetedProductPriceLogicalKey(
-                        productID: product.remoteID ?? remoteID,
-                        type: price.type.rawValue,
-                        effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(from: price.effectiveAt)
-                    )
-                    currentPricesByKey[key, default: []].append(
-                        TargetedProductPriceCurrentInfo(
-                            canonicalPrice: canonicalPrice,
-                            remoteID: price.remoteID,
-                            productPriceIDToLink: price.remoteID == nil ? price.persistentModelID : nil
-                        )
-                    )
-                }
-            }
-
-            var inserted = 0
-            var remoteIdentityLinked = 0
-            var skippedExisting = 0
-            var seenRemoteIDs = Set<UUID>()
-            for row in priceRows where !protected.prices.contains(row.id) {
-                guard row.ownerUserID == ownerUserID else {
-                    throw ProductPriceApplyError.invalidRemoteRow(reason: "owner_mismatch")
-                }
-                guard seenRemoteIDs.insert(row.id).inserted else {
-                    throw ProductPriceApplyError.policyBlocked([.conflicts])
-                }
-                guard let product = productsByRemoteID[row.productID] else {
-                    skippedExisting += 1
-                    continue
-                }
-                let outcome: ProductPriceApplyResult
-                do {
-                    outcome = try applyTargetedProductPriceRow(
-                        row,
-                        product: product,
-                        currentPricesByKey: &currentPricesByKey,
-                        context: context
-                    )
-                } catch ProductPriceApplyError.policyBlocked(let reasons) where reasons.contains(.conflicts) {
-                    skippedExisting += 1
-                    continue
-                }
-                inserted += outcome.inserted
-                remoteIdentityLinked += outcome.remoteIdentityLinked
-                skippedExisting += outcome.skippedExisting
-            }
-            if inserted > 0 || remoteIdentityLinked > 0 {
-                try context.save()
-            }
-            return ProductPriceApplyResult(
-                inserted: inserted,
-                remoteIdentityLinked: remoteIdentityLinked,
-                skippedExisting: skippedExisting,
-                totalConsidered: priceRows.count
-            )
         }.value
     }
 
     private func pruneMissingRemotePrices(
         priceIDs: Set<UUID>,
         ownerUserID: UUID,
-        modelContainer: ModelContainer
+        modelContainer: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope,
+        defaults: UserDefaults
     ) async throws -> Int {
         guard !priceIDs.isEmpty else { return 0 }
         return try await Task.detached(priority: .utility) {
-            let context = ModelContext(modelContainer)
-            let protected = try pendingRemoteIDs(context: context, ownerUserID: ownerUserID)
-            var pruned = 0
-            for remoteID in priceIDs where !protected.prices.contains(remoteID) {
-                guard let price = try fetchProductPrice(remoteID: remoteID, context: context) else { continue }
-                context.delete(price)
-                pruned += 1
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
+                scope,
+                defaults: defaults
+            ) {
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
+                    modelContainer
+                )
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
+                let protected = try pendingRemoteIDs(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    storeIdentity: scope.storeIdentity
+                )
+                var pruned = 0
+                for remoteID in priceIDs where !protected.prices.contains(remoteID) {
+                    guard let price = try fetchProductPrice(remoteID: remoteID, context: context) else { continue }
+                    context.delete(price)
+                    pruned += 1
+                }
+                if pruned > 0 {
+                    try context.save()
+                }
+                return pruned
             }
-            if pruned > 0 {
-                try context.save()
-            }
-            return pruned
         }.value
     }
 }

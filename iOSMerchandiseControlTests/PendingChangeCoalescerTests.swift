@@ -40,4 +40,42 @@ final class PendingChangeCoalescerTests: XCTestCase {
         XCTAssertEqual(result.changedFields, ["tombstone"])
         XCTAssertEqual(result.entityRemoteID, remoteID)
     }
+
+    func testLocalMutationRacingSentUploadReturnsChangeToPending() {
+        let remoteID = UUID()
+        let result = PendingChangeCoalescer.coalesce(
+            current: PendingChangeCoalescer.State(
+                operation: .update,
+                status: .sent,
+                changedFields: ["name"],
+                entityRemoteID: remoteID
+            ),
+            incoming: .update,
+            changedFields: ["barcode"],
+            incomingEntityRemoteID: remoteID
+        )
+
+        XCTAssertEqual(result.operation, .update)
+        XCTAssertEqual(result.status, .pending)
+        XCTAssertEqual(result.changedFields, ["barcode", "name"])
+        XCTAssertEqual(result.entityRemoteID, remoteID)
+    }
+
+    func testNewIntentRearmsBlockedAndStaleChanges() {
+        for status in [LocalPendingChangeStatus.blocked, .staleBaseline] {
+            let result = PendingChangeCoalescer.coalesce(
+                current: PendingChangeCoalescer.State(
+                    operation: .update,
+                    status: status,
+                    changedFields: ["name"],
+                    entityRemoteID: UUID()
+                ),
+                incoming: .update,
+                changedFields: ["name"],
+                incomingEntityRemoteID: nil
+            )
+
+            XCTAssertEqual(result.status, .pending)
+        }
+    }
 }

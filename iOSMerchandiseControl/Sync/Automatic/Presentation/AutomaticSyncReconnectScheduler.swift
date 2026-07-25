@@ -43,7 +43,7 @@ final class AutomaticSyncReconnectScheduler: @unchecked Sendable {
         case .unknown:
             cancelPendingIntent()
         case .satisfied:
-            guard previousStatus == .unsatisfied,
+            guard previousStatus != .satisfied,
                   isForeground else { return }
             scheduleReconnectIntent()
         case .unsatisfied:

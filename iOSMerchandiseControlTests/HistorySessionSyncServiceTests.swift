@@ -555,6 +555,8 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(result.uploadedCount, 1)
+        XCTAssertEqual(result.pushedRemoteIDs, [remoteID])
+        XCTAssertEqual(result.pushedTombstoneRemoteIDs, [remoteID])
         let upserted = await remote.upsertedRows()
         XCTAssertEqual(upserted.single?.remoteID, remoteID)
         XCTAssertNotNil(upserted.single?.deletedAt)
@@ -659,6 +661,176 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
     }
 
+    func testPullRejectsMalformedActiveTimestampBeforeAnyRowIsCommitted() async throws {
+        let context = try makeContext()
+        let valid = remoteRow(
+            remoteID: UUID(),
+            displayName: "VALID_BEFORE_MALFORMED",
+            data: [["barcode"], ["VALID"]],
+            editable: [[""], [""]],
+            complete: [false, true]
+        )
+        let malformed = RemoteSharedSheetSessionRow(
+            remoteID: UUID(),
+            payloadVersion: HistorySessionPayloadCodec.payloadVersion,
+            displayName: "MALFORMED_TIMESTAMP",
+            timestamp: "not-a-timestamp",
+            supplier: "SUP",
+            category: "CAT",
+            isManualEntry: false,
+            data: [["barcode"], ["INVALID"]],
+            sessionOverlay: nil,
+            ownerUserID: owner,
+            updatedAt: "2026-05-13T12:00:01Z",
+            deletedAt: nil
+        )
+        let service = HistorySessionSyncService(
+            remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [valid, malformed])
+        )
+
+        do {
+            _ = try await service.pullHistorySessionsFromCloud(
+                ownerUserID: owner,
+                context: context
+            )
+            XCTFail("Expected malformed history timestamp to fail closed.")
+        } catch let error as HistorySessionSyncError {
+            XCTAssertEqual(error, .invalidTimestamp)
+        }
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
+    func testAutomaticPullShopDriftBeforeFirstSaveCommitsNothing() async throws {
+        let context = try makeContext()
+        let suiteName = "HistorySessionSyncServiceTests.shop-drift.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaultsBox = HistorySessionTestUserDefaultsBox(defaults)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let shopA = selectedShop(id: UUID())
+        let shopB = selectedShop(id: UUID())
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(shopA, accountHash: accountHash))
+        XCTAssertTrue(bindingStore.saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shopA.localStoreIdentity
+        ))
+        let automaticScope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+        let row = remoteRow(
+            remoteID: UUID(),
+            displayName: "TASK139_SCOPE_A",
+            data: [["barcode"], ["TASK139_SCOPE_A"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            shopID: shopA.shopID
+        )
+        let service = HistorySessionSyncService(
+            remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]),
+            pageSize: 1
+        )
+        var didDrift = false
+
+        do {
+            _ = try await service.pullHistorySessionsFromCloud(
+                ownerUserID: owner,
+                context: context,
+                automaticScope: automaticScope,
+                automaticScopeValidator: { expectedScope in
+                    try Task126OwnerStoreGate.revalidateAutomaticScope(
+                        expectedScope,
+                        defaults: defaultsBox.value
+                    )
+                },
+                onProgress: { progress in
+                    guard !didDrift,
+                          progress.stage == .applying,
+                          progress.current == 0 else { return }
+                    didDrift = true
+                    XCTAssertTrue(selectedShopStore.save(shopB, accountHash: accountHash))
+                }
+            )
+            XCTFail("Expected automatic history pull to reject shop drift.")
+        } catch is Task126OwnerStoreGateError {
+            // Expected: scope A is invalid before the first local save.
+        }
+
+        XCTAssertTrue(didDrift)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+        let verificationContext = ModelContext(context.container)
+        XCTAssertEqual(try verificationContext.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
+    func testAutomaticPullUnresolvedShopBeforeFirstSaveCommitsNothing() async throws {
+        let context = try makeContext()
+        let suiteName = "HistorySessionSyncServiceTests.unresolved-drift.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaultsBox = HistorySessionTestUserDefaultsBox(defaults)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let shopA = selectedShop(id: UUID())
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(shopA, accountHash: accountHash))
+        XCTAssertTrue(bindingStore.saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shopA.localStoreIdentity
+        ))
+        let automaticScope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: owner,
+            defaults: defaults
+        )
+        let row = remoteRow(
+            remoteID: UUID(),
+            displayName: "TASK139_SCOPE_UNRESOLVED",
+            data: [["barcode"], ["TASK139_SCOPE_UNRESOLVED"]],
+            editable: [[""], [""]],
+            complete: [false, true],
+            shopID: shopA.shopID
+        )
+        let service = HistorySessionSyncService(
+            remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]),
+            pageSize: 1
+        )
+        var didDrift = false
+
+        do {
+            _ = try await service.pullHistorySessionsFromCloud(
+                ownerUserID: owner,
+                context: context,
+                automaticScope: automaticScope,
+                automaticScopeValidator: { expectedScope in
+                    try Task126OwnerStoreGate.revalidateAutomaticScope(
+                        expectedScope,
+                        defaults: defaultsBox.value
+                    )
+                },
+                onProgress: { progress in
+                    guard !didDrift,
+                          progress.stage == .applying,
+                          progress.current == 0 else { return }
+                    didDrift = true
+                    selectedShopStore.markResolutionUnresolved(accountHash: accountHash)
+                }
+            )
+            XCTFail("Expected automatic history pull to reject unresolved shop scope.")
+        } catch is Task126OwnerStoreGateError {
+            // Expected: unresolved discovery cannot fall back to anonymous.
+        }
+
+        XCTAssertTrue(didDrift)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+        let verificationContext = ModelContext(context.container)
+        XCTAssertEqual(try verificationContext.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
     func testHistoryPendingCountsAsQueuedCloudOperationForOptions() async throws {
         let context = try makeContext()
         let entry = HistoryEntry(id: "TASK108_HISTORY_PENDING")
@@ -707,6 +879,18 @@ final class HistorySessionSyncServiceTests: XCTestCase {
             shopID: shopID,
             updatedAt: "2026-05-13T12:00:01Z",
             deletedAt: deletedAt
+        )
+    }
+
+    private func selectedShop(id: UUID) -> SelectedShop {
+        SelectedShop(
+            shopID: id,
+            code: nil,
+            name: "History fixture shop",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
         )
     }
 
@@ -782,6 +966,14 @@ private actor FakeHistorySessionRemote: HistorySessionRemoteSyncing {
 
     func upsertedRows() -> [SharedSheetSessionUpsertRow] {
         upserted
+    }
+}
+
+private final class HistorySessionTestUserDefaultsBox: @unchecked Sendable {
+    let value: UserDefaults
+
+    init(_ value: UserDefaults) {
+        self.value = value
     }
 }
 

@@ -1340,6 +1340,21 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertTrue(store.activeReasons.isEmpty)
     }
 
+    func testForegroundActivityExclusiveTokenRejectsConcurrentLocalWorkflow() {
+        var store = ForegroundCloudWorkflowActivityStore()
+        let replacement = UUID()
+        let editor = UUID()
+
+        store.setActive(.cloudReview, true, token: replacement)
+        XCTAssertTrue(store.isExclusivelyActive(.cloudReview, token: replacement))
+
+        store.setActive(.editing, true, token: editor)
+        XCTAssertFalse(store.isExclusivelyActive(.cloudReview, token: replacement))
+
+        store.setActive(.editing, false, token: editor)
+        XCTAssertTrue(store.isExclusivelyActive(.cloudReview, token: replacement))
+    }
+
     func testTask091SemiAutomaticCheckBlocksWhileRunIsActive() async throws {
         let fake = SupabaseManualSyncCoordinatorDryRunFake()
         fake.holdAtPreviewUntilSignaled = true

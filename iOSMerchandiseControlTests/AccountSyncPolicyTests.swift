@@ -13,9 +13,9 @@ final class AccountSyncPolicyTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision.action, .promptBootstrapUpload)
+        XCTAssertEqual(decision.action, .promptOwnerStoreReview(.unboundDirty))
         XCTAssertEqual(decision.defaultSafeAction, .cancel)
-        XCTAssertEqual(decision.remoteMutation, .allowedAfterUserConfirmation)
+        XCTAssertEqual(decision.remoteMutation, .blockedUntilUserDecision)
         XCTAssertEqual(decision.pendingHandling, .keepUnboundUntilDecision)
         XCTAssertEqual(decision.testID, "AP-A-01")
     }
@@ -29,7 +29,7 @@ final class AccountSyncPolicyTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision.action, .promptMergeReplaceUploadExportCancel)
+        XCTAssertEqual(decision.action, .promptOwnerStoreReview(.unboundDirty))
         XCTAssertEqual(decision.defaultSafeAction, .cancel)
         XCTAssertEqual(decision.remoteMutation, .blockedUntilUserDecision)
         XCTAssertEqual(decision.conflictPolicy, .noSilentMerge)
@@ -45,7 +45,7 @@ final class AccountSyncPolicyTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision.action, .promptRemoteVerification)
+        XCTAssertEqual(decision.action, .promptOwnerStoreReview(.unboundDirty))
         XCTAssertEqual(decision.defaultSafeAction, .cancel)
         XCTAssertEqual(decision.remoteMutation, .blockedUntilUserDecision)
         XCTAssertEqual(decision.testID, "AP-B-00")
@@ -93,7 +93,7 @@ final class AccountSyncPolicyTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision.action, .promptSwitchStoreOrCreateStore)
+        XCTAssertEqual(decision.action, .promptOwnerStoreReview(.accountMismatch))
         XCTAssertEqual(decision.defaultSafeAction, .cancel)
         XCTAssertEqual(decision.pendingHandling, .keepPendingWithOriginalOwner)
         XCTAssertEqual(decision.conflictPolicy, .noCrossAccountMerge)
@@ -221,29 +221,42 @@ final class AccountSyncPolicyTests: XCTestCase {
         XCTAssertEqual(store.currentBinding?.storeIdentity, identity)
     }
 
-    func testConfirmedAccountDecisionChoiceBindsLocalStoreToSignedInAccount() {
-        let key = "AccountSyncPolicyTests.\(UUID().uuidString).confirmed-choice"
+    func testDirtyUnboundStoreCannotBeBoundByAChoiceWithoutADataTransaction() {
+        let key = "AccountSyncPolicyTests.\(UUID().uuidString).dirty-choice"
         let store = AccountBindingStore(defaults: .standard, key: key)
         let userID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
-        let applier = AccountSyncChoiceBindingApplier(bindingStore: store)
 
-        applier.applyConfirmedRelationship(choice: .merge, userID: userID)
+        let resolution = store.resolveOwnerStoreBinding(
+            userID: userID,
+            activeStoreIdentity: LocalStoreIdentity(rawValue: "shop-a"),
+            isLocalStoreCompletelyEmpty: false
+        )
         Self.retainedBindingStores.append(store)
 
-        XCTAssertEqual(store.currentBinding?.accountHash, AccountBindingStore.accountHash(for: userID))
-        XCTAssertEqual(store.currentBinding?.storeIdentity, .anonymous)
+        XCTAssertEqual(resolution, .reviewRequired(.unboundDirty))
+        XCTAssertNil(store.currentBinding)
     }
 
-    func testCancelledAccountDecisionChoiceLeavesBindingUnchanged() {
-        let key = "AccountSyncPolicyTests.\(UUID().uuidString).cancelled-choice"
+    func testDifferentAccountReviewLeavesExistingBindingUnchanged() {
+        let key = "AccountSyncPolicyTests.\(UUID().uuidString).different-account"
         let store = AccountBindingStore(defaults: .standard, key: key)
-        let userID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
-        let applier = AccountSyncChoiceBindingApplier(bindingStore: store)
+        let oldUserID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let newUserID = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let identity = LocalStoreIdentity(rawValue: "shop-a")
+        XCTAssertTrue(store.saveBinding(
+            accountHash: AccountBindingStore.accountHash(for: oldUserID),
+            storeIdentity: identity
+        ))
 
-        applier.applyConfirmedRelationship(choice: .cancel, userID: userID)
+        let resolution = store.resolveOwnerStoreBinding(
+            userID: newUserID,
+            activeStoreIdentity: identity,
+            isLocalStoreCompletelyEmpty: false
+        )
         Self.retainedBindingStores.append(store)
 
-        XCTAssertNil(store.currentBinding)
+        XCTAssertEqual(resolution, .reviewRequired(.accountMismatch))
+        XCTAssertEqual(store.currentBinding?.accountHash, AccountBindingStore.accountHash(for: oldUserID))
     }
 
     func testAccountHashRedactsRawUserID() {

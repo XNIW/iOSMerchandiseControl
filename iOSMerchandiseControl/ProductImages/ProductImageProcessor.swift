@@ -8,13 +8,17 @@ nonisolated enum ProductImageProcessor {
     static let maximumInputBytes = 25 * 1_024 * 1_024
     static let maximumInputPixels = 64_000_000
     static let mainMaximumSide = 1_600
+    static let mainMinimumSide = 640
     static let mainTargetBytes = 750 * 1_024
     static let mainMaximumBytes = 1_024 * 1_024
     static let thumbMaximumSide = 384
+    static let thumbMinimumSide = 128
+    static let thumbTargetBytes = 90 * 1_024
     static let thumbMaximumBytes = 90 * 1_024
 
-    private static let mainQualities: [CGFloat] = [0.82, 0.76, 0.70]
-    private static let thumbQualities: [CGFloat] = [0.75, 0.68, 0.60, 0.52]
+    static let outputSideFactors: [Double] = [1.0, 0.85, 0.72, 0.61, 0.52, 0.44, 0.4]
+    static let mainQualities: [CGFloat] = [0.82, 0.76, 0.70]
+    static let thumbQualities: [CGFloat] = [0.75, 0.68, 0.60, 0.52]
 
     static func prepare(fileURL: URL) async throws -> PreparedProductImage {
         let task = Task.detached(priority: .userInitiated) {
@@ -82,7 +86,7 @@ nonisolated enum ProductImageProcessor {
         let mainStartedAt = Date()
         let main = try makeVariant(
             normalizedImage: normalizedMain,
-            minimumSide: 640,
+            minimumSide: mainMinimumSide,
             qualities: mainQualities,
             targetBytes: mainTargetBytes,
             hardMaximumBytes: mainMaximumBytes
@@ -97,9 +101,9 @@ nonisolated enum ProductImageProcessor {
         }
         let thumb = try makeVariant(
             normalizedImage: normalizedThumb,
-            minimumSide: 128,
+            minimumSide: thumbMinimumSide,
             qualities: thumbQualities,
-            targetBytes: thumbMaximumBytes,
+            targetBytes: thumbTargetBytes,
             hardMaximumBytes: thumbMaximumBytes
         )
         let thumbEncodeMilliseconds = milliseconds(since: thumbStartedAt)
@@ -127,33 +131,14 @@ nonisolated enum ProductImageProcessor {
         )
     }
 
-    static func containsAPP1Metadata(_ data: Data) -> Bool {
-        guard isJPEG(data), data.count >= 4 else { return false }
-        var index = 2
-        while index + 1 < data.count {
-            guard data[index] == 0xff else {
-                index += 1
-                continue
-            }
-            while index < data.count, data[index] == 0xff {
-                index += 1
-            }
-            guard index < data.count else { return false }
-            let marker = data[index]
-            index += 1
-            if marker == 0xda || marker == 0xd9 { return false }
-            if marker == 0xe1 { return true }
-            if marker == 0x01 || (0xd0...0xd8).contains(marker) {
-                continue
-            }
-            guard index + 1 < data.count else { return false }
-            let segmentLength = Int(data[index]) << 8 | Int(data[index + 1])
-            guard segmentLength >= 2, index + segmentLength <= data.count else {
-                return false
-            }
-            index += segmentLength
+    static func containsForbiddenMetadata(_ data: Data) -> Bool {
+        guard isJPEG(data) else { return true }
+        var output: Data?
+        do {
+            return try inspectJPEG(data, canonicalOutput: &output)
+        } catch {
+            return true
         }
-        return false
     }
 
     static func isJPEG(_ data: Data) -> Bool {
@@ -166,14 +151,15 @@ nonisolated enum ProductImageProcessor {
 
     static func validateDownloadedJPEG(
         _ data: Data,
-        variant: ProductImageVariant
+        variant: ProductImageVariant,
+        expectedMetadata: ProductImageMetadata? = nil
     ) async throws {
         try Task.checkCancellation()
         let maximumSide = variant == .thumb ? thumbMaximumSide : mainMaximumSide
         let task = Task.detached(priority: .utility) {
             try Task.checkCancellation()
             guard isJPEG(data),
-                  !containsAPP1Metadata(data),
+                  !containsForbiddenMetadata(data),
                   let source = CGImageSourceCreateWithData(
                     data as CFData,
                     [kCGImageSourceShouldCache: false] as CFDictionary
@@ -186,6 +172,18 @@ nonisolated enum ProductImageProcessor {
                   height > 0,
                   max(width, height) <= maximumSide else {
                 throw ProductImageError.downloadedImageInvalid
+            }
+            if let expectedMetadata {
+                let digest = SHA256.hash(data: data)
+                    .map { String(format: "%02x", $0) }
+                    .joined()
+                guard expectedMetadata.isValid(for: variant),
+                      expectedMetadata.bytes == data.count,
+                      expectedMetadata.width == width,
+                      expectedMetadata.height == height,
+                      expectedMetadata.sha256 == digest else {
+                    throw ProductImageError.downloadedImageInvalid
+                }
             }
             let options: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -213,15 +211,14 @@ nonisolated enum ProductImageProcessor {
         hardMaximumBytes: Int
     ) throws -> PreparedProductImageVariant {
         let sourceLongestSide = max(normalizedImage.width, normalizedImage.height)
-        var maximumSide = sourceLongestSide
         var fallback: PreparedProductImageVariant?
-        var resizeAttempts = 0
 
-        // 16 is a hard upper bound; the 0.85 scale ladder reaches the documented
-        // minimum from 1600 px in substantially fewer iterations.
-        while maximumSide > 0, resizeAttempts < 16 {
+        for maximumSide in outputSideSchedule(
+            sourceLongestSide: sourceLongestSide,
+            initialMaximum: sourceLongestSide,
+            minimum: minimumSide
+        ) {
             try Task.checkCancellation()
-            resizeAttempts += 1
             let image = try autoreleasepool {
                 try resizedImage(normalizedImage, maximumSide: maximumSide)
             }
@@ -239,19 +236,52 @@ nonisolated enum ProductImageProcessor {
                     return variant
                 }
             }
-
-            if maximumSide <= minimumSide || sourceLongestSide < minimumSide {
-                break
-            }
-            let reduced = max(minimumSide, Int((Double(maximumSide) * 0.85).rounded(.down)))
-            if reduced >= maximumSide { break }
-            maximumSide = min(reduced, sourceLongestSide)
         }
 
         guard let fallback, fallback.metadata.bytes <= hardMaximumBytes else {
             throw ProductImageError.outputTooLarge
         }
         return fallback
+    }
+
+    static func outputSideSchedule(
+        sourceLongestSide: Int,
+        initialMaximum: Int,
+        minimum: Int
+    ) -> [Int] {
+        let maximum = min(initialMaximum, sourceLongestSide)
+        guard maximum > minimum, sourceLongestSide >= minimum else { return [maximum] }
+        var seen = Set<Int>()
+        return (outputSideFactors.map { factor in
+            max(minimum, Int((Double(maximum) * factor).rounded(.down)))
+        } + [minimum]).filter { side in
+            side <= maximum && seen.insert(side).inserted
+        }
+    }
+
+    static func writeBoundedCameraFallback(_ image: CGImage) throws -> URL {
+        guard image.width > 0, image.height > 0,
+              image.height <= maximumInputPixels / image.width,
+              max(image.width, image.height) <= mainMaximumSide else {
+            throw ProductImageError.inputPixelLimitExceeded
+        }
+        let variant = try makeVariant(
+            normalizedImage: image,
+            minimumSide: mainMinimumSide,
+            qualities: mainQualities,
+            targetBytes: mainTargetBytes,
+            hardMaximumBytes: mainMaximumBytes
+        )
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task139-camera-\(UUID().uuidString.lowercased()).jpg")
+        do {
+            try variant.data.write(to: destination, options: [.atomic])
+            try Task.checkCancellation()
+            return destination
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
     }
 
     private static func normalizedImage(
@@ -350,22 +380,67 @@ nonisolated enum ProductImageProcessor {
         guard CGImageDestinationFinalize(destination) else {
             throw ProductImageError.encodeFailed
         }
-        let data = try removingAPP1Segments(output as Data)
+        let data = try removingForbiddenMetadataSegments(output as Data)
         guard isJPEG(data) else {
             throw ProductImageError.encodeFailed
         }
-        guard !containsAPP1Metadata(data) else {
+        guard !containsForbiddenMetadata(data) else {
             throw ProductImageError.metadataPresent
         }
         return data
     }
 
-    private static func removingAPP1Segments(_ data: Data) throws -> Data {
-        guard isJPEG(data) else { throw ProductImageError.encodeFailed }
-        var output = Data(data.prefix(2))
+    static func removingForbiddenMetadataSegments(_ data: Data) throws -> Data {
+        var output: Data? = Data()
+        _ = try inspectJPEG(data, canonicalOutput: &output)
+        guard let output else { throw ProductImageError.encodeFailed }
+        return output
+    }
+
+    private static func inspectJPEG(
+        _ data: Data,
+        canonicalOutput: inout Data?
+    ) throws -> Bool {
+        guard data.count >= 4, data[0] == 0xff, data[1] == 0xd8 else {
+            throw ProductImageError.encodeFailed
+        }
+        if canonicalOutput != nil {
+            canonicalOutput = Data(data.prefix(2))
+        }
+        var containsForbidden = false
         var index = 2
+        var insideScan = false
 
         while index < data.count {
+            if insideScan {
+                let entropyStart = index
+                while index < data.count {
+                    guard data[index] == 0xff else {
+                        index += 1
+                        continue
+                    }
+                    guard index + 1 < data.count else {
+                        throw ProductImageError.encodeFailed
+                    }
+                    let next = data[index + 1]
+                    if next == 0x00 || (0xd0...0xd7).contains(next) {
+                        index += 2
+                        continue
+                    }
+                    if next == 0xff {
+                        index += 1
+                        continue
+                    }
+                    break
+                }
+                guard index < data.count else { throw ProductImageError.encodeFailed }
+                if canonicalOutput != nil {
+                    canonicalOutput!.append(contentsOf: data[entropyStart..<index])
+                }
+                insideScan = false
+                continue
+            }
+
             let markerStart = index
             guard data[index] == 0xff else {
                 throw ProductImageError.encodeFailed
@@ -378,13 +453,22 @@ nonisolated enum ProductImageProcessor {
             index += 1
 
             if marker == 0xd9 {
-                output.append(contentsOf: data[markerStart..<index])
+                if canonicalOutput != nil {
+                    canonicalOutput!.append(contentsOf: data[markerStart..<index])
+                }
                 guard index == data.count else { throw ProductImageError.encodeFailed }
-                return output
+                return containsForbidden
             }
-            if marker == 0xd8 || marker == 0x01 || (0xd0...0xd7).contains(marker) {
-                output.append(contentsOf: data[markerStart..<index])
+            if marker == 0x01 {
+                if canonicalOutput != nil {
+                    canonicalOutput!.append(contentsOf: data[markerStart..<index])
+                }
                 continue
+            }
+            guard marker != 0x00,
+                  marker != 0xd8,
+                  !(0xd0...0xd7).contains(marker) else {
+                throw ProductImageError.encodeFailed
             }
             guard index + 1 < data.count else { throw ProductImageError.encodeFailed }
             let segmentLength = Int(data[index]) << 8 | Int(data[index + 1])
@@ -392,14 +476,27 @@ nonisolated enum ProductImageProcessor {
                 throw ProductImageError.encodeFailed
             }
             let segmentEnd = index + segmentLength
-            if marker != 0xe1 {
-                output.append(contentsOf: data[markerStart..<segmentEnd])
+            let dataStart = index + 2
+            let dataLength = segmentLength - 2
+            let isJFIF = marker == 0xe0 && dataLength == 14 &&
+                data[dataStart] == 0x4a && data[dataStart + 1] == 0x46 &&
+                data[dataStart + 2] == 0x49 && data[dataStart + 3] == 0x46 &&
+                data[dataStart + 4] == 0x00 &&
+                data[dataStart + 5] == 0x01 &&
+                data[dataStart + 7] <= 0x02 &&
+                data[dataStart + 12] == 0x00 &&
+                data[dataStart + 13] == 0x00
+            let forbidden = marker == 0xfe ||
+                (marker == 0xe0 && !isJFIF) ||
+                (0xe1...0xef).contains(marker)
+            containsForbidden = containsForbidden || forbidden
+            if !forbidden, canonicalOutput != nil {
+                canonicalOutput!.append(contentsOf: data[markerStart..<segmentEnd])
             }
             index = segmentEnd
 
             if marker == 0xda {
-                output.append(contentsOf: data[index...])
-                return output
+                insideScan = true
             }
         }
         throw ProductImageError.encodeFailed

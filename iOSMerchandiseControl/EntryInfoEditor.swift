@@ -18,6 +18,9 @@ struct EntryInfoEditor: View {
     @State private var draftTitle: String = ""
     @State private var draftSupplier: String = ""
     @State private var draftCategory: String = ""
+    @State private var initialTitle: String = ""
+    @State private var initialSupplier: String = ""
+    @State private var initialCategory: String = ""
 
     @State private var showAllSuppliersSheet = false
     @State private var showAllCategoriesSheet = false
@@ -127,6 +130,9 @@ struct EntryInfoEditor: View {
                 draftTitle = entry.title
                 draftSupplier = entry.supplier
                 draftCategory = entry.category
+                initialTitle = entry.title
+                initialSupplier = entry.supplier
+                initialCategory = entry.category
             }
             .sheet(isPresented: $showAllSuppliersSheet) {
                 NamePickerSheet(
@@ -150,74 +156,161 @@ struct EntryInfoEditor: View {
         let newTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let newSupplier = draftSupplier.trimmingCharacters(in: .whitespacesAndNewlines)
         let newCategory = draftCategory.trimmingCharacters(in: .whitespacesAndNewlines)
-        let changedFields = historyChangedFields(
+        let pendingOwnerUserID = supabaseAuthViewModel.isSignedIn
+            ? supabaseAuthViewModel.sessionInfo?.userID
+            : nil
+        let entryID = entry.persistentModelID
+        let userChangedFields = historyChangedFields(
+            oldTitle: initialTitle,
+            oldSupplier: initialSupplier,
+            oldCategory: initialCategory,
             newTitle: newTitle,
             newSupplier: newSupplier,
             newCategory: newCategory
         )
+        do {
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: modelContext.container,
+                ownerUserID: pendingOwnerUserID
+            ) { freshContext in
+                let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
+                    HistoryEntry.self,
+                    id: entryID,
+                    in: freshContext
+                )
+                let remoteChangedFields = historyChangedFields(
+                    oldTitle: initialTitle,
+                    oldSupplier: initialSupplier,
+                    oldCategory: initialCategory,
+                    newTitle: freshEntry.title,
+                    newSupplier: freshEntry.supplier,
+                    newCategory: freshEntry.category
+                )
+                guard Task126ConflictResolver.resolve(
+                    localChangedFields: userChangedFields,
+                    remoteChangedFields: remoteChangedFields,
+                    remoteDeleted: freshEntry.remoteDeletedAt != nil
+                ) == .autoMerge else {
+                    throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+                }
 
-        entry.title = newTitle
-        entry.supplier = newSupplier
-        entry.category = newCategory
+                if userChangedFields.contains("title") { freshEntry.title = newTitle }
+                if userChangedFields.contains("supplier") { freshEntry.supplier = newSupplier }
+                if userChangedFields.contains("category") { freshEntry.category = newCategory }
 
-        // Se l’utente inserisce un nuovo fornitore/categoria qui,
-        // lo “promuoviamo” anche nelle tabelle Supplier/ProductCategory (per i suggerimenti futuri)
-        if !newSupplier.isEmpty { _ = findOrCreateSupplier(named: newSupplier) }
-        if !newCategory.isEmpty { _ = findOrCreateCategory(named: newCategory) }
+                let accumulator = LocalPendingChangeAccumulator(
+                    context: freshContext,
+                    ownerUserID: pendingOwnerUserID
+                )
 
-        if !changedFields.isEmpty {
-            recordHistorySessionPending(changedFields: changedFields)
-        }
+                // Se l’utente inserisce un nuovo fornitore/categoria qui,
+                // lo “promuoviamo” anche nelle tabelle Supplier/ProductCategory (per i suggerimenti futuri).
+                // La creazione e il relativo pending devono far parte dello stesso commit della sessione.
+                if userChangedFields.contains("supplier"), !newSupplier.isEmpty {
+                    let resolved = try findOrCreateSupplier(named: newSupplier, context: freshContext)
+                    if resolved.created {
+                        try accumulator.recordSupplierChange(
+                            supplier: resolved.entity,
+                            operation: .create,
+                            origin: .manualCatalogSave
+                        )
+                    }
+                }
+                if userChangedFields.contains("category"), !newCategory.isEmpty {
+                    let resolved = try findOrCreateCategory(named: newCategory, context: freshContext)
+                    if resolved.created {
+                        try accumulator.recordCategoryChange(
+                            category: resolved.entity,
+                            operation: .create,
+                            origin: .manualCatalogSave
+                        )
+                    }
+                }
 
-        try? modelContext.save()
-        dismiss()
+                if !userChangedFields.isEmpty {
+                    try recordHistorySessionPending(
+                        entry: freshEntry,
+                        accumulator: accumulator,
+                        changedFields: userChangedFields
+                    )
+                }
+
+                try freshContext.save()
+            }
+            _ = try Task126OwnerStoreGate.requireLocalModel(
+                HistoryEntry.self,
+                id: entryID,
+                in: modelContext
+            )
+            dismiss()
+        } catch {}
     }
 
     private func historyChangedFields(
+        oldTitle: String,
+        oldSupplier: String,
+        oldCategory: String,
         newTitle: String,
         newSupplier: String,
         newCategory: String
     ) -> [String] {
         var fields: [String] = []
-        if entry.title != newTitle { fields.append("title") }
-        if entry.supplier != newSupplier { fields.append("supplier") }
-        if entry.category != newCategory { fields.append("category") }
+        if oldTitle != newTitle { fields.append("title") }
+        if oldSupplier != newSupplier { fields.append("supplier") }
+        if oldCategory != newCategory { fields.append("category") }
         return fields
     }
 
-    private func recordHistorySessionPending(changedFields: [String]) {
+    private func recordHistorySessionPending(
+        entry: HistoryEntry,
+        accumulator: LocalPendingChangeAccumulator,
+        changedFields: [String]
+    ) throws {
         entry.markHistorySessionLocalMutation()
-        do {
-            _ = try LocalPendingChangeAccumulator(
-                context: modelContext,
-                ownerUserID: supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
-            ).recordHistorySessionChange(
-                entry: entry,
-                operation: .upsert,
-                changedFields: changedFields
-            )
-        } catch {
-            #if DEBUG
-            debugPrint("[HistorySession] pending record failed:", error)
-            #endif
-        }
+        _ = try accumulator.recordHistorySessionChange(
+            entry: entry,
+            operation: .upsert,
+            changedFields: changedFields
+        )
     }
 
     // MARK: - DB helpers (replica la logica di ExcelSessionViewModel)
-    private func findOrCreateSupplier(named name: String) -> Supplier {
-        let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == name })
-        if let existing = try? modelContext.fetch(descriptor).first { return existing }
+    private func findOrCreateSupplier(
+        named name: String,
+        context: ModelContext
+    ) throws -> (entity: Supplier, created: Bool) {
+        let key = ProductImportCore.normalizedRelationKey(name)
+        let matches = try context.fetch(FetchDescriptor<Supplier>()).filter {
+            ProductImportCore.normalizedRelationKey($0.name) == key
+        }
+        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        if let existing = matches.first {
+            return (existing, false)
+        }
         let supplier = Supplier(name: name)
-        modelContext.insert(supplier)
-        return supplier
+        context.insert(supplier)
+        return (supplier, true)
     }
 
-    private func findOrCreateCategory(named name: String) -> ProductCategory {
-        let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == name })
-        if let existing = try? modelContext.fetch(descriptor).first { return existing }
+    private func findOrCreateCategory(
+        named name: String,
+        context: ModelContext
+    ) throws -> (entity: ProductCategory, created: Bool) {
+        let key = ProductImportCore.normalizedRelationKey(name)
+        let matches = try context.fetch(FetchDescriptor<ProductCategory>()).filter {
+            ProductImportCore.normalizedRelationKey($0.name) == key
+        }
+        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
+            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
+        }
+        if let existing = matches.first {
+            return (existing, false)
+        }
         let category = ProductCategory(name: name)
-        modelContext.insert(category)
-        return category
+        context.insert(category)
+        return (category, true)
     }
 
     // MARK: - “autocomplete” (stile PreGenerate)

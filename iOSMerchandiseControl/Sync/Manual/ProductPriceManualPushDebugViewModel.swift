@@ -257,7 +257,8 @@ final class ProductPriceManualPushDebugViewModel: ObservableObject {
                     insertedCount: insertedCount,
                     verification: verification,
                     fingerprint: snapshot.fingerprint,
-                    confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
+                    confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot),
+                    confirmedProductIDs: Self.confirmedProductIDs(for: verification, snapshot: snapshot)
                 )
                 self.state = self.terminalState(for: result)
                 self.task = nil
@@ -376,6 +377,15 @@ final class ProductPriceManualPushDebugViewModel: ObservableObject {
     ) -> [UUID] {
         guard case .exactMatch = verification else { return [] }
         return snapshot.payloads.map(\.id)
+    }
+
+    private static func confirmedProductIDs(
+        for verification: ProductPriceManualPushVerificationResult,
+        snapshot: ProductPriceManualPushSnapshot
+    ) -> [UUID] {
+        guard case .exactMatch = verification else { return [] }
+        return Array(Set(snapshot.payloads.map(\.productID)))
+            .sorted { $0.uuidString < $1.uuidString }
     }
 }
 #endif

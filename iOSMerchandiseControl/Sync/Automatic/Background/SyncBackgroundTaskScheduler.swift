@@ -51,6 +51,17 @@ final class SyncBackgroundTaskScheduler: SyncBackgroundTaskScheduling {
     }
 
     func schedule(reason: SyncBackgroundScheduleReason) {
+        guard isRegistered else {
+            defaults.set(reason.rawValue, forKey: "sync.runtime.background.lastScheduleReason")
+            defaults.set(Date().timeIntervalSince1970, forKey: "sync.runtime.background.lastScheduleFailedAt")
+            defaults.set(false, forKey: "sync.runtime.background.lastScheduleSucceeded")
+            defaults.set(
+                "background_not_registered",
+                forKey: "sync.runtime.background.lastScheduleError"
+            )
+            return
+        }
+
         let request = BGAppRefreshTaskRequest(identifier: SyncBackgroundTaskConstants.appRefreshIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         do {
@@ -119,7 +130,25 @@ nonisolated enum SyncBackgroundTaskRunner {
                 return false
             }
 
-            let modelContainer = try makeModelContainer()
+            // Recovery and replacement are foreground-only transactions. A
+            // background launch must never read/push the old active generation
+            // through a pending target journal.
+            if AccountBindingStore().hasPendingReplacementJournal {
+                UserDefaults.standard.set("recovery_required", forKey: "sync.runtime.background.lastOutcome")
+                return false
+            }
+
+            let (modelContainer, generationLease) = try await MainActor.run {
+                let controller = SyncStoreGenerationController.shared
+                guard controller.loadFailureCode == nil else {
+                    throw SyncStoreGenerationError.unavailable
+                }
+                let container = controller.modelContainer
+                guard let lease = controller.captureLease(for: container) else {
+                    throw SyncStoreGenerationError.staleGenerationLease
+                }
+                return (container, lease)
+            }
             let transport = await MainActor.run {
                 SupabaseTransportClient(clientProvider: provider)
             }
@@ -148,25 +177,25 @@ nonisolated enum SyncBackgroundTaskRunner {
                     modelContainer: modelContainer,
                     remote: SyncEventRemoteSupabaseAdapter(remote: transport)
                 ),
-                recoverySnapshotPullProvider: AutomaticRecoverySnapshotPullService(
-                    modelContainer: modelContainer,
-                    previewService: SupabasePullPreviewService(
-                        inventoryService: RecoveryRemoteSupabaseAdapter(remote: transport),
-                        pageSize: 1_000,
-                        catalogRowBudget: nil,
-                        productPricePreviewSampleLimit: 1_000
-                    ),
-                    productPriceApplyService: SupabaseProductPriceApplyService(
-                        fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: transport),
-                        fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: false)
-                    ),
-                    historyRemote: HistorySessionRemoteSupabaseAdapter(remote: transport),
-                    syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: transport)
+                recoverySnapshotPullProvider: AtomicGenerationRecoverySnapshotPullService(
+                    storeGenerationController: await MainActor.run {
+                        SyncStoreGenerationController.shared
+                    },
+                    recoveryRemote: ShopSyncRecoveryRemoteAdapter(
+                        transport: SupabaseShopSyncRecoveryRPCTransport(remote: transport)
+                    )
                 ),
                 activityRegistrationProvider: SyncActivityRegistrationService(
                     modelContainer: modelContainer,
                     recorder: recorder
-                )
+                ),
+                singleFlight: .processShared,
+                cancellationPolicy: .processShared,
+                runAdmissionValidator: {
+                    try await MainActor.run {
+                        try SyncStoreGenerationController.shared.validateLease(generationLease)
+                    }
+                }
             )
             let decisionInputProvider = await MainActor.run {
                 SyncDecisionInputProvider(
@@ -202,19 +231,4 @@ nonisolated enum SyncBackgroundTaskRunner {
         }
     }
 
-    private static func makeModelContainer() throws -> ModelContainer {
-        let schema = Schema([
-            Product.self,
-            Supplier.self,
-            ProductCategory.self,
-            HistoryEntry.self,
-            ProductPrice.self,
-            SupabaseCatalogBaselineRun.self,
-            SupabaseCatalogBaselineRecord.self,
-            SyncEventOutboxEntry.self,
-            LocalPendingChange.self
-        ])
-        let configuration = ModelConfiguration(schema: schema)
-        return try ModelContainer(for: schema, configurations: [configuration])
-    }
 }

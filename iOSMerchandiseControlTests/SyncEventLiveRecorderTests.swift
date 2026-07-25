@@ -20,18 +20,132 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         let lastCall = await transport.lastCall()
         XCTAssertEqual(callCount, 1)
         let call = try XCTUnwrap(lastCall)
-        XCTAssertEqual(call.functionName, "record_sync_event")
+        XCTAssertEqual(call.functionName, "record_sync_event_v6")
         XCTAssertEqual(call.params.pDomain, "catalog")
         XCTAssertEqual(call.params.pEventType, "catalog_changed")
         XCTAssertEqual(call.params.pChangedCount, 1)
         XCTAssertEqual(call.params.pClientEventID, clientEventID)
         XCTAssertEqual(call.params.pSource, "ios")
         XCTAssertEqual(call.params.pSourceDeviceID, "device-hash")
-        XCTAssertEqual(call.params.pBatchID, UUID(uuidString: "00000000-0000-0000-0000-000000000058"))
+        XCTAssertEqual(call.params.pBatchID, UUID(uuidString: "00000000-0000-4000-8000-000000000058"))
         XCTAssertNil(call.params.pStoreID)
         XCTAssertNil(call.params.pShopID)
-        XCTAssertEqual(call.params.pEntityIDs, .object(["product_ids": .array([])]))
+        XCTAssertEqual(
+            call.params.pEntityIDs,
+            .object([
+                "product_ids": .array([
+                    .string("00000000-0000-4000-8000-000000000058")
+                ])
+            ])
+        )
         XCTAssertEqual(call.params.pMetadata, .object(["source": .string("ios")]))
+    }
+
+    func testMixedVersionFallsBackOnceForLegacyCompatiblePersonalRequest() async throws {
+        let exactID = 9_007_199_254_740_993
+        let numericLegacyRow = fixtureRow(id: exactID).replacingOccurrences(
+            of: #""id": "\#(exactID)""#,
+            with: #""id": \#(exactID)"#
+        )
+        let transport = FakeRPCTransport([
+            .transportError(.postgrest(
+                code: "PGRST202",
+                message: "record_sync_event_v6 is unavailable"
+            )),
+            .json(numericLegacyRow)
+        ])
+        let recorder = makeRecorder(transport: transport)
+
+        let result = try await recorder.record(validRequest())
+
+        XCTAssertEqual(result.row.id, Int64(exactID))
+        let calls = await transport.allCalls()
+        XCTAssertEqual(
+            calls.map(\.functionName),
+            ["record_sync_event_v6", "record_sync_event"]
+        )
+        let legacy = try XCTUnwrap(
+            SyncEventRPCRequestMapper.legacyParametersIfCompatible(
+                calls[0].params,
+                hasAutomaticShopScope: false
+            )
+        )
+        let legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as? [String: Any]
+        )
+        XCTAssertNil(legacyObject["p_shop_id"])
+        XCTAssertEqual(legacyObject["p_domain"] as? String, "catalog")
+    }
+
+    func testMixedVersionShopScopedRequestFailsClosedWithoutLegacyRetry() async {
+        let transport = FakeRPCTransport([
+            .transportError(.postgrest(
+                code: "PGRST202",
+                message: "record_sync_event_v6 is unavailable"
+            )),
+            .json(fixtureRow(id: 2, shopID: shopID))
+        ])
+        let recorder = makeRecorder(transport: transport)
+
+        await assertRecordError(
+            try await recorder.record(validRequest(shopID: shopID)),
+            kind: .schema,
+            code: "PGRST202"
+        )
+
+        let calls = await transport.allCalls()
+        XCTAssertEqual(calls.map(\.functionName), ["record_sync_event_v6"])
+    }
+
+    func testInvalidEntityNilOrV7UUIDFailsLocalValidationBeforeV6Call() async {
+        let incompatibleEntityIDs: [SyncEventJSONValue] = [
+            .object(["product_ids": .array([
+                .string("00000000-0000-0000-0000-000000000000")
+            ])]),
+            .object(["product_ids": .array([
+                .string("01910f3c-7b2a-7e36-8d4a-67a1f9b04c20")
+            ])])
+        ]
+        for entityIDs in incompatibleEntityIDs {
+            let transport = FakeRPCTransport(.transportError(.postgrest(
+                code: "42883",
+                message: "record_sync_event_v6 is unavailable"
+            )))
+            let recorder = makeRecorder(transport: transport)
+
+            await assertRecordError(
+                try await recorder.record(validRequest(entityIDs: entityIDs)),
+                kind: .contract,
+                code: "entity_ids_uuid"
+            )
+            let callCount = await transport.callCount()
+            XCTAssertEqual(callCount, 0)
+        }
+    }
+
+    func testMixedVersionNilOrV7BatchUUIDCallsV6ButNeverLegacyWriter() async {
+        let incompatibleBatchIDs = [
+            UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
+            UUID(uuidString: "01910f3c-7b2a-7e36-8d4a-67a1f9b04c20")!
+        ]
+        for batchID in incompatibleBatchIDs {
+            let transport = FakeRPCTransport([
+                .transportError(.postgrest(
+                    code: "42883",
+                    message: "record_sync_event_v6 is unavailable"
+                )),
+                .json(fixtureRow(id: 2))
+            ])
+            let recorder = makeRecorder(transport: transport)
+
+            await assertRecordError(
+                try await recorder.record(validRequest(batchID: batchID)),
+                kind: .schema,
+                code: "42883"
+            )
+            let calls = await transport.allCalls()
+            XCTAssertEqual(calls.map(\.functionName), ["record_sync_event_v6"])
+        }
     }
 
     func testShopScopedRequestMapsShopIDToRPCParamsAndResponse() async throws {
@@ -60,7 +174,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
             validRequest(
                 eventType: "catalog_tombstone",
                 entityIDs: .object(["product_ids": .array([.string(productID.uuidString)])]),
-                metadata: .object(["product_tombstone_count": .number(1)])
+                metadata: .object(["source": .string("ios")])
             )
         )
 
@@ -74,7 +188,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(call.params.pEventType, "catalog_tombstone")
         XCTAssertEqual(call.params.pChangedCount, 1)
         XCTAssertEqual(call.params.pEntityIDs, .object(["product_ids": .array([.string(productID.uuidString)])]))
-        XCTAssertEqual(call.params.pMetadata, .object(["product_tombstone_count": .number(1)]))
+        XCTAssertEqual(call.params.pMetadata, .object(["source": .string("ios")]))
     }
 
     func testChangedCountAboveContractLimitReturnsContractWithoutTransportCall() async {
@@ -82,7 +196,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         let recorder = makeRecorder(transport: transport)
 
         await assertRecordError(
-            try await recorder.record(validRequest(changedCount: 100_001)),
+            try await recorder.record(validRequest(changedCount: 251)),
             kind: .contract,
             code: "changed_count_limit"
         )
@@ -160,6 +274,69 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(callCount, 0)
     }
 
+    func testAutomaticScopeRejectsDifferentSessionOwnerBeforeTransport() async throws {
+        let fixture = try makeAutomaticScopeFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let transport = FakeRPCTransport(
+            .json(fixtureRow(id: 158, shopID: fixture.scope.shopID))
+        )
+        let recorder = makeRecorder(
+            session: SyncEventLiveRecorderSession(userID: UUID(), isExpired: false),
+            transport: transport
+        )
+
+        await assertRecordError(
+            try await Task126OwnerStoreGate.withAutomaticScope(fixture.scope) {
+                try await recorder.record(validRequest(shopID: fixture.scope.shopID))
+            },
+            kind: .auth,
+            code: "automatic_scope_mismatch"
+        )
+        let callCount = await transport.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testAutomaticScopeRejectsDifferentResponseOwner() async throws {
+        let fixture = try makeAutomaticScopeFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let transport = FakeRPCTransport(
+            .json(fixtureRow(id: 160, ownerID: UUID(), shopID: fixture.scope.shopID))
+        )
+        let recorder = makeRecorder(transport: transport)
+
+        await assertRecordError(
+            try await Task126OwnerStoreGate.withAutomaticScope(fixture.scope) {
+                try await recorder.record(validRequest(shopID: fixture.scope.shopID))
+            },
+            kind: .auth,
+            code: "automatic_scope_mismatch"
+        )
+        let callCount = await transport.callCount()
+        XCTAssertEqual(callCount, 1)
+    }
+
+    func testAutomaticScopeRejectsArrayWithForeignSecondRow() async throws {
+        let fixture = try makeAutomaticScopeFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let transport = FakeRPCTransport(.json("""
+        [
+          \(fixtureRow(id: 161, shopID: fixture.scope.shopID)),
+          \(fixtureRow(id: 162, ownerID: UUID(), shopID: fixture.scope.shopID))
+        ]
+        """))
+        let recorder = makeRecorder(transport: transport)
+
+        await assertRecordError(
+            try await Task126OwnerStoreGate.withAutomaticScope(fixture.scope) {
+                try await recorder.record(validRequest(shopID: fixture.scope.shopID))
+            },
+            kind: .schema,
+            code: "unexpected_row_count"
+        )
+        let callCount = await transport.callCount()
+        XCTAssertEqual(callCount, 1)
+    }
+
     func testObjectResponseRecordsRow() async throws {
         let recorder = makeRecorder(transport: FakeRPCTransport(.json(fixtureRow(id: 6))))
 
@@ -172,17 +349,31 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(row.clientEventID, clientEventID)
     }
 
-    func testArrayResponseCoherentRecordsFirstRow() async throws {
+    func testSingleElementArrayResponseRecordsRow() async throws {
         let recorder = makeRecorder(transport: FakeRPCTransport(.json("""
         [
-          \(fixtureRow(id: 7)),
-          \(fixtureRow(id: 8))
+          \(fixtureRow(id: 7))
         ]
         """)))
 
         let result = try await recorder.record(validRequest())
 
         XCTAssertEqual(result.row.id, 7)
+    }
+
+    func testMultiRowResponseReturnsSchemaInsteadOfConsumingFirstRow() async {
+        let recorder = makeRecorder(transport: FakeRPCTransport(.json("""
+        [
+          \(fixtureRow(id: 8)),
+          \(fixtureRow(id: 9))
+        ]
+        """)))
+
+        await assertRecordError(
+            try await recorder.record(validRequest()),
+            kind: .schema,
+            code: "unexpected_row_count"
+        )
     }
 
     func testResponseExtraFieldsAreIgnored() async throws {
@@ -205,7 +396,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         )
     }
 
-    func testMultiRowMismatchMissingOrNullClientEventIDReturnsSchema() async {
+    func testMultiRowMismatchMissingOrNullClientEventIDReturnsUnexpectedRowCount() async {
         let payloads = [
             """
             [
@@ -232,7 +423,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
             await assertRecordError(
                 try await recorder.record(validRequest()),
                 kind: .schema,
-                code: "client_event_id_mismatch"
+                code: "unexpected_row_count"
             )
         }
     }
@@ -484,10 +675,15 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         domain: String = "catalog",
         eventType: String = "catalog_changed",
         changedCount: Int = 1,
-        entityIDs: SyncEventJSONValue = .object(["product_ids": .array([])]),
+        entityIDs: SyncEventJSONValue = .object([
+            "product_ids": .array([
+                .string("00000000-0000-4000-8000-000000000058")
+            ])
+        ]),
         metadata: SyncEventJSONValue = .object(["source": .string("ios")]),
         shopID: UUID? = nil,
         sourceDeviceID: String? = "device-hash",
+        batchID: UUID? = UUID(uuidString: "00000000-0000-4000-8000-000000000058"),
         clientEventID: String? = nil
     ) -> SyncEventRecordRequest {
         SyncEventRecordRequest(
@@ -499,7 +695,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
             shopID: shopID,
             source: "ios",
             sourceDeviceID: sourceDeviceID,
-            batchID: UUID(uuidString: "00000000-0000-0000-0000-000000000058"),
+            batchID: batchID,
             clientEventID: clientEventID ?? self.clientEventID
         )
     }
@@ -533,6 +729,8 @@ final class SyncEventLiveRecorderTests: XCTestCase {
     private func fixtureRow(
         id: Int,
         clientEventIDShape: ClientEventIDShape? = nil,
+        ownerID: UUID? = nil,
+        shopID: UUID? = nil,
         extraFields: String = ""
     ) -> String {
         let shape = clientEventIDShape ?? .value(clientEventID)
@@ -546,15 +744,18 @@ final class SyncEventLiveRecorderTests: XCTestCase {
             clientEventField = #""client_event_id": null,"#
         }
 
+        let resolvedOwnerID = ownerID ?? self.ownerID
+        let shopField = shopID.map { #""shop_id": "\#($0.uuidString.lowercased())","# } ?? ""
         return """
         {
-          "id": \(id),
-          "owner_user_id": "\(ownerID.uuidString.lowercased())",
+          "id": "\(id)",
+          "owner_user_id": "\(resolvedOwnerID.uuidString.lowercased())",
+          \(shopField)
           "domain": "catalog",
           "event_type": "catalog_changed",
           "source": "ios",
           "source_device_id": "device-hash",
-          "batch_id": "00000000-0000-0000-0000-000000000058",
+          "batch_id": "00000000-0000-4000-8000-000000000058",
           \(clientEventField)
           "changed_count": 1,
           "entity_ids": {
@@ -568,6 +769,37 @@ final class SyncEventLiveRecorderTests: XCTestCase {
           }
         }
         """
+    }
+
+    private func makeAutomaticScopeFixture() throws -> (
+        suiteName: String,
+        defaults: UserDefaults,
+        scope: Task126VerifiedOwnerStoreScope
+    ) {
+        let suiteName = "SyncEventLiveRecorderTests.automaticScope.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        let accountHash = AccountBindingStore.accountHash(for: ownerID)
+        let shop = SelectedShop(
+            shopID: shopID,
+            code: "TASK139",
+            name: "TASK-139 recorder fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        selectedStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedStore.save(shop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: shop.localStoreIdentity
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: ownerID,
+            defaults: defaults
+        )
+        return (suiteName, defaults, scope)
     }
 
     private func productionSource(relativePath: String) throws -> String {
@@ -632,11 +864,16 @@ private actor FakeRPCTransport: SyncEventRPCTransport {
         let params: SyncEventRPCRequestParameters
     }
 
-    private let response: Response
+    private let responses: [Response]
+    private var responseIndex = 0
     private var calls: [Call] = []
 
     init(_ response: Response) {
-        self.response = response
+        self.responses = [response]
+    }
+
+    init(_ responses: [Response]) {
+        self.responses = responses
     }
 
     func call(
@@ -644,6 +881,14 @@ private actor FakeRPCTransport: SyncEventRPCTransport {
         params: SyncEventRPCRequestParameters
     ) async throws -> Data {
         calls.append(Call(functionName: functionName, params: params))
+        guard !responses.isEmpty else {
+            throw SyncEventRPCTransportError.unknown(
+                code: "fixture_empty",
+                message: "No fake RPC response configured."
+            )
+        }
+        let response = responses[min(responseIndex, responses.count - 1)]
+        responseIndex += 1
         switch response {
         case .json(let json):
             return Data(json.utf8)
@@ -662,5 +907,9 @@ private actor FakeRPCTransport: SyncEventRPCTransport {
 
     func lastCall() -> Call? {
         calls.last
+    }
+
+    func allCalls() -> [Call] {
+        calls
     }
 }

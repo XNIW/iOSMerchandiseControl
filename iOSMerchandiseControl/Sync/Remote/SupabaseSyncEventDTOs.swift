@@ -51,7 +51,7 @@ nonisolated indirect enum SyncEventJSONValue: Codable, Sendable, Equatable {
     }
 }
 
-nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equatable {
+nonisolated struct RemoteSyncEventRow: Codable, Sendable, Identifiable, Equatable {
     let id: Int64
     let ownerUserID: UUID
     let shopID: UUID?
@@ -60,10 +60,13 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
     let eventType: String
     let source: String?
     let sourceDeviceID: String?
+    let sourceDeviceKey: String?
     let batchID: UUID?
     let clientEventID: String?
+    let clientEventKey: String?
     let changedCount: Int
     let entityIDs: SyncEventJSONValue?
+    let requiresFullRecovery: Bool
     let createdAt: Date
     let expiresAt: Date?
     let metadata: SyncEventJSONValue
@@ -77,10 +80,13 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
         case eventType = "event_type"
         case source
         case sourceDeviceID = "source_device_id"
+        case sourceDeviceKey = "source_device_key"
         case batchID = "batch_id"
         case clientEventID = "client_event_id"
+        case clientEventKey = "client_event_key"
         case changedCount = "changed_count"
         case entityIDs = "entity_ids"
+        case requiresFullRecovery = "requires_full_recovery"
         case createdAt = "created_at"
         case expiresAt = "expires_at"
         case metadata
@@ -89,7 +95,19 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        id = try container.decode(Int64.self, forKey: .id)
+        // V6 transports every bigint cursor as canonical decimal text.  Do
+        // not accept a JSON number here: JavaScript/PostgREST callers can
+        // otherwise round values above 2^53 before this bounded Int64 bridge.
+        let wireID = try container.decode(String.self, forKey: .id)
+        do {
+            id = try ShopSyncRecoveryCanonical.eventID(wireID)
+        } catch {
+            throw DecodingError.dataCorruptedError(
+                forKey: .id,
+                in: container,
+                debugDescription: "Sync event id must be a canonical decimal string."
+            )
+        }
         ownerUserID = try container.decode(UUID.self, forKey: .ownerUserID)
         shopID = try container.decodeIfPresent(UUID.self, forKey: .shopID)
         storeID = try container.decodeIfPresent(UUID.self, forKey: .storeID)
@@ -97,13 +115,47 @@ nonisolated struct RemoteSyncEventRow: Decodable, Sendable, Identifiable, Equata
         eventType = try container.decode(String.self, forKey: .eventType)
         source = try container.decodeIfPresent(String.self, forKey: .source)
         sourceDeviceID = try container.decodeIfPresent(String.self, forKey: .sourceDeviceID)
+        sourceDeviceKey = try container.decodeIfPresent(String.self, forKey: .sourceDeviceKey)
         batchID = try container.decodeIfPresent(UUID.self, forKey: .batchID)
         clientEventID = try container.decodeIfPresent(String.self, forKey: .clientEventID)
+        clientEventKey = try container.decodeIfPresent(String.self, forKey: .clientEventKey)
         changedCount = try container.decode(Int.self, forKey: .changedCount)
         entityIDs = try container.decodeIfPresent(SyncEventJSONValue.self, forKey: .entityIDs)
+        requiresFullRecovery = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .requiresFullRecovery
+        ) ?? false
         createdAt = try Self.decodeDate(container, key: .createdAt)
         expiresAt = try Self.decodeOptionalDate(container, key: .expiresAt)
         metadata = try container.decodeIfPresent(SyncEventJSONValue.self, forKey: .metadata) ?? .object([:])
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(String(id), forKey: .id)
+        try container.encode(ownerUserID, forKey: .ownerUserID)
+        try container.encodeIfPresent(shopID, forKey: .shopID)
+        try container.encodeIfPresent(storeID, forKey: .storeID)
+        try container.encode(domain, forKey: .domain)
+        try container.encode(eventType, forKey: .eventType)
+        try container.encodeIfPresent(source, forKey: .source)
+        try container.encodeIfPresent(sourceDeviceID, forKey: .sourceDeviceID)
+        try container.encodeIfPresent(sourceDeviceKey, forKey: .sourceDeviceKey)
+        try container.encodeIfPresent(batchID, forKey: .batchID)
+        try container.encodeIfPresent(clientEventID, forKey: .clientEventID)
+        try container.encodeIfPresent(clientEventKey, forKey: .clientEventKey)
+        try container.encode(changedCount, forKey: .changedCount)
+        try container.encodeIfPresent(entityIDs, forKey: .entityIDs)
+        try container.encode(requiresFullRecovery, forKey: .requiresFullRecovery)
+        try container.encode(Self.v6DateString(createdAt), forKey: .createdAt)
+        try container.encodeIfPresent(expiresAt.map(Self.v6DateString), forKey: .expiresAt)
+        try container.encode(metadata, forKey: .metadata)
+    }
+
+    private static func v6DateString(_ value: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: value)
     }
 
     private static func decodeDate(

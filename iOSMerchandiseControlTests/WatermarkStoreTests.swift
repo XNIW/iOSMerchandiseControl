@@ -73,4 +73,82 @@ final class WatermarkStoreTests: XCTestCase {
 
         XCTAssertEqual(store.watermark(for: scope), 0)
     }
+
+    func testAuthoritativeRecoveryReplacesStaleCursorFromDiscardedGeneration() {
+        let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = WatermarkStore(defaults: defaults)
+        let scope = WatermarkStore.Scope(
+            accountHash: "account-a",
+            storeIdentity: LocalStoreIdentity(rawValue: "store-a")
+        )
+        let recoveredGeneration = UUID()
+        store.save(900, for: scope)
+
+        XCTAssertTrue(store.saveAuthoritativeRecoveryCheckpoint(
+            41,
+            generationID: recoveredGeneration,
+            for: scope
+        ))
+
+        XCTAssertEqual(store.watermark(for: scope), 41)
+        XCTAssertEqual(defaults.object(forKey: store.key(for: scope)) as? Int, 41)
+    }
+
+    func testTerminalRepairPreservesNewerCursorForSameGeneration() {
+        let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = WatermarkStore(defaults: defaults)
+        let scope = WatermarkStore.Scope(
+            accountHash: "account-a",
+            storeIdentity: LocalStoreIdentity(rawValue: "store-a")
+        )
+        let generationID = UUID()
+        XCTAssertTrue(store.saveAuthoritativeRecoveryCheckpoint(
+            41,
+            generationID: generationID,
+            for: scope
+        ))
+        store.save(55, for: scope)
+
+        XCTAssertTrue(store.restoreAuthoritativeRecoveryCheckpoint(
+            41,
+            generationID: generationID,
+            for: scope
+        ))
+
+        XCTAssertEqual(store.watermark(for: scope), 55)
+        XCTAssertEqual(defaults.object(forKey: store.key(for: scope)) as? Int, 55)
+    }
+
+    func testTerminalRepairRestoresMissingMirrorAfterRelaunch() {
+        let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let scope = WatermarkStore.Scope(
+            accountHash: "account-a",
+            storeIdentity: LocalStoreIdentity(rawValue: "store-a")
+        )
+        let generationID = UUID()
+        let firstLaunch = WatermarkStore(defaults: defaults)
+        XCTAssertTrue(firstLaunch.saveAuthoritativeRecoveryCheckpoint(
+            41,
+            generationID: generationID,
+            for: scope
+        ))
+        defaults.removeObject(forKey: firstLaunch.key(for: scope))
+        XCTAssertNil(defaults.object(forKey: firstLaunch.key(for: scope)))
+
+        let relaunched = WatermarkStore(defaults: defaults)
+        XCTAssertTrue(relaunched.restoreAuthoritativeRecoveryCheckpoint(
+            41,
+            generationID: generationID,
+            for: scope
+        ))
+
+        XCTAssertEqual(relaunched.watermark(for: scope), 41)
+        XCTAssertEqual(defaults.object(forKey: relaunched.key(for: scope)) as? Int, 41)
+    }
 }

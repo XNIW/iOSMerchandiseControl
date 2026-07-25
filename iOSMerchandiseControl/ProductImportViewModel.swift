@@ -59,11 +59,15 @@ final class ProductImportViewModel: ObservableObject {
     func applyImport() {
         guard let analysis else { return }
         do {
-            try applyImportAnalysis(analysis)
-            try context.save()
+            try Task126OwnerStoreGate.withLocalMutationFence(
+                modelContainer: context.container,
+                ownerUserID: ownerUserID
+            ) { freshContext in
+                try applyImportAnalysis(analysis, context: freshContext)
+                try freshContext.save()
+            }
             lastError = nil
         } catch {
-            context.rollback()
             lastError = "Errore durante l'applicazione dell'import: \(error.localizedDescription)"
         }
     }
@@ -105,16 +109,30 @@ final class ProductImportViewModel: ObservableObject {
         )
     }
 
-    private func applyImportAnalysis(_ analysis: ProductImportAnalysisResult) throws {
+    private func applyImportAnalysis(
+        _ analysis: ProductImportAnalysisResult,
+        context: ModelContext
+    ) throws {
         let resolver = try ProductImportNamedEntityResolver(context: context)
         let accumulator = LocalPendingChangeAccumulator(
             context: context,
             ownerUserID: ownerUserID
         )
 
+        var insertedBarcodes = Set<String>()
         for draft in analysis.newProducts {
+            let barcode = draft.barcode
+            guard insertedBarcodes.insert(barcode).inserted else {
+                throw ProductImportApplyError.catalogChangedAfterAnalysis
+            }
+            let descriptor = FetchDescriptor<Product>(
+                predicate: #Predicate<Product> { $0.barcode == barcode }
+            )
+            guard try context.fetch(descriptor).isEmpty else {
+                throw ProductImportApplyError.catalogChangedAfterAnalysis
+            }
             var priceChanges: [ProductPrice] = []
-            let product = ProductImportCore.insertProduct(
+            let product = try ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
@@ -142,11 +160,20 @@ final class ProductImportViewModel: ObservableObject {
             )
 
             guard let product = try context.fetch(descriptor).first else {
-                continue
+                throw ProductImportApplyError.catalogChangedAfterAnalysis
             }
 
-            let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(update.old)
-            let priceChanges = ProductImportCore.applyUpdate(
+            let currentDraft = Self.makeDraft(product)
+            guard product.remoteDeletedAt == nil,
+                  update.old.barcode == currentDraft.barcode,
+                  ProductUpdateDraft.computeChangedFields(
+                    old: update.old,
+                    new: currentDraft
+                  ).isEmpty else {
+                throw ProductImportApplyError.catalogChangedAfterAnalysis
+            }
+            let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            let priceChanges = try ProductImportCore.applyUpdate(
                 update,
                 to: product,
                 in: context,
@@ -207,4 +234,22 @@ final class ProductImportViewModel: ObservableObject {
         "supplierName",
         "categoryName"
     ]
+
+    private static func makeDraft(_ product: Product) -> ProductDraft {
+        ProductDraft(
+            barcode: product.barcode,
+            itemNumber: product.itemNumber,
+            productName: product.productName,
+            secondProductName: product.secondProductName,
+            purchasePrice: product.purchasePrice,
+            retailPrice: product.retailPrice,
+            stockQuantity: product.stockQuantity,
+            supplierName: product.supplier?.name,
+            categoryName: product.category?.name
+        )
+    }
+}
+
+private enum ProductImportApplyError: Error {
+    case catalogChangedAfterAnalysis
 }

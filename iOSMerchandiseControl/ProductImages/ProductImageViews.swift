@@ -170,8 +170,13 @@ struct ProductImageTransferFile: Transferable, Sendable {
         FileRepresentation(importedContentType: .image) { received in
             let destination = FileManager.default.temporaryDirectory
                 .appendingPathComponent("task137-picker-\(UUID().uuidString.lowercased())")
-            try FileManager.default.copyItem(at: received.file, to: destination)
-            return ProductImageTransferFile(fileURL: destination)
+            do {
+                try FileManager.default.copyItem(at: received.file, to: destination)
+                return ProductImageTransferFile(fileURL: destination)
+            } catch {
+                try? FileManager.default.removeItem(at: destination)
+                throw error
+            }
         }
     }
 }
@@ -195,16 +200,26 @@ struct ProductImageCameraPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 
+    static func dismantleUIViewController(
+        _ uiViewController: UIImagePickerController,
+        coordinator: Coordinator
+    ) {
+        coordinator.cancelAndCleanUp()
+    }
+
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         private let parent: ProductImageCameraPicker
+        private var fallbackTask: Task<Void, Never>?
+        private var leasedTemporaryURL: URL?
+        private var isActive = true
+        private var didComplete = false
 
         init(parent: ProductImageCameraPicker) {
             self.parent = parent
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
-            parent.onCancel()
+            finishCancellation(picker: picker, notifyParent: true)
         }
 
         func imagePickerController(
@@ -213,46 +228,141 @@ struct ProductImageCameraPicker: UIViewControllerRepresentable {
         ) {
             if let sourceURL = info[.imageURL] as? URL,
                let destination = try? Self.copyToTemporaryFile(sourceURL) {
-                picker.dismiss(animated: true)
-                parent.onCapture(destination)
+                leaseTemporaryFile(destination)
+                finishCapture(picker: picker)
                 return
             }
             guard let image = info[.originalImage] as? UIImage else {
-                picker.dismiss(animated: true)
-                parent.onCancel()
+                finishCancellation(picker: picker, notifyParent: true)
                 return
             }
-            let parent = parent
-            Task.detached(priority: .userInitiated) {
-                guard let data = image.jpegData(compressionQuality: 1) else {
-                    await MainActor.run {
-                        picker.dismiss(animated: true)
-                        parent.onCancel()
-                    }
-                    return
-                }
-                let destination = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("task137-camera-\(UUID().uuidString.lowercased()).jpg")
+            fallbackTask?.cancel()
+            fallbackTask = Task { @MainActor [weak self, weak picker] in
+                guard let self else { return }
                 do {
-                    try data.write(to: destination, options: [.atomic])
-                    await MainActor.run {
-                        picker.dismiss(animated: true)
-                        parent.onCapture(destination)
+                    let destination = try await Self.writeBoundedCameraFallback(from: image)
+                    guard !Task.isCancelled,
+                          self.isActive,
+                          !self.didComplete,
+                          let picker else {
+                        try? FileManager.default.removeItem(at: destination)
+                        return
                     }
+                    self.leaseTemporaryFile(destination)
+                    self.finishCapture(picker: picker)
                 } catch {
-                    await MainActor.run {
-                        picker.dismiss(animated: true)
-                        parent.onCancel()
-                    }
+                    guard self.isActive, !self.didComplete, let picker else { return }
+                    self.finishCancellation(picker: picker, notifyParent: true)
                 }
             }
+        }
+
+        func leaseTemporaryFile(_ url: URL) {
+            if let leasedTemporaryURL, leasedTemporaryURL != url {
+                try? FileManager.default.removeItem(at: leasedTemporaryURL)
+            }
+            leasedTemporaryURL = url
+        }
+
+        func cancelAndCleanUp() {
+            isActive = false
+            fallbackTask?.cancel()
+            fallbackTask = nil
+            removeLeasedTemporaryFile()
+        }
+
+        private func finishCapture(picker: UIImagePickerController) {
+            guard isActive, !didComplete, let destination = leasedTemporaryURL else { return }
+            didComplete = true
+            isActive = false
+            fallbackTask = nil
+            leasedTemporaryURL = nil
+            picker.dismiss(animated: true)
+            parent.onCapture(destination)
+        }
+
+        private func finishCancellation(
+            picker: UIImagePickerController,
+            notifyParent: Bool
+        ) {
+            guard !didComplete else { return }
+            didComplete = true
+            isActive = false
+            fallbackTask?.cancel()
+            fallbackTask = nil
+            removeLeasedTemporaryFile()
+            picker.dismiss(animated: true)
+            if notifyParent {
+                parent.onCancel()
+            }
+        }
+
+        private func removeLeasedTemporaryFile() {
+            guard let leasedTemporaryURL else { return }
+            try? FileManager.default.removeItem(at: leasedTemporaryURL)
+            self.leasedTemporaryURL = nil
+        }
+
+        static func writeBoundedCameraFallback(from image: UIImage) async throws -> URL {
+            // UIImage is immutable after the picker callback and is transferred exactly once.
+            // The unchecked box keeps that ownership boundary explicit for Task.detached.
+            let transferredImage = ProductImageCameraImageTransfer(image)
+            let task = Task.detached(priority: .userInitiated) {
+                try autoreleasepool {
+                    try Task.checkCancellation()
+                    guard !Thread.isMainThread,
+                          let boundedImage = Self.boundedCameraImage(transferredImage.image) else {
+                        throw ProductImageError.decodeFailed
+                    }
+                    try Task.checkCancellation()
+                    return try ProductImageProcessor.writeBoundedCameraFallback(boundedImage)
+                }
+            }
+            return try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+        }
+
+        nonisolated static func boundedCameraImage(_ image: UIImage) -> CGImage? {
+            let sourceSize = image.size
+            let longestSide = max(sourceSize.width, sourceSize.height)
+            guard longestSide > 0 else { return nil }
+            let scale = min(1, CGFloat(ProductImageProcessor.mainMaximumSide) / longestSide)
+            let targetSize = CGSize(
+                width: max(1, (sourceSize.width * scale).rounded()),
+                height: max(1, (sourceSize.height * scale).rounded())
+            )
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            format.opaque = true
+            let rendered = UIGraphicsImageRenderer(size: targetSize, format: format).image { context in
+                UIColor.white.setFill()
+                context.fill(CGRect(origin: .zero, size: targetSize))
+                image.draw(in: CGRect(origin: .zero, size: targetSize))
+            }
+            return rendered.cgImage
         }
 
         private static func copyToTemporaryFile(_ sourceURL: URL) throws -> URL {
             let destination = FileManager.default.temporaryDirectory
                 .appendingPathComponent("task137-camera-\(UUID().uuidString.lowercased())")
-            try FileManager.default.copyItem(at: sourceURL, to: destination)
-            return destination
+            do {
+                try FileManager.default.copyItem(at: sourceURL, to: destination)
+                return destination
+            } catch {
+                try? FileManager.default.removeItem(at: destination)
+                throw error
+            }
         }
+    }
+}
+
+nonisolated private final class ProductImageCameraImageTransfer: @unchecked Sendable {
+    let image: UIImage
+
+    init(_ image: UIImage) {
+        self.image = image
     }
 }

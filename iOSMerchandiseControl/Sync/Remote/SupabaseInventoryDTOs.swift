@@ -156,10 +156,15 @@ nonisolated struct RemoteInventoryProductPriceRow: Codable, Sendable, Identifiab
     let productID: UUID
     let type: String
     let price: Double
+    /// Server-canonical decimal used by the recovery checkpoint digest. This
+    /// must not be reconstructed from the binary `Double` at the recovery
+    /// boundary.
+    let priceCanonical: String?
     let effectiveAt: String
     let source: String?
     let note: String?
     let createdAt: String
+    let updatedAt: String?
 
     init(
         id: UUID,
@@ -168,10 +173,12 @@ nonisolated struct RemoteInventoryProductPriceRow: Codable, Sendable, Identifiab
         productID: UUID,
         type: String,
         price: Double,
+        priceCanonical: String? = nil,
         effectiveAt: String,
         source: String?,
         note: String?,
-        createdAt: String
+        createdAt: String,
+        updatedAt: String? = nil
     ) {
         self.id = id
         self.ownerUserID = ownerUserID
@@ -179,10 +186,12 @@ nonisolated struct RemoteInventoryProductPriceRow: Codable, Sendable, Identifiab
         self.productID = productID
         self.type = type
         self.price = price
+        self.priceCanonical = priceCanonical
         self.effectiveAt = effectiveAt
         self.source = source
         self.note = note
         self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 
     enum CodingKeys: String, CodingKey {
@@ -192,9 +201,11 @@ nonisolated struct RemoteInventoryProductPriceRow: Codable, Sendable, Identifiab
         case productID = "product_id"
         case type
         case price
+        case priceCanonical = "price_canonical"
         case effectiveAt = "effective_at"
         case source
         case note
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
 }

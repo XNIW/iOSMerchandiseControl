@@ -177,20 +177,19 @@ final class SyncDecisionEngineTests: XCTestCase {
     }
 
     @MainActor
-    func testSameAccountBindingStillRequiresBootstrapWhenBaselineIsAbsent() async throws {
-        let originalBinding = UserDefaults.standard.data(forKey: "sync.accountBinding.v1")
-        defer {
-            if let originalBinding {
-                UserDefaults.standard.set(originalBinding, forKey: "sync.accountBinding.v1")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
-            }
-        }
-
+    func testSameAccountDirtyStoreUsesLightReconcileWhenBaselineIsAbsent() async throws {
+        let defaults = UserDefaults(suiteName: "SyncDecisionEngineTests.\(UUID().uuidString)")!
+        let bindingStore = AccountBindingStore(defaults: defaults, key: "binding")
         let ownerUserID = UUID()
-        AccountBindingStore().saveBinding(
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        let selectedShop = makeSelectedShop()
+        XCTAssertTrue(selectedShopStore.save(
+            selectedShop,
+            accountHash: AccountBindingStore.accountHash(for: ownerUserID)
+        ))
+        bindingStore.saveBinding(
             accountHash: AccountBindingStore.accountHash(for: ownerUserID),
-            storeIdentity: .anonymous
+            storeIdentity: selectedShop.localStoreIdentity
         )
         let container = try makeContainer()
         let context = ModelContext(container)
@@ -199,7 +198,9 @@ final class SyncDecisionEngineTests: XCTestCase {
 
         let provider = SyncDecisionInputProvider(
             modelContainer: container,
-            initialNetworkStatus: .satisfied
+            initialNetworkStatus: .satisfied,
+            bindingStore: bindingStore,
+            selectedShopStore: selectedShopStore
         )
         let snapshot = await provider.makeSnapshot(
             triggerSource: .rootForeground,
@@ -209,22 +210,19 @@ final class SyncDecisionEngineTests: XCTestCase {
         )
 
         XCTAssertTrue(snapshot.accountBindingMatches)
-        XCTAssertTrue(snapshot.requiresBootstrap)
-        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
+        XCTAssertFalse(snapshot.requiresBootstrap)
+        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .lightReconcile)
     }
 
     @MainActor
-    func testAnonymousLocalDataStillRequiresBootstrapWhenBaselineIsAbsent() async throws {
-        let originalBinding = UserDefaults.standard.data(forKey: "sync.accountBinding.v1")
-        UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
-        defer {
-            if let originalBinding {
-                UserDefaults.standard.set(originalBinding, forKey: "sync.accountBinding.v1")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
-            }
-        }
-
+    func testUnboundDirtyLocalDataBlocksBootstrapWhenBaselineIsAbsent() async throws {
+        let defaults = UserDefaults(suiteName: "SyncDecisionEngineTests.\(UUID().uuidString)")!
+        let ownerUserID = UUID()
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        XCTAssertTrue(selectedShopStore.save(
+            makeSelectedShop(),
+            accountHash: AccountBindingStore.accountHash(for: ownerUserID)
+        ))
         let container = try makeContainer()
         let context = ModelContext(container)
         context.insert(Product(barcode: "TASK132_ANON_BASELINE_ABSENT", productName: "Task 132"))
@@ -232,42 +230,45 @@ final class SyncDecisionEngineTests: XCTestCase {
 
         let provider = SyncDecisionInputProvider(
             modelContainer: container,
-            initialNetworkStatus: .satisfied
+            initialNetworkStatus: .satisfied,
+            bindingStore: AccountBindingStore(defaults: defaults, key: "binding"),
+            selectedShopStore: selectedShopStore
         )
         let snapshot = await provider.makeSnapshot(
             triggerSource: .rootForeground,
             isAuthenticated: true,
-            ownerUserID: UUID(),
+            ownerUserID: ownerUserID,
             isSyncBusy: false
         )
 
-        XCTAssertTrue(snapshot.requiresBootstrap)
-        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
+        XCTAssertEqual(snapshot.ownerStoreBindingResolution, .reviewRequired(.unboundDirty))
+        XCTAssertFalse(snapshot.requiresBootstrap)
+        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .blocked(.accountDecisionRequired))
     }
 
     @MainActor
     func testTask132DEmptyCatalogStillRequiresBootstrapWhenBaselineIsAbsent() async throws {
-        let originalBinding = UserDefaults.standard.data(forKey: "sync.accountBinding.v1")
-        UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
-        defer {
-            if let originalBinding {
-                UserDefaults.standard.set(originalBinding, forKey: "sync.accountBinding.v1")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
-            }
-        }
-
+        let defaults = UserDefaults(suiteName: "SyncDecisionEngineTests.\(UUID().uuidString)")!
+        let ownerUserID = UUID()
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        XCTAssertTrue(selectedShopStore.save(
+            makeSelectedShop(),
+            accountHash: AccountBindingStore.accountHash(for: ownerUserID)
+        ))
         let provider = SyncDecisionInputProvider(
             modelContainer: try makeContainer(),
-            initialNetworkStatus: .satisfied
+            initialNetworkStatus: .satisfied,
+            bindingStore: AccountBindingStore(defaults: defaults, key: "binding"),
+            selectedShopStore: selectedShopStore
         )
         let snapshot = await provider.makeSnapshot(
             triggerSource: .rootForeground,
             isAuthenticated: true,
-            ownerUserID: UUID(),
+            ownerUserID: ownerUserID,
             isSyncBusy: false
         )
 
+        XCTAssertEqual(snapshot.ownerStoreBindingResolution, .autoBound)
         XCTAssertTrue(snapshot.requiresBootstrap)
         XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
     }
@@ -297,5 +298,17 @@ final class SyncDecisionEngineTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)
         return container
+    }
+
+    private func makeSelectedShop() -> SelectedShop {
+        SelectedShop(
+            shopID: UUID(),
+            code: "TASK139",
+            name: "Task 139 Shop",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
     }
 }

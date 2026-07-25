@@ -41,11 +41,16 @@ final class InventorySyncServiceTests: XCTestCase {
 
         XCTAssertEqual(firstResult.succeeded, 1)
         XCTAssertEqual(firstResult.priceRowsInserted, 1)
-        XCTAssertEqual(firstResult.pendingCloudChanges, 2)
-        XCTAssertEqual(product.stockQuantity, 5)
-        XCTAssertEqual(product.retailPrice, 12)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).count, 2)
+        XCTAssertEqual(firstResult.pendingCloudChanges, 3)
+
+        let firstVerificationContext = ModelContext(context.container)
+        let refreshedProduct = try XCTUnwrap(
+            firstVerificationContext.fetch(FetchDescriptor<Product>()).first
+        )
+        XCTAssertEqual(refreshedProduct.stockQuantity, 5)
+        XCTAssertEqual(refreshedProduct.retailPrice, 12)
+        XCTAssertEqual(try firstVerificationContext.fetch(FetchDescriptor<ProductPrice>()).count, 1)
+        XCTAssertEqual(try firstVerificationContext.fetch(FetchDescriptor<LocalPendingChange>()).count, 3)
 
         let retryResult = try InventorySyncService(context: context).sync(
             entry: entry,
@@ -55,8 +60,10 @@ final class InventorySyncServiceTests: XCTestCase {
         XCTAssertEqual(retryResult.succeeded, 1)
         XCTAssertEqual(retryResult.priceRowsInserted, 0)
         XCTAssertEqual(retryResult.pendingCloudChanges, 0)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).count, 2)
+
+        let retryVerificationContext = ModelContext(context.container)
+        XCTAssertEqual(try retryVerificationContext.fetch(FetchDescriptor<ProductPrice>()).count, 1)
+        XCTAssertEqual(try retryVerificationContext.fetch(FetchDescriptor<LocalPendingChange>()).count, 3)
     }
 
     private func makeContext() throws -> ModelContext {

@@ -689,7 +689,15 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
 
         do {
-            try context.save()
+            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                try context.save()
+            }
+        } catch is CancellationError {
+            context.rollback()
+            throw CancellationError()
+        } catch let error as Task126OwnerStoreGateError {
+            context.rollback()
+            throw error
         } catch {
             context.rollback()
             throw SupabasePullApplyError.saveFailed(message: String(describing: error))
@@ -950,8 +958,16 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 onProgress: onProgress
             )
             do {
-                try context.save()
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                    try context.save()
+                }
                 mutationsSinceSave = 0
+            } catch is CancellationError {
+                context.rollback()
+                throw CancellationError()
+            } catch let error as Task126OwnerStoreGateError {
+                context.rollback()
+                throw error
             } catch {
                 context.rollback()
                 throw SupabasePullApplyError.saveFailed(message: String(describing: error))
@@ -1666,7 +1682,15 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         if detachedRelationships {
             do {
-                try context.save()
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
+                    try context.save()
+                }
+            } catch is CancellationError {
+                context.rollback()
+                throw CancellationError()
+            } catch let error as Task126OwnerStoreGateError {
+                context.rollback()
+                throw error
             } catch {
                 context.rollback()
                 throw SupabasePullApplyError.saveFailed(message: String(describing: error))

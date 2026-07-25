@@ -1,8 +1,10 @@
 import Foundation
 
 nonisolated enum SyncEventRPCRequestMapper {
-    static let functionName = "record_sync_event"
-    private static let maxChangedCount = 100_000
+    static let functionName = "record_sync_event_v6"
+    static let legacyFunctionName = "record_sync_event"
+    private static let maxChangedCount = 250
+    private static let maxHistoryChangedCount = 25
     private static let maxClientEventIDLength = 160
     private static let maxSourceDeviceIDLength = 160
 
@@ -18,8 +20,9 @@ nonisolated enum SyncEventRPCRequestMapper {
         }
         try validateConfirmedDomain(domain, eventType: eventType)
 
-        guard (0...maxChangedCount).contains(request.changedCount) else {
-            throw contract("changed_count_limit", "changedCount must be between 0 and 100000.")
+        let changedCountLimit = domain == "history" ? maxHistoryChangedCount : maxChangedCount
+        guard (0...changedCountLimit).contains(request.changedCount) else {
+            throw contract("changed_count_limit", "changedCount exceeds the confirmed domain limit.")
         }
 
         let clientEventID = trimmed(request.clientEventID)
@@ -85,7 +88,7 @@ nonisolated enum SyncEventRPCRequestMapper {
                 throw contract("event_type_domain_mismatch", "eventType is not valid for catalog.")
             }
         case "prices":
-            guard eventType == "prices_changed" || eventType == "prices_tombstone" else {
+            guard eventType == "prices_changed" else {
                 try validateKnownEventType(eventType)
                 throw contract("event_type_domain_mismatch", "eventType is not valid for prices.")
             }
@@ -104,7 +107,6 @@ nonisolated enum SyncEventRPCRequestMapper {
         case "catalog_changed",
              "catalog_tombstone",
              "prices_changed",
-             "prices_tombstone",
              "history_changed",
              "history_tombstone":
             return
@@ -125,6 +127,57 @@ nonisolated enum SyncEventRPCRequestMapper {
 
     private static func contract(_ code: String, _ message: String) -> SyncEventRecordError {
         .contract(SyncEventRecordFailure(code: code, message: message))
+    }
+
+    static func legacyParametersIfCompatible(
+        _ parameters: SyncEventRPCRequestParameters,
+        hasAutomaticShopScope: Bool
+    ) -> SyncEventLegacyRPCRequestParameters? {
+        guard !hasAutomaticShopScope,
+              parameters.pShopID == nil,
+              parameters.pStoreID.map(isLegacyUUID) ?? true,
+              parameters.pBatchID.map(isLegacyUUID) ?? true,
+              legacyJSONUUIDsAreCompatible(parameters.pEntityIDs) else {
+            return nil
+        }
+        return SyncEventLegacyRPCRequestParameters(
+            pDomain: parameters.pDomain,
+            pEventType: parameters.pEventType,
+            pChangedCount: parameters.pChangedCount,
+            pEntityIDs: parameters.pEntityIDs,
+            pStoreID: parameters.pStoreID,
+            pSource: parameters.pSource,
+            pSourceDeviceID: parameters.pSourceDeviceID,
+            pBatchID: parameters.pBatchID,
+            pClientEventID: parameters.pClientEventID,
+            pMetadata: parameters.pMetadata
+        )
+    }
+
+    private static func isLegacyUUID(_ value: UUID) -> Bool {
+        let bytes = value.uuid
+        let version = (bytes.6 & 0xF0) >> 4
+        let variant = bytes.8 & 0xC0
+        return (1...5).contains(version)
+            && variant == 0x80
+            && value != UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+    }
+
+    private static func legacyJSONUUIDsAreCompatible(
+        _ value: SyncEventRPCJSONValue?
+    ) -> Bool {
+        guard let value else { return true }
+        switch value {
+        case .object(let object):
+            return object.values.allSatisfy(legacyJSONUUIDsAreCompatible)
+        case .array(let values):
+            return values.allSatisfy(legacyJSONUUIDsAreCompatible)
+        case .string(let string):
+            guard let uuid = UUID(uuidString: string) else { return true }
+            return isLegacyUUID(uuid)
+        case .number, .bool, .null:
+            return true
+        }
     }
 }
 
@@ -179,6 +232,32 @@ nonisolated struct SyncEventRPCRequestParameters: Encodable, Sendable, Equatable
         self.pClientEventID = pClientEventID
         self.pMetadata = pMetadata
         self.pShopID = pShopID
+    }
+}
+
+nonisolated struct SyncEventLegacyRPCRequestParameters: Encodable, Sendable, Equatable {
+    let pDomain: String
+    let pEventType: String
+    let pChangedCount: Int
+    let pEntityIDs: SyncEventRPCJSONValue?
+    let pStoreID: UUID?
+    let pSource: String?
+    let pSourceDeviceID: String?
+    let pBatchID: UUID?
+    let pClientEventID: String
+    let pMetadata: SyncEventRPCJSONValue
+
+    enum CodingKeys: String, CodingKey {
+        case pDomain = "p_domain"
+        case pEventType = "p_event_type"
+        case pChangedCount = "p_changed_count"
+        case pEntityIDs = "p_entity_ids"
+        case pStoreID = "p_store_id"
+        case pSource = "p_source"
+        case pSourceDeviceID = "p_source_device_id"
+        case pBatchID = "p_batch_id"
+        case pClientEventID = "p_client_event_id"
+        case pMetadata = "p_metadata"
     }
 }
 

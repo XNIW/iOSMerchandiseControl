@@ -60,8 +60,41 @@ nonisolated struct SupabaseManualPushResult: Sendable, Equatable {
     let productUpdates: Int
     let productLinks: Int
     var touchedIDs = SupabaseManualPushTouchedIDs()
+    var tombstoneIDs = SupabaseManualPushTouchedIDs()
     let baselineRunID: UUID?
     let message: String?
+
+    init(
+        status: SupabaseManualPushTerminalStatus,
+        supplierCreates: Int,
+        supplierUpdates: Int,
+        supplierLinks: Int,
+        categoryCreates: Int,
+        categoryUpdates: Int,
+        categoryLinks: Int,
+        productCreates: Int,
+        productUpdates: Int,
+        productLinks: Int,
+        touchedIDs: SupabaseManualPushTouchedIDs = SupabaseManualPushTouchedIDs(),
+        tombstoneIDs: SupabaseManualPushTouchedIDs = SupabaseManualPushTouchedIDs(),
+        baselineRunID: UUID?,
+        message: String?
+    ) {
+        self.status = status
+        self.supplierCreates = supplierCreates
+        self.supplierUpdates = supplierUpdates
+        self.supplierLinks = supplierLinks
+        self.categoryCreates = categoryCreates
+        self.categoryUpdates = categoryUpdates
+        self.categoryLinks = categoryLinks
+        self.productCreates = productCreates
+        self.productUpdates = productUpdates
+        self.productLinks = productLinks
+        self.touchedIDs = touchedIDs
+        self.tombstoneIDs = tombstoneIDs
+        self.baselineRunID = baselineRunID
+        self.message = message
+    }
 
     static func blocked(message: String? = nil) -> SupabaseManualPushResult {
         SupabaseManualPushResult(
@@ -540,6 +573,7 @@ final class SupabaseManualPushService {
 
         var counters = Counters()
         var touchedIDs = SupabaseManualPushTouchedIDs()
+        var tombstoneIDs = SupabaseManualPushTouchedIDs()
         var readBackIDs = SupabaseManualPushTouchedIDs()
         var didConfirmAnyRemoteWrite = false
         var didConfirmAnyRemoteOrLink = false
@@ -571,6 +605,7 @@ final class SupabaseManualPushService {
                 ownerUserID: ownerUserID,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
+                tombstoneIDs: &tombstoneIDs,
                 readBackIDs: &readBackIDs,
                 didConfirmAnyRemoteWrite: &didConfirmAnyRemoteWrite,
                 didConfirmAnyRemoteOrLink: &didConfirmAnyRemoteOrLink
@@ -580,13 +615,21 @@ final class SupabaseManualPushService {
                 status: didConfirmAnyRemoteWrite || didConfirmAnyRemoteOrLink ? .partial : .failedBeforeWrite,
                 counters: counters,
                 touchedIDs: touchedIDs,
+                tombstoneIDs: tombstoneIDs,
                 baselineRunID: nil,
                 message: sanitized(error)
             )
         }
 
         guard !touchedIDs.isEmpty else {
-            return makeResult(status: .completed, counters: counters, touchedIDs: touchedIDs, baselineRunID: nil, message: nil)
+            return makeResult(
+                status: .completed,
+                counters: counters,
+                touchedIDs: touchedIDs,
+                tombstoneIDs: tombstoneIDs,
+                baselineRunID: nil,
+                message: nil
+            )
         }
 
         do {
@@ -602,6 +645,7 @@ final class SupabaseManualPushService {
                 status: .completed,
                 counters: counters,
                 touchedIDs: touchedIDs,
+                tombstoneIDs: tombstoneIDs,
                 baselineRunID: baseline.baselineRunID,
                 message: nil
             )
@@ -610,6 +654,7 @@ final class SupabaseManualPushService {
                 status: didConfirmAnyRemoteWrite ? .completedBaselineRefreshFailed : .failedBeforeWrite,
                 counters: counters,
                 touchedIDs: touchedIDs,
+                tombstoneIDs: tombstoneIDs,
                 baselineRunID: nil,
                 message: sanitized(error)
             )
@@ -817,6 +862,7 @@ final class SupabaseManualPushService {
         ownerUserID: UUID,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
+        tombstoneIDs: inout SupabaseManualPushTouchedIDs,
         readBackIDs: inout SupabaseManualPushTouchedIDs,
         didConfirmAnyRemoteWrite: inout Bool,
         didConfirmAnyRemoteOrLink: inout Bool
@@ -882,6 +928,7 @@ final class SupabaseManualPushService {
             didConfirmAnyRemoteWrite = true
             counters.productUpdates += 1
             touchedIDs.products.insert(remoteID)
+            tombstoneIDs.products.insert(remoteID)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -1103,6 +1150,7 @@ final class SupabaseManualPushService {
         status: SupabaseManualPushTerminalStatus,
         counters: Counters,
         touchedIDs: SupabaseManualPushTouchedIDs,
+        tombstoneIDs: SupabaseManualPushTouchedIDs,
         baselineRunID: UUID?,
         message: String?
     ) -> SupabaseManualPushResult {
@@ -1118,6 +1166,7 @@ final class SupabaseManualPushService {
             productUpdates: counters.productUpdates,
             productLinks: counters.productLinks,
             touchedIDs: touchedIDs,
+            tombstoneIDs: tombstoneIDs,
             baselineRunID: baselineRunID,
             message: message
         )

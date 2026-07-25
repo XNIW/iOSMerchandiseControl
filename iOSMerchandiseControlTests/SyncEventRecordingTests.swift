@@ -28,12 +28,19 @@ final class SyncEventRecordingTests: XCTestCase {
     }
 
     func testChangedCountContractLimitIsAccepted() throws {
-        XCTAssertNoThrow(try validator.validate(validRequest(changedCount: 100_000)))
+        XCTAssertNoThrow(
+            try validator.validate(
+                validRequest(
+                    changedCount: 250,
+                    entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 250))])
+                )
+            )
+        )
     }
 
     func testChangedCountAboveContractLimitIsContractError() {
         assertRecordError(
-            try validator.validate(validRequest(changedCount: 100_001)),
+            try validator.validate(validRequest(changedCount: 251)),
             kind: .contract,
             code: "changed_count_limit"
         )
@@ -81,9 +88,56 @@ final class SyncEventRecordingTests: XCTestCase {
         )
     }
 
-    func testDomainAndEventTypeAreNotHardcodedToKnownDomains() throws {
+    func testDomainAndEventTypeRejectUnconfirmedContractValues() {
+        assertRecordError(
+            try validator.validate(validRequest(domain: "future-domain", eventType: "future_event")),
+            kind: .contract,
+            code: "unsupported_domain"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(domain: "prices", eventType: "prices_tombstone")),
+            kind: .contract,
+            code: "unsupported_event_type"
+        )
+    }
+
+    func testHistoryUsesTwentyFiveRowContractLimit() throws {
         XCTAssertNoThrow(
-            try validator.validate(validRequest(domain: "future-domain", eventType: "future_event"))
+            try validator.validate(
+                validRequest(
+                    domain: "history",
+                    eventType: "history_changed",
+                    changedCount: 25,
+                    entityIDs: .object(["session_ids": .array(rpcUUIDValues(count: 25))])
+                )
+            )
+        )
+        assertRecordError(
+            try validator.validate(
+                validRequest(
+                    domain: "history",
+                    eventType: "history_changed",
+                    changedCount: 26,
+                    entityIDs: .object(["session_ids": .array(rpcUUIDValues(count: 26))])
+                )
+            ),
+            kind: .contract,
+            code: "changed_count_limit"
+        )
+    }
+
+    func testMetadataRejectsUnknownKeysAndNonCanonicalSource() {
+        assertRecordError(
+            try validator.validate(validRequest(metadata: .object(["note": .string("not canonical")]))),
+            kind: .contract,
+            code: "metadata_forbidden_key"
+        )
+        assertRecordError(
+            try validator.validate(
+                validRequest(metadata: .object(["source": .string("ios_history_session_push")]))
+            ),
+            kind: .contract,
+            code: "metadata_value"
         )
     }
 
@@ -145,9 +199,81 @@ final class SyncEventRecordingTests: XCTestCase {
         )
     }
 
+    func testEntityIDsMustBeCompleteForConfirmedDomain() throws {
+        let priceIDs = rpcUUIDValues(count: 2, start: 100)
+        let productIDs = rpcUUIDValues(count: 1, start: 200)
+        XCTAssertNoThrow(
+            try validator.validate(
+                validRequest(
+                    domain: "prices",
+                    eventType: "prices_changed",
+                    changedCount: 2,
+                    entityIDs: .object([
+                        "price_ids": .array(priceIDs),
+                        "product_ids": .array(productIDs)
+                    ])
+                )
+            )
+        )
+
+        assertRecordError(
+            try validator.validate(validRequest(changedCount: 2)),
+            kind: .contract,
+            code: "entity_ids_completeness"
+        )
+        assertRecordError(
+            try validator.validate(
+                validRequest(
+                    domain: "prices",
+                    eventType: "prices_changed",
+                    changedCount: 2,
+                    entityIDs: .object([
+                        "price_ids": .array(priceIDs),
+                        "product_ids": .array([])
+                    ])
+                )
+            ),
+            kind: .contract,
+            code: "entity_ids_product_scope"
+        )
+        assertRecordError(
+            try validator.validate(
+                validRequest(
+                    domain: "history",
+                    eventType: "history_changed",
+                    entityIDs: .object(["product_ids": .array(productIDs)])
+                )
+            ),
+            kind: .contract,
+            code: "entity_ids_key"
+        )
+        assertRecordError(
+            try validator.validate(
+                validRequest(
+                    changedCount: 2,
+                    entityIDs: .object([
+                        "product_ids": .array([productIDs[0], productIDs[0]])
+                    ])
+                )
+            ),
+            kind: .contract,
+            code: "entity_ids_duplicate"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: .null)),
+            kind: .contract,
+            code: "entity_ids_completeness"
+        )
+    }
+
     func testEntityIDsAllowRPCUUIDListsUpToTwoHundredFifty() throws {
         XCTAssertNoThrow(
-            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 250))])))
+            try validator.validate(
+                validRequest(
+                    changedCount: 250,
+                    entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 250))])
+                )
+            )
         )
         assertRecordError(
             try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 251))]))),
@@ -222,7 +348,9 @@ final class SyncEventRecordingTests: XCTestCase {
         let underBudget = SyncEventJSONValue.object([
             "product_ids": .array(rpcUUIDValues(count: 250))
         ])
-        XCTAssertNoThrow(try validator.validate(validRequest(entityIDs: underBudget)))
+        XCTAssertNoThrow(
+            try validator.validate(validRequest(changedCount: 250, entityIDs: underBudget))
+        )
 
         let overBudget = SyncEventJSONValue.object([
             "supplier_ids": .array(rpcUUIDValues(count: 125, start: 0)),
@@ -455,17 +583,25 @@ final class SyncEventRecordingTests: XCTestCase {
         let source = try productionSource(named: "Sync/Automatic/History/HistorySessionAutomaticPushService.swift")
 
         XCTAssertTrue(source.contains("domain: \"history\""))
-        XCTAssertTrue(source.contains("eventType: \"history_changed\""))
+        XCTAssertTrue(source.contains("\"history_changed\""))
+        XCTAssertTrue(source.contains("\"history_tombstone\""))
         XCTAssertTrue(source.contains("\"session_ids\""))
         XCTAssertFalse(source.contains("eventType: \"upsert\""))
         XCTAssertFalse(source.contains("\"history_session_ids\""))
     }
 
-    func testIncrementalSyncEventFetchSelectsShopIDColumn() throws {
+    func testIncrementalSyncEventFetchUsesOnlySanitizedShopScopedRPC() throws {
         let source = try productionSource(named: "Sync/Remote/SyncEventRemoteSupabaseAdapter.swift")
+        let rpc = try productionSource(named: "Sync/Remote/ShopScopedIncrementalRPC.swift")
+        let preview = try productionSource(named: "Sync/Manual/SupabaseSyncEventPreviewService.swift")
+        let signal = try productionSource(named: "Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift")
 
-        XCTAssertTrue(source.contains(#".from("sync_events")"#))
-        XCTAssertTrue(source.contains("id,owner_user_id,shop_id,store_id"))
+        XCTAssertTrue(source.contains("shop_sync_event_page_v1") || rpc.contains("shop_sync_event_page_v1"))
+        for candidate in [source, rpc, preview, signal] {
+            XCTAssertFalse(candidate.contains(#".from("sync_events")"#))
+            XCTAssertFalse(candidate.contains(#"table: "sync_events""#))
+            XCTAssertFalse(candidate.contains("postgresChange("))
+        }
     }
 
     func testRecordTaxonomyMapsToTask055OutboxConceptsWithoutMutation() throws {
@@ -497,7 +633,7 @@ final class SyncEventRecordingTests: XCTestCase {
         entityIDs: SyncEventJSONValue = .object([
             "product_ids": .array([.string("00000000-0000-4000-8000-000000000056")])
         ]),
-        metadata: SyncEventJSONValue = .object(["source": .string("manual_push")]),
+        metadata: SyncEventJSONValue = .object(["source": .string("ios")]),
         sourceDeviceID: String? = "device-hash",
         clientEventID: String? = nil
     ) -> SyncEventRecordRequest {
@@ -582,7 +718,7 @@ final class SyncEventRecordingTests: XCTestCase {
 
         return """
         {
-          "id": \(id),
+          "id": "\(id)",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "domain": "catalog",
           "event_type": "catalog_changed",

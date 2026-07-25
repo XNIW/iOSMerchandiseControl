@@ -60,7 +60,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         )
         XCTAssertEqual(
             entry.metadataPayloadJSON,
-            #"{"baseline_refresh_failed":false,"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_catalog_manual_push"}"#
+            #"{"source":"ios"}"#
         )
         XCTAssertEqual(entry.clientEventID, "catalog-manual-push:\(sha256Hex("catalog-fingerprint"))")
         XCTAssertEqual(entry.sourceDeviceID, "device-1")
@@ -80,28 +80,142 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(
             replayRequest.metadata,
             .object([
-                "source": .string("ios_catalog_manual_push"),
-                "partial": .bool(false),
-                "baseline_refresh_failed": .bool(false),
-                "skipped_count": .number(0),
-                "failed_count": .number(0)
+                "source": .string("ios")
             ])
         )
-        XCTAssertEqual(replayRequest.source, "ios_catalog_manual_push")
+        XCTAssertEqual(replayRequest.source, "ios")
         XCTAssertEqual(replayRequest.sourceDeviceID, "device-1")
         XCTAssertNil(replayRequest.batchID)
         XCTAssertEqual(replayRequest.clientEventID, entry.clientEventID)
     }
 
+    func testMixedCatalogPushSplitsChangedAndTombstoneEvents() throws {
+        let context = try makeContext()
+        var nextEntryID = 0
+        let service = makeService(
+            context: context,
+            entryIDGenerator: {
+                nextEntryID += 1
+                return "mixed-entry-\(nextEntryID)"
+            }
+        )
+        let supplierID = UUID(uuidString: "00000000-0000-4000-8000-000000000201")!
+        let activeProductID = UUID(uuidString: "00000000-0000-4000-8000-000000000401")!
+        let tombstonedProductID = UUID(uuidString: "00000000-0000-4000-8000-000000000402")!
+        let fingerprint = "mixed-catalog-fingerprint"
+        let outcomes = SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(
+            result: SupabaseManualPushResult(
+                status: .completed,
+                supplierCreates: 1,
+                supplierUpdates: 0,
+                supplierLinks: 0,
+                categoryCreates: 0,
+                categoryUpdates: 0,
+                categoryLinks: 0,
+                productCreates: 0,
+                productUpdates: 1,
+                productLinks: 0,
+                touchedIDs: SupabaseManualPushTouchedIDs(
+                    suppliers: [supplierID],
+                    products: [activeProductID, tombstonedProductID]
+                ),
+                tombstoneIDs: SupabaseManualPushTouchedIDs(
+                    products: [tombstonedProductID]
+                ),
+                baselineRunID: nil,
+                message: nil
+            ),
+            ownerUserID: UUID(uuidString: ownerID),
+            currentOwnerUserID: UUID(uuidString: ownerID),
+            planFingerprint: fingerprint,
+            sourceDeviceID: "device-mixed"
+        )
+
+        XCTAssertEqual(outcomes.count, 2)
+        XCTAssertTrue(outcomes.map(service.enqueue).allSatisfy { $0.kind == .enqueued })
+
+        let entries = try allEntries(in: context)
+        XCTAssertEqual(entries.map(\.eventType), ["catalog_changed", "catalog_tombstone"])
+        XCTAssertEqual(entries.map(\.changedCount), [2, 1])
+        XCTAssertEqual(
+            entries.map(\.clientEventID),
+            [
+                "catalog-manual-push:\(sha256Hex(fingerprint)):changed",
+                "catalog-manual-push:\(sha256Hex(fingerprint)):tombstone"
+            ]
+        )
+        XCTAssertEqual(
+            entries[0].entityIDsPayloadJSON,
+            #"{"category_ids":[],"product_ids":["00000000-0000-4000-8000-000000000401"],"supplier_ids":["00000000-0000-4000-8000-000000000201"]}"#
+        )
+        XCTAssertEqual(
+            entries[1].entityIDsPayloadJSON,
+            #"{"category_ids":[],"product_ids":["00000000-0000-4000-8000-000000000402"],"supplier_ids":[]}"#
+        )
+    }
+
+    func testTombstoneOnlyCatalogPushUsesCanonicalTombstoneEventAndBaseID() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+        let tombstonedProductID = UUID(uuidString: "00000000-0000-4000-8000-000000000402")!
+        let fingerprint = "tombstone-only-fingerprint"
+        let outcomes = SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(
+            result: SupabaseManualPushResult(
+                status: .completed,
+                supplierCreates: 0,
+                supplierUpdates: 0,
+                supplierLinks: 0,
+                categoryCreates: 0,
+                categoryUpdates: 0,
+                categoryLinks: 0,
+                productCreates: 0,
+                productUpdates: 1,
+                productLinks: 0,
+                touchedIDs: SupabaseManualPushTouchedIDs(
+                    products: [tombstonedProductID]
+                ),
+                tombstoneIDs: SupabaseManualPushTouchedIDs(
+                    products: [tombstonedProductID]
+                ),
+                baselineRunID: nil,
+                message: nil
+            ),
+            ownerUserID: UUID(uuidString: ownerID),
+            currentOwnerUserID: UUID(uuidString: ownerID),
+            planFingerprint: fingerprint
+        )
+
+        XCTAssertEqual(outcomes.count, 1)
+        XCTAssertEqual(service.enqueue(outcomes[0]).kind, .enqueued)
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(entry.eventType, "catalog_tombstone")
+        XCTAssertEqual(entry.changedCount, 1)
+        XCTAssertEqual(entry.clientEventID, "catalog-manual-push:\(sha256Hex(fingerprint))")
+        XCTAssertEqual(
+            entry.entityIDsPayloadJSON,
+            #"{"category_ids":[],"product_ids":["00000000-0000-4000-8000-000000000402"],"supplier_ids":[]}"#
+        )
+    }
+
     func testProductPricePushSuccessEnqueuesPendingPricesEntry() throws {
         let context = try makeContext()
         let service = makeService(context: context)
+        let priceIDs = (501...507).compactMap {
+            UUID(uuidString: "00000000-0000-4000-8000-\(String(format: "%012d", $0))")
+        }
+        let productIDs = [
+            try XCTUnwrap(UUID(uuidString: "00000000-0000-4000-8000-000000000401")),
+            try XCTUnwrap(UUID(uuidString: "00000000-0000-4000-8000-000000000402"))
+        ]
         let result = service.enqueue(
             .productPriceManualPush(
                 result: ProductPriceManualPushResult(
                     insertedCount: 7,
                     verification: .exactMatch(verifiedCount: 7),
-                    fingerprint: "prices-fingerprint"
+                    fingerprint: "prices-fingerprint",
+                    confirmedRemoteIDs: priceIDs,
+                    confirmedProductIDs: productIDs
                 ),
                 ownerUserID: UUID(uuidString: ownerID),
                 currentOwnerUserID: UUID(uuidString: ownerID),
@@ -116,12 +230,43 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.eventType, "prices_changed")
         XCTAssertEqual(entry.changedCount, 7)
         XCTAssertEqual(entry.entityIDsShape, "price_rows:count=7")
-        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertEqual(
+            entry.entityIDsPayloadJSON,
+            #"{"price_ids":["00000000-0000-4000-8000-000000000501","00000000-0000-4000-8000-000000000502","00000000-0000-4000-8000-000000000503","00000000-0000-4000-8000-000000000504","00000000-0000-4000-8000-000000000505","00000000-0000-4000-8000-000000000506","00000000-0000-4000-8000-000000000507"],"product_ids":["00000000-0000-4000-8000-000000000401","00000000-0000-4000-8000-000000000402"]}"#
+        )
         XCTAssertEqual(
             entry.metadataPayloadJSON,
-            #"{"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_prices_manual_push"}"#
+            #"{"source":"ios"}"#
         )
         XCTAssertEqual(entry.clientEventID, "prices-manual-push:\(sha256Hex("prices-fingerprint"))")
+    }
+
+    func testProductPricePushWithoutConfirmedProductScopeBlocksContract() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+        let priceID = try XCTUnwrap(
+            UUID(uuidString: "00000000-0000-4000-8000-000000000508")
+        )
+
+        let result = service.enqueue(
+            .productPriceManualPush(
+                result: ProductPriceManualPushResult(
+                    insertedCount: 1,
+                    verification: .exactMatch(verifiedCount: 1),
+                    fingerprint: "prices-missing-product-scope",
+                    confirmedRemoteIDs: [priceID]
+                ),
+                ownerUserID: UUID(uuidString: ownerID),
+                currentOwnerUserID: UUID(uuidString: ownerID)
+            )
+        )
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .blockedContract)
+        XCTAssertEqual(result.errorCode, "entity_ids_product_scope")
+        XCTAssertEqual(entry.status, .blockedContract)
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
     }
 
     func testCatalogGeneratedProductPriceRowsEnqueuePricesEventWithPriceIds() throws {
@@ -144,11 +289,14 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
                         "price_ids": .array([
                             .string(priceID1.uuidString.lowercased()),
                             .string(priceID2.uuidString.lowercased())
+                        ]),
+                        "product_ids": .array([
+                            .string(productID.uuidString.lowercased())
                         ])
                     ]),
                     validationMetadata: .object([
-                        "source": .string("ios_catalog_generated_prices"),
-                        "product_ids": .array([.string(productID.uuidString.lowercased())])
+                        "source": .string("ios"),
+                        "product_count": .number(1)
                     ])
                 )
             )
@@ -162,14 +310,14 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.entityIDsShape, "price_rows:count=2;products:count=1")
         XCTAssertEqual(
             entry.entityIDsPayloadJSON,
-            #"{"price_ids":["00000000-0000-4000-8000-000000000501","00000000-0000-4000-8000-000000000502"]}"#
+            #"{"price_ids":["00000000-0000-4000-8000-000000000501","00000000-0000-4000-8000-000000000502"],"product_ids":["00000000-0000-4000-8000-000000000401"]}"#
         )
         XCTAssertEqual(
             entry.metadataPayloadJSON,
-            #"{"product_ids":["00000000-0000-4000-8000-000000000401"],"source":"ios_catalog_generated_prices"}"#
+            #"{"product_count":1,"source":"ios"}"#
         )
         let replayRequest = try entry.makeRecordRequestForReplay()
-        XCTAssertEqual(replayRequest.source, "ios_catalog_generated_prices")
+        XCTAssertEqual(replayRequest.source, "ios")
         XCTAssertEqual(entry.clientEventID, "client-catalog-generated-prices")
     }
 
@@ -193,6 +341,11 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
                     productCreates: 1,
                     productUpdates: 0,
                     productLinks: 0,
+                    touchedIDs: SupabaseManualPushTouchedIDs(
+                        products: [
+                            UUID(uuidString: "00000000-0000-4000-8000-000000000401")!
+                        ]
+                    ),
                     baselineRunID: nil,
                     message: nil
                 ),
@@ -363,13 +516,13 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         let context = try makeContext()
         let service = makeService(context: context)
         let result = service.enqueue(
-            pricesOutcome(rows: 100_001, clientEventID: "client-large-prices")
+            pricesOutcome(rows: 251, clientEventID: "client-large-prices")
         )
 
         let entry = try onlyEntry(in: context)
         XCTAssertEqual(result.kind, .blockedContract)
         XCTAssertEqual(entry.status, .blockedContract)
-        XCTAssertEqual(entry.changedCount, 100_001)
+        XCTAssertEqual(entry.changedCount, 251)
         XCTAssertNil(entry.entityIDsPayloadJSON)
         XCTAssertNil(entry.metadataPayloadJSON)
         XCTAssertEqual(entry.lastErrorKind, .contract)
@@ -504,13 +657,13 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         let context = try makeContext()
         let service = makeService(context: context)
 
-        let result = service.enqueue(pricesOutcome(rows: 100_000, clientEventID: "client-limit-prices"))
+        let result = service.enqueue(pricesOutcome(rows: 250, clientEventID: "client-limit-prices"))
 
         let entry = try onlyEntry(in: context)
         XCTAssertEqual(result.kind, .enqueued)
         XCTAssertEqual(entry.status, .pending)
-        XCTAssertEqual(entry.changedCount, 100_000)
-        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertEqual(entry.changedCount, 250)
+        XCTAssertNotEqual(entry.entityIDsPayloadJSON, "null")
         XCTAssertNotNil(entry.metadataPayloadJSON)
         XCTAssertNoThrow(try entry.makeRecordRequestForReplay())
     }
@@ -520,8 +673,8 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             ownerUserID: ownerID,
             domain: "prices",
             eventType: "prices_changed",
-            changedCount: 100_001,
-            entityIDsShape: "price_rows:count=100001",
+            changedCount: 251,
+            entityIDsShape: "price_rows:count=251",
             metadataShape: "source=ios_prices_manual_push",
             entityIDsPayloadJSON: "null",
             metadataPayloadJSON: #"{"source":"ios_prices_manual_push"}"#,
@@ -552,7 +705,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
     func testSameBlockedContractOutcomeTwiceCreatesOneBlockedEntryThenDuplicateNoOp() throws {
         let context = try makeContext()
         let service = makeService(context: context)
-        let outcome = pricesOutcome(rows: 100_001, clientEventID: "client-duplicate-blocked")
+        let outcome = pricesOutcome(rows: 251, clientEventID: "client-duplicate-blocked")
 
         let first = service.enqueue(outcome)
         let second = service.enqueue(outcome)
@@ -782,6 +935,11 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         validationMetadata: SyncEventJSONValue? = nil
     ) -> SyncEventOutboxProducerOutcome {
         let resolvedOwnerUserID = missingOwner ? nil : (ownerUserID ?? ownerID)
+        let entityIDs = validationEntityIDs ?? .object([
+            "supplier_ids": .array(rpcUUIDValues(count: suppliers, start: 1_000)),
+            "category_ids": .array(rpcUUIDValues(count: categories, start: 2_000)),
+            "product_ids": .array(rpcUUIDValues(count: products, start: 3_000))
+        ])
         return .catalogManualPush(
             SyncEventOutboxProducerOutcome.CatalogManualPush(
                 ownerUserID: resolvedOwnerUserID,
@@ -793,7 +951,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
                 skippedCount: skipped,
                 failedCount: failed,
                 clientEventID: clientEventID,
-                validationEntityIDs: validationEntityIDs,
+                validationEntityIDs: entityIDs,
                 validationMetadata: validationMetadata
             )
         )
@@ -803,15 +961,27 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         rows: Int,
         clientEventID: String = "client-prices"
     ) -> SyncEventOutboxProducerOutcome {
-        .productPriceManualPush(
+        let entityIDs = SyncEventJSONValue.object([
+            "price_ids": .array(rpcUUIDValues(count: rows, start: 4_000)),
+            "product_ids": .array(rows == 0 ? [] : rpcUUIDValues(count: 1, start: 5_000))
+        ])
+        return .productPriceManualPush(
             SyncEventOutboxProducerOutcome.ProductPriceManualPush(
                 ownerUserID: ownerID,
                 currentOwnerUserID: ownerID,
                 terminalStatus: .completed,
                 confirmedPriceRows: rows,
-                clientEventID: clientEventID
+                clientEventID: clientEventID,
+                validationEntityIDs: entityIDs
             )
         )
+    }
+
+    private func rpcUUIDValues(count: Int, start: Int) -> [SyncEventJSONValue] {
+        guard count > 0 else { return [] }
+        return (start..<(start + count)).map { index in
+            .string("00000000-0000-4000-8000-\(String(format: "%012d", index))")
+        }
     }
 
     private func allEntries(in context: ModelContext) throws -> [SyncEventOutboxEntry] {

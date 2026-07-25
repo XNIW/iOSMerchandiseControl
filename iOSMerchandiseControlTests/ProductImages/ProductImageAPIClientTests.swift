@@ -1,9 +1,18 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
+import UIKit
 import UniformTypeIdentifiers
 import XCTest
 @testable import iOSMerchandiseControl
+
+nonisolated func task139SignedURLExpiry(
+    from date: Date = Date(),
+    lifetime: TimeInterval = ProductImageService.defaultSignedURLTTLSeconds
+) -> String {
+    ISO8601DateFormatter().string(from: date.addingTimeInterval(lifetime))
+}
 
 @MainActor
 final class ProductImageAPIClientTests: XCTestCase {
@@ -256,6 +265,205 @@ final class ProductImageAPIClientTests: XCTestCase {
         XCTAssertEqual(cachedThumb, prepared.thumb.data)
     }
 
+    func testStoreKeepsOldImageUnderTransientPreviewThenAtomicallySeedsReplacement() async throws {
+        let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000001")!
+        let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000002")!
+        let productID = UUID(uuidString: "13700000-0000-4000-8000-000000000003")!
+        let newVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000004")!
+        let oldVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000005")!
+        let scope = ProductImageScope(accountID: accountID, shopID: shopID)
+        let recorder = ProductImageHTTPRecorder(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            versionID: newVersionID,
+            finalizeDelay: 0.25
+        )
+        ProductImageURLProtocolStub.handler = { try recorder.respond(to: $0) }
+        defer { ProductImageURLProtocolStub.handler = nil }
+        let cacheRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task-139-store-success-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: cacheRoot) }
+        let store = makeStore(accountID: accountID, cacheRoot: cacheRoot)
+        let oldPrepared = try makePreparedImage(red: 0.15)
+        let replacementPrepared = try makePreparedImage(red: 0.75)
+        let inputURL = cacheRoot.appendingPathComponent("replacement.jpg")
+        try FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
+        try replacementPrepared.main.data.write(to: inputURL, options: [.atomic])
+        let oldMain = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: oldVersionID,
+            variant: .main
+        )
+        let oldThumb = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: oldVersionID,
+            variant: .thumb
+        )
+        store.seedTask138VisualFixture(scope: scope, images: [
+            oldMain: try XCTUnwrap(UIImage(data: oldPrepared.main.data)),
+            oldThumb: try XCTUnwrap(UIImage(data: oldPrepared.thumb.data))
+        ])
+
+        let uploadTask = Task {
+            try await store.upload(
+                fileURL: inputURL,
+                scope: scope,
+                productID: productID,
+                previousVersionID: oldVersionID
+            )
+        }
+        try await waitForPendingPreview(store: store, scope: scope, productID: productID)
+
+        XCTAssertNotNil(store.pendingPreview(scope: scope, productID: productID))
+        XCTAssertNotNil(store.image(for: oldMain), "Current remote image must remain while upload finalizes")
+
+        let result = try await uploadTask.value
+        let newMain = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: result.versionID,
+            variant: .main
+        )
+        let newThumb = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: result.versionID,
+            variant: .thumb
+        )
+        XCTAssertNil(store.pendingPreview(scope: scope, productID: productID))
+        XCTAssertNotNil(store.image(for: newMain))
+        XCTAssertNotNil(store.image(for: newThumb))
+        XCTAssertNil(store.image(for: oldMain))
+        XCTAssertNil(store.image(for: oldThumb))
+        XCTAssertEqual(store.operationStage(productID: productID), .completed)
+    }
+
+    func testStoreFailureClearsTransientPreviewAndPreservesCurrentImage() async throws {
+        let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000001")!
+        let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000002")!
+        let productID = UUID(uuidString: "13700000-0000-4000-8000-000000000003")!
+        let newVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000004")!
+        let oldVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000006")!
+        let scope = ProductImageScope(accountID: accountID, shopID: shopID)
+        let recorder = ProductImageHTTPRecorder(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            versionID: newVersionID,
+            finalizeDelay: 0.15
+        )
+        ProductImageURLProtocolStub.handler = { request in
+            let (_, body) = try recorder.respond(to: request)
+            let statusCode = request.url?.path == "/api/shop/product-images/finalize" ? 422 : 200
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: try XCTUnwrap(request.url),
+                statusCode: statusCode,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            ))
+            return (response, body)
+        }
+        defer { ProductImageURLProtocolStub.handler = nil }
+        let cacheRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task-139-store-failure-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: cacheRoot) }
+        let store = makeStore(accountID: accountID, cacheRoot: cacheRoot)
+        let currentPrepared = try makePreparedImage(red: 0.2)
+        let replacementPrepared = try makePreparedImage(red: 0.8)
+        try FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
+        let inputURL = cacheRoot.appendingPathComponent("replacement.jpg")
+        try replacementPrepared.main.data.write(to: inputURL, options: [.atomic])
+        let oldMain = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: oldVersionID,
+            variant: .main
+        )
+        store.seedTask138VisualFixture(scope: scope, images: [
+            oldMain: try XCTUnwrap(UIImage(data: currentPrepared.main.data))
+        ])
+
+        do {
+            _ = try await store.upload(
+                fileURL: inputURL,
+                scope: scope,
+                productID: productID,
+                previousVersionID: oldVersionID
+            )
+            XCTFail("Expected finalize failure")
+        } catch {
+            XCTAssertEqual(store.operationStage(productID: productID), .failed)
+        }
+
+        XCTAssertNil(store.pendingPreview(scope: scope, productID: productID))
+        XCTAssertNotNil(store.image(for: oldMain))
+        XCTAssertNil(store.image(for: ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: newVersionID,
+            variant: .main
+        )))
+    }
+
+    func testStoreCancellationClearsTransientPreviewAndPreservesCurrentImage() async throws {
+        let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000001")!
+        let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000002")!
+        let productID = UUID(uuidString: "13700000-0000-4000-8000-000000000003")!
+        let newVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000004")!
+        let oldVersionID = UUID(uuidString: "13700000-0000-4000-8000-000000000007")!
+        let scope = ProductImageScope(accountID: accountID, shopID: shopID)
+        let recorder = ProductImageHTTPRecorder(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            versionID: newVersionID
+        )
+        ProductImageURLProtocolStub.handler = { try recorder.respond(to: $0) }
+        ProductImageURLProtocolStub.delayProvider = { request in
+            guard request.httpMethod == "PUT",
+                  request.url?.path.hasSuffix("/main.jpg") == true else {
+                return 0
+            }
+            return 0.5
+        }
+        defer {
+            ProductImageURLProtocolStub.handler = nil
+            ProductImageURLProtocolStub.delayProvider = nil
+        }
+        let cacheRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task-139-store-cancel-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: cacheRoot) }
+        let store = makeStore(accountID: accountID, cacheRoot: cacheRoot)
+        let currentPrepared = try makePreparedImage(red: 0.25)
+        let replacementPrepared = try makePreparedImage(red: 0.85)
+        try FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
+        let inputURL = cacheRoot.appendingPathComponent("replacement.jpg")
+        try replacementPrepared.main.data.write(to: inputURL, options: [.atomic])
+        let oldMain = ProductImageReference(
+            scope: scope,
+            productID: productID,
+            versionID: oldVersionID,
+            variant: .main
+        )
+        store.seedTask138VisualFixture(scope: scope, images: [
+            oldMain: try XCTUnwrap(UIImage(data: currentPrepared.main.data))
+        ])
+        let uploadTask = Task {
+            try await store.upload(
+                fileURL: inputURL,
+                scope: scope,
+                productID: productID,
+                previousVersionID: oldVersionID
+            )
+        }
+        try await waitForPendingPreview(store: store, scope: scope, productID: productID)
+
+        uploadTask.cancel()
+        store.cancelOperation(productID: productID, scope: scope)
+        _ = try? await uploadTask.value
+
+        XCTAssertEqual(store.operationStage(productID: productID), .cancelled)
+        XCTAssertNil(store.pendingPreview(scope: scope, productID: productID))
+        XCTAssertNotNil(store.image(for: oldMain))
+    }
+
     func testUploadRetriesOneTransientObjectFailureWithoutDuplicatingIntentOrFinalize() async throws {
         let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000001")!
         let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000002")!
@@ -303,6 +511,7 @@ final class ProductImageAPIClientTests: XCTestCase {
         let versionID = UUID(uuidString: "13700000-0000-4000-8000-000000000014")!
         let cacheScope = ProductImageService.expectedCacheScope(accountID: accountID)
         let jpeg = try makePreparedImage().thumb.data
+        let metadata = try productImageReadMetadataJSON(jpeg)
         let objectPath = "/storage/v1/object/sign/product-images/shops/\(shopID.uuidString)/products/\(productID.uuidString)/primary/\(versionID.uuidString)/thumb.jpg"
         ProductImageURLProtocolStub.handler = { request in
             guard let url = request.url else { throw ProductImageError.invalidResponse }
@@ -311,7 +520,7 @@ final class ProductImageAPIClientTests: XCTestCase {
             switch (request.httpMethod, url.path) {
             case ("POST", "/api/shop/product-images/read-urls"):
                 body = Data("""
-                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"2099-07-17T12:39:56Z","productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=redacted","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
+                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(task139SignedURLExpiry())","metadata":\(metadata),"productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=redacted","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
                 """.utf8)
                 contentType = "application/json"
             case ("GET", objectPath):
@@ -362,6 +571,165 @@ final class ProductImageAPIClientTests: XCTestCase {
         XCTAssertEqual(cachedRead, jpeg)
     }
 
+    func testContentLengthRejectsReadURLAndImageBodiesBeforeDelivery() async throws {
+        let scope = ProductImageScope(accountID: UUID(), shopID: UUID())
+        let reference = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let objectPath = "/storage/v1/object/sign/product-images/shops/"
+            + "\(scope.shopID.uuidString)/products/\(reference.productID.uuidString)/"
+            + "primary/\(reference.versionID.uuidString)/thumb.jpg"
+        let probe = ProductImageHeaderFirstProbe()
+        ProductImageHeaderFirstURLProtocol.probe = probe
+        ProductImageHeaderFirstURLProtocol.handler = { request in
+            let url = try XCTUnwrap(request.url)
+            if request.httpMethod == "POST" {
+                return (
+                    HTTPURLResponse(
+                        url: url,
+                        statusCode: 200,
+                        httpVersion: "HTTP/1.1",
+                        headerFields: [
+                            "Content-Type": "application/json",
+                            "Content-Length": "\(64 * 1_024 + 1)"
+                        ]
+                    )!,
+                    Data(repeating: 0x20, count: 64 * 1_024 + 1)
+                )
+            }
+            return (
+                HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: [
+                        "Content-Type": "image/jpeg",
+                        "Content-Length": "\(ProductImageVariant.thumb.maxBytes + 1)"
+                    ]
+                )!,
+                Data(repeating: 0xFF, count: ProductImageVariant.thumb.maxBytes + 1)
+            )
+        }
+        defer {
+            ProductImageHeaderFirstURLProtocol.handler = nil
+            ProductImageHeaderFirstURLProtocol.probe = nil
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ProductImageHeaderFirstURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let api = ProductImageAPIClient(
+            apiBaseURL: URL(string: "https://admin.task139.invalid")!,
+            storageBaseURL: URL(string: "https://storage.task139.invalid")!,
+            apiSession: session,
+            storageSession: session
+        )
+
+        do {
+            _ = try await api.resolveReadURL(reference: reference, accessToken: "fixture")
+            XCTFail("Oversized read-url response must fail at headers.")
+        } catch let error as ProductImageError {
+            XCTAssertEqual(error, .invalidResponse)
+        }
+        try await Task.sleep(for: .milliseconds(150))
+        var snapshot = probe.snapshot
+        XCTAssertEqual(snapshot.deliveredBodies, 0)
+        XCTAssertGreaterThanOrEqual(snapshot.stops, 1)
+
+        do {
+            _ = try await api.downloadJPEG(
+                signedURL: "https://storage.task139.invalid\(objectPath)?token=redacted",
+                expectedReference: reference
+            )
+            XCTFail("Oversized image response must fail at headers.")
+        } catch let error as ProductImageError {
+            XCTAssertEqual(error, .downloadedImageInvalid)
+        }
+        try await Task.sleep(for: .milliseconds(150))
+        snapshot = probe.snapshot
+        // URLProtocol may coalesce the test body into one delegate callback,
+        // but the loader rejects that callback before appending any bytes.
+        XCTAssertLessThanOrEqual(snapshot.deliveredBodies, 1)
+        XCTAssertGreaterThanOrEqual(snapshot.stops, 2)
+    }
+
+    func testSyncRPCBoundedLoaderRejectsOversizedContentLengthBeforeBodyDelivery() async throws {
+        let probe = ProductImageHeaderFirstProbe()
+        ProductImageHeaderFirstURLProtocol.probe = probe
+        ProductImageHeaderFirstURLProtocol.handler = { request in
+            let url = try XCTUnwrap(request.url)
+            XCTAssertEqual(request.httpMethod, "POST")
+            return (
+                HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: [
+                        "Content-Type": "application/json",
+                        "Content-Length": "\(4 * 1_024 * 1_024 + 1)"
+                    ]
+                )!,
+                Data(repeating: 0x20, count: 4 * 1_024 * 1_024 + 1)
+            )
+        }
+        defer {
+            ProductImageHeaderFirstURLProtocol.handler = nil
+            ProductImageHeaderFirstURLProtocol.probe = nil
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ProductImageHeaderFirstURLProtocol.self]
+        var request = URLRequest(
+            url: URL(string: "https://admin.task139.invalid/rest/v1/rpc/sync_events_page")!
+        )
+        request.httpMethod = "POST"
+        request.httpBody = Data("{}".utf8)
+
+        do {
+            _ = try await BoundedURLSessionDataLoader.data(
+                for: request,
+                configuration: configuration,
+                maximumBytes: 4 * 1_024 * 1_024
+            ) { response in
+                XCTAssertEqual(response.statusCode, 200)
+            }
+            XCTFail("Oversized sync RPC response must fail at headers.")
+        } catch let error as BoundedHTTPBodyError {
+            XCTAssertEqual(error, .responseTooLarge(limit: 4 * 1_024 * 1_024))
+        }
+
+        try await Task.sleep(for: .milliseconds(150))
+        let snapshot = probe.snapshot
+        XCTAssertEqual(snapshot.deliveredBodies, 0)
+        XCTAssertGreaterThanOrEqual(snapshot.stops, 1)
+    }
+
+    func testBoundedLoaderCompletesWhenCallerIsAlreadyCancelled() async {
+        let request = URLRequest(url: URL(string: "https://cancelled.task139.invalid")!)
+        let completion = expectation(description: "Already-cancelled loader completes")
+
+        Task {
+            withUnsafeCurrentTask { task in
+                task?.cancel()
+            }
+            do {
+                _ = try await BoundedURLSessionDataLoader.data(
+                    for: request,
+                    configuration: .ephemeral,
+                    maximumBytes: 1
+                ) { _ in }
+                XCTFail("An already-cancelled caller must not start the request.")
+            } catch is CancellationError {
+                completion.fulfill()
+            } catch {
+                XCTFail("Expected CancellationError, received \(error).")
+            }
+        }
+
+        await fulfillment(of: [completion], timeout: 1)
+    }
+
     func testReadRefreshesExpiredSignedURLExactlyOnce() async throws {
         let accountID = UUID(uuidString: "13700000-0000-4000-8000-000000000041")!
         let shopID = UUID(uuidString: "13700000-0000-4000-8000-000000000042")!
@@ -369,6 +737,7 @@ final class ProductImageAPIClientTests: XCTestCase {
         let versionID = UUID(uuidString: "13700000-0000-4000-8000-000000000044")!
         let cacheScope = ProductImageService.expectedCacheScope(accountID: accountID)
         let jpeg = try makePreparedImage().thumb.data
+        let metadata = try productImageReadMetadataJSON(jpeg)
         let objectPath = "/storage/v1/object/sign/product-images/shops/\(shopID.uuidString)/products/\(productID.uuidString)/primary/\(versionID.uuidString)/thumb.jpg"
         let attempts = ProductImageAttemptCounter()
         ProductImageURLProtocolStub.handler = { request in
@@ -380,7 +749,7 @@ final class ProductImageAPIClientTests: XCTestCase {
             case ("POST", "/api/shop/product-images/read-urls"):
                 let attempt = attempts.recordResolution()
                 body = Data("""
-                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"2099-07-17T12:39:56Z","productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=\(attempt == 1 ? "expired" : "fresh")","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
+                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(task139SignedURLExpiry())","metadata":\(metadata),"productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=\(attempt == 1 ? "expired" : "fresh")","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
                 """.utf8)
                 contentType = "application/json"
                 statusCode = 200
@@ -436,6 +805,7 @@ final class ProductImageAPIClientTests: XCTestCase {
         let productID = UUID()
         let versionID = UUID()
         let cacheScope = ProductImageService.expectedCacheScope(accountID: accountID)
+        let metadata = unavailableThumbnailMetadataJSON()
         let objectPath = "/storage/v1/object/sign/product-images/shops/\(shopID.uuidString)/products/\(productID.uuidString)/primary/\(versionID.uuidString)/thumb.jpg"
         let attempts = ProductImageAttemptCounter()
         ProductImageURLProtocolStub.handler = { request in
@@ -443,7 +813,7 @@ final class ProductImageAPIClientTests: XCTestCase {
             if request.httpMethod == "POST", url.path == "/api/shop/product-images/read-urls" {
                 let attempt = attempts.recordResolution()
                 let body = Data("""
-                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"2099-07-17T12:39:56Z","productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=expired-\(attempt)","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
+                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(task139SignedURLExpiry())","metadata":\(metadata),"productId":"\(productID.uuidString)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=expired-\(attempt)","status":"ready","variant":"thumb","versionId":"\(versionID.uuidString)"}],"ok":true}
                 """.utf8)
                 return (
                     HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!,
@@ -505,7 +875,8 @@ final class ProductImageAPIClientTests: XCTestCase {
         let recorder = ProductImageBatchRecorder(
             cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
             jpeg: try makePreparedImage().thumb.data,
-            downloadDelay: 0.01
+            downloadDelay: 0.01,
+            readDelay: 0.3
         )
         ProductImageURLProtocolStub.handler = { try recorder.respond(to: $0) }
         defer { ProductImageURLProtocolStub.handler = nil }
@@ -536,10 +907,12 @@ final class ProductImageAPIClientTests: XCTestCase {
         let snapshot = recorder.snapshot
         XCTAssertEqual(snapshot.referenceKeys.count, 205)
         XCTAssertEqual(Set(snapshot.referenceKeys).count, 205)
-        XCTAssertTrue(snapshot.batchSizes.allSatisfy { (1...100).contains($0) })
-        XCTAssertEqual(snapshot.batchSizes.sorted(), [5, 100, 100])
+        XCTAssertTrue(snapshot.batchSizes.allSatisfy { (1...16).contains($0) })
+        XCTAssertEqual(snapshot.batchSizes.sorted(), [13] + Array(repeating: 16, count: 12))
         XCTAssertEqual(snapshot.downloads, 205)
         XCTAssertLessThanOrEqual(snapshot.maximumConcurrentDownloads, 4)
+        XCTAssertGreaterThanOrEqual(snapshot.maximumConcurrentReadRequests, 1)
+        XCTAssertLessThanOrEqual(snapshot.maximumConcurrentReadRequests, 2)
     }
 
     func testConcurrentDuplicateLoadsShareOneReadAndOneDownload() async throws {
@@ -581,6 +954,66 @@ final class ProductImageAPIClientTests: XCTestCase {
         }
 
         XCTAssertEqual(recorder.snapshot.batchSizes, [1])
+        XCTAssertEqual(recorder.snapshot.downloads, 1)
+    }
+
+    func testMixedReadyAndNotFoundBatchPreservesReadySiblingWithoutDownloadLoop() async throws {
+        let accountID = UUID()
+        let scope = ProductImageScope(accountID: accountID, shopID: UUID())
+        let ready = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let missing = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let prepared = try makePreparedImage()
+        let recorder = ProductImageBatchRecorder(
+            cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
+            jpeg: prepared.thumb.data,
+            downloadDelay: 0,
+            notFoundProductIDs: [missing.productID.uuidString]
+        )
+        ProductImageURLProtocolStub.handler = { try recorder.respond(to: $0) }
+        defer { ProductImageURLProtocolStub.handler = nil }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task-139-mixed-not-found-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = ProductImageService(
+            api: ProductImageAPIClient(
+                apiBaseURL: URL(string: "https://admin.task137.invalid")!,
+                storageBaseURL: URL(string: "https://storage.task137.invalid")!,
+                apiSession: makeSession(),
+                storageSession: makeSession()
+            ),
+            cache: ProductImageCache(rootDirectory: root)
+        ) {
+            ProductImageSessionSnapshot(accountID: accountID, accessToken: "fixture")
+        }
+
+        let readyTask = Task { try await service.load(ready) }
+        let missingTask = Task<Result<ProductImageLoadResult, Error>, Never> {
+            do {
+                return .success(try await service.load(missing))
+            } catch {
+                return .failure(error)
+            }
+        }
+
+        let readyResult = try await readyTask.value
+        XCTAssertEqual(readyResult.data, prepared.thumb.data)
+        switch await missingTask.value {
+        case .success:
+            XCTFail("A not_found item must not produce image bytes")
+        case .failure(let error):
+            XCTAssertEqual(error as? ProductImageError, .notFound)
+        }
+        XCTAssertEqual(recorder.snapshot.batchSizes, [2])
         XCTAssertEqual(recorder.snapshot.downloads, 1)
     }
 
@@ -636,15 +1069,18 @@ final class ProductImageAPIClientTests: XCTestCase {
         )
         let cacheScope = ProductImageService.expectedCacheScope(accountID: accountID)
         let jpeg = try makePreparedImage().thumb.data
+        let metadata = try productImageReadMetadataJSON(jpeg)
         let attempts = ProductImageAttemptCounter()
         let objectPath = "/storage/v1/object/sign/product-images/shops/\(scope.shopID)/products/\(reference.productID)/primary/\(reference.versionID)/thumb.jpg"
         ProductImageURLProtocolStub.handler = { request in
             let url = try XCTUnwrap(request.url)
             if request.httpMethod == "POST", url.path == "/api/shop/product-images/read-urls" {
                 let resolution = attempts.recordResolution()
-                let expiresAt = resolution == 1 ? "2000-01-01T00:00:00Z" : "2099-01-01T00:00:00Z"
+                let expiresAt = resolution == 1
+                    ? "2000-01-01T00:00:00Z"
+                    : task139SignedURLExpiry()
                 let body = Data("""
-                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(expiresAt)","productId":"\(reference.productID)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=redacted","status":"ready","variant":"thumb","versionId":"\(reference.versionID)"}],"ok":true}
+                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(expiresAt)","metadata":\(metadata),"productId":"\(reference.productID)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=redacted","status":"ready","variant":"thumb","versionId":"\(reference.versionID)"}],"ok":true}
                 """.utf8)
                 return (
                     HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!,
@@ -683,6 +1119,78 @@ final class ProductImageAPIClientTests: XCTestCase {
 
         XCTAssertEqual(attempts.snapshot.resolutions, 2)
         XCTAssertEqual(attempts.snapshot.downloads, 2)
+    }
+
+    func testOverlongSignedURLLeaseRefreshesBeforeDownload() async throws {
+        let accountID = UUID()
+        let scope = ProductImageScope(accountID: accountID, shopID: UUID())
+        let reference = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .thumb
+        )
+        let cacheScope = ProductImageService.expectedCacheScope(accountID: accountID)
+        let jpeg = try makePreparedImage().thumb.data
+        let metadata = try productImageReadMetadataJSON(jpeg)
+        let attempts = ProductImageAttemptCounter()
+        let clock = Date(timeIntervalSince1970: 1_800_000_000)
+        let objectPath = "/storage/v1/object/sign/product-images/shops/\(scope.shopID)/"
+            + "products/\(reference.productID)/primary/\(reference.versionID)/thumb.jpg"
+        ProductImageURLProtocolStub.handler = { request in
+            let url = try XCTUnwrap(request.url)
+            if request.httpMethod == "POST", url.path == "/api/shop/product-images/read-urls" {
+                let resolution = attempts.recordResolution()
+                let lifetime: TimeInterval = resolution == 1 ? 900 : 300
+                let body = Data("""
+                {"cacheScope":"\(cacheScope)","items":[{"expiresAt":"\(task139SignedURLExpiry(from: clock, lifetime: lifetime))","metadata":\(metadata),"productId":"\(reference.productID)","signedUrl":"https://storage.task137.invalid\(objectPath)?token=redacted","status":"ready","variant":"thumb","versionId":"\(reference.versionID)"}],"ok":true}
+                """.utf8)
+                return (
+                    HTTPURLResponse(
+                        url: url,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: ["Content-Type": "application/json"]
+                    )!,
+                    body
+                )
+            }
+            if request.httpMethod == "GET", url.path == objectPath {
+                _ = attempts.recordDownload()
+                return (
+                    HTTPURLResponse(
+                        url: url,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: ["Content-Type": "image/jpeg"]
+                    )!,
+                    jpeg
+                )
+            }
+            throw ProductImageError.invalidResponse
+        }
+        defer { ProductImageURLProtocolStub.handler = nil }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task-139-lease-overlong-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = ProductImageService(
+            api: ProductImageAPIClient(
+                apiBaseURL: URL(string: "https://admin.task137.invalid")!,
+                storageBaseURL: URL(string: "https://storage.task137.invalid")!,
+                apiSession: makeSession(),
+                storageSession: makeSession()
+            ),
+            cache: ProductImageCache(rootDirectory: root),
+            now: { clock }
+        ) {
+            ProductImageSessionSnapshot(accountID: accountID, accessToken: "fixture")
+        }
+
+        let result = try await service.load(reference)
+
+        XCTAssertEqual(result.data, jpeg)
+        XCTAssertEqual(attempts.snapshot.resolutions, 2)
+        XCTAssertEqual(attempts.snapshot.downloads, 1)
     }
 
     func testProgressiveStoreLoadsThumbnailBeforeMainAndPublishesBoth() async throws {
@@ -752,13 +1260,23 @@ final class ProductImageAPIClientTests: XCTestCase {
         let recorder = ProductImageBatchRecorder(
             cacheScope: ProductImageService.expectedCacheScope(accountID: accountID),
             jpeg: Data([0xff, 0xd8, 0xff, 0xd9]),
+            metadataJPEG: try makePreparedImage().thumb.data,
             downloadDelay: 0
         )
         ProductImageURLProtocolStub.handler = { try recorder.respond(to: $0) }
         defer { ProductImageURLProtocolStub.handler = nil }
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("task-138-invalid-decode-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: root) }
+        // The invalid payload is rejected before ProductImageCache creates a
+        // file.  Create the isolated root ourselves so teardown is idempotent
+        // on Simulator file systems even when the cache correctly performs no
+        // write at all.
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer {
+            if FileManager.default.fileExists(atPath: root.path) {
+                try? FileManager.default.removeItem(at: root)
+            }
+        }
         let cache = ProductImageCache(rootDirectory: root)
         let service = ProductImageService(
             api: ProductImageAPIClient(
@@ -1182,6 +1700,12 @@ final class ProductImageAPIClientTests: XCTestCase {
     }
 
     func testUploadRejectsUnsignedPathAndNonLocalPlainHTTPBeforeNetwork() async throws {
+        let reference = ProductImageReference(
+            scope: ProductImageScope(accountID: UUID(), shopID: UUID()),
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .main
+        )
         let api = ProductImageAPIClient(
             apiBaseURL: URL(string: "https://admin.task137.invalid")!,
             storageBaseURL: URL(string: "https://storage.task137.invalid")!,
@@ -1195,11 +1719,84 @@ final class ProductImageAPIClientTests: XCTestCase {
             "https://storage.task137.invalid/redirect/storage/v1/object/upload/sign/product-images/main.jpg"
         ] {
             do {
-                try await api.uploadJPEG(Data([0xff, 0xd8, 0xff, 0xd9]), signedURL: value)
+                try await api.uploadJPEG(
+                    Data([0xff, 0xd8, 0xff, 0xd9]),
+                    signedURL: value,
+                    expectedReference: reference
+                )
                 XCTFail("Expected signed URL validation to fail")
             } catch let error as ProductImageError {
                 XCTAssertEqual(error, .signedURLInvalid)
             }
+        }
+    }
+
+    func testUploadRejectsOversizedSuccessResponseAndExactReferenceMismatch() async throws {
+        let scope = ProductImageScope(accountID: UUID(), shopID: UUID())
+        let reference = ProductImageReference(
+            scope: scope,
+            productID: UUID(),
+            versionID: UUID(),
+            variant: .main
+        )
+        let prepared = try makePreparedImage()
+        let session = makeSession()
+        let api = ProductImageAPIClient(
+            apiBaseURL: URL(string: "https://admin.task137.invalid")!,
+            storageBaseURL: URL(string: "https://storage.task137.invalid")!,
+            apiSession: session,
+            storageSession: session
+        )
+        let base = "https://storage.task137.invalid/storage/v1/object/upload/sign/product-images/"
+            + "shops/\(scope.shopID.uuidString)/products/\(reference.productID.uuidString)/"
+            + "primary/\(reference.versionID.uuidString)"
+        ProductImageURLProtocolStub.handler = { request in
+            let url = try XCTUnwrap(request.url)
+            return (
+                HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: ["Content-Type": "application/json"]
+                )!,
+                Data(
+                    repeating: 0x41,
+                    count: ProductImageAPIClient.uploadResponseMaximumBytes + 1
+                )
+            )
+        }
+        defer { ProductImageURLProtocolStub.handler = nil }
+
+        do {
+            try await api.uploadJPEG(
+                prepared.main.data,
+                signedURL: "\(base)/main.jpg?token=redacted",
+                expectedReference: reference
+            )
+            XCTFail("An oversized upload response must fail closed")
+        } catch let error as ProductImageError {
+            XCTAssertEqual(error, .invalidResponse)
+        }
+
+        do {
+            try await api.uploadJPEG(
+                prepared.main.data,
+                signedURL: "\(base)/thumb.jpg?token=redacted",
+                expectedReference: reference
+            )
+            XCTFail("A signed URL for another variant must fail before network")
+        } catch let error as ProductImageError {
+            XCTAssertEqual(error, .signedURLInvalid)
+        }
+
+        do {
+            _ = try await api.downloadJPEG(
+                signedURL: "\(base)/thumb.jpg?token=redacted",
+                expectedReference: reference
+            )
+            XCTFail("A signed read URL for another variant must fail before network")
+        } catch let error as ProductImageError {
+            XCTAssertEqual(error, .signedURLInvalid)
         }
     }
 
@@ -1298,6 +1895,38 @@ final class ProductImageAPIClientTests: XCTestCase {
         return host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 
+    private func makeStore(accountID: UUID, cacheRoot: URL) -> ProductImageStore {
+        let service = ProductImageService(
+            api: ProductImageAPIClient(
+                apiBaseURL: URL(string: "https://admin.task137.invalid")!,
+                storageBaseURL: URL(string: "https://storage.task137.invalid")!,
+                apiSession: makeSession(),
+                storageSession: makeSession()
+            ),
+            cache: ProductImageCache(rootDirectory: cacheRoot)
+        ) {
+            ProductImageSessionSnapshot(
+                accountID: accountID,
+                accessToken: "task-139-test-access"
+            )
+        }
+        return ProductImageStore(service: service)
+    }
+
+    private func waitForPendingPreview(
+        store: ProductImageStore,
+        scope: ProductImageScope,
+        productID: UUID
+    ) async throws {
+        for _ in 0..<200 {
+            if store.pendingPreview(scope: scope, productID: productID) != nil {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for transient product-image preview")
+    }
+
     private func makeSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ProductImageURLProtocolStub.self]
@@ -1343,6 +1972,35 @@ private struct ProductImageHTTPRequestRecord: Sendable {
     let method: String
     let path: String
     let upsert: String?
+}
+
+private func productImageReadMetadataJSON(_ data: Data) throws -> String {
+    let metadata = try productImageReadMetadataObject(data)
+    let encoded = try JSONSerialization.data(withJSONObject: metadata, options: [.sortedKeys])
+    guard let value = String(data: encoded, encoding: .utf8) else {
+        throw ProductImageError.invalidResponse
+    }
+    return value
+}
+
+private func productImageReadMetadataObject(_ data: Data) throws -> [String: Any] {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+          let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue else {
+        throw ProductImageError.downloadedImageInvalid
+    }
+    return [
+        "bytes": data.count,
+        "height": height,
+        "mimeType": "image/jpeg",
+        "sha256": SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+        "width": width
+    ]
+}
+
+private func unavailableThumbnailMetadataJSON() -> String {
+    "{\"bytes\":1,\"height\":1,\"mimeType\":\"image/jpeg\",\"sha256\":\"" + String(repeating: "a", count: 64) + "\",\"width\":1}"
 }
 
 private struct ProductImageLocalParityConfig: Decodable {
@@ -1418,16 +2076,19 @@ private final class ProductImageHTTPRecorder: @unchecked Sendable {
     private let cacheScope: String
     private let lock = NSLock()
     private var storedRecords: [ProductImageHTTPRequestRecord] = []
+    private let finalizeDelay: TimeInterval
     private var remainingTransientMainFailures: Int
     private let versionID: UUID
 
     init(
         cacheScope: String,
         versionID: UUID,
+        finalizeDelay: TimeInterval = 0,
         transientMainFailures: Int = 0
     ) {
         self.cacheScope = cacheScope
         self.versionID = versionID
+        self.finalizeDelay = finalizeDelay
         self.remainingTransientMainFailures = transientMainFailures
     }
 
@@ -1468,6 +2129,9 @@ private final class ProductImageHTTPRecorder: @unchecked Sendable {
                 }
             }
         case ("POST", "/api/shop/product-images/finalize"):
+            if finalizeDelay > 0 {
+                Thread.sleep(forTimeInterval: finalizeDelay)
+            }
             body = Data("""
             {"imageUpdatedAt":"2026-07-17T12:34:56Z","ok":true,"status":"finalized","versionId":"\(versionID.uuidString)"}
             """.utf8)
@@ -1513,23 +2177,39 @@ private final class ProductImageBatchRecorder: @unchecked Sendable {
         let batchSizes: [Int]
         let downloads: Int
         let maximumConcurrentDownloads: Int
+        let maximumConcurrentReadRequests: Int
         let referenceKeys: [String]
     }
 
     private let cacheScope: String
     private let downloadDelay: TimeInterval
     private let jpeg: Data
+    private let metadataJPEG: Data?
+    private let notFoundProductIDs: Set<String>
     private let lock = NSLock()
     private var activeDownloads = 0
+    private var activeReadRequests = 0
     private var batchSizes: [Int] = []
     private var downloads = 0
     private var maximumConcurrentDownloads = 0
+    private var maximumConcurrentReadRequests = 0
+    private let readDelay: TimeInterval
     private var referenceKeys: [String] = []
 
-    init(cacheScope: String, jpeg: Data, downloadDelay: TimeInterval) {
+    init(
+        cacheScope: String,
+        jpeg: Data,
+        metadataJPEG: Data? = nil,
+        downloadDelay: TimeInterval,
+        readDelay: TimeInterval = 0,
+        notFoundProductIDs: Set<String> = []
+    ) {
         self.cacheScope = cacheScope
         self.jpeg = jpeg
+        self.metadataJPEG = metadataJPEG
         self.downloadDelay = downloadDelay
+        self.readDelay = readDelay
+        self.notFoundProductIDs = Set(notFoundProductIDs.map { $0.lowercased() })
     }
 
     var snapshot: Snapshot {
@@ -1538,6 +2218,7 @@ private final class ProductImageBatchRecorder: @unchecked Sendable {
                 batchSizes: batchSizes,
                 downloads: downloads,
                 maximumConcurrentDownloads: maximumConcurrentDownloads,
+                maximumConcurrentReadRequests: maximumConcurrentReadRequests,
                 referenceKeys: referenceKeys
             )
         }
@@ -1546,18 +2227,43 @@ private final class ProductImageBatchRecorder: @unchecked Sendable {
     func respond(to request: URLRequest) throws -> (HTTPURLResponse, Data) {
         let url = try XCTUnwrap(request.url)
         if request.httpMethod == "POST", url.path == "/api/shop/product-images/read-urls" {
+            lock.withLock {
+                activeReadRequests += 1
+                maximumConcurrentReadRequests = max(
+                    maximumConcurrentReadRequests,
+                    activeReadRequests
+                )
+            }
+            defer { lock.withLock { activeReadRequests -= 1 } }
+            if readDelay > 0 {
+                Thread.sleep(forTimeInterval: readDelay)
+            }
             let body = try XCTUnwrap(ProductImageHTTPRecorder.bodyData(from: request))
             let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             let shopID = try XCTUnwrap(object["shopId"] as? String)
             let refs = try XCTUnwrap(object["refs"] as? [[String: String]])
+            // Read metadata is server-side information and remains valid even
+            // when the subsequently downloaded bytes are malformed. Keeping
+            // them independent lets this fixture reach the client's JPEG
+            // validation boundary instead of failing inside URLProtocol.
+            let metadata = try productImageReadMetadataObject(metadataJPEG ?? jpeg)
             let items: [[String: Any]] = try refs.map { ref in
                 let productID = try XCTUnwrap(ref["productId"])
                 let versionID = try XCTUnwrap(ref["versionId"])
                 let variant = try XCTUnwrap(ref["variant"])
                 let key = "\(productID)/\(versionID)/\(variant)"
                 lock.withLock { referenceKeys.append(key) }
+                if notFoundProductIDs.contains(productID.lowercased()) {
+                    return [
+                        "productId": productID,
+                        "status": "not_found",
+                        "variant": variant,
+                        "versionId": versionID
+                    ]
+                }
                 return [
-                    "expiresAt": "2099-07-17T12:39:56Z",
+                    "expiresAt": task139SignedURLExpiry(),
+                    "metadata": metadata,
                     "productId": productID,
                     "signedUrl": "https://storage.task137.invalid/storage/v1/object/sign/product-images/shops/\(shopID)/products/\(productID)/primary/\(versionID)/\(variant).jpg?token=redacted",
                     "status": "ready",
@@ -1597,7 +2303,13 @@ private final class ProductImageBatchRecorder: @unchecked Sendable {
 
 private final class ProductImageURLProtocolStub: URLProtocol, @unchecked Sendable {
     typealias Handler = @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)
+    typealias DelayProvider = @Sendable (URLRequest) -> TimeInterval
     nonisolated(unsafe) static var handler: Handler?
+    nonisolated(unsafe) static var delayProvider: DelayProvider?
+
+    private let stateLock = NSLock()
+    private var deliveryWorkItem: DispatchWorkItem?
+    private var stopped = false
 
     override class func canInit(with request: URLRequest) -> Bool { true }
 
@@ -1609,13 +2321,132 @@ private final class ProductImageURLProtocolStub: URLProtocol, @unchecked Sendabl
                 throw ProductImageError.invalidResponse
             }
             let (response, data) = try handler(request)
+            let workItem = DispatchWorkItem { [weak self] in
+                guard let self, self.beginDelivery() else { return }
+                self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                self.client?.urlProtocol(self, didLoad: data)
+                self.client?.urlProtocolDidFinishLoading(self)
+            }
+            let shouldSchedule = stateLock.withLock {
+                guard !stopped else { return false }
+                deliveryWorkItem = workItem
+                return true
+            }
+            guard shouldSchedule else { return }
+            let delay = max(0, Self.delayProvider?(request) ?? 0)
+            if delay == 0 {
+                workItem.perform()
+            } else {
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                    deadline: .now() + delay,
+                    execute: workItem
+                )
+            }
+        } catch {
+            guard beginDelivery() else { return }
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {
+        let workItem = stateLock.withLock { () -> DispatchWorkItem? in
+            stopped = true
+            defer { deliveryWorkItem = nil }
+            return deliveryWorkItem
+        }
+        workItem?.cancel()
+    }
+
+    private func beginDelivery() -> Bool {
+        stateLock.withLock {
+            guard !stopped else { return false }
+            deliveryWorkItem = nil
+            return true
+        }
+    }
+}
+
+private final class ProductImageHeaderFirstProbe: @unchecked Sendable {
+    struct Snapshot {
+        let deliveredBodies: Int
+        let stops: Int
+    }
+
+    private let lock = NSLock()
+    private var deliveredBodies = 0
+    private var stops = 0
+
+    var snapshot: Snapshot {
+        lock.withLock {
+            Snapshot(deliveredBodies: deliveredBodies, stops: stops)
+        }
+    }
+
+    func recordBody() {
+        lock.withLock { deliveredBodies += 1 }
+    }
+
+    func recordStop() {
+        lock.withLock { stops += 1 }
+    }
+}
+
+private final class ProductImageHeaderFirstURLProtocol: URLProtocol, @unchecked Sendable {
+    typealias Handler = @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)
+    nonisolated(unsafe) static var handler: Handler?
+    nonisolated(unsafe) static var probe: ProductImageHeaderFirstProbe?
+
+    private let lock = NSLock()
+    private var bodyDelivery: DispatchWorkItem?
+    private var stopped = false
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        do {
+            guard let handler = Self.handler else {
+                throw ProductImageError.invalidResponse
+            }
+            let (response, data) = try handler(request)
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
+            let delivery = DispatchWorkItem { [weak self] in
+                guard let self, self.beginBodyDelivery() else { return }
+                Self.probe?.recordBody()
+                self.client?.urlProtocol(self, didLoad: data)
+                self.client?.urlProtocolDidFinishLoading(self)
+            }
+            let shouldSchedule = lock.withLock {
+                guard !stopped else { return false }
+                bodyDelivery = delivery
+                return true
+            }
+            if shouldSchedule {
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                    deadline: .now() + 0.10,
+                    execute: delivery
+                )
+            }
         } catch {
             client?.urlProtocol(self, didFailWithError: error)
         }
     }
 
-    override func stopLoading() {}
+    override func stopLoading() {
+        let delivery = lock.withLock { () -> DispatchWorkItem? in
+            stopped = true
+            defer { bodyDelivery = nil }
+            return bodyDelivery
+        }
+        delivery?.cancel()
+        Self.probe?.recordStop()
+    }
+
+    private func beginBodyDelivery() -> Bool {
+        lock.withLock {
+            guard !stopped else { return false }
+            bodyDelivery = nil
+            return true
+        }
+    }
 }

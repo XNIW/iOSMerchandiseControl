@@ -7,7 +7,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
     func testDecodesValidSyncEventDTO() throws {
         let row = try decodeRow("""
         {
-          "id": 42,
+          "id": "42",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "store_id": "00000000-0000-0000-0000-000000000002",
           "domain": "catalog",
@@ -44,7 +44,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
     func testExtraFieldsAreIgnoredAndJSONObjectsDecode() throws {
         let row = try decodeRow("""
         {
-          "id": 43,
+          "id": "43",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "domain": "prices",
           "event_type": "prices_changed",
@@ -74,6 +74,33 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
         }
     }
 
+    func testDecodesRedactedRPCKeysAndRecoveryFlagWithoutRawIdentifiers() throws {
+        let sourceKey = String(repeating: "a", count: 64)
+        let clientKey = String(repeating: "b", count: 64)
+        let row = try decodeRow("""
+        {
+          "id": "44",
+          "owner_user_id": "00000000-0000-0000-0000-000000000001",
+          "shop_id": "00000000-0000-0000-0000-000000000002",
+          "domain": "catalog",
+          "event_type": "unsupported",
+          "source_device_key": "\(sourceKey)",
+          "client_event_key": "\(clientKey)",
+          "changed_count": 0,
+          "entity_ids": null,
+          "requires_full_recovery": true,
+          "created_at": "2026-05-06T12:34:56Z",
+          "metadata": {}
+        }
+        """)
+
+        XCTAssertNil(row.sourceDeviceID)
+        XCTAssertNil(row.clientEventID)
+        XCTAssertEqual(row.sourceDeviceKey, sourceKey)
+        XCTAssertEqual(row.clientEventKey, clientKey)
+        XCTAssertTrue(row.requiresFullRecovery)
+    }
+
     func testArrayResponseDecodesIntoRowsEnvelope() throws {
         let response = try decodeResponse("""
         [
@@ -97,7 +124,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
         let postgresRow = try decodeRow(fixtureRow(id: 61, createdAt: "2026-05-06 12:34:56+00"))
         let expiringRow = try decodeRow("""
         {
-          "id": 62,
+          "id": "62",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "domain": "catalog",
           "event_type": "catalog_changed",
@@ -215,7 +242,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
     private func fixtureRow(id: Int, createdAt: String) -> String {
         """
         {
-          "id": \(id),
+          "id": "\(id)",
           "owner_user_id": "00000000-0000-0000-0000-000000000001",
           "domain": "catalog",
           "event_type": "catalog_changed",

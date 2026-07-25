@@ -56,15 +56,107 @@ nonisolated enum SupabaseTransportClientError: Error, Sendable {
 
 actor SupabaseTransportClient {
     nonisolated static let stablePageOrderColumn = "id"
+    nonisolated static let maximumRPCRequestBytes = 64 * 1_024
 
     private let clientProvider: SupabaseClientProvider
+    private let rpcSessionConfiguration: URLSessionConfiguration
 
     init(clientProvider: SupabaseClientProvider) {
         self.clientProvider = clientProvider
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.urlCache = nil
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        configuration.timeoutIntervalForRequest = 45
+        configuration.timeoutIntervalForResource = 60
+        self.rpcSessionConfiguration = configuration
     }
 
     func client() -> SupabaseClient {
         clientProvider.client
+    }
+
+    func boundedRPC<Parameters: Encodable & Sendable>(
+        _ function: String,
+        parameters: Parameters,
+        maximumResponseBytes: Int
+    ) async throws -> Data {
+        guard !function.isEmpty,
+              function.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }),
+              maximumResponseBytes > 0 else {
+            throw SupabaseTransportClientError.invalidConfig
+        }
+        let session: Session
+        do {
+            session = try await clientProvider.client.auth.session
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw SupabaseTransportClientError.sessionMissing
+        }
+        try Task.checkCancellation()
+        guard !session.accessToken.isEmpty,
+              !session.accessToken.contains("\n"),
+              !session.accessToken.contains("\r") else {
+            throw SupabaseTransportClientError.sessionMissing
+        }
+
+        let body: Data
+        do {
+            body = try JSONEncoder().encode(parameters)
+        } catch {
+            throw SupabaseTransportClientError.unknown(message: "RPC request encoding failed.")
+        }
+        guard body.count <= Self.maximumRPCRequestBytes else {
+            throw SupabaseTransportClientError.networkError(
+                statusCode: nil,
+                message: "RPC request exceeded the local byte limit."
+            )
+        }
+
+        let url = clientProvider.config.projectURL
+            .appendingPathComponent("rest", isDirectory: true)
+            .appendingPathComponent("v1", isDirectory: true)
+            .appendingPathComponent("rpc", isDirectory: true)
+            .appendingPathComponent(function, isDirectory: false)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = body
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(clientProvider.config.publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let bounded = try await BoundedURLSessionDataLoader.data(
+                for: request,
+                configuration: rpcSessionConfiguration,
+                maximumBytes: maximumResponseBytes
+            ) { response in
+                guard (200..<300).contains(response.statusCode) else {
+                    throw SupabaseTransportClientError.networkError(
+                        statusCode: response.statusCode,
+                        message: nil
+                    )
+                }
+            }
+            return bounded.0
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch is BoundedHTTPBodyError {
+            throw SupabaseTransportClientError.networkError(
+                statusCode: nil,
+                message: "RPC response exceeded the local byte limit."
+            )
+        } catch let error as SupabaseTransportClientError {
+            throw error
+        } catch let error as URLError {
+            throw networkError(error)
+        } catch {
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
+        }
     }
 
     @discardableResult
@@ -72,6 +164,8 @@ actor SupabaseTransportClient {
         do {
             let session = try await clientProvider.client.auth.session
             return session.user.id
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw SupabaseTransportClientError.sessionMissing
         }

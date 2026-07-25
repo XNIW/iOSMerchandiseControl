@@ -54,21 +54,19 @@ struct Task138ProductImageVisualHarness: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        if state != .editorPicker {
-                            header
-                        }
-                        stateContent
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Spacer(minLength: 24)
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 18) {
+                    if state != .editorPicker {
+                        header
                     }
-                    .padding(20)
-                    .frame(width: geometry.size.width, alignment: .leading)
+                    stateContent
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 24)
                 }
-                .background(Color(uiColor: .systemGroupedBackground))
+                .containerRelativeFrame(.horizontal, alignment: .leading)
             }
+            .contentMargins(20, for: .scrollContent)
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(state.title)
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -85,6 +83,8 @@ struct Task138ProductImageVisualHarness: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("task138.visual.header")
     }
 
@@ -187,19 +187,19 @@ struct Task138ProductImageVisualHarness: View {
             Text("Immagine prodotto")
                 .font(.headline)
             HStack(spacing: 12) {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Label("Libreria foto", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("task138.visual.editor.library")
-
                 Button(action: {}) {
                     Label("Fotocamera", systemImage: "camera")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("task138.visual.editor.camera")
+
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("Libreria foto", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("task138.visual.editor.library")
             }
             Text("Preparazione → main → thumbnail → finalizzazione")
                 .font(.caption)
