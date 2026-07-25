@@ -491,12 +491,16 @@ final class ShopSyncRecoveryContractTests: XCTestCase {
         let shopID = UUID(uuidString: "00000000-0000-4000-8000-000000000140")!
         let scope = ShopSyncRecoveryScope(
             kind: "shop_scoped",
-            key: "12ba5e60a6bf564660cb3acbc6a2cb58"
-                + "a03162efcfd5c5ed151fd16b74fd81ba",
+            key: "12ba5e60a6bf5646"
+                + "60cb3acbc6a2cb58"
+                + "a03162efcfd5c5ed"
+                + "151fd16b74fd81ba",
             legacyOwnerKey: nil,
             accountKey: ShopSyncRecoveryCanonical.sha256("golden-account-139"),
-            deviceKey: "257e184cfeb7888e6eb749b3ca4b2d64"
-                + "4ef4f278bde892714196a3980ded96e6"
+            deviceKey: "257e184cfeb7888e"
+                + "6eb749b3ca4b2d64"
+                + "4ef4f278bde892714"
+                + "196a3980ded96e6"
         )
 
         XCTAssertNoThrow(try scope.validate(
