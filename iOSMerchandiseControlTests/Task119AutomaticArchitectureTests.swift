@@ -122,9 +122,24 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     @MainActor
     func testBackgroundSchedulerFailsClosedBeforeRegistration() throws {
-        let suiteName = "Task139BackgroundScheduler-\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = UserDefaults.standard
+        let keys = [
+            "sync.runtime.background.lastScheduleReason",
+            "sync.runtime.background.lastScheduleError",
+            "sync.runtime.background.lastScheduleSucceeded",
+            "sync.runtime.background.lastScheduleFailedAt"
+        ]
+        let priorValues = keys.map { ($0, defaults.object(forKey: $0)) }
+        keys.forEach(defaults.removeObject(forKey:))
+        defer {
+            for (key, value) in priorValues {
+                if let value {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
         let scheduler = SyncBackgroundTaskScheduler(defaults: defaults)
 
         scheduler.schedule(reason: .foregroundCompletion)
