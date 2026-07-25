@@ -156,8 +156,7 @@ shop non-production autorizzato il singolo replace E2E con confronto forte
 cloud/local, immagini, outbox e tre relaunch. Questo non è un PASS globale né
 un `DONE`.
 
-Evidence autorevole:
-`docs/TASKS/EVIDENCE/TASK-139/15-v6-atomic-recovery-contract-ios.md`.
+Evidence autorevole nell'archivio esterno non versionato del closeout.
 Il task resta in `REVIEW`, responsabile reviewer; mai `DONE` o PASS globale
 senza conferma esplicita dell'utente.
 
