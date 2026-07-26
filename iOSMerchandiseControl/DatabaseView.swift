@@ -417,9 +417,13 @@ nonisolated private enum DatabaseImportPipeline {
     ) async throws -> PreparedImportAnalysis {
         try Task.checkCancellation()
 
+        let workbook: ExcelAnalyzer.XLSXWorkbookSession
         let sheetNames: [String]
         do {
-            sheetNames = try ExcelAnalyzer.listSheetNames(at: url)
+            workbook = try ExcelAnalyzer.openXLSXWorkbook(at: url)
+            sheetNames = try ExcelAnalyzer.listSheetNames(in: workbook)
+        } catch let resourceError as ExcelImportResourceError {
+            throw resourceError
         } catch {
             throw DatabaseImportPreparationError.invalidWorkbook
         }
@@ -437,7 +441,7 @@ nonisolated private enum DatabaseImportPipeline {
             await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
             try Task.checkCancellation()
             let parsingStartedAt = Date()
-            supplierSheetNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
+            supplierSheetNames = try readNamedEntitiesSheet(in: workbook, sheetName: suppliersSheetName)
             logTiming(
                 phase: "parsing",
                 sheet: suppliersSheetName,
@@ -453,7 +457,7 @@ nonisolated private enum DatabaseImportPipeline {
             await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
             try Task.checkCancellation()
             let parsingStartedAt = Date()
-            categorySheetNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
+            categorySheetNames = try readNamedEntitiesSheet(in: workbook, sheetName: categoriesSheetName)
             logTiming(
                 phase: "parsing",
                 sheet: categoriesSheetName,
@@ -474,7 +478,9 @@ nonisolated private enum DatabaseImportPipeline {
         let productsParsingStartedAt = Date()
         let productsRows: [[String]]
         do {
-            productsRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: productsSheetName)
+            productsRows = try ExcelAnalyzer.readSheetByName(in: workbook, sheetName: productsSheetName)
+        } catch let resourceError as ExcelImportResourceError {
+            throw resourceError
         } catch {
             throw DatabaseImportPreparationError.invalidWorkbook
         }
@@ -512,8 +518,8 @@ nonisolated private enum DatabaseImportPipeline {
             await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(priceHistorySheetName), processedCount: 0, totalCount: 0))
             try Task.checkCancellation()
             let parsingStartedAt = Date()
-            parsedPriceHistoryEntries = parsePendingPriceHistoryEntries(
-                at: url,
+            parsedPriceHistoryEntries = try parsePendingPriceHistoryEntries(
+                in: workbook,
                 sheetNameMap: sheetNameMap
             ) ?? []
             logTiming(
@@ -716,10 +722,15 @@ nonisolated private enum DatabaseImportPipeline {
         try context.fetch(FetchDescriptor<Product>()).map(ImportExistingProductSnapshot.init)
     }
 
-    private static func readNamedEntitiesSheet(at url: URL, sheetName: String) -> [String] {
+    private static func readNamedEntitiesSheet(
+        in workbook: ExcelAnalyzer.XLSXWorkbookSession,
+        sheetName: String
+    ) throws -> [String] {
         let rows: [[String]]
         do {
-            rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
+            rows = try ExcelAnalyzer.readSheetByName(in: workbook, sheetName: sheetName)
+        } catch let resourceError as ExcelImportResourceError {
+            throw resourceError
         } catch {
             debugLogFullImport("impossibile leggere un foglio richiesto, skip.")
             return []
@@ -1212,16 +1223,16 @@ nonisolated private enum DatabaseImportPipeline {
     }
 
     private static func parsePendingPriceHistoryEntries(
-        at url: URL,
+        in workbook: ExcelAnalyzer.XLSXWorkbookSession,
         sheetNameMap: [String: String]
-    ) -> [PendingPriceHistoryImportEntry]? {
+    ) throws -> [PendingPriceHistoryImportEntry]? {
         guard let sheetName = sheetNameMap[normalizedSheetName("PriceHistory")] else {
             return nil
         }
 
         let entries: [PendingPriceHistoryImportEntry]
         do {
-            let rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
+            let rows = try ExcelAnalyzer.readSheetByName(in: workbook, sheetName: sheetName)
             guard !rows.isEmpty else {
                 debugLogFullImport("foglio storico prezzi vuoto, skip.")
                 return nil
@@ -1272,8 +1283,9 @@ nonisolated private enum DatabaseImportPipeline {
                     )
                 }
             }
-
             entries = parsedEntries
+        } catch let resourceError as ExcelImportResourceError {
+            throw resourceError
         } catch {
             debugLogFullImport("impossibile leggere il foglio storico prezzi, skip.")
             return nil
@@ -4819,13 +4831,16 @@ struct DatabaseView: View {
         }
         defer { url.stopAccessingSecurityScopedResource() }
 
+        // Rifiuta il file prima di copiarlo nella sandbox temporanea.
+        try ExcelImportResourcePolicy.validateSourceFile(at: url)
+
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("import-cache", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
 
         let fileName = "\(UUID().uuidString)-\(url.lastPathComponent)"
         let tempURL = tempDirectory.appendingPathComponent(fileName)
-        try FileManager.default.copyItem(at: url, to: tempURL)
+        try ExcelImportResourcePolicy.copyValidatedSourceFile(from: url, to: tempURL)
         return tempURL
     }
 
@@ -5035,7 +5050,7 @@ struct DatabaseView: View {
             }
             defer { url.stopAccessingSecurityScopedResource() }
 
-            let data = try Data(contentsOf: url)
+            let data = try ExcelImportResourcePolicy.readWholeDocument(at: url)
             guard let content = String(data: data, encoding: .utf8) else {
                 throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: L("database.error.file_not_utf8")])
             }

@@ -480,6 +480,11 @@
 "inventory.home.no_file" = "当前没有已加载文件。";
 "inventory.home.no_inventory" = "没有可用库存。";
 "inventory.home.error.loading_title" = "加载错误";
+"inventory.shop_switch.error.title" = "未切换商店";
+"inventory.shop_switch.error.pending" = "此商店仍有 %d 项本地更改等待同步。请先同步或处理这些更改，再切换商店。";
+"inventory.shop_switch.error.sync_busy" = "当前同步未能安全停止。请再次尝试切换商店。";
+"inventory.shop_switch.error.local_store" = "无法安全准备本地目录。当前商店仍保持选中。";
+"inventory.shop_switch.error.invalid_selection" = "此商店已无法选择。";
 "inventory.home.error.unknown" = "未知错误。";
 "inventory.home.error.unsupported_format" = "不支持的文件格式：%@。支持格式：.xlsx、.xls、.html";
 "inventory.home.error.import_in_progress" = "已有导入正在进行。请等待完成后再打开其他文件。";
@@ -794,6 +799,11 @@
 "database.validation.exported_values_mismatch" = "商品 %@ 的 supplier/category 值未正确导出。";
 "database.error.file_permission_denied" = "文件权限被拒绝";
 "database.error.file_not_utf8" = "无法将文件读取为 UTF-8 文本。";
+"import.security.file_too_large" = "所选文件过大。请选择不超过 %d MB 的文件。";
+"import.security.session_too_large" = "所选文件的总大小过大。请选择总计不超过 %d MB 的文件。";
+"import.security.xlsx_too_many_parts" = "Excel 文件包含过多内部项目（最多 %d 个）。";
+"import.security.xlsx_part_too_large" = "Excel 文件包含超过 %d MB 的内部项目。";
+"import.security.xlsx_expanded_too_large" = "Excel 文件解压后超过 %d MB 的安全限制。";
 "database.error.import_in_progress" = "已有导入正在进行。请等待完成后再启动另一个导入。";
 "database.error.barcode_column_missing" = "无法在文件中找到“barcode”列。";
 "database.error.barcode_missing" = "缺少条码。";

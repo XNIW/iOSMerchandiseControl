@@ -480,6 +480,11 @@
 "inventory.home.no_file" = "No file loaded yet.";
 "inventory.home.no_inventory" = "No inventory available.";
 "inventory.home.error.loading_title" = "Loading error";
+"inventory.shop_switch.error.title" = "Shop not changed";
+"inventory.shop_switch.error.pending" = "This shop still has %d local change(s) waiting to sync. Sync or resolve them before changing shop.";
+"inventory.shop_switch.error.sync_busy" = "The current sync did not stop safely. Try changing shop again.";
+"inventory.shop_switch.error.local_store" = "The local catalog could not be prepared safely. The current shop remains selected.";
+"inventory.shop_switch.error.invalid_selection" = "This shop is no longer available for selection.";
 "inventory.home.error.unknown" = "Unknown error.";
 "inventory.home.error.unsupported_format" = "Unsupported file format: %@. Accepted formats: .xlsx, .xls, .html";
 "inventory.home.error.import_in_progress" = "An import is already running. Wait for it to finish before opening another file.";
@@ -794,6 +799,11 @@
 "database.validation.exported_values_mismatch" = "The supplier/category values for product %@ were not exported correctly.";
 "database.error.file_permission_denied" = "File permissions denied";
 "database.error.file_not_utf8" = "Unable to read the file as UTF-8 text.";
+"import.security.file_too_large" = "The selected file is too large. Choose a file no larger than %d MB.";
+"import.security.session_too_large" = "The selected files are too large together. Choose files totaling no more than %d MB.";
+"import.security.xlsx_too_many_parts" = "The Excel file contains too many internal parts (maximum %d).";
+"import.security.xlsx_part_too_large" = "The Excel file contains an internal part larger than %d MB.";
+"import.security.xlsx_expanded_too_large" = "The Excel file expands beyond the safe limit of %d MB.";
 "database.error.import_in_progress" = "An import is already running. Wait for it to finish before starting another one.";
 "database.error.barcode_column_missing" = "Unable to find the 'barcode' column in the file.";
 "database.error.barcode_missing" = "Barcode is missing.";

@@ -479,6 +479,11 @@
 "inventory.home.no_file" = "Nessun file caricato al momento.";
 "inventory.home.no_inventory" = "Nessun inventario disponibile.";
 "inventory.home.error.loading_title" = "Errore durante il caricamento";
+"inventory.shop_switch.error.title" = "Negozio non cambiato";
+"inventory.shop_switch.error.pending" = "Questo negozio ha ancora %d modifica/he locale/i da sincronizzare. Sincronizzale o risolvile prima di cambiare negozio.";
+"inventory.shop_switch.error.sync_busy" = "La sincronizzazione corrente non si è arrestata in sicurezza. Riprova a cambiare negozio.";
+"inventory.shop_switch.error.local_store" = "Non è stato possibile preparare in sicurezza il catalogo locale. Il negozio corrente resta selezionato.";
+"inventory.shop_switch.error.invalid_selection" = "Questo negozio non è più disponibile per la selezione.";
 "inventory.home.error.unknown" = "Errore sconosciuto.";
 "inventory.home.error.unsupported_format" = "Formato file non supportato: %@. Formati accettati: .xlsx, .xls, .html";
 "inventory.home.error.import_in_progress" = "È già in corso un'importazione. Attendi il completamento prima di aprire un altro file.";
@@ -793,6 +798,11 @@
 "database.validation.exported_values_mismatch" = "I valori supplier/category del prodotto %@ non sono stati esportati correttamente.";
 "database.error.file_permission_denied" = "Permessi file negati";
 "database.error.file_not_utf8" = "Impossibile leggere il file come testo UTF-8.";
+"import.security.file_too_large" = "Il file selezionato è troppo grande. Scegli un file non superiore a %d MB.";
+"import.security.session_too_large" = "I file selezionati sono troppo grandi nel complesso. Scegli file per un totale massimo di %d MB.";
+"import.security.xlsx_too_many_parts" = "Il file Excel contiene troppe parti interne (massimo %d).";
+"import.security.xlsx_part_too_large" = "Il file Excel contiene una parte interna superiore a %d MB.";
+"import.security.xlsx_expanded_too_large" = "Il file Excel supera il limite sicuro di %d MB dopo l'espansione.";
 "database.error.import_in_progress" = "È già in corso un'importazione. Attendere il completamento prima di avviarne un'altra.";
 "database.error.barcode_column_missing" = "Impossibile trovare la colonna 'barcode' nel file.";
 "database.error.barcode_missing" = "Manca il barcode.";

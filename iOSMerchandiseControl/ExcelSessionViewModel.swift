@@ -420,6 +420,8 @@ final class ExcelSessionViewModel: ObservableObject {
             throw ExcelLoadError.invalidFormat("Nessun dato presente. Carica prima un file.")
         }
 
+        try ExcelImportResourcePolicy.validateSourceFilesForSession(urls)
+
         isLoading = true
         progress = 0
         lastError = nil
@@ -1058,9 +1060,253 @@ struct AnalysisMetrics: Sendable {
     let issues: [String]
 }
 
+// MARK: - Limiti risorse import
+
+nonisolated enum ExcelImportResourceError: LocalizedError, Equatable {
+    case sourceFileTooLarge
+    case sourceSessionTooLarge
+    case archiveHasTooManyEntries
+    case archiveEntryTooLarge
+    case archiveExpandedSizeTooLarge
+
+    var errorDescription: String? {
+        switch self {
+        case .sourceFileTooLarge:
+            return String(
+                format: NSLocalizedString("import.security.file_too_large", comment: ""),
+                ExcelImportResourcePolicy.megabytes(ExcelImportResourcePolicy.maximumSourceFileBytes)
+            )
+        case .sourceSessionTooLarge:
+            return String(
+                format: NSLocalizedString("import.security.session_too_large", comment: ""),
+                ExcelImportResourcePolicy.megabytes(ExcelImportResourcePolicy.maximumSourceSessionBytes)
+            )
+        case .archiveHasTooManyEntries:
+            return String(
+                format: NSLocalizedString("import.security.xlsx_too_many_parts", comment: ""),
+                ExcelImportResourcePolicy.maximumArchiveEntryCount
+            )
+        case .archiveEntryTooLarge:
+            return String(
+                format: NSLocalizedString("import.security.xlsx_part_too_large", comment: ""),
+                ExcelImportResourcePolicy.megabytes(ExcelImportResourcePolicy.maximumArchiveEntryBytes)
+            )
+        case .archiveExpandedSizeTooLarge:
+            return String(
+                format: NSLocalizedString("import.security.xlsx_expanded_too_large", comment: ""),
+                ExcelImportResourcePolicy.megabytes(ExcelImportResourcePolicy.maximumArchiveExpandedBytes)
+            )
+        }
+    }
+}
+
+/// Limiti condivisi dai file picker Inventory/Database e dal parser.
+///
+/// I file HTML/CSV/XLS sono letti interamente solo dopo il controllo dei 32 MiB.
+/// Gli XLSX restano compressi su disco e ogni entry viene estratta con budget
+/// dichiarato e runtime, oltre al budget cumulativo dell'archivio.
+nonisolated enum ExcelImportResourcePolicy {
+    static let maximumSourceFileBytes: UInt64 = 32 * 1_024 * 1_024
+    static let maximumSourceSessionBytes: UInt64 = maximumSourceFileBytes
+    static let maximumArchiveEntryCount = 2_048
+    static let maximumArchiveEntryBytes: UInt64 = 128 * 1_024 * 1_024
+    static let maximumArchiveExpandedBytes: UInt64 = 256 * 1_024 * 1_024
+
+    struct ArchiveValidationState {
+        private(set) var entryCount = 0
+        private(set) var expandedBytes: UInt64 = 0
+
+        mutating func recordEntry(uncompressedBytes: UInt64) throws {
+            entryCount += 1
+            guard entryCount <= maximumArchiveEntryCount else {
+                throw ExcelImportResourceError.archiveHasTooManyEntries
+            }
+            guard uncompressedBytes <= maximumArchiveEntryBytes else {
+                throw ExcelImportResourceError.archiveEntryTooLarge
+            }
+
+            let (newTotal, overflow) = expandedBytes.addingReportingOverflow(uncompressedBytes)
+            guard !overflow, newTotal <= maximumArchiveExpandedBytes else {
+                throw ExcelImportResourceError.archiveExpandedSizeTooLarge
+            }
+            expandedBytes = newTotal
+        }
+    }
+
+    final class ArchiveExtractionBudget {
+        private let maximumBytes: UInt64
+        private let lock = NSLock()
+        private var maximumObservedBytesByPath: [String: UInt64] = [:]
+        private var expandedBytes: UInt64 = 0
+        private var hasExceededLimit = false
+
+        init(maximumBytes: UInt64 = ExcelImportResourcePolicy.maximumArchiveExpandedBytes) {
+            self.maximumBytes = maximumBytes
+        }
+
+        func recordEntryProgress(path: String, expandedBytes entryExpandedBytes: UInt64) throws {
+            lock.lock()
+            defer { lock.unlock() }
+
+            guard !hasExceededLimit else {
+                throw ExcelImportResourceError.archiveExpandedSizeTooLarge
+            }
+
+            let previouslyObservedBytes = maximumObservedBytesByPath[path] ?? 0
+            guard entryExpandedBytes > previouslyObservedBytes else { return }
+
+            let additionalBytes = entryExpandedBytes - previouslyObservedBytes
+            let (newTotal, overflow) = expandedBytes.addingReportingOverflow(additionalBytes)
+            guard !overflow, newTotal <= maximumBytes else {
+                hasExceededLimit = true
+                throw ExcelImportResourceError.archiveExpandedSizeTooLarge
+            }
+
+            maximumObservedBytesByPath[path] = entryExpandedBytes
+            expandedBytes = newTotal
+        }
+    }
+
+    static func megabytes(_ bytes: UInt64) -> Int {
+        Int(bytes / (1_024 * 1_024))
+    }
+
+    private static func sourceFileSize(at url: URL) throws -> UInt64 {
+        let resourceValues = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+
+        if let fileSize = resourceValues.fileSize, fileSize >= 0 {
+            return UInt64(fileSize)
+        }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard let fileSize = attributes[.size] as? NSNumber else {
+            throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: url])
+        }
+        return fileSize.uint64Value
+    }
+
+    static func validateSourceFile(at url: URL) throws {
+        let size = try sourceFileSize(at: url)
+
+        guard size <= maximumSourceFileBytes else {
+            throw ExcelImportResourceError.sourceFileTooLarge
+        }
+    }
+
+    static func validateSourceFilesForSession(_ urls: [URL]) throws {
+        var aggregateBytes: UInt64 = 0
+
+        for url in urls {
+            let size = try sourceFileSize(at: url)
+            guard size <= maximumSourceFileBytes else {
+                throw ExcelImportResourceError.sourceFileTooLarge
+            }
+
+            let (newTotal, overflow) = aggregateBytes.addingReportingOverflow(size)
+            guard !overflow, newTotal <= maximumSourceSessionBytes else {
+                throw ExcelImportResourceError.sourceSessionTooLarge
+            }
+            aggregateBytes = newTotal
+        }
+    }
+
+    static func readPrefix(at url: URL, maximumBytes: Int = 4_096) throws -> Data {
+        try validateSourceFile(at: url)
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        return try handle.read(upToCount: maximumBytes) ?? Data()
+    }
+
+    static func readWholeDocument(at url: URL) throws -> Data {
+        try validateSourceFile(at: url)
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+
+        var totalBytes: UInt64 = 0
+        var result = Data()
+        while let chunk = try handle.read(upToCount: 64 * 1_024), !chunk.isEmpty {
+            let (newTotal, overflow) = totalBytes.addingReportingOverflow(UInt64(chunk.count))
+            guard !overflow, newTotal <= maximumSourceFileBytes else {
+                throw ExcelImportResourceError.sourceFileTooLarge
+            }
+            totalBytes = newTotal
+            result.append(chunk)
+        }
+        return result
+    }
+
+    static func copyValidatedSourceFile(from sourceURL: URL, to destinationURL: URL) throws {
+        try validateSourceFile(at: sourceURL)
+
+        let fileManager = FileManager.default
+        guard fileManager.createFile(atPath: destinationURL.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destinationURL])
+        }
+
+        do {
+            let sourceHandle = try FileHandle(forReadingFrom: sourceURL)
+            let destinationHandle = try FileHandle(forWritingTo: destinationURL)
+            defer {
+                try? sourceHandle.close()
+                try? destinationHandle.close()
+            }
+
+            var totalBytes: UInt64 = 0
+            while let chunk = try sourceHandle.read(upToCount: 64 * 1_024), !chunk.isEmpty {
+                let (newTotal, overflow) = totalBytes.addingReportingOverflow(UInt64(chunk.count))
+                guard !overflow, newTotal <= maximumSourceFileBytes else {
+                    throw ExcelImportResourceError.sourceFileTooLarge
+                }
+                totalBytes = newTotal
+                try destinationHandle.write(contentsOf: chunk)
+            }
+            try destinationHandle.synchronize()
+        } catch {
+            try? fileManager.removeItem(at: destinationURL)
+            throw error
+        }
+    }
+
+    static func validateArchive(_ archive: Archive) throws {
+        var state = ArchiveValidationState()
+        for entry in archive {
+            try state.recordEntry(uncompressedBytes: entry.uncompressedSize)
+        }
+    }
+
+    static func extractData(
+        from archive: Archive,
+        entry: Entry,
+        maximumBytes: UInt64 = maximumArchiveEntryBytes,
+        runtimeBudget: ArchiveExtractionBudget
+    ) throws -> Data {
+        guard entry.uncompressedSize <= maximumBytes else {
+            throw ExcelImportResourceError.archiveEntryTooLarge
+        }
+
+        var extractedBytes: UInt64 = 0
+        var result = Data()
+        _ = try archive.extract(entry) { chunk in
+            let (newTotal, overflow) = extractedBytes.addingReportingOverflow(UInt64(chunk.count))
+            guard !overflow, newTotal <= maximumBytes else {
+                throw ExcelImportResourceError.archiveEntryTooLarge
+            }
+            try runtimeBudget.recordEntryProgress(path: entry.path, expandedBytes: newTotal)
+            extractedBytes = newTotal
+            result.append(chunk)
+        }
+        return result
+    }
+}
+
 // MARK: - Analisi file Excel/HTML (equivalente di ExcelUtils.kt su Android)
 
 nonisolated struct ExcelAnalyzer {
+
+    struct XLSXWorkbookSession {
+        fileprivate let archive: Archive
+        fileprivate let runtimeBudget: ExcelImportResourcePolicy.ArchiveExtractionBudget
+    }
 
     private struct WorkbookSheetReference {
         let name: String
@@ -1531,6 +1777,8 @@ nonisolated struct ExcelAnalyzer {
             throw ExcelLoadError.invalidFormat("Nessun file selezionato.")
         }
 
+        try ExcelImportResourcePolicy.validateSourceFilesForSession(urls)
+
         // 🔹 Manteniamo l'header originale solo del primo file
         let first = try readAndAnalyzeExcelDetailed(from: firstURL)
         let originalHeader = first.originalHeader
@@ -1566,24 +1814,28 @@ nonisolated struct ExcelAnalyzer {
     }
 
     static func readAndAnalyzeExcelDetailed(from url: URL) throws -> ExcelImportAnalysisTable {
-        let data = try Data(contentsOf: url)
+        let filePrefix = try ExcelImportResourcePolicy.readPrefix(at: url)
         let ext = url.pathExtension.lowercased()
 
         debugLog("Caricamento \(url.lastPathComponent) (ext=\(ext))", level: .info)
 
         // 1) HTML first (anche DreamDIY.xls)
-        if looksLikeHtml(data: data) {
+        if looksLikeHtml(data: filePrefix) {
             debugLog("Rilevato HTML (anche con estensione .\(ext))", level: .info)
+            let data = try ExcelImportResourcePolicy.readWholeDocument(at: url)
             let rows = try rowsFromHTML(data: data)
             return analyzeRowsDetailed(normalizeAllCells(rows))
         }
 
         // 2) Prova come XLSX (ZIP), basato sul contenuto
-        if isZipXlsx(data: data) {
+        if isZipXlsx(data: filePrefix) {
             do {
                 debugLog("Firma ZIP rilevata, provo come XLSX", level: .info)
                 let rows = try rowsFromXLSX(at: url)
                 return analyzeRowsDetailed(normalizeAllCells(rows))
+            } catch let resourceError as ExcelImportResourceError {
+                // Un limite di sicurezza non deve degradare nel fallback legacy.
+                throw resourceError
             } catch {
                 debugLog("Errore lettura XLSX: \(error.localizedDescription)", level: .warning)
 
@@ -1600,6 +1852,7 @@ nonisolated struct ExcelAnalyzer {
         // 3) Legacy .xls (BIFF) → libxls
         if ext == "xls" || ext == "xlsx" {
             debugLog("Provo parser legacy .xls per \(url.lastPathComponent)", level: .info)
+            let data = try ExcelImportResourcePolicy.readWholeDocument(at: url)
             let rows = try rowsFromLegacyXLS(data: data)
             return analyzeRowsDetailed(normalizeAllCells(rows))
         }
@@ -1609,23 +1862,34 @@ nonisolated struct ExcelAnalyzer {
     }
 
     static func listSheetNames(at url: URL) throws -> [String] {
-        let archive = try openXLSXArchive(at: url)
-        return try workbookSheets(from: archive).map(\.name)
+        let workbook = try openXLSXWorkbook(at: url)
+        return try listSheetNames(in: workbook)
+    }
+
+    static func listSheetNames(in workbook: XLSXWorkbookSession) throws -> [String] {
+        try workbookSheets(from: workbook).map(\.name)
     }
 
     static func readSheetByName(at url: URL, sheetName: String) throws -> [[String]] {
-        let archive = try openXLSXArchive(at: url)
-        let sharedStrings = try sharedStringsFromArchive(archive)
-        let styles = try stylesFromArchive(archive)
+        let workbook = try openXLSXWorkbook(at: url)
+        return try readSheetByName(in: workbook, sheetName: sheetName)
+    }
+
+    static func readSheetByName(
+        in workbook: XLSXWorkbookSession,
+        sheetName: String
+    ) throws -> [[String]] {
+        let sharedStrings = try sharedStringsFromArchive(workbook)
+        let styles = try stylesFromArchive(workbook)
         let targetKey = normalizedSheetKey(sheetName)
 
-        guard let sheetInfo = try workbookSheets(from: archive).first(where: {
+        guard let sheetInfo = try workbookSheets(from: workbook).first(where: {
             normalizedSheetKey($0.name) == targetKey
         }) else {
             throw ExcelLoadError.invalidFormat("Foglio '\(sheetName)' non trovato nel file Excel.")
         }
 
-        let sheetData = try dataFromArchive(archive, path: sheetInfo.path)
+        let sheetData = try dataFromArchive(workbook, path: sheetInfo.path)
         return parseSheetXML(sheetData, sharedStrings: sharedStrings, styles: styles)
     }
 
@@ -1950,25 +2214,25 @@ nonisolated struct ExcelAnalyzer {
     }
     
     private static func rowsFromXLSX(at url: URL) throws -> [[String]] {
-        let archive = try openXLSXArchive(at: url)
+        let workbook = try openXLSXWorkbook(at: url)
 
         // 1) sharedStrings.xml (può anche non esserci)
-        let sharedStrings = try sharedStringsFromArchive(archive)
-        let styles = try stylesFromArchive(archive)
+        let sharedStrings = try sharedStringsFromArchive(workbook)
+        let styles = try stylesFromArchive(workbook)
 
         // 2) Trova il primo sheet
         //   - prima proviamo "xl/worksheets/sheet1.xml"
         //   - se non esiste, prendiamo il primo "xl/worksheets/sheet*.xml"
         let sheetPath: String
-        if archive["xl/worksheets/sheet1.xml"] != nil {
+        if workbook.archive["xl/worksheets/sheet1.xml"] != nil {
             sheetPath = "xl/worksheets/sheet1.xml"
-        } else if let entry = archive.first(where: { $0.path.hasPrefix("xl/worksheets/sheet") && $0.path.hasSuffix(".xml") }) {
+        } else if let entry = workbook.archive.first(where: { $0.path.hasPrefix("xl/worksheets/sheet") && $0.path.hasSuffix(".xml") }) {
             sheetPath = entry.path
         } else {
             throw ExcelLoadError.invalidFormat("Nessun foglio di lavoro trovato nel file Excel.")
         }
 
-        let sheetData = try dataFromArchive(archive, path: sheetPath)
+        let sheetData = try dataFromArchive(workbook, path: sheetPath)
         return parseSheetXML(sheetData, sharedStrings: sharedStrings, styles: styles)
     }
     
@@ -2009,25 +2273,32 @@ nonisolated struct ExcelAnalyzer {
         return max(result - 1, 0)
     }
 
-    private static func openXLSXArchive(at url: URL) throws -> Archive {
+    static func openXLSXWorkbook(at url: URL) throws -> XLSXWorkbookSession {
+        try ExcelImportResourcePolicy.validateSourceFile(at: url)
+
+        let archive: Archive
         do {
-            return try Archive(url: url, accessMode: .read)
+            archive = try Archive(url: url, accessMode: .read)
         } catch {
             throw ExcelLoadError.invalidFormat("Impossibile aprire il file Excel (zip non valido).")
         }
+
+        try ExcelImportResourcePolicy.validateArchive(archive)
+        return XLSXWorkbookSession(
+            archive: archive,
+            runtimeBudget: ExcelImportResourcePolicy.ArchiveExtractionBudget()
+        )
     }
 
-    private static func sharedStringsFromArchive(_ archive: Archive) throws -> [String] {
-        if let ssData = try? dataFromArchive(archive, path: "xl/sharedStrings.xml") {
-            return parseSharedStringsXML(ssData)
-        }
-        return []
+    private static func sharedStringsFromArchive(_ workbook: XLSXWorkbookSession) throws -> [String] {
+        guard workbook.archive["xl/sharedStrings.xml"] != nil else { return [] }
+        let sharedStringsData = try dataFromArchive(workbook, path: "xl/sharedStrings.xml")
+        return parseSharedStringsXML(sharedStringsData)
     }
 
-    private static func stylesFromArchive(_ archive: Archive) throws -> [CellStyle] {
-        guard let stylesData = try? dataFromArchive(archive, path: "xl/styles.xml") else {
-            return []
-        }
+    private static func stylesFromArchive(_ workbook: XLSXWorkbookSession) throws -> [CellStyle] {
+        guard workbook.archive["xl/styles.xml"] != nil else { return [] }
+        let stylesData = try dataFromArchive(workbook, path: "xl/styles.xml")
 
         let delegate = StylesDelegate()
         let parser = XMLParser(data: stylesData)
@@ -2065,13 +2336,15 @@ nonisolated struct ExcelAnalyzer {
         return String(repeating: "0", count: width - integer.count) + integer
     }
 
-    private static func workbookSheets(from archive: Archive) throws -> [WorkbookSheetInfo] {
+    private static func workbookSheets(from workbook: XLSXWorkbookSession) throws -> [WorkbookSheetInfo] {
         let workbookData: Data
         let relationshipsData: Data
 
         do {
-            workbookData = try dataFromArchive(archive, path: "xl/workbook.xml")
-            relationshipsData = try dataFromArchive(archive, path: "xl/_rels/workbook.xml.rels")
+            workbookData = try dataFromArchive(workbook, path: "xl/workbook.xml")
+            relationshipsData = try dataFromArchive(workbook, path: "xl/_rels/workbook.xml.rels")
+        } catch let resourceError as ExcelImportResourceError {
+            throw resourceError
         } catch {
             throw ExcelLoadError.invalidFormat("Impossibile leggere la struttura dei fogli del file Excel.")
         }
@@ -2085,7 +2358,7 @@ nonisolated struct ExcelAnalyzer {
             }
 
             let path = normalizeWorkbookTargetPath(target)
-            guard archive[path] != nil else {
+            guard workbook.archive[path] != nil else {
                 return nil
             }
 
@@ -2147,16 +2420,15 @@ nonisolated struct ExcelAnalyzer {
     }
 
     /// Estrae i dati di un entry ZIP in memoria
-    private static func dataFromArchive(_ archive: Archive, path: String) throws -> Data {
-        guard let entry = archive[path] else {
+    private static func dataFromArchive(_ workbook: XLSXWorkbookSession, path: String) throws -> Data {
+        guard let entry = workbook.archive[path] else {
             throw ExcelLoadError.invalidFormat("Componente mancante nel file Excel: \(path)")
         }
-
-        var result = Data()
-        _ = try archive.extract(entry) { chunk in
-            result.append(chunk)
-        }
-        return result
+        return try ExcelImportResourcePolicy.extractData(
+            from: workbook.archive,
+            entry: entry,
+            runtimeBudget: workbook.runtimeBudget
+        )
     }
 
     // MARK: - Analisi avanzata (replica di ExcelUtils.kt)

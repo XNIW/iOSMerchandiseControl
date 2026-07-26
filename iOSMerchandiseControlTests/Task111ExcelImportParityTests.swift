@@ -718,6 +718,177 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertFalse(values.contains("123456789"))
     }
 
+    func testImportResourcePolicyRejectsSparseOversizedSourceBeforeRead() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task111-oversized-source-\(UUID().uuidString).xls")
+        XCTAssertTrue(FileManager.default.createFile(atPath: url.path, contents: Data()))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: ExcelImportResourcePolicy.maximumSourceFileBytes + 1)
+        try handle.close()
+
+        let destinationURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task111-rejected-copy-\(UUID().uuidString).xls")
+        defer { try? FileManager.default.removeItem(at: destinationURL) }
+
+        XCTAssertThrowsError(try ExcelImportResourcePolicy.validateSourceFile(at: url)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .sourceFileTooLarge)
+            XCTAssertTrue(error.localizedDescription.contains("32"))
+        }
+        XCTAssertThrowsError(
+            try ExcelImportResourcePolicy.copyValidatedSourceFile(from: url, to: destinationURL)
+        ) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .sourceFileTooLarge)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destinationURL.path))
+    }
+
+    func testImportResourcePolicyRejectsAggregateMultiFileSessionBeforeParsing() throws {
+        let urls = (0..<2).map { index in
+            FileManager.default.temporaryDirectory
+                .appendingPathComponent("task111-session-\(index)-\(UUID().uuidString).xls")
+        }
+        defer {
+            for url in urls {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
+        for url in urls {
+            XCTAssertTrue(FileManager.default.createFile(atPath: url.path, contents: Data()))
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.truncate(atOffset: 20 * 1_024 * 1_024)
+            try handle.close()
+            XCTAssertNoThrow(try ExcelImportResourcePolicy.validateSourceFile(at: url))
+        }
+
+        XCTAssertThrowsError(try ExcelImportResourcePolicy.validateSourceFilesForSession(urls)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .sourceSessionTooLarge)
+            XCTAssertTrue(error.localizedDescription.contains("32"))
+        }
+        XCTAssertThrowsError(try ExcelAnalyzer.loadFromMultipleURLDetails(urls)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .sourceSessionTooLarge)
+        }
+    }
+
+    func testImportResourcePolicyRejectsSyntheticXLSXWithOversizedEntryMetadata() throws {
+        let url = try makeSyntheticArchive(entryData: Data([0x41]))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        var bytes = [UInt8](try Data(contentsOf: url))
+        let centralDirectorySignature: [UInt8] = [0x50, 0x4B, 0x01, 0x02]
+        let signatureIndex = try XCTUnwrap(
+            bytes.indices.first(where: { index in
+                let end = index + centralDirectorySignature.count
+                guard end <= bytes.count else { return false }
+                return Array(bytes[index..<end]) == centralDirectorySignature
+            })
+        )
+        let declaredSize = UInt32(ExcelImportResourcePolicy.maximumArchiveEntryBytes + 1)
+        let sizeBytes = withUnsafeBytes(of: declaredSize.littleEndian) { Array($0) }
+        bytes.replaceSubrange((signatureIndex + 24)..<(signatureIndex + 28), with: sizeBytes)
+        try Data(bytes).write(to: url, options: .atomic)
+
+        let archive = try Archive(url: url, accessMode: .read)
+        XCTAssertThrowsError(try ExcelImportResourcePolicy.validateArchive(archive)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .archiveEntryTooLarge)
+        }
+    }
+
+    func testImportResourcePolicyBoundsArchiveEntryCountAndExpandedTotal() throws {
+        var countState = ExcelImportResourcePolicy.ArchiveValidationState()
+        for _ in 0..<ExcelImportResourcePolicy.maximumArchiveEntryCount {
+            try countState.recordEntry(uncompressedBytes: 0)
+        }
+        XCTAssertThrowsError(try countState.recordEntry(uncompressedBytes: 0)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .archiveHasTooManyEntries)
+        }
+
+        var totalState = ExcelImportResourcePolicy.ArchiveValidationState()
+        try totalState.recordEntry(uncompressedBytes: ExcelImportResourcePolicy.maximumArchiveEntryBytes)
+        try totalState.recordEntry(uncompressedBytes: ExcelImportResourcePolicy.maximumArchiveEntryBytes)
+        XCTAssertThrowsError(try totalState.recordEntry(uncompressedBytes: 1)) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .archiveExpandedSizeTooLarge)
+        }
+    }
+
+    func testImportResourcePolicyExtractsSmallEntryWithinRuntimeBudget() throws {
+        let payload = Data(repeating: 0x41, count: 1_024)
+        let url = try makeSyntheticArchive(entryData: payload)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let archive = try Archive(url: url, accessMode: .read)
+        try ExcelImportResourcePolicy.validateArchive(archive)
+        let entry = try XCTUnwrap(archive["xl/worksheets/sheet1.xml"])
+        let extracted = try ExcelImportResourcePolicy.extractData(
+            from: archive,
+            entry: entry,
+            runtimeBudget: ExcelImportResourcePolicy.ArchiveExtractionBudget()
+        )
+        XCTAssertEqual(extracted, payload)
+    }
+
+    func testImportResourcePolicyRejectsCumulativeRuntimeExpansionAcrossExtractions() throws {
+        let payload = Data(repeating: 0x41, count: 1_024)
+        let firstPath = "xl/worksheets/sheet1.xml"
+        let secondPath = "xl/worksheets/sheet2.xml"
+        let url = try makeSyntheticArchive(entries: [
+            (path: firstPath, data: payload),
+            (path: secondPath, data: payload)
+        ])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        var archiveData = try Data(contentsOf: url)
+        let centralDirectorySignature = Data([0x50, 0x4B, 0x01, 0x02])
+        var centralDirectoryOffsets: [Int] = []
+        var searchStart = archiveData.startIndex
+        while searchStart < archiveData.endIndex,
+              let range = archiveData.range(
+                  of: centralDirectorySignature,
+                  in: searchStart..<archiveData.endIndex
+              ) {
+            centralDirectoryOffsets.append(range.lowerBound)
+            searchStart = range.upperBound
+        }
+        XCTAssertEqual(centralDirectoryOffsets.count, 2)
+        let falseDeclaredSizeBytes = withUnsafeBytes(of: UInt32(1).littleEndian) { Data($0) }
+        for offset in centralDirectoryOffsets {
+            archiveData.replaceSubrange((offset + 24)..<(offset + 28), with: falseDeclaredSizeBytes)
+        }
+        try archiveData.write(to: url, options: .atomic)
+
+        let archive = try Archive(url: url, accessMode: .read)
+        try ExcelImportResourcePolicy.validateArchive(archive)
+        let firstEntry = try XCTUnwrap(archive[firstPath])
+        let secondEntry = try XCTUnwrap(archive[secondPath])
+        let runtimeBudget = ExcelImportResourcePolicy.ArchiveExtractionBudget(maximumBytes: 1_536)
+        let firstExtraction = try ExcelImportResourcePolicy.extractData(
+            from: archive,
+            entry: firstEntry,
+            maximumBytes: 2_048,
+            runtimeBudget: runtimeBudget
+        )
+        let repeatedExtraction = try ExcelImportResourcePolicy.extractData(
+            from: archive,
+            entry: firstEntry,
+            maximumBytes: 2_048,
+            runtimeBudget: runtimeBudget
+        )
+        XCTAssertEqual(firstExtraction, payload)
+        XCTAssertEqual(repeatedExtraction, payload)
+        XCTAssertThrowsError(
+            try ExcelImportResourcePolicy.extractData(
+                from: archive,
+                entry: secondEntry,
+                maximumBytes: 2_048,
+                runtimeBudget: runtimeBudget
+            )
+        ) { error in
+            XCTAssertEqual(error as? ExcelImportResourceError, .archiveExpandedSizeTooLarge)
+        }
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -824,6 +995,36 @@ final class Task111ExcelImportParityTests: XCTestCase {
         try FileManager.default.zipItem(at: root, to: xlsxURL, shouldKeepParent: false)
         try? FileManager.default.removeItem(at: root)
         return xlsxURL
+    }
+
+    private func makeSyntheticArchive(entryData: Data) throws -> URL {
+        try makeSyntheticArchive(entries: [
+            (path: "xl/worksheets/sheet1.xml", data: entryData)
+        ])
+    }
+
+    private func makeSyntheticArchive(entries: [(path: String, data: Data)]) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("task111-resource-policy-\(UUID().uuidString).xlsx")
+
+        do {
+            let archive = try Archive(url: url, accessMode: .create)
+            for entry in entries {
+                try archive.addEntry(
+                    with: entry.path,
+                    type: .file,
+                    uncompressedSize: Int64(entry.data.count),
+                    compressionMethod: .deflate
+                ) { position, size in
+                    let lowerBound = Int(position)
+                    guard lowerBound < entry.data.count else { return Data() }
+                    let upperBound = min(entry.data.count, lowerBound + size)
+                    return entry.data.subdata(in: lowerBound..<upperBound)
+                }
+            }
+        }
+
+        return url
     }
 
     private func write(_ text: String, to url: URL) throws {
