@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-139 — REVIEW_WITH_IOS_V6_PREBOUND_RUNTIME_VERIFIED_ISOLATED / REVIEW — Product Image Production Hardening e Cross-Platform Contract Parity (iOS)** *(2026-07-23: continuation principale autorizzata sul candidato isolato. Prova reale `ProductImageService`/`ProductImageStore`: 64 completion A/G1 tardive dopo transizione B/G2 con zero publish/cache stale e 100 consumer B same-key con una sola read/GET. Prova app-process prepare→terminate→verify `2/2`, PID distinto, owner/store B fail-closed, risorse A leggibili e nessuna publication cross-scope; crash harness SIGKILL pre/post-manifest riconfermato `2/2`. Full XCTest finale `1.262` = `1.227` pass + `35` skip opt-in/live + `0` failure; build, analyze, plist e diff check verdi. Solo Simulator effimeri non autenticati; nessun secondo replace, clear-data, rete, production o deploy. Il runtime proof mobile per `sec-mobile-prebound-resource-003` è ora presente sulla lane iOS, ma TASK-139 resta `REVIEW`, non PASS globale/DONE: E2E cross-platform non-production e gate Win7POS restano separati. Evidence runtime conservata fuori repository nel closeout finale.)*
+**IDLE — ultimo completato TASK-139 DONE / FINAL REVIEW APPROVED — Product Image Production Hardening e Cross-Platform Contract Parity (iOS)** *(2026-07-25: chiusura esplicita utente. SHA codice `e6ce8a5e7ad654cc55ea92744affeaa85726b438` verificata su `main`; CI `30176557473` `SUCCESS` con contract hash, build Debug, full XCTest `1.284` totali / `35` skipped / `0` failure, Analyze e secret scan verdi. P0/P1/P2 aperti `0`; device/camera fisici restano evidence esterna opzionale e non bloccante. Nessun deploy, TestFlight, write production o nuovo scan Codex Security.)*
 
 **TASK-138 — DONE / DONE_RECONCILED — Product Images Runtime Completion, UX e Live Parity (iOS)** *(2026-07-18: chiusura esplicita utente dopo review completa. Parity locale read/replace/remove bidirezionale con Admin e Android PASS; sei screenshot finali; Analyze PASS; suite Product Images 40 eseguiti, 37 PASS, 3 SKIP opt-in attesi, 0 failure; cleanup DB/Storage/Auth 0 e nessun Simulator Booted. Verdict `RELEASE_READY_WITH_MEASURED_GATES`. Device fisico e staging/dev autenticato restano `BLOCKED_EXTERNAL_PRECONDITION`, non PASS. File `docs/TASKS/TASK-138-product-images-runtime-completion-ios.md`; evidence `docs/TASKS/EVIDENCE/TASK-138/`. Responsabile: **USER / Confirmed release**.)*
 
@@ -1068,13 +1068,13 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** TASK-139 — Product Image Production Hardening e Cross-Platform Contract Parity (iOS)
-- **File task attivo:** `docs/TASKS/TASK-139-product-image-production-hardening-ios.md`
-- **Stato task:** REVIEW_WITH_IOS_FIXES_VERIFIED_ISOLATED
-- **Fase attuale:** REVIEW
-- **Responsabile attuale:** **Claude/ChatGPT / Reviewer**
-- **Ultimo aggiornamento:** 2026-07-21 — FIX post-replace completata sul candidato isolato: matrice integrata unica di `28` classi, `383` pass + `3` skip su `386`, e focus recovery/cancel `94/94`; RPC `29/29`, outbox `32/32`, recovery preflight/W0 `3/3`, lease interleaving singolo + repeat-5, Debug build e Analyze verdi. Corretti exactly-one RPC, outbox fail-closed, preflight/budget e `recoveryRequired` durevole: persiste su cancel/failure/block/busy/no-op/relaunch e si libera solo dopo successo verificato; il replacement rimuove il latch soltanto per journal/bootstrap e la race Cancel→Retry immediato viene drenata dopo chiusura cooperativa. Gap/reconnect/check normali non avviano snapshot; solo Retry CTA esplicito può richiedere recovery. I conteggi raw staging e locali reconciliation-aware del checkpoint reale non sono comparabili uno-a-uno; il blocker certo storico era `policyBlocked / sync_event_missing_entity_ids` + `idle/noWork`. Nessun secondo replace/install/clear-data/live mutation: convergenza reale non riprovata. Resta P1 letterale per stato fisico intermedio dei save paginati/cross-domain, protetto da journal/retry ma non da transazione fisica globale.
-- **Handoff corrente:** archivio esterno non versionato del closeout TASK-139
+- **Task attivo corrente:** nessuno; ultimo completato TASK-139.
+- **File task attivo:** nessuno; ultimo `docs/TASKS/TASK-139-product-image-production-hardening-ios.md`.
+- **Stato task:** DONE
+- **Fase attuale:** IDLE / DONE
+- **Responsabile attuale:** **USER / Final review approved**
+- **Ultimo aggiornamento:** 2026-07-25 — TASK-139 chiusa `DONE`; SHA codice `e6ce8a5e7ad654cc55ea92744affeaa85726b438` verificata su `main` e antenata del tip documentale. CI esistente `30176557473` `SUCCESS`: contract hash, Debug build, full XCTest `1.284` totali con `35` skip e `0` failure, Analyze e secret scan verdi. P0/P1/P2 aperti `0`; device/camera fisici restano esterni non bloccanti.
+- **Handoff corrente:** `DONE`; evidence runtime nell'archivio esterno non versionato del closeout TASK-139.
 - **Nota TASK-129:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; broad Android non e' PASS pieno.
 - **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-132 e' DONE per override utente finale** nel perimetro `CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED`. La closure storicamente etichettata **TASK-134** e' parte del sotto-scope `TASK-132 final live strict closure`; non esiste un task canonico separato TASK-134 in questa closure, e i riferimenti `TASK134_*` restano solo fixture/harness prefix storici. TASK-135 non e' aperto; nessun claim production-ready globale oltre il perimetro task.
 - **Ultimo completato:** **TASK-130** (`docs/TASKS/TASK-130-price-contract-current-previous-old.md`) — **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**.

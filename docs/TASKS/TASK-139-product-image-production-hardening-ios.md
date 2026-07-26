@@ -2,13 +2,13 @@
 
 ## Stato
 
-- Stato: `REVIEW_WITH_IOS_V6_PREBOUND_RUNTIME_VERIFIED_ISOLATED`
-- Fase: `REVIEW`
-- Responsabile: `Claude/ChatGPT / Reviewer`
+- Stato: `DONE`
+- Fase: `DONE`
+- Responsabile: `USER / FINAL REVIEW APPROVED`
 - Apertura: `2026-07-18`, brief esplicito utente cross-platform.
 - Ultima FIX: `2026-07-23`, publication atomica, contratto V6 e runtime
   pre-bound resource verificati sul candidato isolato.
-- Chiusura: mai `DONE` senza conferma esplicita dell'utente.
+- Chiusura: `DONE`; conferma esplicita dell'utente ricevuta il `2026-07-25`.
 - Baseline: `origin/main` `66d90983f8e9ab08dd72184abb4ec70d2c4daefb`.
 
 ## Scope lane iOS
@@ -138,7 +138,7 @@ reale non è stata riprovata.
 - Win7POS/security globale: `BLOCKED_EXTERNAL` per input esterno mancante; non è
   un PASS globale.
 
-## Stato V6 e handoff
+## Stato V6 e handoff storico
 
 Il precedente `P1` di atomicità fisica è superseduto sul candidato iOS: il
 recovery prepara una generation separata, controlla mutation fence e receipt,
@@ -151,20 +151,21 @@ Osservazione P2: nella full suite è apparsa una diagnostica SwiftData
 il warning non si era riprodotto nelle riesecuzioni isolate. Va riprodotto
 prima di trattarlo come difetto runtime.
 
-Resta il blocker di accettazione cross-platform: non è stato eseguito sullo
-shop non-production autorizzato il singolo replace E2E con confronto forte
-cloud/local, immagini, outbox e tre relaunch. Questo non è un PASS globale né
-un `DONE`.
+Al checkpoint del candidato non era stato eseguito sullo shop non-production
+autorizzato il singolo replace E2E con confronto forte cloud/local, immagini,
+outbox e tre relaunch. La nota resta evidence storica; l'integrazione finale
+cross-repository e la conferma utente del `2026-07-25` la rendono non bloccante
+per la closure software TASK-139.
 
 Evidence autorevole nell'archivio esterno non versionato del closeout.
-Il task resta in `REVIEW`, responsabile reviewer; mai `DONE` o PASS globale
-senza conferma esplicita dell'utente.
+Il task era rimasto in `REVIEW` in attesa della conferma esplicita dell'utente,
+ora ricevuta e registrata nella sezione finale.
 
 ## Continuation principale 2026-07-23 — runtime pre-bound resource
 
 User override: la continuation cross-platform ha autorizzato la FIX mirata
-anche se la lane era già in `REVIEW`. L'impatto sul workflow è limitato a
-codice/harness/test/evidence locali; l'handoff torna a `REVIEW`, non `DONE`.
+anche se la lane era già in `REVIEW`. L'impatto sul workflow era limitato a
+codice/harness/test/evidence locali; l'handoff tornava allora a `REVIEW`.
 
 La prova XCTest usa `ProductImageService`, `ProductImageStore`,
 `ProductImageCache` e il gate owner/store reali. Sono state avviate `64`
@@ -209,3 +210,19 @@ Il runtime proof iOS richiesto da `sec-mobile-prebound-resource-003` è presente
 Questo non chiude da solo la security review globale, l'E2E cross-platform o
 Win7POS. Nessun commit, stage, push, merge o deploy è stato eseguito in questa
 continuation.
+
+## Final review closeout — 2026-07-25
+
+- Stato finale: `DONE`, con approvazione esplicita dell'utente.
+- SHA codice verificata:
+  `e6ce8a5e7ad654cc55ea92744affeaa85726b438`.
+- La SHA coincideva con `main`, `origin/main` e GitHub `main` al preflight ed è
+  antenata del successivo commit documentale.
+- CI GitHub `30176557473`: `SUCCESS` sull'esatta SHA.
+- Gate riusati dal run: contract hash/byte parity, Debug build, full XCTest
+  `1.284` totali con `35` skipped e `0` failure, Analyze e secret scan verdi.
+- Acceptance I-01…I-06: chiusa; P0/P1/P2 aperti `0/0/0`.
+- Device e camera fisici restano `NOT_RUN` come evidence esterna opzionale e
+  non bloccante.
+- Nessun deploy, TestFlight, write production o nuovo scan Codex Security è
+  stato eseguito nel closeout.
