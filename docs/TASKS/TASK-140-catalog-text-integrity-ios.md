@@ -10,21 +10,25 @@
 - Apertura: `2026-07-27`
 - Baseline: `origin/main`
   `351ccb9dd0e573bd7f450f23efc1d50670ae362f`
-- Branch: `codex/catalog-text-integrity-ios-20260727`
+- Branch implementazione: `codex/catalog-text-integrity-ios-20260727`
+- Branch closeout: `codex/catalog-text-integrity-closeout-ios-20260727`
 - Evidence: `docs/TASKS/EVIDENCE/TASK-140/README.md`
 - Ambiente autorizzato: fixture locali, XCTest e iOS Simulator; staging pubblico
   soltanto nell'eventuale fase coordinata e con autorizzazione/gate espliciti.
 - Production: `NOT_MODIFIED`
 - Win7POS: `NOT_MODIFIED`
-- PR Admin: `PENDING`
-- PR Android: `PENDING`
-- PR iOS: `PENDING`
+- PR Admin:
+  [XNIW/merchandise-control-admin-web#42](https://github.com/XNIW/merchandise-control-admin-web/pull/42)
+- PR Android:
+  [XNIW/MerchandiseControlSplitView#3](https://github.com/XNIW/MerchandiseControlSplitView/pull/3)
+- PR iOS:
+  [XNIW/iOSMerchandiseControl#1](https://github.com/XNIW/iOSMerchandiseControl/pull/1)
 
 I finding `CHANGES_REQUIRED` sono stati corretti e i gate locali sono stati
-rieseguiti. La rereview tecnica dello SHA `7d8f0de1` è `APPROVED_PRE_PR` con
-P0/P1/P2 aperti pari a zero; il solo P3 documentale è corretto nel follow-up
-corrente. Codex non marca il task `DONE`; la chiusura richiede staging, merge e
-conferma esplicita dell'utente.
+rieseguiti. La rereview tecnica finale è `APPROVED` con P0/P1/P2/P3
+`0/0/0/0`; PR, CI, merge normale e acceptance staging coordinata sono
+completati. Codex non marca il task `DONE`; resta necessaria la conferma
+esplicita dell'utente.
 
 ## Obiettivo
 
@@ -95,7 +99,7 @@ boundary catalogo.
 | I-140-07 | Inbound incremental/recovery canonicalizza display, rifiuta strict invalido e non crea local pending/loop. | `PASS` |
 | I-140-08 | Nessun PriceHistory per text-only; fallback nome esistente e resource bounds preservati. | `PASS` |
 | I-140-09 | EN/IT/ES/ZH-Hans e focused/integration/Simulator checks hanno evidence reale. | `PASS` — target XCUITest reale e 2/2 test Simulator verdi per Import Analysis e Database/file importer. |
-| I-140-10 | Build, sync regression, analyze/full XCTest/smoke hanno risultato reale o stato `NOT_RUN`/`BLOCKED` motivato. | `PASS_WITH_NOTES` — gate locali verdi; staging `NOT_RUN` per precondizioni esterne. |
+| I-140-10 | Build, sync regression, analyze/full XCTest/smoke hanno risultato reale o stato `NOT_RUN`/`BLOCKED` motivato. | `PASS_WITH_NOTES` — gate locali verdi; staging cross-platform `PASS`; restano soltanto 6 warning Swift 6 storici nel target test. |
 | I-140-11 | Production e Win7POS restano `NOT_MODIFIED`; nessun secret o dato reale nel repository/evidence. | `PASS` |
 
 ## Piano di execution
@@ -139,16 +143,35 @@ boundary catalogo.
 - target `iOSMerchandiseControlUITests` reale nello scheme condiviso, con test
   Import Analysis e Database/file importer senza attese temporali arbitrarie.
 
-### Rischi residui e gate esterni
+### Closeout cross-platform
 
-- staging cross-platform non eseguito: mancano in questo workstream
-  account/shop QA coordinati, ID esatti e autorizzazione al write/cleanup;
+- Override utente esplicito applicato esclusivamente per registrare il
+  closeout esterno mentre il task è già in `REVIEW`; nessuna nuova modifica
+  runtime iOS in questa fase.
+- PR iOS [#1](https://github.com/XNIW/iOSMerchandiseControl/pull/1), CI verde e
+  merge normale a due parent
+  `712689dd917125c9c656b8cc48e7c392c87174fd`; PR Admin #42 e Android #3
+  collegati e integrati normalmente.
+- Review finali dei tre repository: P0/P1/P2/P3 `0/0/0/0`.
+- Acceptance pubblica sul solo shop QA: iOS ha letto il prodotto e quattro
+  prezzi scritti da Android; ha poi scritto tramite i servizi Release un
+  prodotto con quattro prezzi, letti canonicali da Android e Admin nello
+  stesso owner/shop scope.
+- Migration e repair staging completati soltanto su
+  `merchandisecontrol-dev`: `345` prodotti, invalidi post-repair `0`,
+  invarianti preservati. Paging Win7POS-equivalente read-only e cleanup esatto
+  a residuo `0`.
+- File temporanei di sessione, derived data e build log iOS eliminati; la
+  rimozione e il cleanup fixture non sono recuperabili.
+
+### Rischi residui
+
 - Analyze finale: 0 errori, 0 analyzer warning e 6 warning Swift 6 preesistenti
-  nel target test; 0 warning nei file toccati da TASK-140;
-- fix round committato e revisionato su `7d8f0de1`; push, PR e deploy ancora
-  `NOT_RUN_PRE_PR`; nessun write production o modifica Win7POS.
+  nel target test; 0 warning nei file toccati da TASK-140.
+- Production e Win7POS: `NOT_MODIFIED`; nessun deploy/TestFlight.
+- P0/P1/P2/P3 aperti: `0/0/0/0`.
 
 ### Prossima fase
 
-Push/PR/CI e merge normale, poi acceptance staging coordinata. Il passaggio a
-`DONE` resta esclusivamente subordinato alla conferma esplicita dell'utente.
+`REVIEW / READY_FOR_USER_CONFIRMATION`. Il passaggio a `DONE` resta
+esclusivamente subordinato alla conferma esplicita dell'utente.
