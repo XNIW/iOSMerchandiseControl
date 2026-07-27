@@ -589,11 +589,55 @@ nonisolated enum SupabasePullPreviewNormalizer {
     }
 
     static func normalizedBarcode(_ value: String?) -> String? {
-        semanticString(value)
+        guard let value else { return nil }
+        return canonical(
+            CatalogTextPolicy.strict(
+                value,
+                required: true,
+                maximumUTF16Length: CatalogTextField.barcode.maximumUTF16Length
+            )
+        )
     }
 
     static func normalizedLookupName(_ value: String?) -> String? {
-        semanticString(value)?.lowercased()
+        guard let value else { return nil }
+        return canonical(
+            CatalogTextPolicy.display(
+                value,
+                required: false,
+                maximumUTF16Length: CatalogTextField.supplierName.maximumUTF16Length
+            )
+        )?.lowercased()
+    }
+
+    static func catalogDisplayString(
+        _ value: String?,
+        field: CatalogTextField,
+        required: Bool
+    ) -> String? {
+        guard let value else { return nil }
+        return canonical(
+            CatalogTextPolicy.display(
+                value,
+                required: required,
+                maximumUTF16Length: field.maximumUTF16Length
+            )
+        )
+    }
+
+    static func catalogStrictString(
+        _ value: String?,
+        field: CatalogTextField,
+        required: Bool
+    ) -> String? {
+        guard let value else { return nil }
+        return canonical(
+            CatalogTextPolicy.strict(
+                value,
+                required: required,
+                maximumUTF16Length: field.maximumUTF16Length
+            )
+        )
     }
 
     static func stringsEqual(_ lhs: String?, _ rhs: String?) -> Bool {
@@ -635,5 +679,14 @@ nonisolated enum SupabasePullPreviewNormalizer {
     static func decimalDisplay(_ value: Double?) -> String? {
         guard let value else { return nil }
         return String(format: "%.3f", value)
+    }
+
+    private static func canonical(_ outcome: CatalogTextOutcome) -> String? {
+        switch outcome {
+        case let .unchanged(value), let .normalized(value, _):
+            return value.isEmpty ? nil : value
+        case .rejected:
+            return nil
+        }
     }
 }

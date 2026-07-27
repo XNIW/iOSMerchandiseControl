@@ -81,7 +81,11 @@ struct EditProductView: View {
     }
 
     private var trimmedBarcode: String {
-        barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        CatalogTextPolicy.strict(
+            barcode,
+            required: true,
+            maximumUTF16Length: CatalogTextField.barcode.maximumUTF16Length
+        ).value ?? ""
     }
 
     var body: some View {
@@ -681,7 +685,7 @@ struct EditProductView: View {
     }
 
     private func save() {
-        guard !trimmedBarcode.isEmpty else {
+        guard !barcode.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = L("product.validation.barcode_required")
             return
         }
@@ -689,17 +693,28 @@ struct EditProductView: View {
         let purchase = Self.parseDouble(from: purchasePrice)
         let retail = Self.parseDouble(from: retailPrice)
         let stock = Self.parseDouble(from: stockQuantity)
-        let formDraft = ProductDraft(
-            barcode: trimmedBarcode,
-            itemNumber: Self.optionalTrimmed(itemNumber),
-            productName: Self.optionalTrimmed(name),
-            secondProductName: Self.optionalTrimmed(secondName),
-            purchasePrice: purchase,
-            retailPrice: retail,
-            stockQuantity: stock,
-            supplierName: Self.optionalTrimmed(supplierName),
-            categoryName: Self.optionalTrimmed(categoryName)
-        )
+        let formDraft: ProductDraft
+        do {
+            formDraft = try ProductImportCore.validatedDraft(
+                ProductDraft(
+                    barcode: barcode,
+                    itemNumber: Self.optionalRaw(itemNumber),
+                    productName: Self.optionalRaw(name),
+                    secondProductName: Self.optionalRaw(secondName),
+                    purchasePrice: purchase,
+                    retailPrice: retail,
+                    stockQuantity: stock,
+                    supplierName: Self.optionalRaw(supplierName),
+                    categoryName: Self.optionalRaw(categoryName)
+                )
+            )
+        } catch let error as CatalogTextValidationError {
+            validationMessage = L(error.reason.localizationKey)
+            return
+        } catch {
+            validationMessage = L("catalog.text.error.invalid_input")
+            return
+        }
         let existingID = existingProduct?.persistentModelID
 
         do {
@@ -748,7 +763,7 @@ struct EditProductView: View {
                         .productFingerprintHash(target)
                     operation = .update
                 } else {
-                    target = Product(barcode: barcode)
+                    target = Product(barcode: formDraft.barcode)
                     freshContext.insert(target)
                     baselineDraft = nil
                     baselineFingerprintHash = nil
@@ -758,8 +773,18 @@ struct EditProductView: View {
                 let hasBarcodeConflict = try freshContext.fetch(
                     FetchDescriptor<Product>()
                 ).contains(where: {
-                    $0.persistentModelID != target.persistentModelID
-                        && $0.barcode == formDraft.barcode
+                    let canonicalBarcode = CatalogTextPolicy.strict(
+                        $0.barcode,
+                        required: true,
+                        maximumUTF16Length:
+                            CatalogTextField.barcode.maximumUTF16Length
+                    ).value
+                    return $0.persistentModelID != target.persistentModelID
+                        && canonicalBarcode.map(
+                            ProductImportCore.strictIdentityKey
+                        ) == ProductImportCore.strictIdentityKey(
+                            formDraft.barcode
+                        )
                 })
                 guard !hasBarcodeConflict else {
                     throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
@@ -925,9 +950,8 @@ struct EditProductView: View {
         return Double(normalized)
     }
 
-    nonisolated private static func optionalTrimmed(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+    nonisolated private static func optionalRaw(_ text: String) -> String? {
+        text.isEmpty ? nil : text
     }
 
     nonisolated private static func makeDraft(_ product: Product) -> ProductDraft {

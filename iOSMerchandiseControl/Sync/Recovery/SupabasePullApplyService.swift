@@ -555,6 +555,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
 
         try validateNotStale(plan: plan, context: context)
+        try validateCatalogText(plan: plan)
 
         var productsByBarcode = try fetchProductsByBarcode(context: context)
         var suppliersByName = try fetchSuppliersByNormalizedName(context: context)
@@ -615,15 +616,27 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 createdCount: &categoriesCreated
             )
             let product = Product(
-                barcode: insert.barcode,
+                barcode: try CatalogTextPolicy.validate(
+                    insert.barcode,
+                    for: .barcode
+                ).value,
                 remoteID: insert.payload.remoteID,
                 remoteUpdatedAt: insert.payload.remoteUpdatedAt,
                 remoteDeletedAt: insert.payload.remoteDeletedAt,
                 primaryImageVersionID: insert.payload.primaryImageVersionID,
                 primaryImageUpdatedAt: insert.payload.primaryImageUpdatedAt,
-                itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
-                productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
-                secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
+                itemNumber: try CatalogTextPersistenceBoundary.validatedOptionalStrict(
+                    insert.payload.itemNumber,
+                    field: .itemNumber
+                ),
+                productName: try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+                    insert.payload.productName,
+                    field: .productName
+                ),
+                secondProductName: try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+                    insert.payload.secondProductName,
+                    field: .secondProductName
+                ),
                 purchasePrice: insert.payload.purchasePrice,
                 retailPrice: insert.payload.retailPrice,
                 stockQuantity: plan.options.applyStockQuantity ? insert.payload.stockQuantity : nil,
@@ -937,6 +950,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         try Task.checkCancellation()
         try validateNotStale(plan: plan, context: context)
+        try validateCatalogText(plan: plan)
 
         var productsByBarcode = try fetchProductsByBarcode(context: context)
         var suppliersByName = try fetchSuppliersByNormalizedName(context: context)
@@ -1048,15 +1062,27 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 createdCount: &categoriesCreated
             )
             let product = Product(
-                barcode: insert.barcode,
+                barcode: try CatalogTextPolicy.validate(
+                    insert.barcode,
+                    for: .barcode
+                ).value,
                 remoteID: insert.payload.remoteID,
                 remoteUpdatedAt: insert.payload.remoteUpdatedAt,
                 remoteDeletedAt: insert.payload.remoteDeletedAt,
                 primaryImageVersionID: insert.payload.primaryImageVersionID,
                 primaryImageUpdatedAt: insert.payload.primaryImageUpdatedAt,
-                itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
-                productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
-                secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
+                itemNumber: try CatalogTextPersistenceBoundary.validatedOptionalStrict(
+                    insert.payload.itemNumber,
+                    field: .itemNumber
+                ),
+                productName: try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+                    insert.payload.productName,
+                    field: .productName
+                ),
+                secondProductName: try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+                    insert.payload.secondProductName,
+                    field: .secondProductName
+                ),
                 purchasePrice: insert.payload.purchasePrice,
                 retailPrice: insert.payload.retailPrice,
                 stockQuantity: plan.options.applyStockQuantity ? insert.payload.stockQuantity : nil,
@@ -1323,6 +1349,73 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
     }
 
+    private func validateCatalogText(plan: SupabasePullApplyPlan) throws {
+        for supplier in plan.suppliersToCreate {
+            _ = try CatalogTextPolicy.validate(
+                supplier.displayName,
+                for: .supplierName
+            )
+        }
+        for category in plan.categoriesToCreate {
+            _ = try CatalogTextPolicy.validate(
+                category.displayName,
+                for: .categoryName
+            )
+        }
+
+        for insert in plan.productInserts {
+            try validateCatalogText(
+                barcode: insert.barcode,
+                payload: insert.payload
+            )
+        }
+        for update in plan.productUpdates {
+            try validateCatalogText(
+                barcode: update.barcode,
+                payload: update.payload
+            )
+        }
+        for tombstone in plan.productTombstones {
+            try validateCatalogText(
+                barcode: tombstone.barcode,
+                payload: tombstone.payload
+            )
+        }
+        for prune in plan.productPrunes {
+            _ = try CatalogTextPolicy.validate(prune.barcode, for: .barcode)
+        }
+    }
+
+    private func validateCatalogText(
+        barcode: String,
+        payload: SyncPreviewProductApplyPayload
+    ) throws {
+        _ = try CatalogTextPolicy.validate(barcode, for: .barcode)
+        if let payloadBarcode = payload.barcode {
+            _ = try CatalogTextPolicy.validate(payloadBarcode, for: .barcode)
+        }
+        _ = try CatalogTextPersistenceBoundary.validatedOptionalStrict(
+            payload.itemNumber,
+            field: .itemNumber
+        )
+        _ = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.productName,
+            field: .productName
+        )
+        _ = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.secondProductName,
+            field: .secondProductName
+        )
+        _ = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.supplierName,
+            field: .supplierName
+        )
+        _ = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.categoryName,
+            field: .categoryName
+        )
+    }
+
     private func applyPayload(
         _ payload: SyncPreviewProductApplyPayload,
         to product: Product,
@@ -1334,19 +1427,28 @@ nonisolated struct SupabasePullApplyService: Sendable {
         categoriesCreated: inout Int,
         didMutate: inout Bool
     ) throws {
-        if let itemNumber = SupabasePullPreviewNormalizer.semanticString(payload.itemNumber),
+        if let itemNumber = try CatalogTextPersistenceBoundary.validatedOptionalStrict(
+            payload.itemNumber,
+            field: .itemNumber
+        ),
            !SupabasePullPreviewNormalizer.stringsEqual(itemNumber, product.itemNumber) {
             product.itemNumber = itemNumber
             didMutate = true
         }
 
-        if let productName = SupabasePullPreviewNormalizer.semanticString(payload.productName),
+        if let productName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.productName,
+            field: .productName
+        ),
            !SupabasePullPreviewNormalizer.stringsEqual(productName, product.productName) {
             product.productName = productName
             didMutate = true
         }
 
-        if let secondProductName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName),
+        if let secondProductName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            payload.secondProductName,
+            field: .secondProductName
+        ),
            !SupabasePullPreviewNormalizer.stringsEqual(secondProductName, product.secondProductName) {
             product.secondProductName = secondProductName
             didMutate = true
@@ -1462,7 +1564,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
         cache: inout [String: Supplier],
         createdCount: inout Int
     ) throws -> Supplier? {
-        guard let displayName = SupabasePullPreviewNormalizer.semanticString(name),
+        guard let displayName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            name,
+            field: .supplierName
+        ),
               let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName) else {
             return nil
         }
@@ -1531,7 +1636,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
         cache: inout [String: ProductCategory],
         createdCount: inout Int
     ) throws -> ProductCategory? {
-        guard let displayName = SupabasePullPreviewNormalizer.semanticString(name),
+        guard let displayName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            name,
+            field: .categoryName
+        ),
               let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName) else {
             return nil
         }

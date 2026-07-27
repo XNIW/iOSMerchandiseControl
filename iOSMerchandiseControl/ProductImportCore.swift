@@ -46,8 +46,16 @@ nonisolated enum ProductImportCore {
     private static let previousImportSource = "IMPORT_PREV"
 
     private struct PendingRow {
+        var barcode: String
+        var rawBarcodeIdentity: String
         var lastRow: [String: String]
         var rowNumbers: [Int]
+    }
+
+    private struct CanonicalImportRow {
+        let values: [String: String]
+        let normalizationFields: [ProductImportFieldNormalization]
+        let rejectionKeys: [String]
     }
 
     private struct ParsedDraft {
@@ -186,32 +194,109 @@ nonisolated enum ProductImportCore {
     ) -> ProductImportAnalysisResult {
         var errors: [ProductImportRowError] = []
         var pendingByBarcode: [String: PendingRow] = [:]
+        var normalizationWarnings: [ProductImportNormalizationWarning] = []
+        var collidedBarcodeKeys: Set<String> = []
         let existingByBarcode = normalizedExistingProducts(existingProductsByBarcode)
 
         for (index, row) in dataRows.enumerated() {
-            let map = mappedRow(header: header, row: row)
+            let rawMap = mappedRow(header: header, row: row)
             let rowNumber = importRowNumber(
-                from: map[AndroidImportKey.rowNumber],
+                from: rawMap[AndroidImportKey.rowNumber],
                 fallback: index + 1
             )
+            let canonicalRow = canonicalizeCatalogFields(in: rawMap)
+            var map = canonicalRow.values
 
-            guard let barcode = normalizedBarcode(from: map[AndroidImportKey.barcode]) else {
+            if !canonicalRow.normalizationFields.isEmpty {
+                normalizationWarnings.append(
+                    ProductImportNormalizationWarning(
+                        rowNumber: rowNumber,
+                        fields: canonicalRow.normalizationFields
+                    )
+                )
+            }
+
+            if !canonicalRow.rejectionKeys.isEmpty {
                 errors.append(
                     ProductImportRowError(
                         rowNumber: rowNumber,
-                        reasonKey: "import.analysis.row_error.barcode_missing",
-                        rowContent: map
+                        reasonKeys: canonicalRow.rejectionKeys,
+                        rowContent: map,
+                        blocksApply: true
                     )
                 )
                 continue
             }
 
-            if var pending = pendingByBarcode[barcode] {
+            guard let strictBarcode = optionalNonEmpty(map[AndroidImportKey.barcode]) else {
+                errors.append(
+                    ProductImportRowError(
+                        rowNumber: rowNumber,
+                        reasonKey: "import.analysis.row_error.barcode_missing",
+                        rowContent: map,
+                        blocksApply: true
+                    )
+                )
+                continue
+            }
+            let barcode: String
+            switch spreadsheetDecodedBarcode(strictBarcode) {
+            case let .value(decodedBarcode):
+                barcode = decodedBarcode
+                map[AndroidImportKey.barcode] = decodedBarcode
+            case let .rejected(reason):
+                map[AndroidImportKey.barcode] =
+                    "[catalog-text:\(reason.rawValue)]"
+                errors.append(
+                    ProductImportRowError(
+                        rowNumber: rowNumber,
+                        reasonKeys: [reason.localizationKey],
+                        rowContent: map,
+                        blocksApply: true
+                    )
+                )
+                continue
+            }
+
+            let barcodeKey = strictIdentityKey(barcode)
+            guard !collidedBarcodeKeys.contains(barcodeKey) else {
+                errors.append(
+                    ProductImportRowError(
+                        rowNumber: rowNumber,
+                        reasonKey: CatalogTextRejectionReason
+                            .identityCollisionAfterTrim.localizationKey,
+                        rowContent: map,
+                        blocksApply: true
+                    )
+                )
+                continue
+            }
+
+            let rawBarcodeIdentity = strictIdentityKey(
+                rawMap[AndroidImportKey.barcode] ?? ""
+            )
+            if var pending = pendingByBarcode[barcodeKey] {
+                if pending.rawBarcodeIdentity != rawBarcodeIdentity {
+                    collidedBarcodeKeys.insert(barcodeKey)
+                    pendingByBarcode.removeValue(forKey: barcodeKey)
+                    errors.append(
+                        ProductImportRowError(
+                            rowNumber: rowNumber,
+                            reasonKey: CatalogTextRejectionReason
+                                .identityCollisionAfterTrim.localizationKey,
+                            rowContent: map,
+                            blocksApply: true
+                        )
+                    )
+                    continue
+                }
                 pending.lastRow = map
                 pending.rowNumbers.append(rowNumber)
-                pendingByBarcode[barcode] = pending
+                pendingByBarcode[barcodeKey] = pending
             } else {
-                pendingByBarcode[barcode] = PendingRow(
+                pendingByBarcode[barcodeKey] = PendingRow(
+                    barcode: barcode,
+                    rawBarcodeIdentity: rawBarcodeIdentity,
                     lastRow: map,
                     rowNumbers: [rowNumber]
                 )
@@ -222,7 +307,8 @@ nonisolated enum ProductImportCore {
         var updates: [ProductUpdateDraft] = []
         var warnings: [ProductDuplicateWarning] = []
 
-        for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
+        for (_, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
+            let barcode = pending.barcode
             let row = pending.lastRow
 
             if pending.rowNumbers.count > 1 {
@@ -234,7 +320,7 @@ nonisolated enum ProductImportCore {
                 )
             }
 
-            let oldDraft = existingByBarcode[barcode]
+            let oldDraft = existingByBarcode[strictIdentityKey(barcode)]
             let parsed = parseProductDraft(
                 barcode: barcode,
                 row: row,
@@ -283,6 +369,7 @@ nonisolated enum ProductImportCore {
             updatedProducts: updates,
             errors: errors,
             warnings: warnings,
+            normalizationWarnings: normalizationWarnings,
             totalInputRows: dataRows.count
         )
     }
@@ -295,6 +382,7 @@ nonisolated enum ProductImportCore {
         recordPriceHistory: Bool,
         onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
     ) throws -> Product {
+        let draft = try validatedDraft(draft)
         let product = Product(
             barcode: draft.barcode,
             itemNumber: draft.itemNumber,
@@ -334,7 +422,7 @@ nonisolated enum ProductImportCore {
         recordPriceHistory: Bool,
         onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
     ) throws -> [ProductPrice] {
-        let newDraft = update.new
+        let newDraft = try validatedDraft(update.new)
         let oldPurchase = product.purchasePrice
         let oldRetail = product.retailPrice
 
@@ -469,9 +557,12 @@ nonisolated enum ProductImportCore {
     }
 
     static func normalizedDisplayName(_ rawName: String?) -> String? {
-        let trimmed = trimImportText(rawName ?? "")
-        guard !trimmed.isEmpty else { return nil }
-        return trimmed
+        guard let rawName else { return nil }
+        return CatalogTextPolicy.display(
+            rawName,
+            required: false,
+            maximumUTF16Length: CatalogTextField.productName.maximumUTF16Length
+        ).value.flatMap(optionalNonEmpty)
     }
 
     private static func parseProductDraft(
@@ -482,11 +573,11 @@ nonisolated enum ProductImportCore {
         var rowErrorKeys: [String] = []
         var recoverableErrorKeys: [String] = []
 
-        let itemNumber = normalizedDisplayName(row[AndroidImportKey.itemNumber])
-        let productName = normalizedDisplayName(row[AndroidImportKey.productName])
-        let secondProductName = normalizedDisplayName(row[AndroidImportKey.secondProductName])
-        let supplierName = normalizedDisplayName(row[AndroidImportKey.supplier])
-        let categoryName = normalizedDisplayName(row[AndroidImportKey.category])
+        let itemNumber = optionalNonEmpty(row[AndroidImportKey.itemNumber])
+        let productName = optionalNonEmpty(row[AndroidImportKey.productName])
+        let secondProductName = optionalNonEmpty(row[AndroidImportKey.secondProductName])
+        let supplierName = optionalNonEmpty(row[AndroidImportKey.supplier])
+        let categoryName = optionalNonEmpty(row[AndroidImportKey.category])
         let hasExistingDraft: Bool
         switch existingDraft {
         case .some:
@@ -599,6 +690,192 @@ nonisolated enum ProductImportCore {
         )
     }
 
+    private static let catalogFieldKeys: Set<String> = [
+        AndroidImportKey.barcode,
+        AndroidImportKey.itemNumber,
+        AndroidImportKey.productName,
+        AndroidImportKey.secondProductName,
+        AndroidImportKey.supplier,
+        AndroidImportKey.category
+    ]
+
+    private static func canonicalizeCatalogFields(
+        in rawValues: [String: String]
+    ) -> CanonicalImportRow {
+        var values = rawValues
+        var normalizationFields: [ProductImportFieldNormalization] = []
+        var rejectionKeys: [String] = []
+
+        let specifications: [
+            (key: String, display: Bool, required: Bool, maximumUTF16Length: Int)
+        ] = [
+            (
+                AndroidImportKey.barcode,
+                false,
+                true,
+                CatalogTextField.barcode.maximumUTF16Length
+            ),
+            (
+                AndroidImportKey.itemNumber,
+                false,
+                false,
+                CatalogTextField.itemNumber.maximumUTF16Length
+            ),
+            (
+                AndroidImportKey.productName,
+                true,
+                false,
+                CatalogTextField.productName.maximumUTF16Length
+            ),
+            (
+                AndroidImportKey.secondProductName,
+                true,
+                false,
+                CatalogTextField.secondProductName.maximumUTF16Length
+            ),
+            (
+                AndroidImportKey.supplier,
+                true,
+                false,
+                CatalogTextField.supplierName.maximumUTF16Length
+            ),
+            (
+                AndroidImportKey.category,
+                true,
+                false,
+                CatalogTextField.categoryName.maximumUTF16Length
+            )
+        ]
+
+        for specification in specifications {
+            let rawValue = rawValues[specification.key] ?? ""
+            let outcome = specification.display
+                ? CatalogTextPolicy.display(
+                    rawValue,
+                    required: specification.required,
+                    maximumUTF16Length: specification.maximumUTF16Length
+                )
+                : CatalogTextPolicy.strict(
+                    rawValue,
+                    required: specification.required,
+                    maximumUTF16Length: specification.maximumUTF16Length
+                )
+
+            switch outcome {
+            case let .unchanged(value):
+                values[specification.key] = value
+            case let .normalized(value, changes):
+                values[specification.key] = value
+                normalizationFields.append(
+                    ProductImportFieldNormalization(
+                        fieldKey: specification.key,
+                        changes: changes
+                    )
+                )
+            case let .rejected(reason):
+                values[specification.key] = "[catalog-text:\(reason.rawValue)]"
+                if specification.key == AndroidImportKey.barcode,
+                   reason == .emptyRequired {
+                    rejectionKeys.append("import.analysis.row_error.barcode_missing")
+                } else {
+                    rejectionKeys.append(reason.localizationKey)
+                }
+            }
+        }
+
+        return CanonicalImportRow(
+            values: values,
+            normalizationFields: normalizationFields,
+            rejectionKeys: rejectionKeys
+        )
+    }
+
+    static func validatedDraft(_ draft: ProductDraft) throws -> ProductDraft {
+        let barcode = try CatalogTextPolicy.validate(draft.barcode, for: .barcode).value
+        let itemNumber = try validateOptional(
+            draft.itemNumber,
+            display: false,
+            maximumUTF16Length: CatalogTextField.itemNumber.maximumUTF16Length,
+            field: .itemNumber
+        )
+        let productName = try validateOptional(
+            draft.productName,
+            display: true,
+            maximumUTF16Length: CatalogTextField.productName.maximumUTF16Length,
+            field: .productName
+        )
+        let secondProductName = try validateOptional(
+            draft.secondProductName,
+            display: true,
+            maximumUTF16Length: CatalogTextField.secondProductName.maximumUTF16Length,
+            field: .secondProductName
+        )
+        let supplierName = try validateOptional(
+            draft.supplierName,
+            display: true,
+            maximumUTF16Length: CatalogTextField.supplierName.maximumUTF16Length,
+            field: .supplierName
+        )
+        let categoryName = try validateOptional(
+            draft.categoryName,
+            display: true,
+            maximumUTF16Length: CatalogTextField.categoryName.maximumUTF16Length,
+            field: .categoryName
+        )
+
+        return ProductDraft(
+            barcode: barcode,
+            itemNumber: itemNumber,
+            productName: productName,
+            secondProductName: secondProductName,
+            purchasePrice: draft.purchasePrice,
+            retailPrice: draft.retailPrice,
+            stockQuantity: draft.stockQuantity,
+            oldPurchasePrice: draft.oldPurchasePrice,
+            oldRetailPrice: draft.oldRetailPrice,
+            supplierName: supplierName,
+            categoryName: categoryName
+        )
+    }
+
+    private static func validateOptional(
+        _ rawValue: String?,
+        display: Bool,
+        maximumUTF16Length: Int,
+        field: CatalogTextField
+    ) throws -> String? {
+        guard let rawValue else { return nil }
+        let outcome = display
+            ? CatalogTextPolicy.display(
+                rawValue,
+                required: false,
+                maximumUTF16Length: maximumUTF16Length
+            )
+            : CatalogTextPolicy.strict(
+                rawValue,
+                required: false,
+                maximumUTF16Length: maximumUTF16Length
+            )
+
+        switch outcome {
+        case let .unchanged(value), let .normalized(value, _):
+            return optionalNonEmpty(value)
+        case let .rejected(reason):
+            throw CatalogTextValidationError(field: field, reason: reason)
+        }
+    }
+
+    private static func optionalNonEmpty(_ value: String?) -> String? {
+        guard let value, !value.isEmpty else { return nil }
+        return value
+    }
+
+    static func strictIdentityKey(_ value: String) -> String {
+        value.unicodeScalars
+            .map { String($0.value, radix: 16, uppercase: true) }
+            .joined(separator: ".")
+    }
+
     private static func mappedRow(header: [String], row: [String]) -> [String: String] {
         var map: [String: String] = [:]
 
@@ -607,7 +884,7 @@ nonisolated enum ProductImportCore {
             guard !key.isEmpty else { continue }
 
             let raw = colIndex < row.count ? row[colIndex] : ""
-            let value = trimImportText(raw)
+            let value = catalogFieldKeys.contains(key) ? raw : trimImportText(raw)
             guard !value.isEmpty else {
                 if map[key] == nil {
                     map[key] = ""
@@ -722,10 +999,164 @@ nonisolated enum ProductImportCore {
     ) -> [String: ProductDraft] {
         var result: [String: ProductDraft] = [:]
         for (barcode, draft) in existingProductsByBarcode {
-            let key = normalizedBarcode(from: barcode) ?? barcode
-            result[key] = draft
+            guard let canonical = CatalogTextPolicy.strict(
+                barcode,
+                required: true,
+                maximumUTF16Length: CatalogTextField.barcode.maximumUTF16Length
+            ).value else {
+                continue
+            }
+            result[strictIdentityKey(canonical)] = draft
         }
         return result
+    }
+
+    // Excel può consegnare una cella barcode numerica in notazione scientifica
+    // o con una sola coda decimale ".0". Questo è decoding del tipo cella,
+    // eseguito esclusivamente dopo la validazione strict del testo: control,
+    // whitespace interno, zero-width, BOM e bidi non vengono mai rimossi.
+    private enum SpreadsheetBarcodeDecodeResult {
+        case value(String)
+        case rejected(CatalogTextRejectionReason)
+    }
+
+    private enum ScientificBarcodeExpansionResult {
+        case notScientific
+        case expanded(String)
+        case rejected(CatalogTextRejectionReason)
+    }
+
+    private enum BoundedUnsignedInteger {
+        case value(Int)
+        case exceedsLimit
+        case invalid
+    }
+
+    private static func spreadsheetDecodedBarcode(
+        _ value: String
+    ) -> SpreadsheetBarcodeDecodeResult {
+        let decoded: String
+        switch expandScientificSpreadsheetBarcode(value) {
+        case let .expanded(expanded):
+            decoded = expanded
+        case let .rejected(reason):
+            return .rejected(reason)
+        case .notScientific:
+            if value.hasSuffix(".0") || value.hasSuffix(",0") {
+                decoded = String(value.dropLast(2))
+            } else {
+                decoded = value
+            }
+        }
+
+        switch CatalogTextPolicy.strict(
+            decoded,
+            required: true,
+            maximumUTF16Length: CatalogTextField.barcode.maximumUTF16Length
+        ) {
+        case let .unchanged(canonical), let .normalized(canonical, _):
+            return .value(canonical)
+        case let .rejected(reason):
+            return .rejected(reason)
+        }
+    }
+
+    private static func expandScientificSpreadsheetBarcode(
+        _ raw: String
+    ) -> ScientificBarcodeExpansionResult {
+        guard let exponentIndex = raw.firstIndex(where: { $0 == "e" || $0 == "E" }) else {
+            return .notScientific
+        }
+
+        let mantissa = String(raw[..<exponentIndex])
+        var exponentText = raw[raw.index(after: exponentIndex)...]
+        let isNegativeExponent = exponentText.first == "-"
+        if exponentText.first == "+" || isNegativeExponent {
+            exponentText = exponentText.dropFirst()
+        }
+        guard !exponentText.isEmpty else { return .notScientific }
+
+        var digits = ""
+        digits.reserveCapacity(mantissa.utf8.count)
+        var digitsBeforeSeparator = 0
+        var sawSeparator = false
+        for scalar in mantissa.unicodeScalars {
+            switch scalar.value {
+            case 0x30...0x39:
+                digits.unicodeScalars.append(scalar)
+                if !sawSeparator {
+                    digitsBeforeSeparator += 1
+                }
+            case 0x2E, 0x2C:
+                guard !sawSeparator else { return .notScientific }
+                sawSeparator = true
+            default:
+                return .notScientific
+            }
+        }
+        guard !digits.isEmpty else { return .notScientific }
+
+        let maximumLength = CatalogTextField.barcode.maximumUTF16Length
+        let exponentLimit = isNegativeExponent
+            ? digitsBeforeSeparator
+            : max(0, maximumLength - digitsBeforeSeparator)
+        let exponentMagnitude: Int
+        switch boundedUnsignedInteger(exponentText, limit: exponentLimit) {
+        case let .value(value):
+            exponentMagnitude = value
+        case .exceedsLimit:
+            return isNegativeExponent ? .notScientific : .rejected(.tooLong)
+        case .invalid:
+            return .notScientific
+        }
+
+        if isNegativeExponent {
+            let decimalIndex = digitsBeforeSeparator - exponentMagnitude
+            guard decimalIndex > 0 else { return .notScientific }
+            let split = digits.index(digits.startIndex, offsetBy: decimalIndex)
+            let fractional = digits[split...]
+            guard fractional.allSatisfy({ $0 == "0" }) else {
+                return .notScientific
+            }
+            return .expanded(String(digits[..<split]))
+        }
+
+        let decimalIndex = digitsBeforeSeparator + exponentMagnitude
+        if decimalIndex >= digits.count {
+            let zeroCount = decimalIndex - digits.count
+            guard digits.count + zeroCount <= maximumLength else {
+                return .rejected(.tooLong)
+            }
+            return .expanded(
+                digits + String(repeating: "0", count: zeroCount)
+            )
+        }
+
+        let split = digits.index(digits.startIndex, offsetBy: decimalIndex)
+        let fractional = digits[split...]
+        guard fractional.allSatisfy({ $0 == "0" }) else {
+            return .notScientific
+        }
+        return .expanded(String(digits[..<split]))
+    }
+
+    private static func boundedUnsignedInteger(
+        _ raw: Substring,
+        limit: Int
+    ) -> BoundedUnsignedInteger {
+        var value = 0
+        for scalar in raw.unicodeScalars {
+            guard scalar.value >= 0x30, scalar.value <= 0x39 else {
+                return .invalid
+            }
+            let digit = Int(scalar.value - 0x30)
+            guard value < limit / 10
+                    || (value == limit / 10 && digit <= limit % 10) else {
+                return .exceedsLimit
+            }
+            value = value * 10 + digit
+        }
+        return .value(value)
     }
 
     private static func quantityValue(in row: [String: String]) -> NumericValue {
@@ -763,62 +1194,6 @@ nonisolated enum ProductImportCore {
         for (key, value) in validations where value.isInvalid {
             rowErrorKeys.append(key)
         }
-    }
-
-    private static func normalizedBarcode(from raw: String?) -> String? {
-        var barcode = trimImportText(raw ?? "")
-            .replacingOccurrences(of: "\u{00A0}", with: "")
-            .replacingOccurrences(of: "\u{202F}", with: "")
-            .replacingOccurrences(of: "\u{2007}", with: "")
-            .replacingOccurrences(of: "\u{FEFF}", with: "")
-            .replacingOccurrences(of: "\u{200B}", with: "")
-            .replacingOccurrences(of: " ", with: "")
-
-        guard !barcode.isEmpty else { return nil }
-
-        if let expanded = expandScientificBarcode(barcode) {
-            return expanded
-        }
-
-        if barcode.hasSuffix(".0") || barcode.hasSuffix(",0") {
-            barcode.removeLast(2)
-        }
-
-        return barcode.isEmpty ? nil : barcode
-    }
-
-    private static func expandScientificBarcode(_ raw: String) -> String? {
-        guard let exponentIndex = raw.firstIndex(where: { $0 == "e" || $0 == "E" }) else {
-            return nil
-        }
-
-        let mantissa = String(raw[..<exponentIndex])
-        let exponentText = String(raw[raw.index(after: exponentIndex)...])
-        guard let exponent = Int(exponentText) else { return nil }
-
-        let separatorIndex = mantissa.lastIndex(where: { $0 == "." || $0 == "," })
-        let digitsBeforeSeparator: Int
-        let digits: String
-        if let separatorIndex {
-            digitsBeforeSeparator = mantissa[..<separatorIndex].filter(\.isNumber).count
-            digits = mantissa.filter(\.isNumber).map(String.init).joined()
-        } else {
-            digitsBeforeSeparator = mantissa.filter(\.isNumber).count
-            digits = mantissa.filter(\.isNumber).map(String.init).joined()
-        }
-
-        guard !digits.isEmpty else { return nil }
-        let decimalIndex = digitsBeforeSeparator + exponent
-        if decimalIndex >= digits.count {
-            return digits + String(repeating: "0", count: decimalIndex - digits.count)
-        }
-        if decimalIndex > 0 {
-            let split = digits.index(digits.startIndex, offsetBy: decimalIndex)
-            let fractional = digits[split...]
-            guard fractional.allSatisfy({ $0 == "0" }) else { return nil }
-            return String(digits[..<split])
-        }
-        return nil
     }
 
     private static func normalizeNumberString(_ raw: String) -> String {
@@ -1037,7 +1412,10 @@ nonisolated final class ProductImportNamedEntityResolver {
     }
 
     func resolveSupplier(named rawName: String?) throws -> Supplier? {
-        guard let normalizedName = ProductImportCore.normalizedDisplayName(rawName),
+        guard let normalizedName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            rawName,
+            field: .supplierName
+        ),
               let key = ProductImportCore.normalizedRelationKey(normalizedName) else {
             return nil
         }
@@ -1058,7 +1436,10 @@ nonisolated final class ProductImportNamedEntityResolver {
     }
 
     func resolveCategory(named rawName: String?) throws -> ProductCategory? {
-        guard let normalizedName = ProductImportCore.normalizedDisplayName(rawName),
+        guard let normalizedName = try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+            rawName,
+            field: .categoryName
+        ),
               let key = ProductImportCore.normalizedRelationKey(normalizedName) else {
             return nil
         }

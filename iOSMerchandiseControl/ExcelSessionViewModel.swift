@@ -66,10 +66,11 @@ final class ExcelSessionViewModel: ObservableObject {
         case empty
         case existing(name: String)
         case pendingCreate(name: String)
+        case invalid(reason: CatalogTextRejectionReason)
 
         var isValid: Bool {
             switch self {
-            case .empty:
+            case .empty, .invalid:
                 return false
             case .existing, .pendingCreate:
                 return true
@@ -78,7 +79,7 @@ final class ExcelSessionViewModel: ObservableObject {
 
         var displayName: String? {
             switch self {
-            case .empty:
+            case .empty, .invalid:
                 return nil
             case .existing(let name), .pendingCreate(let name):
                 return name
@@ -128,7 +129,15 @@ final class ExcelSessionViewModel: ObservableObject {
         input: String,
         existingNames: [String]
     ) -> RelationInputState {
-        guard let displayName = ProductImportCore.normalizedDisplayName(input),
+        let outcome = CatalogTextPolicy.display(
+            input,
+            required: false,
+            maximumUTF16Length: CatalogTextField.supplierName.maximumUTF16Length
+        )
+        if let reason = outcome.rejectionReason {
+            return .invalid(reason: reason)
+        }
+        guard let displayName = outcome.value, !displayName.isEmpty,
               let inputKey = normalizedRelationKey(displayName) else {
             return .empty
         }
@@ -691,7 +700,15 @@ extension ExcelSessionViewModel {
 
     @discardableResult
     func ensureSupplierExists(name rawName: String? = nil, in context: ModelContext) throws -> Supplier? {
-        guard let displayName = ProductImportCore.normalizedDisplayName(rawName ?? supplierName),
+        let outcome = CatalogTextPolicy.display(
+            rawName ?? supplierName,
+            required: false,
+            maximumUTF16Length: CatalogTextField.supplierName.maximumUTF16Length
+        )
+        if let reason = outcome.rejectionReason {
+            throw CatalogTextValidationError(field: .supplierName, reason: reason)
+        }
+        guard let displayName = outcome.value, !displayName.isEmpty,
               let key = Self.normalizedRelationKey(displayName) else {
             return nil
         }
@@ -713,7 +730,15 @@ extension ExcelSessionViewModel {
 
     @discardableResult
     func ensureCategoryExists(name rawName: String? = nil, in context: ModelContext) throws -> ProductCategory? {
-        guard let displayName = ProductImportCore.normalizedDisplayName(rawName ?? categoryName),
+        let outcome = CatalogTextPolicy.display(
+            rawName ?? categoryName,
+            required: false,
+            maximumUTF16Length: CatalogTextField.categoryName.maximumUTF16Length
+        )
+        if let reason = outcome.rejectionReason {
+            throw CatalogTextValidationError(field: .categoryName, reason: reason)
+        }
+        guard let displayName = outcome.value, !displayName.isEmpty,
               let key = Self.normalizedRelationKey(displayName) else {
             return nil
         }

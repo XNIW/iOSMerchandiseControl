@@ -26,6 +26,13 @@
 			remoteGlobalIDString = 415227B22EE0B07D008233E0;
 			remoteInfo = iOSMerchandiseControl;
 		};
+		42C0DF162F2A000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 415227AB2EE0B07D008233E0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 415227B22EE0B07D008233E0;
+			remoteInfo = iOSMerchandiseControl;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +68,7 @@
 		41B18CFD2EE7A90100FE61E2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		41B18D3B2EE7B0B400FE61E2 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		42C0DF112F2A000100000001 /* iOSMerchandiseControlUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -87,6 +95,11 @@
 			path = iOSMerchandiseControlTests;
 			sourceTree = "<group>";
 		};
+		42C0DF122F2A000100000001 /* iOSMerchandiseControlUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = iOSMerchandiseControlUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +121,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		42C0DF132F2A000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -117,6 +137,7 @@
 				41B18CFF2EE7A90100FE61E2 /* Vendor 2 */,
 				415227B52EE0B07D008233E0 /* iOSMerchandiseControl */,
 				42C0DE122F2A000100000001 /* iOSMerchandiseControlTests */,
+				42C0DF122F2A000100000001 /* iOSMerchandiseControlUITests */,
 				415227B42EE0B07D008233E0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -126,6 +147,7 @@
 			children = (
 				415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */,
 				42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */,
+				42C0DF112F2A000100000001 /* iOSMerchandiseControlUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -275,6 +297,29 @@
 			productReference = 42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		42C0DF182F2A000100000001 /* iOSMerchandiseControlUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42C0DF1B2F2A000100000001 /* Build configuration list for PBXNativeTarget "iOSMerchandiseControlUITests" */;
+			buildPhases = (
+				42C0DF152F2A000100000001 /* Sources */,
+				42C0DF132F2A000100000001 /* Frameworks */,
+				42C0DF142F2A000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				42C0DF172F2A000100000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				42C0DF122F2A000100000001 /* iOSMerchandiseControlUITests */,
+			);
+			name = iOSMerchandiseControlUITests;
+			packageProductDependencies = (
+			);
+			productName = iOSMerchandiseControlUITests;
+			productReference = 42C0DF112F2A000100000001 /* iOSMerchandiseControlUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -289,6 +334,10 @@
 						CreatedOnToolsVersion = 26.1.1;
 					};
 					42C0DE182F2A000100000001 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 415227B22EE0B07D008233E0;
+					};
+					42C0DF182F2A000100000001 = {
 						CreatedOnToolsVersion = 26.1.1;
 						TestTargetID = 415227B22EE0B07D008233E0;
 					};
@@ -319,6 +368,7 @@
 			targets = (
 				415227B22EE0B07D008233E0 /* iOSMerchandiseControl */,
 				42C0DE182F2A000100000001 /* iOSMerchandiseControlTests */,
+				42C0DF182F2A000100000001 /* iOSMerchandiseControlUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -332,6 +382,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		42C0DE142F2A000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42C0DF142F2A000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -360,6 +417,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		42C0DF152F2A000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -367,6 +431,11 @@
 			isa = PBXTargetDependency;
 			target = 415227B22EE0B07D008233E0 /* iOSMerchandiseControl */;
 			targetProxy = 42C0DE162F2A000100000001 /* PBXContainerItemProxy */;
+		};
+		42C0DF172F2A000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 415227B22EE0B07D008233E0 /* iOSMerchandiseControl */;
+			targetProxy = 42C0DF162F2A000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -643,6 +712,54 @@
 			};
 			name = Release;
 		};
+		42C0DF192F2A000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 45PJ364B5B;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niwcyber.iOSMerchandiseControlUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iOSMerchandiseControl;
+			};
+			name = Debug;
+		};
+		42C0DF1A2F2A000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 45PJ364B5B;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niwcyber.iOSMerchandiseControlUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iOSMerchandiseControl;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -669,6 +786,15 @@
 			buildConfigurations = (
 				42C0DE192F2A000100000001 /* Debug */,
 				42C0DE1A2F2A000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42C0DF1B2F2A000100000001 /* Build configuration list for PBXNativeTarget "iOSMerchandiseControlUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42C0DF192F2A000100000001 /* Debug */,
+				42C0DF1A2F2A000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

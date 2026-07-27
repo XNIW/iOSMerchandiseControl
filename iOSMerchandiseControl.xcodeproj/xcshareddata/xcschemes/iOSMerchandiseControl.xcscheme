@@ -35,6 +35,20 @@
                ReferencedContainer = "container:iOSMerchandiseControl.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "42C0DF182F2A000100000001"
+               BuildableName = "iOSMerchandiseControlUITests.xctest"
+               BlueprintName = "iOSMerchandiseControlUITests"
+               ReferencedContainer = "container:iOSMerchandiseControl.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -52,6 +66,17 @@
                BlueprintIdentifier = "42C0DE182F2A000100000001"
                BuildableName = "iOSMerchandiseControlTests.xctest"
                BlueprintName = "iOSMerchandiseControlTests"
+               ReferencedContainer = "container:iOSMerchandiseControl.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "42C0DF182F2A000100000001"
+               BuildableName = "iOSMerchandiseControlUITests.xctest"
+               BlueprintName = "iOSMerchandiseControlUITests"
                ReferencedContainer = "container:iOSMerchandiseControl.xcodeproj">
             </BuildableReference>
          </TestableReference>

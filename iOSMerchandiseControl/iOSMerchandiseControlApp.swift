@@ -19,21 +19,25 @@ struct iOSMerchandiseControlApp: App {
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
         let isTask139AtomicCrashHarness = Self.task139AtomicCrashHarnessRequested
         let isTask139PreboundHarness = Self.task139PreboundHarnessRequested
+        let isTask140UITest = Self.task140UITestRequested
         #else
         let isTask138VisualHarness = false
         let isTask139AtomicCrashHarness = false
         let isTask139PreboundHarness = false
+        let isTask140UITest = false
         #endif
         let dependencies = Self.isRunningHostedXCTest
             || isTask138VisualHarness
             || isTask139AtomicCrashHarness
             || isTask139PreboundHarness
+            || isTask140UITest
             ? Self.makeHostedXCTestDependencies()
             : Self.makeSupabaseDependencies()
         let generationController = Self.isRunningHostedXCTest
             || isTask138VisualHarness
             || isTask139AtomicCrashHarness
             || isTask139PreboundHarness
+            || isTask140UITest
             ? SyncStoreGenerationController.ephemeral()
             : SyncStoreGenerationController.shared
         let productImageStore = dependencies.productImageStore
@@ -52,6 +56,7 @@ struct iOSMerchandiseControlApp: App {
            !isTask138VisualHarness,
            !isTask139AtomicCrashHarness,
            !isTask139PreboundHarness,
+           !isTask140UITest,
            generationController.loadFailureCode == nil {
             SyncBackgroundTaskScheduler.shared.register()
             SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
@@ -132,6 +137,10 @@ struct iOSMerchandiseControlApp: App {
         Task138ProductImageVisualState(
             environmentValue: ProcessInfo.processInfo.environment["TASK138_PRODUCT_IMAGE_VISUAL_STATE"]
         )
+    }
+
+    private static var task140UITestRequested: Bool {
+        ProcessInfo.processInfo.environment["TASK140_UI_TEST"] == "1"
     }
     #endif
 

@@ -21,6 +21,7 @@ struct EntryInfoEditor: View {
     @State private var initialTitle: String = ""
     @State private var initialSupplier: String = ""
     @State private var initialCategory: String = ""
+    @State private var validationMessage: String?
 
     @State private var showAllSuppliersSheet = false
     @State private var showAllCategoriesSheet = false
@@ -38,6 +39,14 @@ struct EntryInfoEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let validationMessage {
+                    Section {
+                        Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 Section {
                     HStack {
                         Text(L("common.file_id"))
@@ -154,8 +163,24 @@ struct EntryInfoEditor: View {
 
     private func saveAndDismiss() {
         let newTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newSupplier = draftSupplier.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newCategory = draftCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newSupplier: String
+        let newCategory: String
+        do {
+            newSupplier = try canonicalLookupText(
+                draftSupplier,
+                field: .supplierName
+            )
+            newCategory = try canonicalLookupText(
+                draftCategory,
+                field: .categoryName
+            )
+        } catch let error as CatalogTextValidationError {
+            validationMessage = L(error.reason.localizationKey)
+            return
+        } catch {
+            validationMessage = L("catalog.text.error.invalid_input")
+            return
+        }
         let pendingOwnerUserID = supabaseAuthViewModel.isSignedIn
             ? supabaseAuthViewModel.sessionInfo?.userID
             : nil
@@ -243,7 +268,26 @@ struct EntryInfoEditor: View {
                 in: modelContext
             )
             dismiss()
-        } catch {}
+        } catch {
+            validationMessage = L("catalog.text.error.save_failed")
+        }
+    }
+
+    private func canonicalLookupText(
+        _ value: String,
+        field: CatalogTextField
+    ) throws -> String {
+        let outcome = CatalogTextPolicy.display(
+            value,
+            required: false,
+            maximumUTF16Length: field.maximumUTF16Length
+        )
+        switch outcome {
+        case let .unchanged(canonical), let .normalized(canonical, _):
+            return canonical
+        case let .rejected(reason):
+            throw CatalogTextValidationError(field: field, reason: reason)
+        }
     }
 
     private func historyChangedFields(

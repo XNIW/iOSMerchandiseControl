@@ -460,7 +460,11 @@ nonisolated func applyTargetedSupplier(
         let detachedCount = try localIdentityIndex.detachProducts(supplierRemoteID: row.id)
         return (nil, false, updated || detachedCount > 0)
     }
-    guard let name = SupabasePullPreviewNormalizer.semanticString(row.name) else {
+    guard let name = SupabasePullPreviewNormalizer.catalogDisplayString(
+        row.name,
+        field: .supplierName,
+        required: true
+    ) else {
         throw SyncEventIncrementalApplyError.dynamicPreflightRequired
     }
     guard let canonicalName = SupabasePullPreviewNormalizer.normalizedLookupName(name) else {
@@ -543,7 +547,11 @@ nonisolated func applyTargetedCategory(
         let detachedCount = try localIdentityIndex.detachProducts(categoryRemoteID: row.id)
         return (nil, false, updated || detachedCount > 0)
     }
-    guard let name = SupabasePullPreviewNormalizer.semanticString(row.name) else {
+    guard let name = SupabasePullPreviewNormalizer.catalogDisplayString(
+        row.name,
+        field: .categoryName,
+        required: true
+    ) else {
         throw SyncEventIncrementalApplyError.dynamicPreflightRequired
     }
     guard let canonicalName = SupabasePullPreviewNormalizer.normalizedLookupName(name) else {
@@ -612,7 +620,31 @@ nonisolated func applyTargetedProduct(
     context: ModelContext,
     localIdentityIndex: inout IncrementalLocalCatalogIdentityIndex
 ) throws -> (inserted: Bool, updated: Bool, tombstoned: Bool) {
-    guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(row.barcode) else {
+    guard let barcode = SupabasePullPreviewNormalizer.catalogStrictString(
+        row.barcode,
+        field: .barcode,
+        required: true
+    ) else {
+        throw SyncEventIncrementalApplyError.dynamicPreflightRequired
+    }
+    let itemNumber = SupabasePullPreviewNormalizer.catalogStrictString(
+        row.itemNumber,
+        field: .itemNumber,
+        required: false
+    )
+    let productName = SupabasePullPreviewNormalizer.catalogDisplayString(
+        row.productName,
+        field: .productName,
+        required: false
+    )
+    let secondProductName = SupabasePullPreviewNormalizer.catalogDisplayString(
+        row.secondProductName,
+        field: .secondProductName,
+        required: false
+    )
+    guard row.itemNumber == nil || itemNumber != nil,
+          row.productName == nil || productName != nil,
+          row.secondProductName == nil || secondProductName != nil else {
         throw SyncEventIncrementalApplyError.dynamicPreflightRequired
     }
     let deletedAt = SupabaseRemoteDateParser.parse(row.deletedAt)
@@ -662,9 +694,9 @@ nonisolated func applyTargetedProduct(
         product.remoteDeletedAt = nil
         product.primaryImageVersionID = row.primaryImageVersionID
         product.primaryImageUpdatedAt = primaryImageUpdatedAt
-        product.itemNumber = SupabasePullPreviewNormalizer.semanticString(row.itemNumber)
-        product.productName = SupabasePullPreviewNormalizer.semanticString(row.productName)
-        product.secondProductName = SupabasePullPreviewNormalizer.semanticString(row.secondProductName)
+        product.itemNumber = itemNumber
+        product.productName = productName
+        product.secondProductName = secondProductName
         product.purchasePrice = row.purchasePrice
         product.retailPrice = row.retailPrice
         product.stockQuantity = row.stockQuantity
@@ -684,9 +716,9 @@ nonisolated func applyTargetedProduct(
         remoteUpdatedAt: updatedAt,
         primaryImageVersionID: row.primaryImageVersionID,
         primaryImageUpdatedAt: primaryImageUpdatedAt,
-        itemNumber: SupabasePullPreviewNormalizer.semanticString(row.itemNumber),
-        productName: SupabasePullPreviewNormalizer.semanticString(row.productName),
-        secondProductName: SupabasePullPreviewNormalizer.semanticString(row.secondProductName),
+        itemNumber: itemNumber,
+        productName: productName,
+        secondProductName: secondProductName,
         purchasePrice: row.purchasePrice,
         retailPrice: row.retailPrice,
         stockQuantity: row.stockQuantity,

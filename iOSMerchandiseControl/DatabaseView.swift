@@ -180,6 +180,7 @@ nonisolated private struct DatabaseImportRowErrorPayload: Sendable {
     let rowNumber: Int
     let reasonKeys: [String]
     let rowContent: [String: String]
+    let blocksApply: Bool
 }
 
 nonisolated private struct DatabaseImportAnalysisPayload: Sendable {
@@ -187,6 +188,7 @@ nonisolated private struct DatabaseImportAnalysisPayload: Sendable {
     let updatedProducts: [ProductUpdateDraft]
     let errors: [DatabaseImportRowErrorPayload]
     let warnings: [ProductDuplicateWarning]
+    let normalizationWarnings: [ProductImportNormalizationWarning]
     let totalInputRows: Int
 }
 
@@ -194,6 +196,12 @@ nonisolated private struct PreparedImportAnalysis: Sendable {
     let analysis: DatabaseImportAnalysisPayload
     let pendingFullImportContext: PendingFullImportContext?
     let nonProductSummary: NonProductDeltaSummary?
+}
+
+nonisolated private struct NamedEntitySheetAnalysis: Sendable {
+    let names: [String]
+    let errors: [DatabaseImportRowErrorPayload]
+    let normalizationWarnings: [ProductImportNormalizationWarning]
 }
 
 nonisolated private struct PriceHistoryFingerprint: Hashable, Sendable {
@@ -236,10 +244,12 @@ private enum DatabaseImportUILocalizer {
                 ProductImportRowError(
                     rowNumber: error.rowNumber,
                     reasonKeys: error.reasonKeys,
-                    rowContent: error.rowContent
+                    rowContent: error.rowContent,
+                    blocksApply: error.blocksApply
                 )
             },
             warnings: payload.warnings,
+            normalizationWarnings: payload.normalizationWarnings,
             totalInputRows: payload.totalInputRows
         )
     }
@@ -434,39 +444,57 @@ nonisolated private enum DatabaseImportPipeline {
             uniqueKeysWithValues: sheetNames.map { (normalizedSheetName($0), $0) }
         )
         let backgroundContext = ModelContext(modelContainer)
-        let supplierSheetNames: [String]
-        let categorySheetNames: [String]
+        let supplierSheetAnalysis: NamedEntitySheetAnalysis
+        let categorySheetAnalysis: NamedEntitySheetAnalysis
 
         if let suppliersSheetName = sheetNameMap[normalizedSheetName("Suppliers")] {
             await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
             try Task.checkCancellation()
             let parsingStartedAt = Date()
-            supplierSheetNames = try readNamedEntitiesSheet(in: workbook, sheetName: suppliersSheetName)
+            supplierSheetAnalysis = try readNamedEntitiesSheet(
+                in: workbook,
+                sheetName: suppliersSheetName,
+                fieldKey: AndroidImportKey.supplier,
+                field: .supplierName
+            )
             logTiming(
                 phase: "parsing",
                 sheet: suppliersSheetName,
                 elapsed: Date().timeIntervalSince(parsingStartedAt),
-                rows: supplierSheetNames.count
+                rows: supplierSheetAnalysis.names.count
             )
             try Task.checkCancellation()
         } else {
-            supplierSheetNames = []
+            supplierSheetAnalysis = NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
         if let categoriesSheetName = sheetNameMap[normalizedSheetName("Categories")] {
             await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
             try Task.checkCancellation()
             let parsingStartedAt = Date()
-            categorySheetNames = try readNamedEntitiesSheet(in: workbook, sheetName: categoriesSheetName)
+            categorySheetAnalysis = try readNamedEntitiesSheet(
+                in: workbook,
+                sheetName: categoriesSheetName,
+                fieldKey: AndroidImportKey.category,
+                field: .categoryName
+            )
             logTiming(
                 phase: "parsing",
                 sheet: categoriesSheetName,
                 elapsed: Date().timeIntervalSince(parsingStartedAt),
-                rows: categorySheetNames.count
+                rows: categorySheetAnalysis.names.count
             )
             try Task.checkCancellation()
         } else {
-            categorySheetNames = []
+            categorySheetAnalysis = NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
         guard let productsSheetName = sheetNameMap[normalizedSheetName("Products")] else {
@@ -499,10 +527,22 @@ nonisolated private enum DatabaseImportPipeline {
         try Task.checkCancellation()
         let analyzeStartedAt = Date()
         let existingProducts = try fetchExistingProductSnapshots(in: backgroundContext)
-        let analysis = try analyzeImport(
+        let productAnalysis = try analyzeImport(
             header: normalizedHeader,
             dataRows: dataRows,
             existingProducts: existingProducts
+        )
+        let analysis = DatabaseImportAnalysisPayload(
+            newProducts: productAnalysis.newProducts,
+            updatedProducts: productAnalysis.updatedProducts,
+            errors: productAnalysis.errors
+                + supplierSheetAnalysis.errors
+                + categorySheetAnalysis.errors,
+            warnings: productAnalysis.warnings,
+            normalizationWarnings: productAnalysis.normalizationWarnings
+                + supplierSheetAnalysis.normalizationWarnings
+                + categorySheetAnalysis.normalizationWarnings,
+            totalInputRows: productAnalysis.totalInputRows
         )
         logTiming(
             phase: "analyze",
@@ -542,8 +582,8 @@ nonisolated private enum DatabaseImportPipeline {
         )
         try Task.checkCancellation()
         let namedEntities = try buildPendingSuppliersCategoriesAndNonProductSummary(
-            supplierSheetNames: supplierSheetNames,
-            categorySheetNames: categorySheetNames,
+            supplierSheetNames: supplierSheetAnalysis.names,
+            categorySheetNames: categorySheetAnalysis.names,
             analysis: analysis,
             priceHistoryToInsertCount: classifiedPriceHistory.toInsert.count,
             priceHistoryAlreadyPresentCount: classifiedPriceHistory.alreadyPresentCount,
@@ -708,10 +748,12 @@ nonisolated private enum DatabaseImportPipeline {
                 DatabaseImportRowErrorPayload(
                     rowNumber: error.rowNumber,
                     reasonKeys: error.reasonKeys,
-                    rowContent: error.rowContent
+                    rowContent: error.rowContent,
+                    blocksApply: error.blocksApply
                 )
             },
             warnings: analysis.warnings,
+            normalizationWarnings: analysis.normalizationWarnings,
             totalInputRows: analysis.totalInputRows
         )
     }
@@ -724,8 +766,10 @@ nonisolated private enum DatabaseImportPipeline {
 
     private static func readNamedEntitiesSheet(
         in workbook: ExcelAnalyzer.XLSXWorkbookSession,
-        sheetName: String
-    ) throws -> [String] {
+        sheetName: String,
+        fieldKey: String,
+        field: CatalogTextField
+    ) throws -> NamedEntitySheetAnalysis {
         let rows: [[String]]
         do {
             rows = try ExcelAnalyzer.readSheetByName(in: workbook, sheetName: sheetName)
@@ -733,12 +777,20 @@ nonisolated private enum DatabaseImportPipeline {
             throw resourceError
         } catch {
             debugLogFullImport("impossibile leggere un foglio richiesto, skip.")
-            return []
+            return NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
         guard !rows.isEmpty else {
             debugLogFullImport("foglio richiesto vuoto, skip.")
-            return []
+            return NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
         let header = rows[0].map {
@@ -746,18 +798,69 @@ nonisolated private enum DatabaseImportPipeline {
         }
         guard let nameIndex = header.firstIndex(of: "name") else {
             debugLogFullImport("foglio richiesto senza colonna name, skip.")
-            return []
+            return NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
         guard rows.count > 1 else {
             debugLogFullImport("foglio richiesto con soli header, skip.")
-            return []
+            return NamedEntitySheetAnalysis(
+                names: [],
+                errors: [],
+                normalizationWarnings: []
+            )
         }
 
-        return normalizedUniqueSortedNames(
-            rows.dropFirst().compactMap { row in
-                normalizeNamedEntityName(cellValue(in: row, at: nameIndex))
+        var names: [String] = []
+        var errors: [DatabaseImportRowErrorPayload] = []
+        var normalizationWarnings: [ProductImportNormalizationWarning] = []
+
+        for (offset, row) in rows.dropFirst().enumerated() {
+            let rawName = cellValue(in: row, at: nameIndex)
+            let outcome = CatalogTextPolicy.display(
+                rawName,
+                required: false,
+                maximumUTF16Length: field.maximumUTF16Length
+            )
+            switch outcome {
+            case let .unchanged(value):
+                if !value.isEmpty {
+                    names.append(value)
+                }
+            case let .normalized(value, changes):
+                if !value.isEmpty {
+                    names.append(value)
+                }
+                normalizationWarnings.append(
+                    ProductImportNormalizationWarning(
+                        rowNumber: offset + 2,
+                        fields: [
+                            ProductImportFieldNormalization(
+                                fieldKey: fieldKey,
+                                changes: changes
+                            )
+                        ]
+                    )
+                )
+            case let .rejected(reason):
+                errors.append(
+                    DatabaseImportRowErrorPayload(
+                        rowNumber: offset + 2,
+                        reasonKeys: [reason.localizationKey],
+                        rowContent: [fieldKey: "[catalog-text:\(reason.rawValue)]"],
+                        blocksApply: true
+                    )
+                )
             }
+        }
+
+        return NamedEntitySheetAnalysis(
+            names: normalizedUniqueSortedNames(names),
+            errors: errors,
+            normalizationWarnings: normalizationWarnings
         )
     }
 
@@ -1761,9 +1864,8 @@ struct DatabaseView: View {
 
     // Import prodotti (CSV semplice + Excel con analisi)
     @State private var showingImportOptions = false
-    @State private var showingCSVImportPicker = false
-    @State private var showingExcelImportPicker = false
-    @State private var showingFullExcelImportPicker = false
+    @State private var activeImportPickerKind: ImportPickerKind = .excelAnalysis
+    @State private var showingImportPicker = false
 
     @State private var importError: String?
     
@@ -1776,6 +1878,7 @@ struct DatabaseView: View {
     @State private var cancelledFullImportPrepareTaskID: UUID?
     @State private var fullImportResultPayload: FullImportResultPayload?
     @State private var deferredFullImportResultPayload: FullImportResultPayload?
+    @State private var didPresentTask140UIAnalysis = false
 
     private struct FullImportResultView: View {
         let payload: FullImportResultPayload
@@ -1969,9 +2072,35 @@ struct DatabaseView: View {
         }
     }
 
+    private enum ImportPickerKind {
+        case csv
+        case excelAnalysis
+        case fullExcel
+
+        var allowedContentTypes: [UTType] {
+            switch self {
+            case .csv:
+                return [.commaSeparatedText, .plainText]
+            case .excelAnalysis:
+                return [.spreadsheet, .html]
+            case .fullExcel:
+                return [.spreadsheet]
+            }
+        }
+    }
+
     private enum DatabaseNamedEntityKind {
         case supplier
         case category
+
+        var catalogTextField: CatalogTextField {
+            switch self {
+            case .supplier:
+                return .supplierName
+            case .category:
+                return .categoryName
+            }
+        }
 
         var entityKind: LocalPendingChangeEntityKind {
             switch self {
@@ -2374,7 +2503,7 @@ struct DatabaseView: View {
         @State private var validationMessage: String?
 
         private var trimmedName: String {
-            name.trimmingCharacters(in: .whitespacesAndNewlines)
+            CatalogTextPolicy.evaluate(name, for: kind.catalogTextField).value ?? ""
         }
 
         var body: some View {
@@ -2413,6 +2542,13 @@ struct DatabaseView: View {
         }
 
         private func save() {
+            if let reason = CatalogTextPolicy.evaluate(
+                name,
+                for: kind.catalogTextField
+            ).rejectionReason {
+                validationMessage = L(reason.localizationKey)
+                return
+            }
             guard !trimmedName.isEmpty else {
                 validationMessage = L("database.entity.name_required")
                 return
@@ -2486,7 +2622,7 @@ struct DatabaseView: View {
         }
 
         private var trimmedName: String {
-            name.trimmingCharacters(in: .whitespacesAndNewlines)
+            CatalogTextPolicy.evaluate(name, for: kind.catalogTextField).value ?? ""
         }
 
         private var linkedProducts: [Product] {
@@ -2659,6 +2795,13 @@ struct DatabaseView: View {
         }
 
         private func save() {
+            if let reason = CatalogTextPolicy.evaluate(
+                name,
+                for: kind.catalogTextField
+            ).rejectionReason {
+                validationMessage = L(reason.localizationKey)
+                return
+            }
             guard !trimmedName.isEmpty else {
                 validationMessage = L("database.entity.name_required")
                 return
@@ -3753,7 +3896,11 @@ struct DatabaseView: View {
             }
 
         }
+        .accessibilityIdentifier("task140.database.root")
         .navigationTitle(L("database.title"))
+        .task {
+            presentTask140UIAnalysisIfRequested()
+        }
         .onChange(of: imageScope) { previousScope, nextScope in
             guard previousScope != nextScope else { return }
             dismissProductPresentationsForImageScopeChange()
@@ -3776,6 +3923,7 @@ struct DatabaseView: View {
                     }
                     .disabled(importProgress.isRunning)
                     .accessibilityLabel(L("database.import.title"))
+                    .accessibilityIdentifier("task140.database.import")
 
                     Button {
                         showingExportOptions = true
@@ -3910,14 +4058,17 @@ struct DatabaseView: View {
             titleVisibility: .visible
         ) {
             Button(L("database.import.excel_analysis")) {
-                showingExcelImportPicker = true
+                presentImportPicker(.excelAnalysis)
             }
+            .accessibilityIdentifier("task140.database.import.excel-analysis")
             Button(L("database.import.full")) {
-                showingFullExcelImportPicker = true
+                presentImportPicker(.fullExcel)
             }
+            .accessibilityIdentifier("task140.database.import.full")
             Button(L("database.import.csv_simple")) {
-                showingCSVImportPicker = true
+                presentImportPicker(.csv)
             }
+            .accessibilityIdentifier("task140.database.import.csv")
             Button(L("common.cancel"), role: .cancel) { }
         } message: {
             Text(L("database.import.message"))
@@ -3938,46 +4089,22 @@ struct DatabaseView: View {
             Text(L("database.delete.confirm_message", productsPendingDeletion.count))
         }
 
-        // Import CSV (flow semplice esistente)
+        // Un solo fileImporter gestisce i tre flussi: SwiftUI mantiene una sola
+        // presentazione modale affidabile per questo ramo della view.
         .fileImporter(
-            isPresented: $showingCSVImportPicker,
-            allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
+            isPresented: $showingImportPicker,
+            allowedContentTypes: activeImportPickerKind.allowedContentTypes,
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
-                if let url = urls.first {
+                guard let url = urls.first else { return }
+                switch activeImportPickerKind {
+                case .csv:
                     importProducts(from: url)
-                }
-            case .failure(let error):
-                importError = error.localizedDescription
-            }
-        }
-
-        // Import Excel con analisi
-        .fileImporter(
-            isPresented: $showingExcelImportPicker,
-            allowedContentTypes: [.spreadsheet, .html],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                if let url = urls.first {
+                case .excelAnalysis:
                     importProductsFromExcel(url: url)
-                }
-            case .failure(let error):
-                importError = error.localizedDescription
-            }
-        }
-
-        .fileImporter(
-            isPresented: $showingFullExcelImportPicker,
-            allowedContentTypes: [.spreadsheet],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                if let url = urls.first {
+                case .fullExcel:
                     importFullDatabaseFromExcel(url: url)
                 }
             case .failure(let error):
@@ -4019,9 +4146,7 @@ struct DatabaseView: View {
         }
         .foregroundCloudWorkflowActivity(
             .importExcel,
-            isActive: showingCSVImportPicker
-                || showingExcelImportPicker
-                || showingFullExcelImportPicker
+            isActive: showingImportPicker
                 || importAnalysisSession != nil
                 || pendingFullImportContext != nil
                 || fullImportResultPayload != nil
@@ -4043,6 +4168,42 @@ struct DatabaseView: View {
             .localProgress,
             isActive: importProgress.isRunning || importProgress.showsOverlay
         )
+    }
+
+    private func presentImportPicker(_ kind: ImportPickerKind) {
+        activeImportPickerKind = kind
+        showingImportOptions = false
+
+        Task { @MainActor in
+            await Task.yield()
+            guard activeImportPickerKind == kind else { return }
+            showingImportPicker = true
+        }
+    }
+
+    private func presentTask140UIAnalysisIfRequested() {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment[
+            "TASK140_UI_IMPORT_ANALYSIS"
+        ] == "1",
+        !didPresentTask140UIAnalysis else {
+            return
+        }
+        didPresentTask140UIAnalysis = true
+        let analysis = ProductImportCore.analyzeImport(
+            header: ["barcode", "productName", "retailPrice"],
+            dataRows: [
+                [" TASK140_UI_VALID ", " UI\nProduct ", "10"],
+                [
+                    "1E+999999999999999999999999999999999999999999999999",
+                    "Rejected",
+                    "10"
+                ]
+            ],
+            existingProductsByBarcode: [:]
+        )
+        importAnalysisSession = ImportAnalysisSession(analysis: analysis)
+        #endif
     }
 
     private var importProgressOverlay: some View {
@@ -4292,16 +4453,24 @@ struct DatabaseView: View {
             let source: String
         }
 
-        let productRows = try exportedProductRows()
-
+        let productDescriptor = FetchDescriptor<Product>(
+            sortBy: [SortDescriptor(\Product.barcode, order: .forward)]
+        )
         let supplierDescriptor = FetchDescriptor<Supplier>()
         let categoryDescriptor = FetchDescriptor<ProductCategory>()
         let priceHistoryDescriptor = FetchDescriptor<ProductPrice>()
 
+        let products = try context.fetch(productDescriptor)
         let suppliers = try context.fetch(supplierDescriptor)
             .sorted { $0.name < $1.name }
         let categories = try context.fetch(categoryDescriptor)
             .sorted { $0.name < $1.name }
+        try CatalogTextPersistenceBoundary.validateFullCatalogExport(
+            products: products,
+            suppliers: suppliers,
+            categories: categories
+        )
+        let productRows = try exportedProductRows(from: products)
         let priceHistoryRows = try context.fetch(priceHistoryDescriptor)
             .compactMap { entry -> ExportedPriceHistoryRow? in
                 guard let barcode = entry.product?.barcode else {
@@ -4439,7 +4608,14 @@ struct DatabaseView: View {
             sortBy: [SortDescriptor(\Product.barcode, order: .forward)]
         )
 
-        return try context.fetch(descriptor).map { product in
+        return try exportedProductRows(from: context.fetch(descriptor))
+    }
+
+    private func exportedProductRows(
+        from products: [Product]
+    ) throws -> [ExportedProductRow] {
+        try products.map { product in
+            try CatalogTextPersistenceBoundary.validateCanonical(product)
             let purchaseSummary = priceSummary(
                 for: product,
                 type: .purchase,
@@ -5004,6 +5180,15 @@ struct DatabaseView: View {
         pendingFullImportContext: PendingFullImportContext?,
         ownerUserID: UUID?
     ) throws -> ImportApplyPayload {
+        guard !session.errors.contains(where: \.blocksApply) else {
+            throw NSError(
+                domain: "ImportExcelApply",
+                code: 7,
+                userInfo: [
+                    NSLocalizedDescriptionKey: L("catalog.text.import.apply_blocked")
+                ]
+            )
+        }
         guard hasWorkToApply(session: session, pendingFullImportContext: pendingFullImportContext) else {
             throw NSError(
                 domain: "ImportExcelApply",
@@ -5055,208 +5240,24 @@ struct DatabaseView: View {
                 throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: L("database.error.file_not_utf8")])
             }
 
-            try Task126OwnerStoreGate.withLocalMutationFence(
-                modelContainer: context.container,
-                ownerUserID: currentPendingOwnerUserID
-            ) { freshContext in
-                try parseProductsCSV(content, context: freshContext)
-                try freshContext.save()
+            let rows = try CatalogCSVParser.parse(content)
+            guard let header = rows.first else { return }
+            let dataRows = rows.dropFirst().filter { row in
+                row.contains { !$0.isEmpty }
             }
+            var existingProductsByBarcode: [String: ProductDraft] = [:]
+            for product in products where existingProductsByBarcode[product.barcode] == nil {
+                existingProductsByBarcode[product.barcode] = Self.makeDraft(product)
+            }
+            let analysis = ProductImportCore.analyzeImport(
+                header: header,
+                dataRows: Array(dataRows),
+                existingProductsByBarcode: existingProductsByBarcode
+            )
+            pendingFullImportContext = nil
+            importAnalysisSession = ImportAnalysisSession(analysis: analysis)
         } catch {
             importError = L("database.error.import", error.localizedDescription)
-        }
-    }
-
-    private func parseProductsCSV(_ content: String, context: ModelContext) throws {
-        let lines = content.split(whereSeparator: \.isNewline)
-        guard !lines.isEmpty else { return }
-        let accumulator = LocalPendingChangeAccumulator(
-            context: context,
-            ownerUserID: currentPendingOwnerUserID
-        )
-
-        // salta l'header
-        let dataLines = lines.dropFirst()
-
-        for rawLine in dataLines {
-            let line = String(rawLine)
-            if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
-
-            let cols = splitCSVRow(line)
-            if cols.isEmpty { continue }
-
-            func col(_ index: Int) -> String {
-                guard index < cols.count else { return "" }
-                return cols[index]
-            }
-
-            let barcode = col(0).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !barcode.isEmpty else { continue }
-
-            let itemNumber = col(1).trimmingCharacters(in: .whitespacesAndNewlines)
-            let productName = col(2).trimmingCharacters(in: .whitespacesAndNewlines)
-            let secondName = col(3).trimmingCharacters(in: .whitespacesAndNewlines)
-            let purchase = DatabaseImportPipeline.parseDouble(from: col(4))
-            let retail = DatabaseImportPipeline.parseDouble(from: col(5))
-            let stock = DatabaseImportPipeline.parseDouble(from: col(6))
-            let supplierName = col(7).trimmingCharacters(in: .whitespacesAndNewlines)
-            let categoryName = col(8).trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let supplierResolution = try supplierName.isEmpty
-                ? nil
-                : findOrCreateSupplier(named: supplierName, context: context)
-            let categoryResolution = try categoryName.isEmpty
-                ? nil
-                : findOrCreateCategory(named: categoryName, context: context)
-            let supplier = supplierResolution?.entity
-            let category = categoryResolution?.entity
-
-            // Cerca prodotto esistente per barcode
-            let descriptor = FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })
-            let existing = try context.fetch(descriptor).first
-            guard existing?.remoteDeletedAt == nil else {
-                throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
-            }
-            let oldDraft = existing.map(Self.makeDraft)
-            let baselineHash = existing.map(LocalPendingChangeLogicalKey.productFingerprintHash)
-
-            let product: Product
-            let operation: LocalPendingChangeOperation
-            if let existing {
-                product = existing
-                operation = .update
-            } else {
-                product = Product(
-                    barcode: barcode,
-                    itemNumber: itemNumber.isEmpty ? nil : itemNumber,
-                    productName: productName.isEmpty ? nil : productName,
-                    secondProductName: secondName.isEmpty ? nil : secondName,
-                    purchasePrice: purchase,
-                    retailPrice: retail,
-                    stockQuantity: stock,
-                    supplier: supplier,
-                    category: category
-                )
-                context.insert(product)
-                operation = .create
-            }
-
-            product.itemNumber = itemNumber.isEmpty ? nil : itemNumber
-            product.productName = productName.isEmpty ? nil : productName
-            product.secondProductName = secondName.isEmpty ? nil : secondName
-            product.purchasePrice = purchase
-            product.retailPrice = retail
-            product.stockQuantity = stock
-            product.supplier = supplier
-            product.category = category
-
-            if let supplier, supplierResolution?.created == true {
-                try accumulator.recordSupplierChange(
-                    supplier: supplier,
-                    operation: .create,
-                    origin: .confirmedImport
-                )
-            }
-            if let category, categoryResolution?.created == true {
-                try accumulator.recordCategoryChange(
-                    category: category,
-                    operation: .create,
-                    origin: .confirmedImport
-                )
-            }
-
-            let changedFields = operation == .create
-                ? Self.createChangedFields
-                : ProductUpdateDraft.computeChangedFields(
-                    old: oldDraft ?? Self.makeDraft(product),
-                    new: Self.makeDraft(product)
-                ).map(\.rawValue)
-            try accumulator.recordProductChange(
-                product: product,
-                operation: operation,
-                origin: .confirmedImport,
-                changedFields: changedFields,
-                baselineFingerprintHash: baselineHash
-            )
-        }
-    }
-
-    private func splitCSVRow(_ line: String) -> [String] {
-        // parsing molto semplice: separatore ';', gestisce i campi tra doppi apici
-        var result: [String] = []
-        var current = ""
-        var insideQuotes = false
-
-        for char in line {
-            if char == "\"" {
-                insideQuotes.toggle()
-                current.append(char)
-            } else if char == ";" && !insideQuotes {
-                result.append(current.trimmingCharacters(in: .whitespaces))
-                current = ""
-            } else {
-                current.append(char)
-            }
-        }
-        if !current.isEmpty {
-            result.append(current.trimmingCharacters(in: .whitespaces))
-        }
-
-        // rimuovi doppi apici esterni e rimpiazza "" con "
-        return result.map { field in
-            var f = field
-            if f.hasPrefix("\""), f.hasSuffix("\""), f.count >= 2 {
-                f.removeFirst()
-                f.removeLast()
-            }
-            f = f.replacingOccurrences(of: "\"\"", with: "\"")
-            return f
-        }
-    }
-
-    private func findOrCreateSupplier(
-        named name: String,
-        context: ModelContext
-    ) throws -> (entity: Supplier, created: Bool)? {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let key = ProductImportCore.normalizedRelationKey(trimmed)
-        let matches = try context.fetch(FetchDescriptor<Supplier>()).filter {
-            ProductImportCore.normalizedRelationKey($0.name) == key
-        }
-        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
-            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
-        }
-        if let existing = matches.first {
-            return (existing, false)
-        } else {
-            let supplier = Supplier(name: trimmed)
-            context.insert(supplier)
-            return (supplier, true)
-        }
-    }
-
-    private func findOrCreateCategory(
-        named name: String,
-        context: ModelContext
-    ) throws -> (entity: ProductCategory, created: Bool)? {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let key = ProductImportCore.normalizedRelationKey(trimmed)
-        let matches = try context.fetch(FetchDescriptor<ProductCategory>()).filter {
-            ProductImportCore.normalizedRelationKey($0.name) == key
-        }
-        guard !matches.contains(where: { $0.remoteDeletedAt != nil }) else {
-            throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
-        }
-        if let existing = matches.first {
-            return (existing, false)
-        } else {
-            let category = ProductCategory(name: trimmed)
-            context.insert(category)
-            return (category, true)
         }
     }
 
