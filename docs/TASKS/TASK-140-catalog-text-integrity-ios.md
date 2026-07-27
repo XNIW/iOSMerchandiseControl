@@ -4,14 +4,15 @@
 
 - Coordination key: `CATALOG-TEXT-001`
 - Repository: `XNIW/iOSMerchandiseControl`
-- Stato: `ACTIVE`
-- Fase: `REVIEW`
-- Responsabile: `CLAUDE/ChatGPT / Planner-Reviewer`
+- Stato: `DONE`
+- Fase: `DONE / USER_CONFIRMED_CLOSURE`
+- Responsabile: `USER / CONFIRMED CLOSURE`
 - Apertura: `2026-07-27`
 - Baseline: `origin/main`
   `351ccb9dd0e573bd7f450f23efc1d50670ae362f`
 - Branch implementazione: `codex/catalog-text-integrity-ios-20260727`
 - Branch closeout: `codex/catalog-text-integrity-closeout-ios-20260727`
+- Branch chiusura: `codex/catalog-text-integrity-done-ios-20260727`
 - Evidence: `docs/TASKS/EVIDENCE/TASK-140/README.md`
 - Ambiente autorizzato: fixture locali, XCTest e iOS Simulator; staging pubblico
   soltanto nell'eventuale fase coordinata e con autorizzazione/gate espliciti.
@@ -27,8 +28,8 @@
 I finding `CHANGES_REQUIRED` sono stati corretti e i gate locali sono stati
 rieseguiti. La rereview tecnica finale è `APPROVED` con P0/P1/P2/P3
 `0/0/0/0`; PR, CI, merge normale e acceptance staging coordinata sono
-completati. Codex non marca il task `DONE`; resta necessaria la conferma
-esplicita dell'utente.
+completati. L'utente ha confermato esplicitamente la chiusura a `DONE` il
+`2026-07-27`.
 
 ## Obiettivo
 
@@ -120,7 +121,7 @@ boundary catalogo.
 - Nessun `PASS` dedotto: ogni risultato deriva da un comando eseguito.
 - Il commit baseline di resource hardening e i limiti import restano invariati.
 
-## Handoff a REVIEW
+## Chiusura
 
 ### Risultato
 
@@ -173,5 +174,5 @@ boundary catalogo.
 
 ### Prossima fase
 
-`REVIEW / READY_FOR_USER_CONFIRMATION`. Il passaggio a `DONE` resta
-esclusivamente subordinato alla conferma esplicita dell'utente.
+`DONE / USER_CONFIRMED_CLOSURE`. Nessuna fase successiva; eventuali nuovi gap
+richiedono un task separato.
