@@ -2,11 +2,11 @@
 
 ## Verdict execution iOS
 
-`INDEPENDENT_REVIEW_APPROVED_AND_STAGING_ACCEPTED`
+`DONE / USER_CONFIRMED_CLOSURE`
 
 L'implementazione, i gate locali, il merge normale e l'acceptance staging
-coordinata sono completi. Il task resta `ACTIVE / REVIEW`, non `DONE`, in
-attesa della conferma esplicita dell'utente.
+coordinata sono completi. L'utente ha confermato esplicitamente la chiusura a
+`DONE` il `2026-07-27`.
 
 ## Baseline e sicurezza
 
@@ -14,6 +14,7 @@ attesa della conferma esplicita dell'utente.
 - baseline: `351ccb9dd0e573bd7f450f23efc1d50670ae362f`;
 - branch implementazione: `codex/catalog-text-integrity-ios-20260727`;
 - branch closeout: `codex/catalog-text-integrity-closeout-ios-20260727`;
+- branch chiusura: `codex/catalog-text-integrity-done-ios-20260727`;
 - HEAD preesistente al fix round:
   `95f015196907309ec0bdac2472c5f6b18fe40432`;
 - fix round revisionato:
@@ -174,7 +175,14 @@ prodotto.
   verificati dal coordinatore;
 - file di sessione/derived data/build effimeri eliminati; production e
   Win7POS non modificati;
-- task consegnato a `REVIEW / READY_FOR_USER_CONFIRMATION`, non `DONE`.
+- task consegnato inizialmente a `REVIEW / READY_FOR_USER_CONFIRMATION`.
+
+### 2026-07-27 — conferma utente e DONE
+
+- conferma esplicita ricevuta dopo il riepilogo di gate, staging e cleanup;
+- stato finale `DONE / USER_CONFIRMED_CLOSURE`;
+- nessuna modifica runtime, production, Win7POS o nuovo test nella sola
+  transizione documentale.
 
 ## Rischi residui / reviewer checklist
 
@@ -183,4 +191,4 @@ prodotto.
 - restano 6 warning Swift 6 storici nel target test, 0 nei file TASK-140;
 - P0/P1/P2/P3 aperti `0/0/0/0`;
 - production e Win7POS `NOT_MODIFIED`;
-- nessun passaggio a `DONE` senza conferma esplicita utente.
+- conferma esplicita utente ricevuta; task `DONE`.
