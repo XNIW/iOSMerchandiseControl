@@ -601,6 +601,8 @@ struct PreGenerateView: View {
         switch state {
         case .empty:
             return L("pregenerate.selection.not_selected")
+        case .invalid(let reason):
+            return L(reason.localizationKey)
         case .existing(let name):
             return L("pregenerate.selection.existing", name)
         case .pendingCreate(let name):
@@ -620,6 +622,8 @@ struct PreGenerateView: View {
         switch state {
         case .empty:
             return L("pregenerate.selection.not_selected")
+        case .invalid(let reason):
+            return L(reason.localizationKey)
         case .existing(let name):
             return name
         case .pendingCreate(let name):
@@ -636,6 +640,8 @@ struct PreGenerateView: View {
         switch state {
         case .empty:
             return "circle"
+        case .invalid:
+            return "xmark.octagon.fill"
         case .existing:
             return "checkmark.circle.fill"
         case .pendingCreate:
@@ -647,6 +653,8 @@ struct PreGenerateView: View {
         switch state {
         case .empty:
             return .secondary
+        case .invalid:
+            return .red
         case .existing:
             return .green
         case .pendingCreate:

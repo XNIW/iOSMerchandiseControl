@@ -58,6 +58,10 @@ final class ProductImportViewModel: ObservableObject {
     /// Applica l’analisi al DB SwiftData
     func applyImport() {
         guard let analysis else { return }
+        guard !analysis.errors.contains(where: \.blocksApply) else {
+            lastError = L("catalog.text.import.apply_blocked")
+            return
+        }
         do {
             try Task126OwnerStoreGate.withLocalMutationFence(
                 modelContainer: context.container,

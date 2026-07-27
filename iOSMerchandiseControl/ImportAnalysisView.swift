@@ -87,6 +87,7 @@ struct ProductImportRowError: Identifiable, Sendable {
     let rowNumber: Int
     let reasonKeys: [String]
     let rowContent: [String: String]
+    let blocksApply: Bool
 
     var reason: String {
         reasonKeys
@@ -94,16 +95,28 @@ struct ProductImportRowError: Identifiable, Sendable {
             .joined(separator: " ")
     }
 
-    nonisolated init(rowNumber: Int, reasonKey: String, rowContent: [String: String]) {
+    nonisolated init(
+        rowNumber: Int,
+        reasonKey: String,
+        rowContent: [String: String],
+        blocksApply: Bool = false
+    ) {
         self.rowNumber = rowNumber
         self.reasonKeys = [reasonKey]
         self.rowContent = rowContent
+        self.blocksApply = blocksApply
     }
 
-    nonisolated init(rowNumber: Int, reasonKeys: [String], rowContent: [String: String]) {
+    nonisolated init(
+        rowNumber: Int,
+        reasonKeys: [String],
+        rowContent: [String: String],
+        blocksApply: Bool = false
+    ) {
         self.rowNumber = rowNumber
         self.reasonKeys = reasonKeys
         self.rowContent = rowContent
+        self.blocksApply = blocksApply
     }
 }
 
@@ -118,6 +131,21 @@ struct ProductDuplicateWarning: Identifiable, Sendable {
     }
 }
 
+struct ProductImportFieldNormalization: Hashable, Sendable {
+    let fieldKey: String
+    let changes: [CatalogTextChange]
+}
+
+struct ProductImportNormalizationWarning: Identifiable, Sendable {
+    let id = UUID()
+    let rowNumber: Int
+    let fields: [ProductImportFieldNormalization]
+
+    var affectedFieldCount: Int {
+        fields.count
+    }
+}
+
 /// Risultato complessivo dell'analisi
 struct ProductImportAnalysisResult: Identifiable, Sendable {
     let id = UUID()
@@ -125,6 +153,7 @@ struct ProductImportAnalysisResult: Identifiable, Sendable {
     var updatedProducts: [ProductUpdateDraft]
     var errors: [ProductImportRowError]
     var warnings: [ProductDuplicateWarning]
+    var normalizationWarnings: [ProductImportNormalizationWarning] = []
     var totalInputRows: Int = 0
 
     var hasChanges: Bool {
@@ -148,6 +177,7 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
     @Published var updatedProducts: [ProductUpdateDraft]
     @Published var errors: [ProductImportRowError]
     @Published var warnings: [ProductDuplicateWarning]
+    @Published var normalizationWarnings: [ProductImportNormalizationWarning]
     @Published var nonProductSummary: NonProductDeltaSummary?
 
     private let pendingSupplierNames: [String]
@@ -174,6 +204,7 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
         updatedProducts = analysis.updatedProducts
         errors = analysis.errors
         warnings = analysis.warnings
+        normalizationWarnings = analysis.normalizationWarnings
         totalInputRows = analysis.totalInputRows
         self.nonProductSummary = nonProductSummary
         self.pendingSupplierNames = pendingSupplierNames
@@ -298,6 +329,10 @@ struct ImportAnalysisView: View {
         Array(session.warnings.prefix(Self.previewItemLimit))
     }
 
+    private var visibleNormalizationWarnings: [ProductImportNormalizationWarning] {
+        Array(session.normalizationWarnings.prefix(Self.previewItemLimit))
+    }
+
     private var visibleNewProducts: [ProductDraft] {
         Array(session.newProducts.prefix(Self.previewItemLimit))
     }
@@ -323,11 +358,15 @@ struct ImportAnalysisView: View {
     }
 
     private var canApply: Bool {
-        !isApplying && hasWorkToApply() && !hasCorrectableDraftIssues
+        !isApplying
+            && hasWorkToApply()
+            && !hasCorrectableDraftIssues
+            && !session.errors.contains(where: \.blocksApply)
     }
 
     private var showsWarnings: Bool {
-        !session.warnings.isEmpty && (selectedFilter == .all || selectedFilter == .warnings)
+        (!session.warnings.isEmpty || !session.normalizationWarnings.isEmpty)
+            && (selectedFilter == .all || selectedFilter == .warnings)
     }
 
     private var showsNewProducts: Bool {
@@ -369,6 +408,7 @@ struct ImportAnalysisView: View {
             }
         }
         .id("import-analysis-list-\(resolvedLanguageCode)")
+        .accessibilityIdentifier("task140.import-analysis.root")
         .disabled(isApplying)
         .overlay {
             if isApplying {
@@ -461,9 +501,17 @@ struct ImportAnalysisView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 if !session.errors.isEmpty {
-                    Text(L("import.analysis.apply.errors_excluded", session.errors.count))
+                    Text(
+                        session.errors.contains(where: \.blocksApply)
+                            ? L("catalog.text.import.apply_blocked")
+                            : L("import.analysis.apply.errors_excluded", session.errors.count)
+                    )
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(
+                            session.errors.contains(where: \.blocksApply)
+                                ? Color.red
+                                : Color.secondary
+                        )
                 }
             }
 
@@ -479,6 +527,7 @@ struct ImportAnalysisView: View {
             .controlSize(.large)
             .disabled(!canApply)
             .accessibilityHint(L("import.analysis.apply.accessibility_hint"))
+            .accessibilityIdentifier("task140.import-analysis.apply")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -493,7 +542,25 @@ struct ImportAnalysisView: View {
             row(label: L("import.analysis.summary.valid_rows"), systemImage: "checkmark.circle", value: validProductCount)
             row(label: L("import.analysis.summary.new_products"), systemImage: "plus.circle", value: session.newProducts.count)
             row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: session.updatedProducts.count)
-            row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: session.warnings.count)
+            row(
+                label: L("import.analysis.summary.warnings"),
+                systemImage: "exclamationmark.triangle",
+                value: session.warnings.count + session.normalizationWarnings.count
+            )
+            if !session.normalizationWarnings.isEmpty {
+                row(
+                    label: L("catalog.text.import.normalized_rows"),
+                    systemImage: "text.badge.checkmark",
+                    value: session.normalizationWarnings.count
+                )
+                row(
+                    label: L("catalog.text.import.normalized_fields"),
+                    systemImage: "character.cursor.ibeam",
+                    value: session.normalizationWarnings.reduce(0) {
+                        $0 + $1.affectedFieldCount
+                    }
+                )
+            }
             row(label: L("import.analysis.summary.errors"), systemImage: "xmark.octagon", value: session.errors.count)
 
             if let nonProductSummary = session.nonProductSummary {
@@ -632,6 +699,33 @@ struct ImportAnalysisView: View {
 
     private var warningsSection: some View {
         Section {
+            if visibleNormalizationWarnings.count < session.normalizationWarnings.count {
+                previewBanner(
+                    text: L(
+                        "import.analysis.preview_notice",
+                        Self.previewItemLimit,
+                        session.normalizationWarnings.count
+                    )
+                )
+            }
+
+            ForEach(visibleNormalizationWarnings) { warning in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L("common.row_number", warning.rowNumber))
+                        .font(.headline)
+                    Text(L("catalog.text.import.normalized_warning"))
+                        .font(.caption)
+                    Text(
+                        warning.fields
+                            .map(\.fieldKey)
+                            .joined(separator: ", ")
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+
             if visibleWarnings.count < session.warnings.count {
                 previewBanner(
                     text: L(
@@ -829,7 +923,11 @@ struct ImportAnalysisView: View {
             }
         } header: {
             HStack {
-                Text(L("import.analysis.errors_ignored"))
+                Text(
+                    session.errors.contains(where: \.blocksApply)
+                        ? L("catalog.text.import.blocking_errors")
+                        : L("import.analysis.errors_ignored")
+                )
                 Spacer()
                 Button(L("import.analysis.export_errors")) {
                     exportErrors()
@@ -970,7 +1068,10 @@ struct ImportAnalysisView: View {
     private func exportWarnings() {
         Task { @MainActor in
             do {
-                let url = try Self.exportWarningsToXLSX(session.warnings)
+                let url = try Self.exportWarningsToXLSX(
+                    session.warnings,
+                    normalizationWarnings: session.normalizationWarnings
+                )
                 shareItem = ShareItem(url: url)
             } catch {
                 exportError = L("import.analysis.export_impossible", error.localizedDescription)
@@ -1011,7 +1112,10 @@ struct ImportAnalysisView: View {
         return url
     }
 
-    private static func exportWarningsToXLSX(_ warnings: [ProductDuplicateWarning]) throws -> URL {
+    private static func exportWarningsToXLSX(
+        _ warnings: [ProductDuplicateWarning],
+        normalizationWarnings: [ProductImportNormalizationWarning]
+    ) throws -> URL {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("exports", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -1035,6 +1139,34 @@ struct ImportAnalysisView: View {
             sheet.write(.string(warning.barcode), [row, 0])
             sheet.write(.number(Double(warning.totalOccurrences)), [row, 1])
             sheet.write(.string(warning.rowNumbers.map(String.init).joined(separator: ", ")), [row, 2])
+        }
+
+        if !normalizationWarnings.isEmpty {
+            let normalizationSheet = workbook.addWorksheet(
+                name: L("catalog.text.import.warning_sheet_name")
+            )
+            normalizationSheet.write(.string(L("common.rows_header")), [0, 0])
+            normalizationSheet.write(
+                .string(L("catalog.text.import.normalized_fields")),
+                [0, 1]
+            )
+            normalizationSheet.write(
+                .string(L("catalog.text.import.warning_reason")),
+                [0, 2]
+            )
+
+            for (index, warning) in normalizationWarnings.enumerated() {
+                let row = index + 1
+                normalizationSheet.write(.number(Double(warning.rowNumber)), [row, 0])
+                normalizationSheet.write(
+                    .string(warning.fields.map(\.fieldKey).joined(separator: ", ")),
+                    [row, 1]
+                )
+                normalizationSheet.write(
+                    .string(L("catalog.text.import.normalized_warning")),
+                    [row, 2]
+                )
+            }
         }
 
         return url
@@ -1148,6 +1280,7 @@ private struct EditProductDraftView: View {
     @State private var stockQuantity: String
     @State private var supplierName: String
     @State private var categoryName: String
+    @State private var validationError: String?
 
     private let oldPurchasePrice: Double?
     private let oldRetailPrice: Double?
@@ -1181,20 +1314,36 @@ private struct EditProductDraftView: View {
     }
 
     private var trimmedBarcode: String {
-        barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        CatalogTextPolicy.strict(
+            barcode,
+            required: true,
+            maximumUTF16Length: CatalogTextField.barcode.maximumUTF16Length
+        ).value ?? ""
     }
 
     private var trimmedProductName: String {
-        productName.trimmingCharacters(in: .whitespacesAndNewlines)
+        CatalogTextPolicy.display(
+            productName,
+            required: false,
+            maximumUTF16Length: CatalogTextField.productName.maximumUTF16Length
+        ).value ?? ""
     }
 
     private var trimmedItemNumber: String {
-        itemNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        CatalogTextPolicy.strict(
+            itemNumber,
+            required: false,
+            maximumUTF16Length: CatalogTextField.itemNumber.maximumUTF16Length
+        ).value ?? ""
     }
 
     private var saveDisabled: Bool {
         trimmedBarcode.isEmpty
-            || (trimmedProductName.isEmpty && trimmedItemNumber.isEmpty)
+            || (
+                trimmedProductName.isEmpty
+                    && trimmedItemNumber.isEmpty
+                    && secondProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
             || forbiddenBarcodes.contains(trimmedBarcode)
     }
 
@@ -1248,24 +1397,61 @@ private struct EditProductDraftView: View {
                     .disabled(saveDisabled)
                 }
             }
+            .alert(
+                L("catalog.text.error.title"),
+                isPresented: Binding(
+                    get: { validationError != nil },
+                    set: { if !$0 { validationError = nil } }
+                )
+            ) {
+                Button(L("common.ok"), role: .cancel) {
+                    validationError = nil
+                }
+            } message: {
+                Text(validationError ?? "")
+            }
         }
     }
 
     private func save() {
-        let draft = ProductDraft(
-            barcode: trimmedBarcode,
-            itemNumber: Self.trimmedOrNil(itemNumber),
-            productName: Self.trimmedOrNil(productName),
-            secondProductName: Self.trimmedOrNil(secondProductName),
-            purchasePrice: Self.parseDouble(from: purchasePrice),
-            retailPrice: Self.parseDouble(from: retailPrice),
-            stockQuantity: Self.parseDouble(from: stockQuantity),
-            oldPurchasePrice: oldPurchasePrice,
-            oldRetailPrice: oldRetailPrice,
-            supplierName: Self.trimmedOrNil(supplierName),
-            categoryName: Self.trimmedOrNil(categoryName)
-        )
-        onSave(draft)
+        do {
+            let canonicalBarcode = try CatalogTextPolicy.validate(
+                barcode,
+                for: .barcode
+            ).value
+            guard !forbiddenBarcodes.contains(canonicalBarcode) else {
+                validationError = L("catalog.text.error.identity_collision_after_trim")
+                return
+            }
+
+            let draft = ProductDraft(
+                barcode: canonicalBarcode,
+                itemNumber: try Self.canonicalOptional(itemNumber, field: .itemNumber),
+                productName: try Self.canonicalOptional(productName, field: .productName),
+                secondProductName: try Self.canonicalOptional(
+                    secondProductName,
+                    field: .secondProductName
+                ),
+                purchasePrice: Self.parseDouble(from: purchasePrice),
+                retailPrice: Self.parseDouble(from: retailPrice),
+                stockQuantity: Self.parseDouble(from: stockQuantity),
+                oldPurchasePrice: oldPurchasePrice,
+                oldRetailPrice: oldRetailPrice,
+                supplierName: try Self.canonicalOptional(
+                    supplierName,
+                    field: .supplierName
+                ),
+                categoryName: try Self.canonicalOptional(
+                    categoryName,
+                    field: .categoryName
+                )
+            )
+            onSave(draft)
+        } catch let error as CatalogTextValidationError {
+            validationError = L(error.reason.localizationKey)
+        } catch {
+            validationError = L("catalog.text.error.invalid_input")
+        }
     }
 
     private nonisolated static func format(number: Double) -> String {
@@ -1277,8 +1463,27 @@ private struct EditProductDraftView: View {
         }
     }
 
-    private nonisolated static func trimmedOrNil(_ text: String) -> String? {
-        normalizedImportNamedEntityName(text)
+    private nonisolated static func canonicalOptional(
+        _ text: String,
+        field: CatalogTextField
+    ) throws -> String? {
+        let outcome = field.isDisplayText
+            ? CatalogTextPolicy.display(
+                text,
+                required: false,
+                maximumUTF16Length: field.maximumUTF16Length
+            )
+            : CatalogTextPolicy.strict(
+                text,
+                required: false,
+                maximumUTF16Length: field.maximumUTF16Length
+            )
+        switch outcome {
+        case let .unchanged(value), let .normalized(value, _):
+            return value.isEmpty ? nil : value
+        case let .rejected(reason):
+            throw CatalogTextValidationError(field: field, reason: reason)
+        }
     }
 
     private nonisolated static func parseDouble(from text: String) -> Double? {

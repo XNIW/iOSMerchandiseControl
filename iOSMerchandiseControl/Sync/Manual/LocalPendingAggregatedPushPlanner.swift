@@ -252,6 +252,21 @@ final class LocalPendingAggregatedPushPlanner {
             )
         }
 
+        if includesCatalog {
+            let storeIdentity = ShopContextSelection
+                .selectedShopID(ownerUserID: ownerUserID) == nil
+                ? LocalStoreIdentity.anonymous
+                : ShopContextSelection.localStoreIdentity(
+                    ownerUserID: ownerUserID
+                )
+            _ = try CatalogTextPendingRepair.repair(
+                context: context,
+                ownerUserID: ownerUserID,
+                storeIdentity: storeIdentity,
+                limit: hardCap
+            )
+        }
+
         let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
             .loadSnapshot(ownerUserID: ownerUserID)
         var counts = LocalPendingAggregatedPushCounts()

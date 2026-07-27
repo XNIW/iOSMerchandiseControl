@@ -446,6 +446,9 @@ nonisolated final class LocalPendingChangeAccumulator {
         baselineFingerprintHash: String? = nil,
         intendedFingerprintHash: String? = nil
     ) throws -> LocalPendingChange? {
+        if operation != .delete {
+            try CatalogTextPersistenceBoundary.canonicalize(product)
+        }
         let key = LocalPendingChangeLogicalKey.product(
             remoteID: product.remoteID,
             barcode: product.barcode
@@ -472,6 +475,9 @@ nonisolated final class LocalPendingChangeAccumulator {
         baselineFingerprintHash: String? = nil,
         intendedFingerprintHash: String? = nil
     ) throws -> LocalPendingChange? {
+        if operation != .delete {
+            try CatalogTextPersistenceBoundary.canonicalize(supplier)
+        }
         let key = LocalPendingChangeLogicalKey.supplier(
             remoteID: supplier.remoteID,
             name: supplier.name
@@ -498,6 +504,9 @@ nonisolated final class LocalPendingChangeAccumulator {
         baselineFingerprintHash: String? = nil,
         intendedFingerprintHash: String? = nil
     ) throws -> LocalPendingChange? {
+        if operation != .delete {
+            try CatalogTextPersistenceBoundary.canonicalize(category)
+        }
         let key = LocalPendingChangeLogicalKey.category(
             remoteID: category.remoteID,
             name: category.name

@@ -32,6 +32,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 scope: scope,
                 defaults: defaults
             ) { context -> (plan: SyncCatalogPushPlan, changeIDs: [String]) in
+                _ = try CatalogTextPendingRepair.repair(
+                    context: context,
+                    ownerUserID: ownerUserID,
+                    storeIdentity: scope.storeIdentity
+                )
                 let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
                     .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: scope.storeIdentity)
                 var blockers: [String] = []
@@ -190,6 +195,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
     nonisolated private enum CatalogPushError: Error, Sendable, Equatable {
         case responseMismatch
         case invalidIdempotencyKey
+        case nonCanonicalCatalogText(CatalogTextField)
     }
 
     nonisolated private enum CatalogEntityReference: Sendable {
@@ -303,6 +309,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 )
             }
             guard let supplier else { return nil }
+            try requireCanonical(supplier.name, field: .supplierName)
             let fingerprint = LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier)
             if let remoteID = supplier.remoteID {
                 return PreparedCatalogMutation(
@@ -365,6 +372,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 )
             }
             guard let category else { return nil }
+            try requireCanonical(category.name, field: .categoryName)
             let fingerprint = LocalPendingChangeLogicalKey.categoryFingerprintHash(category)
             if let remoteID = category.remoteID {
                 return PreparedCatalogMutation(
@@ -424,6 +432,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 )
             }
             guard let product else { return nil }
+            try requireCanonical(product)
             let fingerprint = LocalPendingChangeLogicalKey.productFingerprintHash(product)
             if let remoteID = product.remoteID {
                 return PreparedCatalogMutation(
@@ -966,6 +975,62 @@ final class CatalogPushService: SyncCatalogPushProviding {
             categoryID: product.category?.remoteID,
             stockQuantity: product.stockQuantity
         )
+    }
+
+    nonisolated private static func requireCanonical(_ product: Product) throws {
+        try requireCanonical(product.barcode, field: .barcode)
+        try requireCanonicalOptional(
+            product.itemNumber,
+            field: .itemNumber,
+            display: false
+        )
+        try requireCanonicalOptional(
+            product.productName,
+            field: .productName,
+            display: true
+        )
+        try requireCanonicalOptional(
+            product.secondProductName,
+            field: .secondProductName,
+            display: true
+        )
+    }
+
+    nonisolated private static func requireCanonical(
+        _ value: String,
+        field: CatalogTextField
+    ) throws {
+        let normalized = try CatalogTextPolicy.validate(value, for: field).value
+        guard scalarExactEqual(value, normalized) else {
+            throw CatalogPushError.nonCanonicalCatalogText(field)
+        }
+    }
+
+    nonisolated private static func requireCanonicalOptional(
+        _ value: String?,
+        field: CatalogTextField,
+        display: Bool
+    ) throws {
+        guard let value else { return }
+        let normalized = display
+            ? try CatalogTextPersistenceBoundary.validatedOptionalDisplay(
+                value,
+                field: field
+            )
+            : try CatalogTextPersistenceBoundary.validatedOptionalStrict(
+                value,
+                field: field
+            )
+        guard let normalized, scalarExactEqual(value, normalized) else {
+            throw CatalogPushError.nonCanonicalCatalogText(field)
+        }
+    }
+
+    nonisolated private static func scalarExactEqual(
+        _ lhs: String,
+        _ rhs: String
+    ) -> Bool {
+        Array(lhs.unicodeScalars) == Array(rhs.unicodeScalars)
     }
 
     nonisolated private static func deterministicCreateID(

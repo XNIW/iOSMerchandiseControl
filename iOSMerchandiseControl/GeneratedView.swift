@@ -2815,7 +2815,8 @@ struct GeneratedView: View {
                 newProducts: session.newProducts,
                 updatedProducts: session.updatedProducts,
                 errors: session.errors,
-                warnings: session.warnings
+                warnings: session.warnings,
+                normalizationWarnings: session.normalizationWarnings
             )
             vm.applyImport()
             if let error = vm.lastError {

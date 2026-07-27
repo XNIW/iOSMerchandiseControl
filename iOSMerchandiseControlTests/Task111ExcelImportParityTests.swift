@@ -35,6 +35,42 @@ final class Task111ExcelImportParityTests: XCTestCase {
         XCTAssertEqual(analysis.totalInputRows, 1)
     }
 
+    func testScientificBarcodeExpansionIsBoundedAndStrictlyRevalidated() throws {
+        let header = ["barcode", "productName", "retailPrice"]
+
+        let maximum = ProductImportCore.analyzeImport(
+            header: header,
+            dataRows: [["9.99E+95", "Maximum", "10"]],
+            existingProductsByBarcode: [:]
+        )
+        XCTAssertTrue(maximum.errors.isEmpty)
+        let maximumBarcode = try XCTUnwrap(maximum.newProducts.first?.barcode)
+        XCTAssertEqual(maximumBarcode.utf16.count, 96)
+        XCTAssertEqual(maximumBarcode.prefix(3), "999")
+
+        for rawBarcode in [
+            "9.99E+96",
+            "1E+999999999999999999999999999999999999999999999999"
+        ] {
+            let rejected = ProductImportCore.analyzeImport(
+                header: header,
+                dataRows: [[rawBarcode, "Too long", "10"]],
+                existingProductsByBarcode: [:]
+            )
+            XCTAssertTrue(rejected.newProducts.isEmpty)
+            let error = try XCTUnwrap(rejected.errors.first)
+            XCTAssertTrue(error.blocksApply)
+            XCTAssertEqual(
+                error.reasonKeys,
+                [CatalogTextRejectionReason.tooLong.localizationKey]
+            )
+            XCTAssertEqual(
+                error.rowContent[AndroidImportKey.barcode],
+                "[catalog-text:too_long]"
+            )
+        }
+    }
+
     func testDuplicateBarcodeUsesLastRowWithoutSummingQuantity() throws {
         let header = [
             "barcode",

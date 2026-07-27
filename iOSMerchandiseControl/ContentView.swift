@@ -186,6 +186,9 @@ struct ContentView: View {
         if value == "options" {
             return 3
         }
+        if value == "database" {
+            return 1
+        }
         #endif
         return 0
     }
