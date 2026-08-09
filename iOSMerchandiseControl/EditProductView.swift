@@ -32,6 +32,9 @@ struct EditProductView: View {
     @State private var supplierName: String
     @State private var categoryName: String
     @State private var validationMessage: String?
+    @State private var purchasePriceError: String?
+    @State private var retailPriceError: String?
+    @State private var stockQuantityError: String?
     @State private var productForHistory: Product?
     @State private var selectedImageItem: PhotosPickerItem?
     @State private var pendingImageURL: URL?
@@ -67,6 +70,9 @@ struct EditProductView: View {
         _stockQuantity = State(initialValue: product?.stockQuantity.map { Self.format(number: $0) } ?? "")
         _supplierName = State(initialValue: product?.supplier?.name ?? "")
         _categoryName = State(initialValue: product?.category?.name ?? "")
+        _purchasePriceError = State(initialValue: nil)
+        _retailPriceError = State(initialValue: nil)
+        _stockQuantityError = State(initialValue: nil)
         _currentImageVersionID = State(initialValue: product?.primaryImageVersionID)
         _currentImageUpdatedAt = State(initialValue: product?.primaryImageUpdatedAt)
     }
@@ -107,6 +113,7 @@ struct EditProductView: View {
                     .keyboardType(.numbersAndPunctuation)
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.barcode")))
+                    .accessibilityIdentifier("task141.product.barcode")
 
                 TextField(L("product.field.item_number"), text: $itemNumber)
                     .textInputAutocapitalization(.never)
@@ -130,6 +137,20 @@ struct EditProductView: View {
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.stock_quantity")))
+                    .accessibilityIdentifier("task141.product.stock-quantity")
+                    .onChange(of: stockQuantity) { _, value in
+                        guard stockQuantityError != nil else { return }
+                        stockQuantityError = numericInputError(
+                            parseOptionalCLQuantityInput(value),
+                            kind: .quantity
+                        )
+                    }
+
+                numericFieldError(
+                    stockQuantityError,
+                    fieldKey: "product.field.stock_quantity",
+                    identifier: "task141.product.stock-quantity-error"
+                )
             }
 
             Section(L("product.section.prices")) {
@@ -137,11 +158,39 @@ struct EditProductView: View {
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.purchase_price")))
+                    .accessibilityIdentifier("task141.product.purchase-price")
+                    .onChange(of: purchasePrice) { _, value in
+                        guard purchasePriceError != nil else { return }
+                        purchasePriceError = numericInputError(
+                            parseOptionalCLPriceInput(value),
+                            kind: .price
+                        )
+                    }
+
+                numericFieldError(
+                    purchasePriceError,
+                    fieldKey: "product.field.purchase_price",
+                    identifier: "task141.product.purchase-price-error"
+                )
 
                 TextField(L("product.field.retail_price"), text: $retailPrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.retail_price")))
+                    .accessibilityIdentifier("task141.product.retail-price")
+                    .onChange(of: retailPrice) { _, value in
+                        guard retailPriceError != nil else { return }
+                        retailPriceError = numericInputError(
+                            parseOptionalCLPriceInput(value),
+                            kind: .price
+                        )
+                    }
+
+                numericFieldError(
+                    retailPriceError,
+                    fieldKey: "product.field.retail_price",
+                    identifier: "task141.product.retail-price-error"
+                )
 
                 if let existingProduct {
                     Button {
@@ -690,9 +739,22 @@ struct EditProductView: View {
             return
         }
 
-        let purchase = Self.parseDouble(from: purchasePrice)
-        let retail = Self.parseDouble(from: retailPrice)
-        let stock = Self.parseDouble(from: stockQuantity)
+        let purchaseResult = parseOptionalCLPriceInput(purchasePrice)
+        let retailResult = parseOptionalCLPriceInput(retailPrice)
+        let stockResult = parseOptionalCLQuantityInput(stockQuantity)
+        purchasePriceError = numericInputError(purchaseResult, kind: .price)
+        retailPriceError = numericInputError(retailResult, kind: .price)
+        stockQuantityError = numericInputError(stockResult, kind: .quantity)
+        guard purchaseResult.isAccepted,
+              retailResult.isAccepted,
+              stockResult.isAccepted else {
+            validationMessage = nil
+            return
+        }
+
+        let purchase = purchaseResult.value
+        let retail = retailResult.value
+        let stock = stockResult.value
         let formDraft: ProductDraft
         do {
             formDraft = try ProductImportCore.validatedDraft(
@@ -941,13 +1003,47 @@ struct EditProductView: View {
         return created
     }
 
-    private static func parseDouble(from text: String) -> Double? {
-        let normalized = text
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+    private enum NumericInputKind {
+        case price
+        case quantity
+    }
 
-        guard !normalized.isEmpty else { return nil }
-        return Double(normalized)
+    private func numericInputError(
+        _ result: CLNumericInputResult,
+        kind: NumericInputKind
+    ) -> String? {
+        switch result {
+        case .empty, .value:
+            return nil
+        case .invalid:
+            return L(
+                kind == .price
+                    ? "product.validation.price_invalid"
+                    : "product.validation.quantity_invalid"
+            )
+        case .negative:
+            return L(
+                kind == .price
+                    ? "product.validation.price_negative"
+                    : "product.validation.quantity_negative"
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func numericFieldError(
+        _ message: String?,
+        fieldKey: String,
+        identifier: String
+    ) -> some View {
+        if let message {
+            Label(message, systemImage: "exclamationmark.circle.fill")
+                .font(.footnote)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(Text("\(L(fieldKey)): \(message)"))
+                .accessibilityIdentifier(identifier)
+        }
     }
 
     nonisolated private static func optionalRaw(_ text: String) -> String? {

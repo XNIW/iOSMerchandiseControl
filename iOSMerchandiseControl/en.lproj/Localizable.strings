@@ -535,6 +535,10 @@
 "product.title.edit" = "Edit product";
 "product.validation.barcode_required" = "Enter a barcode to save the product.";
 "product.validation.save_failed" = "Unable to save the product. Check the data and try again.";
+"product.validation.price_invalid" = "Enter a valid number for this price.";
+"product.validation.price_negative" = "Prices cannot be negative.";
+"product.validation.quantity_invalid" = "Enter a valid stock quantity.";
+"product.validation.quantity_negative" = "Stock quantity cannot be negative.";
 
 /* Product price history */
 "product.history.empty" = "No price history available.";
@@ -635,7 +639,7 @@
 "import.analysis.export_warnings" = "Export warnings";
 "import.analysis.warning_sheet_name" = "Import Warnings";
 "import.analysis.warning.occurrences" = "Occurrences";
-"import.analysis.warning.duplicate_policy" = "%d occurrences. Last row will be used and quantities are aggregated.";
+"import.analysis.warning.duplicate_policy" = "%d occurrences. The last row will be used; quantities will not be summed.";
 "import.analysis.apply.ready_count" = "%d rows ready";
 "import.analysis.apply.errors_excluded" = "%d error rows excluded";
 "import.analysis.apply.accessibility_hint" = "Saves valid rows and leaves error rows unchanged.";

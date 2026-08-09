@@ -535,6 +535,10 @@
 "product.title.edit" = "编辑商品";
 "product.validation.barcode_required" = "请输入条码以保存商品。";
 "product.validation.save_failed" = "无法保存商品。请检查数据后重试。";
+"product.validation.price_invalid" = "请为此价格输入有效数字。";
+"product.validation.price_negative" = "价格不能为负数。";
+"product.validation.quantity_invalid" = "请输入有效的库存数量。";
+"product.validation.quantity_negative" = "库存数量不能为负数。";
 
 /* Product price history */
 "product.history.empty" = "没有可用的价格历史。";
@@ -635,7 +639,7 @@
 "import.analysis.export_warnings" = "导出警告";
 "import.analysis.warning_sheet_name" = "导入警告";
 "import.analysis.warning.occurrences" = "出现次数";
-"import.analysis.warning.duplicate_policy" = "%d 次出现。将使用最后一行并汇总数量。";
+"import.analysis.warning.duplicate_policy" = "出现 %d 次。将使用最后一行；数量不会相加。";
 "import.analysis.apply.ready_count" = "%d 行可导入";
 "import.analysis.apply.errors_excluded" = "%d 个错误行将被排除";
 "import.analysis.apply.accessibility_hint" = "保存有效行，错误行保持不变。";

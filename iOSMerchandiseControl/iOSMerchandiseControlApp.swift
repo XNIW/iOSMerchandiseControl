@@ -16,6 +16,9 @@ struct iOSMerchandiseControlApp: App {
 
     init() {
         #if DEBUG
+        if Self.task141ResetUIStateRequested {
+            Self.resetTask141UIState()
+        }
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
         let isTask139AtomicCrashHarness = Self.task139AtomicCrashHarnessRequested
         let isTask139PreboundHarness = Self.task139PreboundHarnessRequested
@@ -141,6 +144,15 @@ struct iOSMerchandiseControlApp: App {
 
     private static var task140UITestRequested: Bool {
         ProcessInfo.processInfo.environment["TASK140_UI_TEST"] == "1"
+    }
+
+    private static var task141ResetUIStateRequested: Bool {
+        ProcessInfo.processInfo.environment["TASK141_RESET_UI_STATE"] == "1"
+    }
+
+    private static func resetTask141UIState() {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
+        UserDefaults.standard.removePersistentDomain(forName: bundleIdentifier)
     }
     #endif
 

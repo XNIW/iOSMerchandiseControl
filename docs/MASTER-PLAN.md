@@ -4,6 +4,17 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
+**ACTIVE — TASK-141 / REVIEW — MOBILE-CATALOG-INTEGRITY-001** *(2026-08-09:
+user override esplicito per audit, planning, execution, review e integrazione
+condizionata. Batch iOS: validazione lossless degli input numerici prodotto e
+copy import barcode duplicati coerente con last-row-wins/no-sum. Baseline
+`c1b7b706...`, branch `agent/mobile-catalog-data-integrity-20260809`, file
+`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`. Client TASK-033,
+security review, release PR, Supabase e production restano `NOT_MODIFIED`.
+Il P1 residuo mixed grouped-decimal price è corretto con separatori grouped
+coerenti e regressioni dedicate; re-review finale `APPROVED`, handoff
+`CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.)*
+
 **IDLE — ultimo completato TASK-140 DONE / USER_CONFIRMED_CLOSURE — CATALOG-TEXT-001 Cross-platform catalog text integrity (iOS)** *(2026-07-27: implementazione e finding integrati; focused 49/49, XCUITest 2/2, full unit 1.312 eseguiti / 35 skipped opt-in / 0 failure, Release PASS, Analyze PASS_WITH_NOTES con 0 warning sui file toccati. PR iOS #1 e closeout #2 integrati con merge normali; acceptance staging Android→iOS e iOS→Android/Admin, repair atomico 345, paging Win7POS-equivalente e cleanup a residuo zero `PASS`. P0/P1/P2/P3 `0/0/0/0`; Production e Win7POS `NOT_MODIFIED`. Chiusura `DONE` confermata esplicitamente dall'utente. File `docs/TASKS/TASK-140-catalog-text-integrity-ios.md`; evidence `docs/TASKS/EVIDENCE/TASK-140/README.md`. Responsabile: **USER / Confirmed closure**.)*
 
 **IDLE — ultimo completato TASK-139 DONE / FINAL REVIEW APPROVED — Product Image Production Hardening e Cross-Platform Contract Parity (iOS)** *(2026-07-25: chiusura esplicita utente. SHA codice `e6ce8a5e7ad654cc55ea92744affeaa85726b438` verificata su `main`; CI `30176557473` `SUCCESS` con contract hash, build Debug, full XCTest `1.284` totali / `35` skipped / `0` failure, Analyze e secret scan verdi. P0/P1/P2 aperti `0`; device/camera fisici restano evidence esterna opzionale e non bloccante. Nessun deploy, TestFlight, write production o nuovo scan Codex Security.)*
@@ -127,7 +138,14 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
-**ACTIVE** — TASK-131 **ACTIVE / BLOCKED — PHYSICAL_REVIEW_ACCESSIBILITY_OPERATOR_EVIDENCE_REQUIRED**. Il task e' aperto nel repo locale e non e' DONE/REVIEW: full physical sync/offline/account non-B policy, build/test/scans/security/cleanup sono PASS con evidence aggiornata; restano bloccanti solo le evidenze operator-assisted per Conflict/Review tap fisici e accessibility VoiceOver/TalkBack/Dynamic Type, piu' i casi A->B che richiedono secondo account sintetico. Ultimo completato resta TASK-130 **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**. Nessun claim production-ready globale.
+**ACTIVE — TASK-141 / REVIEW.** Il closeout TASK-140 del 2026-07-27 ha
+superseduto cronologicamente lo snapshot TASK-131 del 2026-05-29 riportato in
+questa sezione. TASK-131 resta un blocker storico, non viene riaperto, chiuso o
+marcato DONE da TASK-141. Il task corrente è soltanto
+`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`; ultimo completato
+TASK-140 `DONE / USER_CONFIRMED_CLOSURE`. Il finding `R2-I141-01` è verificato
+risolto; TASK-141 resta `ACTIVE / REVIEW`, approvato e in attesa di conferma
+utente con handoff `CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.
 
 **TASK-122 — DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING:** file **`docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-122/`**. Chiuso per override utente dopo TASK-123; local architecture execution e final remote-domain strangler accettati come baseline storica.
 
@@ -1070,13 +1088,16 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** nessuno; ultimo completato TASK-139.
-- **File task attivo:** nessuno; ultimo `docs/TASKS/TASK-139-product-image-production-hardening-ios.md`.
-- **Stato task:** DONE
-- **Fase attuale:** IDLE / DONE
-- **Responsabile attuale:** **USER / Final review approved**
-- **Ultimo aggiornamento:** 2026-07-25 — TASK-139 chiusa `DONE`; SHA codice `e6ce8a5e7ad654cc55ea92744affeaa85726b438` verificata su `main` e antenata del tip documentale. CI esistente `30176557473` `SUCCESS`: contract hash, Debug build, full XCTest `1.284` totali con `35` skip e `0` failure, Analyze e secret scan verdi. P0/P1/P2 aperti `0`; device/camera fisici restano esterni non bloccanti.
-- **Handoff corrente:** `DONE`; evidence runtime nell'archivio esterno non versionato del closeout TASK-139.
+- **Task attivo corrente:** TASK-141 — Mobile catalog data integrity e import truthfulness (iOS).
+- **File task attivo:** `docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`.
+- **Stato task:** ACTIVE
+- **Fase attuale:** REVIEW
+- **Responsabile attuale:** **USER_APPROVER**
+- **Ultimo aggiornamento:** 2026-08-09 — re-review finale `APPROVED`;
+  `R2-I141-01` verificato risolto, rerun reviewer parser 6/6, full post-fix
+  1323/0 failure, Analyze/Release/localizzazioni/diff `PASS`; evidence
+  `docs/TASKS/EVIDENCE/TASK-141/review-03-approved.md`.
+- **Handoff corrente:** `CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.
 - **Nota TASK-129:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; broad Android non e' PASS pieno.
 - **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-132 e' DONE per override utente finale** nel perimetro `CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED`. La closure storicamente etichettata **TASK-134** e' parte del sotto-scope `TASK-132 final live strict closure`; non esiste un task canonico separato TASK-134 in questa closure, e i riferimenti `TASK134_*` restano solo fixture/harness prefix storici. TASK-135 non e' aperto; nessun claim production-ready globale oltre il perimetro task.
 - **Ultimo completato:** **TASK-130** (`docs/TASKS/TASK-130-price-contract-current-previous-old.md`) — **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**.
