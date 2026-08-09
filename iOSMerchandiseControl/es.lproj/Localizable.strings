@@ -535,6 +535,10 @@
 "product.title.edit" = "Editar producto";
 "product.validation.barcode_required" = "Introduce un barcode para guardar el producto.";
 "product.validation.save_failed" = "No se pudo guardar el producto. Revisa los datos e inténtalo de nuevo.";
+"product.validation.price_invalid" = "Introduce un número válido para este precio.";
+"product.validation.price_negative" = "Los precios no pueden ser negativos.";
+"product.validation.quantity_invalid" = "Introduce una cantidad de stock válida.";
+"product.validation.quantity_negative" = "La cantidad de stock no puede ser negativa.";
 
 /* Product price history */
 "product.history.empty" = "No hay historial de precios disponible.";
@@ -635,7 +639,7 @@
 "import.analysis.export_warnings" = "Exportar avisos";
 "import.analysis.warning_sheet_name" = "Avisos de importacion";
 "import.analysis.warning.occurrences" = "Ocurrencias";
-"import.analysis.warning.duplicate_policy" = "%d ocurrencias. Se usa la última fila y las cantidades se agregan.";
+"import.analysis.warning.duplicate_policy" = "%d ocurrencias. Se usa la última fila; las cantidades no se suman.";
 "import.analysis.apply.ready_count" = "%d filas listas";
 "import.analysis.apply.errors_excluded" = "%d filas con error excluidas";
 "import.analysis.apply.accessibility_hint" = "Guarda las filas válidas y deja sin cambios las filas con error.";

@@ -341,6 +341,32 @@ final class LocalizationCoverageTests: XCTestCase {
         XCTAssertEqual(strings["options.accountDecision.choice.replaceWithCloud"], "Sostituisci con dati cloud")
     }
 
+    func testTask141NumericErrorsAndDuplicatePolicyAreLocalizedAndTruthful() throws {
+        let numericKeys = [
+            "product.validation.price_invalid",
+            "product.validation.price_negative",
+            "product.validation.quantity_invalid",
+            "product.validation.quantity_negative"
+        ]
+        let duplicateCopyByLanguage = [
+            "it": "%d occorrenze. Viene usata l'ultima riga; le quantità non vengono sommate.",
+            "en": "%d occurrences. The last row will be used; quantities will not be summed.",
+            "es": "%d ocurrencias. Se usa la última fila; las cantidades no se suman.",
+            "zh-Hans": "出现 %d 次。将使用最后一行；数量不会相加。"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in numericKeys {
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) missing in \(language)")
+            }
+            XCTAssertEqual(
+                strings["import.analysis.warning.duplicate_policy"],
+                duplicateCopyByLanguage[language]
+            )
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
