@@ -2,14 +2,14 @@
 
 ## Stato
 
-- Stato: `ACTIVE`
-- Fase: `REVIEW`
+- Stato: `DONE`
+- Fase: `DONE / USER_CONFIRMED_CLOSURE`
 - Coordination key: `MOBILE-CATALOG-INTEGRITY-001`
 - Repository: `XNIW/iOSMerchandiseControl`
 - Baseline: `origin/main` `c1b7b706c5f05cd7e8dda74cea1122f6483df7ec`
 - Branch: `agent/mobile-catalog-data-integrity-20260809`
 - Apertura: `2026-08-09`
-- Responsabile attuale: `USER_APPROVER`
+- Responsabile attuale: `USER / CONFIRMED CLOSURE`
 - Autorizzazione: prompt utente `PRODUCT COMPLETION + MODERN UI/UX OPTIMIZATION`
   del 2026-08-09, che autorizza audit, planning, execution, review e integrazione
   condizionata mantenendo separati i ruoli logici.
@@ -211,4 +211,16 @@ toccato.
 
 ## Handoff
 
-`CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.
+`USER_CONFIRMED_CLOSURE`.
+
+## Chiusura — 2026-08-11
+
+- conferma esplicita `USER_APPROVER` ricevuta per il closeout multi-repository;
+- PR #4 `Protect iOS catalog data integrity` merged normalmente il 2026-08-09;
+- commit task `d3a3442646cfbe6a3f269e209a3b7e88658beb91` antenato di
+  `origin/main`; merge commit finale
+  `c55e3a93449c4f432bf28f4d7b1f5ac1e5f9b502` con tree identico al commit task;
+- CI PR `31331876775` e CI sul merge commit `31332907006`: `PASS`, inclusi
+  contract hash, Debug build, full XCTest, Analyze e secret scan;
+- working tree post-clone pulito; nessun file Swift, xcscheme, Supabase o production
+  modificato durante la chiusura governance.

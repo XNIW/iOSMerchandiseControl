@@ -4,16 +4,15 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**ACTIVE — TASK-141 / REVIEW — MOBILE-CATALOG-INTEGRITY-001** *(2026-08-09:
-user override esplicito per audit, planning, execution, review e integrazione
-condizionata. Batch iOS: validazione lossless degli input numerici prodotto e
-copy import barcode duplicati coerente con last-row-wins/no-sum. Baseline
-`c1b7b706...`, branch `agent/mobile-catalog-data-integrity-20260809`, file
-`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`. Client TASK-033,
-security review, release PR, Supabase e production restano `NOT_MODIFIED`.
-Il P1 residuo mixed grouped-decimal price è corretto con separatori grouped
-coerenti e regressioni dedicate; re-review finale `APPROVED`, handoff
-`CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.)*
+**IDLE — ultimo completato TASK-141 DONE / USER_CONFIRMED_CLOSURE —
+MOBILE-CATALOG-INTEGRITY-001** *(2026-08-11: re-review finale `APPROVED` già
+registrata con zero finding aperti; conferma esplicita `USER_APPROVER` ricevuta.
+PR #4 merged normalmente con merge commit
+`c55e3a93449c4f432bf28f4d7b1f5ac1e5f9b502`; commit task
+`d3a3442646cfbe6a3f269e209a3b7e88658beb91` è antenato di `origin/main` e il
+tree del merge è identico. CI pull request `31331876775` e CI push sul merge
+`31332907006` `PASS`. Nessuna modifica Supabase/production; file task
+`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`.)*
 
 **IDLE — ultimo completato TASK-140 DONE / USER_CONFIRMED_CLOSURE — CATALOG-TEXT-001 Cross-platform catalog text integrity (iOS)** *(2026-07-27: implementazione e finding integrati; focused 49/49, XCUITest 2/2, full unit 1.312 eseguiti / 35 skipped opt-in / 0 failure, Release PASS, Analyze PASS_WITH_NOTES con 0 warning sui file toccati. PR iOS #1 e closeout #2 integrati con merge normali; acceptance staging Android→iOS e iOS→Android/Admin, repair atomico 345, paging Win7POS-equivalente e cleanup a residuo zero `PASS`. P0/P1/P2/P3 `0/0/0/0`; Production e Win7POS `NOT_MODIFIED`. Chiusura `DONE` confermata esplicitamente dall'utente. File `docs/TASKS/TASK-140-catalog-text-integrity-ios.md`; evidence `docs/TASKS/EVIDENCE/TASK-140/README.md`. Responsabile: **USER / Confirmed closure**.)*
 
@@ -1088,19 +1087,17 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** TASK-141 — Mobile catalog data integrity e import truthfulness (iOS).
-- **File task attivo:** `docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`.
-- **Stato task:** ACTIVE
-- **Fase attuale:** REVIEW
-- **Responsabile attuale:** **USER_APPROVER**
-- **Ultimo aggiornamento:** 2026-08-09 — re-review finale `APPROVED`;
-  `R2-I141-01` verificato risolto, rerun reviewer parser 6/6, full post-fix
-  1323/0 failure, Analyze/Release/localizzazioni/diff `PASS`; evidence
-  `docs/TASKS/EVIDENCE/TASK-141/review-03-approved.md`.
-- **Handoff corrente:** `CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.
+- **Task attivo corrente:** nessuno.
+- **File task attivo:** non applicabile.
+- **Stato task:** non applicabile.
+- **Fase attuale:** non applicabile.
+- **Responsabile attuale:** **USER_APPROVER**.
+- **Ultimo aggiornamento:** 2026-08-11 — TASK-141 chiuso `DONE` dopo conferma
+  esplicita; PR #4 merged in `c55e3a93`, CI sul merge `31332907006` `PASS`.
+- **Handoff corrente:** `USER_CONFIRMED_CLOSURE`.
 - **Nota TASK-129:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; broad Android non e' PASS pieno.
 - **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-132 e' DONE per override utente finale** nel perimetro `CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED`. La closure storicamente etichettata **TASK-134** e' parte del sotto-scope `TASK-132 final live strict closure`; non esiste un task canonico separato TASK-134 in questa closure, e i riferimenti `TASK134_*` restano solo fixture/harness prefix storici. TASK-135 non e' aperto; nessun claim production-ready globale oltre il perimetro task.
-- **Ultimo completato:** **TASK-130** (`docs/TASKS/TASK-130-price-contract-current-previous-old.md`) — **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**.
+- **Ultimo completato:** **TASK-141** (`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`) — **DONE / USER_CONFIRMED_CLOSURE**.
 - **Precedente completato:** **TASK-113** (`docs/TASKS/TASK-113-agent-friendly-cli-automation-harness.md`) — **DONE / Chiusura — FINAL CLI HARNESS ACCEPTANCE PASS** (CLI harness, report schema 1.1, MCP wrapper, Android L1/L2, iOS Options fallback, Supabase linked checks; evidence `EVIDENCE/TASK-113/13-final-done-closure.md`).
 - **Precedente completato:** **TASK-112** (`docs/TASKS/TASK-112-automatic-cross-platform-sync-no-manual-options-cta.md`) — **DONE / Chiusura — FINAL EVIDENCE-BACKED AUTOMATIC SYNC PASS** (automatic cross-platform sync + cleanup finale; evidence `EVIDENCE/TASK-112/93-final-cleanup-done-closure.md`; no migration/RLS weakening, no service role client).
 - **Precedente completato:** **TASK-111** (`docs/TASKS/TASK-111-excel-analysis-parity-ios.md`) — **DONE / Chiusura — REVIEW PASS WITH NOTES** (Excel/import parity iOS reviewata; evidence `EVIDENCE/TASK-111/`; no Supabase mutation, Android reference-only).

@@ -1,5 +1,16 @@
 # TASK-141 evidence — iOS
 
+## Chiusura post-merge — 2026-08-11
+
+- esito: `DONE / USER_CONFIRMED_CLOSURE`;
+- PR #4: `MERGED` normalmente;
+- commit task `d3a3442646cfbe6a3f269e209a3b7e88658beb91` antenato di
+  `origin/main`;
+- merge commit `c55e3a93449c4f432bf28f4d7b1f5ac1e5f9b502`, tree identico al
+  commit task;
+- CI PR `31331876775` e CI merge `31332907006`: `PASS`;
+- nessuna modifica runtime, xcscheme, staging o production nel closeout documentale.
+
 - Baseline: `c1b7b706c5f05cd7e8dda74cea1122f6483df7ec`
 - Branch: `agent/mobile-catalog-data-integrity-20260809`
 - Scope: product numeric input safety e truthful duplicate-barcode import copy.
