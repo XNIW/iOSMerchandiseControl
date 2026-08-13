@@ -357,19 +357,38 @@ struct OptionsView: View {
                     .foregroundStyle(.secondary)
             }
         } else {
-            Button {
-                supabaseAuthViewModel.signInWithGoogle()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.crop.circle.badge.plus")
-                    Text(L("options.cloud.account.action.signIn"))
+            VStack(alignment: .leading, spacing: 10) {
+                Button {
+                    supabaseAuthViewModel.signInWithGoogle()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                        Text(L("options.cloud.account.action.signIn"))
+                    }
+                    .frame(minWidth: 112, alignment: .center)
                 }
-                .frame(minWidth: 112, alignment: .center)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.blue)
+                .disabled(!supabaseAuthViewModel.canSignIn)
+
+                if supabaseAuthViewModel.isWeChatEnabled {
+                    Button {
+                        supabaseAuthViewModel.signInWithWeChat()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "message.fill")
+                            Text(L("options.cloud.account.action.signInWeChat"))
+                        }
+                        .frame(minWidth: 112, alignment: .center)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .tint(.green)
+                    .disabled(!supabaseAuthViewModel.canSignInWithWeChat)
+                    .accessibilityLabel(L("options.cloud.account.action.signInWeChat.accessibility"))
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.blue)
-            .disabled(!supabaseAuthViewModel.canSignIn)
         }
     }
 
@@ -442,8 +461,34 @@ struct OptionsView: View {
             return L("options.cloud.account.signedIn.detail")
         case .signingOut:
             return L("options.cloud.account.signingOut.detail")
-        case .failed:
+        case .failed(let error):
+            if case .wechat(let weChatError) = error {
+                return localizedWeChatError(weChatError)
+            }
             return L("options.cloud.account.failed.detail")
+        }
+    }
+
+    private func localizedWeChatError(_ error: WeChatAuthError) -> String {
+        switch error {
+        case .providerNotConfigured:
+            return L("options.cloud.account.wechat.error.notConfigured")
+        case .appNotInstalled:
+            return L("options.cloud.account.wechat.error.notInstalled")
+        case .userCancelled:
+            return L("options.cloud.account.wechat.error.cancelled")
+        case .userDenied:
+            return L("options.cloud.account.wechat.error.denied")
+        case .stateMismatch, .stateExpired, .callbackDuplicate:
+            return L("options.cloud.account.wechat.error.invalidCallback")
+        case .codeMissing, .backendTemporary:
+            return L("options.cloud.account.wechat.error.temporary")
+        case .identityConflict:
+            return L("options.cloud.account.wechat.error.conflict")
+        case .accountSuspended:
+            return L("options.cloud.account.wechat.error.suspended")
+        case .sessionExpired:
+            return L("options.cloud.account.wechat.error.sessionExpired")
         }
     }
 

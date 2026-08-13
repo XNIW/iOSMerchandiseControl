@@ -8,5 +8,11 @@
 	<string>YOUR_ANON_OR_PUBLISHABLE_KEY</string>
 	<key>PRODUCT_IMAGE_API_BASE_URL</key>
 	<string>YOUR_ADMIN_API_BASE_URL</string>
+	<key>WECHAT_AUTH_IOS_ENABLED</key>
+	<string>0</string>
+	<key>WECHAT_IOS_APP_ID</key>
+	<string>YOUR_WECHAT_IOS_APP_ID</string>
+	<key>WECHAT_AUTH_GATEWAY_BASE_URL</key>
+	<string>YOUR_ADMIN_API_BASE_URL</string>
 </dict>
 </plist>

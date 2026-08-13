@@ -6,13 +6,14 @@ nonisolated enum SupabaseAuthServiceError: Error, Equatable, Sendable {
     case configMissing
     case invalidConfig
     case oauthCancelled
+    case wechat(WeChatAuthError)
     case callbackFailed(message: String?)
     case sessionMissing
     case unknown(message: String?)
 
     var safeDiagnosticDetail: String? {
         switch self {
-        case .configMissing, .invalidConfig, .oauthCancelled, .sessionMissing:
+        case .configMissing, .invalidConfig, .oauthCancelled, .wechat, .sessionMissing:
             return nil
         case .callbackFailed(let message), .unknown(let message):
             return SupabaseTransportClientError.sanitizedDiagnosticDetail(message)
@@ -67,13 +68,22 @@ final class SupabaseAuthService: @unchecked Sendable {
     nonisolated static let mobileSignOutScope: SignOutScope = .local
 
     private let provider: SupabaseClientProvider
+    private let weChatCoordinator: WeChatAuthCoordinator?
 
-    init(provider: SupabaseClientProvider) {
+    init(
+        provider: SupabaseClientProvider,
+        weChatCoordinator: WeChatAuthCoordinator? = nil
+    ) {
         self.provider = provider
+        self.weChatCoordinator = weChatCoordinator
     }
 
     var currentSession: SupabaseAuthSessionInfo? {
         provider.client.auth.currentSession.map { Self.sessionInfo(from: $0) }
+    }
+
+    var isWeChatEnabled: Bool {
+        weChatCoordinator?.isConfigured == true
     }
 
     func signInWithGoogle() async throws -> SupabaseAuthSessionInfo {
@@ -83,6 +93,24 @@ final class SupabaseAuthService: @unchecked Sendable {
                 redirectTo: provider.redirectURL
             )
             return Self.sessionInfo(from: session)
+        } catch {
+            throw mapAuthError(error)
+        }
+    }
+
+    func signInWithWeChat() async throws -> SupabaseAuthSessionInfo {
+        guard let weChatCoordinator, weChatCoordinator.isConfigured else {
+            throw SupabaseAuthServiceError.wechat(.providerNotConfigured)
+        }
+        do {
+            let handedOffSession = try await weChatCoordinator.authenticate()
+            let session = try await provider.client.auth.setSession(
+                accessToken: handedOffSession.accessToken,
+                refreshToken: handedOffSession.refreshToken
+            )
+            return Self.sessionInfo(from: session)
+        } catch let error as WeChatAuthError {
+            throw SupabaseAuthServiceError.wechat(error)
         } catch {
             throw mapAuthError(error)
         }
@@ -99,6 +127,9 @@ final class SupabaseAuthService: @unchecked Sendable {
     }
 
     func handleOpenURL(_ url: URL) -> Bool {
+        if weChatCoordinator?.handleOpenURL(url) == true {
+            return true
+        }
         guard url.scheme?.lowercased() == provider.redirectURL.scheme?.lowercased() else {
             return false
         }
