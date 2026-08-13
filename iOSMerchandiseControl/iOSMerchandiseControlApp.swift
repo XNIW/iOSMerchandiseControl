@@ -172,7 +172,23 @@ struct iOSMerchandiseControlApp: App {
         do {
             let config = try SupabaseConfig.load()
             let provider = SupabaseClientProvider(config: config)
-            let authService = SupabaseAuthService(provider: provider)
+            let weChatConfiguration = WeChatAuthConfiguration.load()
+            let weChatGateway: any WeChatAuthGateway = weChatConfiguration.gatewayBaseURL.map {
+                HTTPWeChatAuthGateway(baseURL: $0)
+            } ?? UnconfiguredWeChatAuthGateway()
+            let weChatDeviceIDStore = WeChatDeviceIDStore()
+            // The official OpenSDK adapter is deliberately not substituted until its
+            // AppID, Universal Link and binary provenance have been externally verified.
+            let weChatCoordinator = WeChatAuthCoordinator(
+                configuration: weChatConfiguration,
+                codeProvider: UnconfiguredWeChatAuthorizationCodeProvider(),
+                deviceID: { weChatDeviceIDStore.getOrCreate() },
+                gateway: weChatGateway
+            )
+            let authService = SupabaseAuthService(
+                provider: provider,
+                weChatCoordinator: weChatCoordinator
+            )
             let shopDeviceRegistrationService = ShopDeviceRegistrationService(clientProvider: provider)
             let supabaseTransportClient = SupabaseTransportClient(clientProvider: provider)
             let previewService = SupabasePullPreviewService(

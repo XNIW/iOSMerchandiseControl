@@ -1199,6 +1199,17 @@
 "options.cloud.account.failed.title" = "账号需要检查";
 "options.cloud.account.failed.detail" = "无法验证云端访问。请重试或检查账号。";
 "options.cloud.account.action.signIn" = "登录";
+"options.cloud.account.action.signInWeChat" = "使用微信登录";
+"options.cloud.account.action.signInWeChat.accessibility" = "使用微信登录个人账户";
+"options.cloud.account.wechat.error.notConfigured" = "微信登录尚未配置。";
+"options.cloud.account.wechat.error.notInstalled" = "请先安装微信。";
+"options.cloud.account.wechat.error.cancelled" = "已取消微信登录。";
+"options.cloud.account.wechat.error.denied" = "微信授权已被拒绝。";
+"options.cloud.account.wechat.error.invalidCallback" = "微信回调无效或已过期，请重试。";
+"options.cloud.account.wechat.error.temporary" = "微信登录暂时不可用。";
+"options.cloud.account.wechat.error.conflict" = "此微信身份已关联其他账户，请联系支持人员。";
+"options.cloud.account.wechat.error.suspended" = "此账户已停用。";
+"options.cloud.account.wechat.error.sessionExpired" = "会话已过期，请重新登录。";
 "options.localDatabase.products" = "商品";
 "options.localDatabase.suppliers" = "供应商";
 "options.localDatabase.categories" = "分类";

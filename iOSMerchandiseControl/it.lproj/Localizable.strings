@@ -1198,6 +1198,17 @@
 "options.cloud.account.failed.title" = "Account da controllare";
 "options.cloud.account.failed.detail" = "Non e' stato possibile verificare l'accesso cloud. Riprova o controlla l'account.";
 "options.cloud.account.action.signIn" = "Accedi";
+"options.cloud.account.action.signInWeChat" = "Accedi con WeChat";
+"options.cloud.account.action.signInWeChat.accessibility" = "Accedi al tuo account personale con WeChat";
+"options.cloud.account.wechat.error.notConfigured" = "L’accesso WeChat non è configurato.";
+"options.cloud.account.wechat.error.notInstalled" = "Installa WeChat per continuare.";
+"options.cloud.account.wechat.error.cancelled" = "Accesso WeChat annullato.";
+"options.cloud.account.wechat.error.denied" = "Autorizzazione WeChat rifiutata.";
+"options.cloud.account.wechat.error.invalidCallback" = "Il callback WeChat non è valido o è scaduto. Riprova.";
+"options.cloud.account.wechat.error.temporary" = "L’accesso WeChat non è temporaneamente disponibile.";
+"options.cloud.account.wechat.error.conflict" = "Questa identità WeChat è collegata a un altro account. Contatta l’assistenza.";
+"options.cloud.account.wechat.error.suspended" = "Questo account è sospeso.";
+"options.cloud.account.wechat.error.sessionExpired" = "La sessione è scaduta. Accedi di nuovo.";
 "options.localDatabase.products" = "Prodotti";
 "options.localDatabase.suppliers" = "Fornitori";
 "options.localDatabase.categories" = "Categorie";

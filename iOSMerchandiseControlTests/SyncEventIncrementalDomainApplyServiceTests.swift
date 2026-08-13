@@ -3653,6 +3653,606 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testWECHAT003AdminProductCreateUpdateArchiveRestoreAndImagePointerConverge() async throws {
+        let owner = UUID(uuidString: "33333333-3333-4333-8333-333333333390")!
+        let productID = UUID(uuidString: "77777777-7777-4777-8777-777777777790")!
+        let firstImageVersionID = UUID(uuidString: "88888888-8888-4888-8888-888888888891")!
+        let secondImageVersionID = UUID(uuidString: "88888888-8888-4888-8888-888888888892")!
+        let suiteName = "WECHAT003-ProductLifecycle-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try configureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        let container = try makeContainer()
+
+        func productRow(
+            name: String,
+            updatedAt: String,
+            deletedAt: String?,
+            imageVersionID: UUID,
+            imageUpdatedAt: String
+        ) -> RemoteInventoryProductRow {
+            RemoteInventoryProductRow(
+                id: productID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                barcode: "Wechat-003-Sku",
+                itemNumber: "WMP-790",
+                productName: name,
+                secondProductName: nil,
+                purchasePrice: 4.125,
+                retailPrice: 7.875,
+                supplierID: nil,
+                categoryID: nil,
+                stockQuantity: 3,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                primaryImageVersionID: imageVersionID,
+                primaryImageUpdatedAt: imageUpdatedAt
+            )
+        }
+
+        let create = try await applyWECHAT003CatalogEvent(
+            id: 600,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            products: [productRow(
+                name: "Created by Mini Program",
+                updatedAt: "2026-08-13T10:00:00Z",
+                deletedAt: nil,
+                imageVersionID: firstImageVersionID,
+                imageUpdatedAt: "2026-08-13T10:00:01Z"
+            )]
+        )
+        XCTAssertEqual(create.productsInserted, 1)
+        XCTAssertEqual(create.watermarkAfter, 600)
+        do {
+            let read = ModelContext(container)
+            let product = try XCTUnwrap(read.fetch(FetchDescriptor<Product>()).first)
+            XCTAssertEqual(product.remoteID, productID)
+            XCTAssertEqual(product.barcode, "Wechat-003-Sku")
+            XCTAssertEqual(product.productName, "Created by Mini Program")
+            XCTAssertEqual(product.primaryImageVersionID, firstImageVersionID)
+            XCTAssertNil(product.remoteDeletedAt)
+        }
+
+        let update = try await applyWECHAT003CatalogEvent(
+            id: 601,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            products: [productRow(
+                name: "Updated by Mini Program",
+                updatedAt: "2026-08-13T10:01:00Z",
+                deletedAt: nil,
+                imageVersionID: secondImageVersionID,
+                imageUpdatedAt: "2026-08-13T10:01:01Z"
+            )]
+        )
+        XCTAssertEqual(update.productsUpdated, 1)
+        XCTAssertEqual(update.watermarkAfter, 601)
+        do {
+            let read = ModelContext(container)
+            let product = try XCTUnwrap(read.fetch(FetchDescriptor<Product>()).first)
+            XCTAssertEqual(product.productName, "Updated by Mini Program")
+            XCTAssertEqual(product.primaryImageVersionID, secondImageVersionID)
+            XCTAssertEqual(
+                product.primaryImageUpdatedAt,
+                SupabaseRemoteDateParser.parse("2026-08-13T10:01:01Z")
+            )
+        }
+
+        let archive = try await applyWECHAT003CatalogEvent(
+            id: 602,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            products: [productRow(
+                name: "Updated by Mini Program",
+                updatedAt: "2026-08-13T10:02:00Z",
+                deletedAt: "2026-08-13T10:02:00Z",
+                imageVersionID: secondImageVersionID,
+                imageUpdatedAt: "2026-08-13T10:01:01Z"
+            )]
+        )
+        XCTAssertEqual(archive.productsTombstoned, 1)
+        XCTAssertEqual(archive.watermarkAfter, 602)
+        do {
+            let read = ModelContext(container)
+            let products = try read.fetch(FetchDescriptor<Product>())
+            XCTAssertEqual(products.count, 1, "Archive must remain a tombstone, not a hard delete.")
+            XCTAssertNotNil(products.first?.remoteDeletedAt)
+            XCTAssertEqual(products.first?.primaryImageVersionID, secondImageVersionID)
+        }
+
+        let restore = try await applyWECHAT003CatalogEvent(
+            id: 603,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            products: [productRow(
+                name: "Restored by Mini Program",
+                updatedAt: "2026-08-13T10:03:00Z",
+                deletedAt: nil,
+                imageVersionID: secondImageVersionID,
+                imageUpdatedAt: "2026-08-13T10:01:01Z"
+            )]
+        )
+        XCTAssertEqual(restore.productsUpdated, 1)
+        XCTAssertEqual(restore.watermarkAfter, 603)
+        do {
+            let read = ModelContext(container)
+            let products = try read.fetch(FetchDescriptor<Product>())
+            XCTAssertEqual(products.count, 1)
+            XCTAssertEqual(products.first?.remoteID, productID)
+            XCTAssertEqual(products.first?.productName, "Restored by Mini Program")
+            XCTAssertNil(products.first?.remoteDeletedAt)
+            XCTAssertEqual(products.first?.primaryImageVersionID, secondImageVersionID)
+        }
+    }
+
+    @MainActor
+    func testWECHAT003AdminRelationReplacementCarriesCompleteCatalogIDs() async throws {
+        let owner = UUID(uuidString: "33333333-3333-4333-8333-333333333391")!
+        let oldSupplierID = UUID(uuidString: "44444444-4444-4444-8444-444444444491")!
+        let replacementSupplierID = UUID(uuidString: "44444444-4444-4444-8444-444444444492")!
+        let oldCategoryID = UUID(uuidString: "55555555-5555-4555-8555-555555555591")!
+        let replacementCategoryID = UUID(uuidString: "55555555-5555-4555-8555-555555555592")!
+        let firstProductID = UUID(uuidString: "77777777-7777-4777-8777-777777777791")!
+        let secondProductID = UUID(uuidString: "77777777-7777-4777-8777-777777777792")!
+        let suiteName = "WECHAT003-RelationReplacement-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try configureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        let container = try makeContainer()
+        let seed = ModelContext(container)
+        let oldSupplier = Supplier(name: "Supplier to archive", remoteID: oldSupplierID)
+        let replacementSupplier = Supplier(
+            name: "Replacement supplier",
+            remoteID: replacementSupplierID
+        )
+        let oldCategory = ProductCategory(name: "Category to archive", remoteID: oldCategoryID)
+        let replacementCategory = ProductCategory(
+            name: "Replacement category",
+            remoteID: replacementCategoryID
+        )
+        seed.insert(oldSupplier)
+        seed.insert(replacementSupplier)
+        seed.insert(oldCategory)
+        seed.insert(replacementCategory)
+        seed.insert(Product(
+            barcode: "WECHAT003-REPLACE-1",
+            remoteID: firstProductID,
+            supplier: oldSupplier,
+            category: oldCategory
+        ))
+        seed.insert(Product(
+            barcode: "WECHAT003-REPLACE-2",
+            remoteID: secondProductID,
+            supplier: oldSupplier,
+            category: oldCategory
+        ))
+        try seed.save()
+
+        let suppliers = [
+            RemoteInventorySupplierRow(
+                id: oldSupplierID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                name: "Supplier to archive",
+                updatedAt: "2026-08-13T11:00:00Z",
+                deletedAt: "2026-08-13T11:00:00Z"
+            ),
+            RemoteInventorySupplierRow(
+                id: replacementSupplierID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                name: "Replacement supplier",
+                updatedAt: "2026-08-13T11:00:00Z",
+                deletedAt: nil
+            )
+        ]
+        let categories = [
+            RemoteInventoryCategoryRow(
+                id: oldCategoryID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                name: "Category to archive",
+                updatedAt: "2026-08-13T11:00:00Z",
+                deletedAt: "2026-08-13T11:00:00Z"
+            ),
+            RemoteInventoryCategoryRow(
+                id: replacementCategoryID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                name: "Replacement category",
+                updatedAt: "2026-08-13T11:00:00Z",
+                deletedAt: nil
+            )
+        ]
+        let products = [firstProductID, secondProductID].enumerated().map { index, productID in
+            RemoteInventoryProductRow(
+                id: productID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                barcode: "WECHAT003-REPLACE-\(index + 1)",
+                itemNumber: nil,
+                productName: "Replacement target \(index + 1)",
+                secondProductName: nil,
+                purchasePrice: nil,
+                retailPrice: nil,
+                supplierID: replacementSupplierID,
+                categoryID: replacementCategoryID,
+                stockQuantity: nil,
+                updatedAt: "2026-08-13T11:00:00Z",
+                deletedAt: nil
+            )
+        }
+
+        let summary = try await applyWECHAT003CatalogEvent(
+            id: 610,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            suppliers: suppliers,
+            categories: categories,
+            products: products
+        )
+
+        XCTAssertNil(summary.requiresFullRecoveryReason)
+        XCTAssertEqual(summary.targetedSuppliersFetched, 2)
+        XCTAssertEqual(summary.targetedCategoriesFetched, 2)
+        XCTAssertEqual(summary.targetedProductsFetched, 2)
+        XCTAssertEqual(summary.watermarkAfter, 610)
+        let read = ModelContext(container)
+        let storedSuppliers = try read.fetch(FetchDescriptor<Supplier>())
+        let storedCategories = try read.fetch(FetchDescriptor<ProductCategory>())
+        let storedProducts = try read.fetch(FetchDescriptor<Product>())
+        XCTAssertEqual(storedSuppliers.count, 2)
+        XCTAssertEqual(storedCategories.count, 2)
+        XCTAssertEqual(storedProducts.count, 2)
+        XCTAssertNotNil(storedSuppliers.first { $0.remoteID == oldSupplierID }?.remoteDeletedAt)
+        XCTAssertNil(storedSuppliers.first { $0.remoteID == replacementSupplierID }?.remoteDeletedAt)
+        XCTAssertNotNil(storedCategories.first { $0.remoteID == oldCategoryID }?.remoteDeletedAt)
+        XCTAssertNil(storedCategories.first { $0.remoteID == replacementCategoryID }?.remoteDeletedAt)
+        XCTAssertTrue(storedProducts.allSatisfy {
+            $0.supplier?.remoteID == replacementSupplierID
+                && $0.category?.remoteID == replacementCategoryID
+                && $0.remoteDeletedAt == nil
+        })
+    }
+
+    @MainActor
+    func testWECHAT003AdminPriceHistoryReplayIsIdempotentAndLocalConflictFailsClosed() async throws {
+        let owner = UUID(uuidString: "33333333-3333-4333-8333-333333333392")!
+        let productID = UUID(uuidString: "77777777-7777-4777-8777-777777777793")!
+        let priceID = UUID(uuidString: "66666666-6666-4666-8666-666666666693")!
+        let suiteName = "WECHAT003-PriceReplay-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try configureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        let container = try makeContainer()
+        let seed = ModelContext(container)
+        seed.insert(Product(
+            barcode: "WECHAT003-PRICE",
+            remoteID: productID,
+            remoteUpdatedAt: try date("2026-08-13T11:59:00Z"),
+            productName: "Price fixture"
+        ))
+        try seed.save()
+
+        func productRow(retailPrice: Double, updatedAt: String) -> RemoteInventoryProductRow {
+            RemoteInventoryProductRow(
+                id: productID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                barcode: "WECHAT003-PRICE",
+                itemNumber: nil,
+                productName: "Price fixture",
+                secondProductName: nil,
+                purchasePrice: nil,
+                retailPrice: retailPrice,
+                supplierID: nil,
+                categoryID: nil,
+                stockQuantity: nil,
+                updatedAt: updatedAt,
+                deletedAt: nil
+            )
+        }
+        func priceRow(price: Double, updatedAt: String) -> RemoteInventoryProductPriceRow {
+            RemoteInventoryProductPriceRow(
+                id: priceID,
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                productID: productID,
+                type: "RETAIL",
+                price: price,
+                priceCanonical: PriceCanonicalizer.canonicalAmount(from: price)?.value,
+                effectiveAt: "2026-08-13T12:00:00Z",
+                source: "WECHAT_MINI_PROGRAM",
+                note: nil,
+                createdAt: "2026-08-13T12:00:00Z",
+                updatedAt: updatedAt
+            )
+        }
+
+        let firstApply = try await applyWECHAT003PriceEvent(
+            id: 620,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            product: productRow(retailPrice: 9.875, updatedAt: "2026-08-13T12:00:00Z"),
+            price: priceRow(price: 9.875, updatedAt: "2026-08-13T12:00:00Z")
+        )
+        XCTAssertEqual(firstApply.productPricesInserted, 1)
+        XCTAssertEqual(firstApply.watermarkAfter, 620)
+        do {
+            let read = ModelContext(container)
+            let prices = try read.fetch(FetchDescriptor<ProductPrice>())
+            XCTAssertEqual(prices.count, 1)
+            XCTAssertEqual(prices.first?.remoteID, priceID)
+            XCTAssertEqual(prices.first?.price, 9.875)
+            XCTAssertEqual(prices.first?.source, "WECHAT_MINI_PROGRAM")
+        }
+
+        let replay = try await applyWECHAT003PriceEvent(
+            id: 621,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            product: productRow(retailPrice: 9.875, updatedAt: "2026-08-13T12:00:00Z"),
+            price: priceRow(price: 9.875, updatedAt: "2026-08-13T12:00:00Z")
+        )
+        XCTAssertNil(replay.requiresFullRecoveryReason)
+        XCTAssertEqual(replay.productPricesInserted, 0)
+        XCTAssertEqual(replay.watermarkAfter, 621)
+        XCTAssertEqual(try ModelContext(container).fetchCount(FetchDescriptor<ProductPrice>()), 1)
+
+        let localEdit = ModelContext(container)
+        let localPrice = try XCTUnwrap(localEdit.fetch(FetchDescriptor<ProductPrice>()).first)
+        localPrice.price = 99
+        localEdit.insert(LocalPendingChange(
+            ownerUserID: owner,
+            entityKind: .productPrice,
+            operation: .update,
+            origin: .productPriceSave,
+            logicalKey: LocalPendingChangeLogicalKey.remoteEntity(
+                kind: .productPrice,
+                remoteID: priceID
+            ),
+            changedFields: ["price"],
+            entityRemoteID: priceID
+        ))
+        try localEdit.save()
+
+        let conflict = try await applyWECHAT003PriceEvent(
+            id: 622,
+            ownerUserID: owner,
+            defaults: defaults,
+            container: container,
+            product: productRow(retailPrice: 10.125, updatedAt: "2026-08-13T12:01:00Z"),
+            price: priceRow(price: 10.125, updatedAt: "2026-08-13T12:01:00Z")
+        )
+        XCTAssertEqual(conflict.requiresFullRecoveryReason, "sync_event_dirty_local")
+        XCTAssertEqual(conflict.watermarkAfter, 621)
+        let read = ModelContext(container)
+        let prices = try read.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.remoteID, priceID)
+        XCTAssertEqual(prices.first?.price, 99, "Conflict must preserve the unsent local value.")
+        XCTAssertEqual(
+            SyncEventApplyStatusStore(defaults: defaults).record(
+                ownerUserID: owner,
+                shopID: Self.automaticShopID,
+                eventID: 622
+            )?.reason,
+            .dirtyLocal
+        )
+    }
+
+    @MainActor
+    func testWECHAT004RealLocalSupabaseFixtureConvergesThroughProductionIncrementalApply() async throws {
+        guard let fixturePath = ProcessInfo.processInfo.environment["WECHAT_004_LOCAL_E2E_FIXTURE"],
+              !fixturePath.isEmpty else {
+            throw XCTSkip("WECHAT_004_LOCAL_E2E_FIXTURE is required for the real local gate")
+        }
+        let fixtureData = try Data(contentsOf: URL(fileURLWithPath: fixturePath))
+        let root = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: fixtureData) as? [String: Any]
+        )
+        let provenance = try XCTUnwrap(root["provenance"] as? [String: Any])
+        XCTAssertEqual(provenance["kind"] as? String, "supabase_local_real")
+        let owner = try XCTUnwrap(UUID(uuidString: try XCTUnwrap(root["actorUserId"] as? String)))
+        let shopID = try XCTUnwrap(UUID(uuidString: try XCTUnwrap(root["shopId"] as? String)))
+        let decoder = JSONDecoder()
+        func decode<T: Decodable>(_ type: T.Type, key: String) throws -> T {
+            try decoder.decode(
+                type,
+                from: JSONSerialization.data(withJSONObject: try XCTUnwrap(root[key]))
+            )
+        }
+        let supplier = try decode(RemoteInventorySupplierRow.self, key: "supplier")
+        let category = try decode(RemoteInventoryCategoryRow.self, key: "category")
+        let product = try decode(RemoteInventoryProductRow.self, key: "product")
+        let prices = try decode([RemoteInventoryProductPriceRow].self, key: "prices")
+        let events = try decode([RemoteSyncEventRow].self, key: "events")
+        XCTAssertGreaterThanOrEqual(events.count, 4)
+        XCTAssertEqual(prices.count, 2)
+
+        let suiteName = "WECHAT004-RealLocal-(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try configureAutomaticScope(ownerUserID: owner, shopID: shopID, defaults: defaults)
+        let container = try makeContainer()
+        let remote = SyncEventIncrementalDomainApplyRemoteFake(
+            events: events,
+            suppliers: [supplier],
+            categories: [category],
+            products: [product],
+            productPrices: prices
+        )
+        let summary = try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: remote,
+            remote: remote,
+            defaults: defaults
+        ).applyNextEvents(
+            ownerUserID: owner,
+            modelContainer: container,
+            isAuthenticated: true
+        )
+
+        let context = ModelContext(container)
+        let stored = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<Product>()).first { $0.remoteID == product.id }
+        )
+        XCTAssertEqual(stored.barcode, product.barcode)
+        XCTAssertEqual(stored.productName, product.productName)
+        XCTAssertEqual(stored.category?.remoteID, category.id)
+        XCTAssertEqual(stored.supplier?.remoteID, supplier.id)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ProductPrice>()), prices.count)
+        XCTAssertEqual(summary.eventsProcessed, events.count)
+        XCTAssertEqual(summary.totalApplied, 5)
+        XCTAssertEqual(summary.watermarkAfter, try XCTUnwrap(events.map(\.id).max()))
+        XCTAssertFalse(summary.requiresFullRecovery)
+    }
+
+    @MainActor
+    func testWECHAT003AdminCatalogResponseFromAnotherShopIsRejectedBeforeMutation() async throws {
+        let owner = UUID(uuidString: "33333333-3333-4333-8333-333333333393")!
+        let productID = UUID(uuidString: "77777777-7777-4777-8777-777777777794")!
+        let foreignShopID = UUID(uuidString: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4")!
+        let suiteName = "WECHAT003-CrossShop-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try configureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        let container = try makeContainer()
+        let foreignRow = RemoteInventoryProductRow(
+            id: productID,
+            ownerUserID: owner,
+            shopID: foreignShopID,
+            barcode: "WECHAT003-FOREIGN",
+            itemNumber: nil,
+            productName: "Must not materialize",
+            secondProductName: nil,
+            purchasePrice: nil,
+            retailPrice: nil,
+            supplierID: nil,
+            categoryID: nil,
+            stockQuantity: nil,
+            updatedAt: "2026-08-13T13:00:00Z",
+            deletedAt: nil
+        )
+
+        do {
+            _ = try await applyWECHAT003CatalogEvent(
+                id: 630,
+                ownerUserID: owner,
+                defaults: defaults,
+                container: container,
+                products: [foreignRow]
+            )
+            XCTFail("Expected foreign-shop current-state row to fail closed.")
+        } catch {
+            XCTAssertEqual(error as? Task126OwnerStoreGateError, .scopeChanged)
+        }
+        XCTAssertEqual(try ModelContext(container).fetchCount(FetchDescriptor<Product>()), 0)
+        XCTAssertEqual(
+            WatermarkStore(defaults: defaults).watermark(
+                for: WatermarkStore.Scope(
+                    ownerUserID: owner,
+                    storeIdentity: LocalStoreIdentity(
+                        rawValue: Self.automaticShopID.uuidString.lowercased()
+                    )
+                )
+            ),
+            0
+        )
+    }
+
+    @MainActor
+    private func applyWECHAT003CatalogEvent(
+        id: Int64,
+        ownerUserID: UUID,
+        defaults: UserDefaults,
+        container: ModelContainer,
+        suppliers: [RemoteInventorySupplierRow] = [],
+        categories: [RemoteInventoryCategoryRow] = [],
+        products: [RemoteInventoryProductRow] = []
+    ) async throws -> SyncIncrementalPullSummary {
+        let entityIDsObject = [
+            "supplier_ids": suppliers.map { $0.id.uuidString.lowercased() },
+            "category_ids": categories.map { $0.id.uuidString.lowercased() },
+            "product_ids": products.map { $0.id.uuidString.lowercased() }
+        ]
+        let entityIDsData = try JSONSerialization.data(
+            withJSONObject: entityIDsObject,
+            options: [.sortedKeys]
+        )
+        let event = try syncEventRow(
+            id: id,
+            ownerUserID: ownerUserID,
+            domain: "catalog",
+            changedCount: suppliers.count + categories.count + products.count,
+            entityIDsJSON: try XCTUnwrap(String(data: entityIDsData, encoding: .utf8))
+        )
+        let remote = SyncEventIncrementalDomainApplyRemoteFake(
+            events: [event],
+            suppliers: suppliers,
+            categories: categories,
+            products: products
+        )
+        return try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: remote,
+            remote: remote,
+            defaults: defaults
+        ).applyNextEvents(
+            ownerUserID: ownerUserID,
+            modelContainer: container,
+            isAuthenticated: true
+        )
+    }
+
+    @MainActor
+    private func applyWECHAT003PriceEvent(
+        id: Int64,
+        ownerUserID: UUID,
+        defaults: UserDefaults,
+        container: ModelContainer,
+        product: RemoteInventoryProductRow,
+        price: RemoteInventoryProductPriceRow
+    ) async throws -> SyncIncrementalPullSummary {
+        let entityIDsObject = [
+            "price_ids": [price.id.uuidString.lowercased()],
+            "product_ids": [product.id.uuidString.lowercased()]
+        ]
+        let entityIDsData = try JSONSerialization.data(
+            withJSONObject: entityIDsObject,
+            options: [.sortedKeys]
+        )
+        let event = try syncEventRow(
+            id: id,
+            ownerUserID: ownerUserID,
+            domain: "prices",
+            changedCount: 1,
+            entityIDsJSON: try XCTUnwrap(String(data: entityIDsData, encoding: .utf8))
+        )
+        let remote = SyncEventIncrementalDomainApplyRemoteFake(
+            events: [event],
+            products: [product],
+            productPrices: [price]
+        )
+        return try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: remote,
+            remote: remote,
+            defaults: defaults
+        ).applyNextEvents(
+            ownerUserID: ownerUserID,
+            modelContainer: container,
+            isAuthenticated: true
+        )
+    }
+
+    @MainActor
     private func assertLookupTombstonesBlockProductPendingDependency(
         createdLate: Bool
     ) async throws {
@@ -3984,11 +4584,13 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
 
     private func configureAutomaticScope(
         ownerUserID: UUID,
+        shopID: UUID? = nil,
         defaults: UserDefaults
     ) throws {
         let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let resolvedShopID = shopID ?? Self.automaticShopID
         let selectedShop = SelectedShop(
-            shopID: Self.automaticShopID,
+            shopID: resolvedShopID,
             code: "TASK139",
             name: "TASK139 incremental fixture shop",
             role: "owner",

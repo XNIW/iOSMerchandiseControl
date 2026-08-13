@@ -1199,6 +1199,17 @@
 "options.cloud.account.failed.title" = "Account needs attention";
 "options.cloud.account.failed.detail" = "Cloud access could not be verified. Try again or check the account.";
 "options.cloud.account.action.signIn" = "Sign in";
+"options.cloud.account.action.signInWeChat" = "Sign in with WeChat";
+"options.cloud.account.action.signInWeChat.accessibility" = "Sign in to your personal account with WeChat";
+"options.cloud.account.wechat.error.notConfigured" = "WeChat sign-in is not configured.";
+"options.cloud.account.wechat.error.notInstalled" = "Install WeChat to continue.";
+"options.cloud.account.wechat.error.cancelled" = "WeChat sign-in was cancelled.";
+"options.cloud.account.wechat.error.denied" = "WeChat authorization was denied.";
+"options.cloud.account.wechat.error.invalidCallback" = "The WeChat callback is invalid or expired. Try again.";
+"options.cloud.account.wechat.error.temporary" = "WeChat sign-in is temporarily unavailable.";
+"options.cloud.account.wechat.error.conflict" = "This WeChat identity is linked to another account. Contact support.";
+"options.cloud.account.wechat.error.suspended" = "This account is suspended.";
+"options.cloud.account.wechat.error.sessionExpired" = "The session expired. Sign in again.";
 "options.localDatabase.products" = "Products";
 "options.localDatabase.suppliers" = "Suppliers";
 "options.localDatabase.categories" = "Categories";

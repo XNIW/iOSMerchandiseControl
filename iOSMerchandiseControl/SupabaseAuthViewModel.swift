@@ -74,6 +74,14 @@ final class SupabaseAuthViewModel: ObservableObject {
         }
     }
 
+    var isWeChatEnabled: Bool {
+        authService?.isWeChatEnabled == true
+    }
+
+    var canSignInWithWeChat: Bool {
+        canSignIn && isWeChatEnabled
+    }
+
     var canSignOut: Bool {
         isSignedIn && !isTransitioning
     }
@@ -102,6 +110,26 @@ final class SupabaseAuthViewModel: ObservableObject {
                 state = info.isExpired ? .signedOut : .signedIn
                 if !info.isExpired {
                     registerShopDeviceIfReady(reason: "auth_sign_in")
+                }
+            } catch let error as SupabaseAuthServiceError {
+                await applySignInFailure(error, authService: authService)
+            } catch {
+                await applySignInFailure(.unknown(message: String(describing: error)), authService: authService)
+            }
+        }
+    }
+
+    func signInWithWeChat() {
+        guard canSignInWithWeChat, let authService else { return }
+
+        state = .signingIn
+        Task {
+            do {
+                let info = try await authService.signInWithWeChat()
+                sessionInfo = info
+                state = info.isExpired ? .signedOut : .signedIn
+                if !info.isExpired {
+                    registerShopDeviceIfReady(reason: "auth_sign_in_wechat")
                 }
             } catch let error as SupabaseAuthServiceError {
                 await applySignInFailure(error, authService: authService)
@@ -216,7 +244,7 @@ final class SupabaseAuthViewModel: ObservableObject {
         switch error {
         case .sessionMissing, .callbackFailed, .unknown:
             return true
-        case .configMissing, .invalidConfig, .oauthCancelled:
+        case .configMissing, .invalidConfig, .oauthCancelled, .wechat:
             return false
         }
     }
