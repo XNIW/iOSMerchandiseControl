@@ -182,6 +182,40 @@ final class WeChatAuthContractTests: XCTestCase {
         XCTAssertFalse(example.contains("session_key"))
     }
 
+    func testStagingAssociatedDomainMatchesTheAdminAASAHost() throws {
+        let sourceRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let entitlementsURL = sourceRoot.appendingPathComponent(
+            "iOSMerchandiseControl/iOSMerchandiseControl.entitlements"
+        )
+        let entitlementsData = try Data(contentsOf: entitlementsURL)
+        let entitlements = try XCTUnwrap(
+            PropertyListSerialization.propertyList(
+                from: entitlementsData,
+                options: [],
+                format: nil
+            ) as? [String: Any]
+        )
+        let associatedDomains = try XCTUnwrap(
+            entitlements["com.apple.developer.associated-domains"] as? [String]
+        )
+
+        XCTAssertEqual(associatedDomains, [
+            "applinks:merchandise-control-admin-web-staging.merchandise-control-admin-web.workers.dev"
+        ])
+
+        let project = try String(
+            contentsOf: sourceRoot.appendingPathComponent(
+                "iOSMerchandiseControl.xcodeproj/project.pbxproj"
+            ),
+            encoding: .utf8
+        )
+        let entitlementSetting =
+            "CODE_SIGN_ENTITLEMENTS = iOSMerchandiseControl/iOSMerchandiseControl.entitlements;"
+        XCTAssertEqual(project.components(separatedBy: entitlementSetting).count - 1, 2)
+    }
+
     func testOfficialOpenSDKResponseMappingPreservesSecurityOutcomes() throws {
         XCTAssertEqual(
             try OpenSDKWeChatAuthorizationCodeProvider.mapResponse(
