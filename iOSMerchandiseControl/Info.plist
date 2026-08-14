@@ -53,6 +53,12 @@
             </array>
         </dict>
     </array>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>weixin</string>
+        <string>weixinULAPI</string>
+        <string>weixinURLParamsAPI</string>
+    </array>
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>com.niwcyber.iOSMerchandiseControl.sync.refresh</string>

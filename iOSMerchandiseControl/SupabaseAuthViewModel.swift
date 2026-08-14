@@ -160,11 +160,12 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     func handleOpenURL(_ url: URL) -> Bool {
-        guard url.scheme?.lowercased() == SupabaseOAuthRedirect.scheme.lowercased() else {
-            return false
-        }
+        authService?.handleOpenURL(url)
+            ?? (url.scheme?.lowercased() == SupabaseOAuthRedirect.scheme.lowercased())
+    }
 
-        return authService?.handleOpenURL(url) ?? true
+    func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        authService?.handleUniversalLink(userActivity) ?? false
     }
 
     private func startAuthListener() {

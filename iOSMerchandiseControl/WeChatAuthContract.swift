@@ -27,36 +27,62 @@ nonisolated enum WeChatAuthError: String, Error, Equatable, Sendable {
 }
 
 nonisolated struct WeChatAuthConfiguration: Equatable, Sendable {
+    private static let configFileName = "SupabaseConfig"
     static let enabledKey = "WECHAT_AUTH_IOS_ENABLED"
     static let appIDKey = "WECHAT_IOS_APP_ID"
+    static let universalLinkKey = "WECHAT_IOS_UNIVERSAL_LINK"
     static let gatewayBaseURLKey = "WECHAT_AUTH_GATEWAY_BASE_URL"
 
     let enabled: Bool
     let appID: String?
+    let universalLink: URL?
     let gatewayBaseURL: URL?
 
     var hasPublicConfiguration: Bool {
-        enabled && appID != nil && gatewayBaseURL != nil
+        enabled && appID != nil && universalLink != nil && gatewayBaseURL != nil
     }
 
     static func load(
         bundle: Bundle = .main,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> WeChatAuthConfiguration {
+        let fileValues = loadConfigFile(bundle: bundle)
         let enabledValue = normalized(environment[enabledKey])
+            ?? normalized(fileValues[enabledKey])
             ?? normalized(bundle.object(forInfoDictionaryKey: enabledKey))
         let appIDValue = normalized(environment[appIDKey])
+            ?? normalized(fileValues[appIDKey])
             ?? normalized(bundle.object(forInfoDictionaryKey: appIDKey))
+        let universalLinkValue = normalized(environment[universalLinkKey])
+            ?? normalized(fileValues[universalLinkKey])
+            ?? normalized(bundle.object(forInfoDictionaryKey: universalLinkKey))
         let gatewayValue = normalized(environment[gatewayBaseURLKey])
+            ?? normalized(fileValues[gatewayBaseURLKey])
             ?? normalized(bundle.object(forInfoDictionaryKey: gatewayBaseURLKey))
 
         let appID = appIDValue.flatMap(validatedAppID)
+        let universalLink = universalLinkValue.flatMap(validatedUniversalLink)
         let gatewayURL = gatewayValue.flatMap(validatedGatewayBaseURL)
         return WeChatAuthConfiguration(
             enabled: enabledValue == "1" || enabledValue?.lowercased() == "true",
             appID: appID,
+            universalLink: universalLink,
             gatewayBaseURL: gatewayURL
         )
+    }
+
+    private static func loadConfigFile(bundle: Bundle) -> [String: Any] {
+        guard let url = bundle.url(forResource: configFileName, withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let plist = try? PropertyListSerialization.propertyList(
+                from: data,
+                options: [],
+                format: nil
+              ),
+              let values = plist as? [String: Any] else {
+            return [:]
+        }
+        return values
     }
 
     private static func normalized(_ value: Any?) -> String? {
@@ -71,6 +97,21 @@ nonisolated struct WeChatAuthConfiguration: Equatable, Sendable {
             return nil
         }
         return value
+    }
+
+    private static func validatedUniversalLink(_ value: String) -> URL? {
+        guard let url = URL(string: value),
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.scheme?.lowercased() == "https",
+              components.host?.isEmpty == false,
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              components.path.hasSuffix("/") else {
+            return nil
+        }
+        return url
     }
 
     private static func validatedGatewayBaseURL(_ value: String) -> URL? {
@@ -110,6 +151,7 @@ nonisolated protocol WeChatAuthorizationCodeProviding: Sendable {
     var isAvailable: Bool { get }
     func authorize(_ request: WeChatAuthorizationRequest) async throws -> WeChatAuthorizationResponse
     func handleOpenURL(_ url: URL) -> Bool
+    func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool
 }
 
 nonisolated struct UnconfiguredWeChatAuthorizationCodeProvider: WeChatAuthorizationCodeProviding {
@@ -120,6 +162,8 @@ nonisolated struct UnconfiguredWeChatAuthorizationCodeProvider: WeChatAuthorizat
     }
 
     func handleOpenURL(_ url: URL) -> Bool { false }
+
+    func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool { false }
 }
 
 nonisolated struct WeChatChallenge: Codable, Equatable, Sendable {
@@ -305,6 +349,10 @@ actor WeChatAuthCoordinator {
 
     nonisolated func handleOpenURL(_ url: URL) -> Bool {
         codeProvider.handleOpenURL(url)
+    }
+
+    nonisolated func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        codeProvider.handleUniversalLink(userActivity)
     }
 
     private static func secureBase64URLToken() throws -> String {
