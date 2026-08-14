@@ -138,6 +138,10 @@ final class SupabaseAuthService: @unchecked Sendable {
         return true
     }
 
+    func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        weChatCoordinator?.handleUniversalLink(userActivity) == true
+    }
+
     func authStateChanges() -> AsyncStream<SupabaseAuthEvent> {
         AsyncStream { continuation in
             let task = Task {

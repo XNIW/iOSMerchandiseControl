@@ -12,6 +12,8 @@
 	<string>0</string>
 	<key>WECHAT_IOS_APP_ID</key>
 	<string>YOUR_WECHAT_IOS_APP_ID</string>
+	<key>WECHAT_IOS_UNIVERSAL_LINK</key>
+	<string>YOUR_WECHAT_IOS_UNIVERSAL_LINK</string>
 	<key>WECHAT_AUTH_GATEWAY_BASE_URL</key>
 	<string>YOUR_ADMIN_API_BASE_URL</string>
 </dict>

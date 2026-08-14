@@ -10,6 +10,7 @@ final class WeChatAuthContractTests: XCTestCase {
         let enabled = WeChatAuthConfiguration.load(environment: [
             WeChatAuthConfiguration.enabledKey: "1",
             WeChatAuthConfiguration.appIDKey: "wx1234567890abcdef",
+            WeChatAuthConfiguration.universalLinkKey: "https://wechat.example.com/ios/",
             WeChatAuthConfiguration.gatewayBaseURLKey: "https://staging.example.com"
         ])
         XCTAssertTrue(enabled.hasPublicConfiguration)
@@ -18,9 +19,18 @@ final class WeChatAuthContractTests: XCTestCase {
         let insecure = WeChatAuthConfiguration.load(environment: [
             WeChatAuthConfiguration.enabledKey: "1",
             WeChatAuthConfiguration.appIDKey: "wx1234567890abcdef",
+            WeChatAuthConfiguration.universalLinkKey: "https://wechat.example.com/ios/",
             WeChatAuthConfiguration.gatewayBaseURLKey: "http://staging.example.com"
         ])
         XCTAssertFalse(insecure.hasPublicConfiguration)
+
+        let malformedUniversalLink = WeChatAuthConfiguration.load(environment: [
+            WeChatAuthConfiguration.enabledKey: "1",
+            WeChatAuthConfiguration.appIDKey: "wx1234567890abcdef",
+            WeChatAuthConfiguration.universalLinkKey: "https://wechat.example.com/ios",
+            WeChatAuthConfiguration.gatewayBaseURLKey: "https://staging.example.com"
+        ])
+        XCTAssertFalse(malformedUniversalLink.hasPublicConfiguration)
     }
 
     func testCallbackSuccessThenDuplicateIsRejected() throws {
@@ -97,6 +107,7 @@ final class WeChatAuthContractTests: XCTestCase {
         let configuration = WeChatAuthConfiguration.load(environment: [
             WeChatAuthConfiguration.enabledKey: "1",
             WeChatAuthConfiguration.appIDKey: "wx1234567890abcdef",
+            WeChatAuthConfiguration.universalLinkKey: "https://wechat.example.com/ios/",
             WeChatAuthConfiguration.gatewayBaseURLKey: "https://staging.example.com"
         ])
         let expectedSession = WeChatSupabaseSession(
@@ -126,6 +137,7 @@ final class WeChatAuthContractTests: XCTestCase {
         let configuration = WeChatAuthConfiguration.load(environment: [
             WeChatAuthConfiguration.enabledKey: "1",
             WeChatAuthConfiguration.appIDKey: "wx1234567890abcdef",
+            WeChatAuthConfiguration.universalLinkKey: "https://wechat.example.com/ios/",
             WeChatAuthConfiguration.gatewayBaseURLKey: "https://staging.example.com"
         ])
         let coordinator = WeChatAuthCoordinator(
@@ -169,6 +181,116 @@ final class WeChatAuthContractTests: XCTestCase {
         XCTAssertFalse(example.contains("WECHAT_MINIPROGRAM_APP_SECRET"))
         XCTAssertFalse(example.contains("session_key"))
     }
+
+    func testOfficialOpenSDKResponseMappingPreservesSecurityOutcomes() throws {
+        XCTAssertEqual(
+            try OpenSDKWeChatAuthorizationCodeProvider.mapResponse(
+                errorCode: 0,
+                code: "temporary-code",
+                state: "expected-state"
+            ),
+            WeChatAuthorizationResponse(
+                code: "temporary-code",
+                state: "expected-state",
+                outcome: .success
+            )
+        )
+        XCTAssertEqual(
+            try OpenSDKWeChatAuthorizationCodeProvider.mapResponse(
+                errorCode: -2,
+                code: nil,
+                state: "expected-state"
+            ).outcome,
+            .cancelled
+        )
+        XCTAssertEqual(
+            try OpenSDKWeChatAuthorizationCodeProvider.mapResponse(
+                errorCode: -4,
+                code: nil,
+                state: "expected-state"
+            ).outcome,
+            .denied
+        )
+        XCTAssertThrowsError(
+            try OpenSDKWeChatAuthorizationCodeProvider.mapResponse(
+                errorCode: -1,
+                code: nil,
+                state: "expected-state"
+            )
+        ) { error in
+            XCTAssertEqual(error as? WeChatAuthError, .backendTemporary)
+        }
+    }
+
+    func testOfficialProviderRequiresExactAppIDURLScheme() {
+        let urlTypes: [[String: Any]] = [
+            ["CFBundleURLSchemes": ["com.niwcyber.iosmerchandisecontrol"]],
+            ["CFBundleURLSchemes": ["wx1234567890abcdef"]]
+        ]
+
+        XCTAssertTrue(
+            OpenSDKWeChatAuthorizationCodeProvider.hasURLScheme(
+                "wx1234567890abcdef",
+                in: urlTypes
+            )
+        )
+        XCTAssertFalse(
+            OpenSDKWeChatAuthorizationCodeProvider.hasURLScheme(
+                "wxmissing",
+                in: urlTypes
+            )
+        )
+        XCTAssertFalse(
+            OpenSDKWeChatAuthorizationCodeProvider.hasURLScheme(
+                "wx1234567890abcdef",
+                in: "invalid"
+            )
+        )
+    }
+
+    func testOfficialProviderRejectsMissingWeChatApp() async {
+        let provider = OpenSDKWeChatAuthorizationCodeProvider(
+            appID: "wx1234567890abcdef",
+            isAvailable: true,
+            isAppReady: { false },
+            sendAuthorization: { _, _ in
+                XCTFail("Authorization must not be sent without a supported WeChat app")
+            }
+        )
+
+        do {
+            _ = try await provider.authorize(
+                WeChatAuthorizationRequest(
+                    appID: "wx1234567890abcdef",
+                    state: "expected-state"
+                )
+            )
+            XCTFail("Expected app-not-installed failure")
+        } catch {
+            XCTAssertEqual(error as? WeChatAuthError, .appNotInstalled)
+        }
+    }
+
+    func testOfficialProviderRejectsFailedSDKHandoff() async {
+        let provider = OpenSDKWeChatAuthorizationCodeProvider(
+            appID: "wx1234567890abcdef",
+            isAvailable: true,
+            isAppReady: { true },
+            sendAuthorization: { _, completion in completion(false) }
+        )
+
+        do {
+            _ = try await provider.authorize(
+                WeChatAuthorizationRequest(
+                    appID: "wx1234567890abcdef",
+                    state: "expected-state"
+                )
+            )
+            XCTFail("Expected SDK handoff failure")
+        } catch {
+            XCTAssertEqual(error as? WeChatAuthError, .backendTemporary)
+        }
+    }
 }
 
 private struct EchoWeChatCodeProvider: WeChatAuthorizationCodeProviding {
@@ -184,6 +306,10 @@ private struct EchoWeChatCodeProvider: WeChatAuthorizationCodeProviding {
 
     func handleOpenURL(_ url: URL) -> Bool {
         url.scheme == "wechat-test"
+    }
+
+    func handleUniversalLink(_ userActivity: NSUserActivity) -> Bool {
+        userActivity.webpageURL?.host == "wechat.example.com"
     }
 }
 

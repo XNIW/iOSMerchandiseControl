@@ -109,6 +109,9 @@ struct iOSMerchandiseControlApp: App {
             .onOpenURL { url in
                 _ = supabaseAuthViewModel.handleOpenURL(url)
             }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
+                _ = supabaseAuthViewModel.handleUniversalLink(userActivity)
+            }
         }
     }
 
@@ -177,11 +180,16 @@ struct iOSMerchandiseControlApp: App {
                 HTTPWeChatAuthGateway(baseURL: $0)
             } ?? UnconfiguredWeChatAuthGateway()
             let weChatDeviceIDStore = WeChatDeviceIDStore()
-            // The official OpenSDK adapter is deliberately not substituted until its
-            // AppID, Universal Link and binary provenance have been externally verified.
+            #if os(iOS)
+            let weChatCodeProvider: any WeChatAuthorizationCodeProviding =
+                OpenSDKWeChatAuthorizationCodeProvider(configuration: weChatConfiguration)
+            #else
+            let weChatCodeProvider: any WeChatAuthorizationCodeProviding =
+                UnconfiguredWeChatAuthorizationCodeProvider()
+            #endif
             let weChatCoordinator = WeChatAuthCoordinator(
                 configuration: weChatConfiguration,
-                codeProvider: UnconfiguredWeChatAuthorizationCodeProvider(),
+                codeProvider: weChatCodeProvider,
                 deviceID: { weChatDeviceIDStore.getOrCreate() },
                 gateway: weChatGateway
             )
