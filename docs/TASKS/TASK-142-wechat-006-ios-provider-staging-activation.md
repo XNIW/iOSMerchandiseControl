@@ -122,6 +122,9 @@ all'approvazione e tutte le regressioni Auth/sync esistenti.
   aggregato presente nel bundle.
 - Install/launch Release su Simulator: `PASS`, processo stabile con flag WeChat
   OFF e nessun valore provider nel bundle.
+- Commit applicativo `2a632d2772072e3f2efc00ac8b1fc433fa3ee1e2`
+  pushato sul branch `codex/wechat-006-ios-provider`; PR normale GitHub
+  `XNIW/iOSMerchandiseControl#7` aperta ready-for-review e mergeable.
 - Evidence privacy-safe: `docs/TASKS/EVIDENCE/TASK-142/README.md` e directory
   esterna ristretta WECHAT-006 indicata nel closeout coordinato.
 
@@ -143,8 +146,8 @@ all'approvazione e tutte le regressioni Auth/sync esistenti.
 
 ## Handoff
 
-`READY_FOR_PR_AND_EXTERNAL_ACTIVATION_HANDOFF` — creare/validare PR e CI, poi
-merge normale. L'attivazione live resta separata e richiede: Mac sbloccato,
+`READY_FOR_CI_AND_EXTERNAL_ACTIVATION_HANDOFF` — attendere required CI della PR
+`#7`, quindi merge normale. L'attivazione live resta separata e richiede: Mac sbloccato,
 accesso portale WeChat approvato, AppID iOS reale, Universal Link verificato,
 Associated Domains e AppID URL scheme corrispondenti, device con WeChat e
 conferma puntuale prima di ogni modifica persistente nel portale. Fino ad allora

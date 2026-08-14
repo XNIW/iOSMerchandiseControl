@@ -30,6 +30,7 @@ registrato qui.
 | Release bundle sensitive scan | `PASS` | nessuna stringa WeChat/server secret o service role |
 | Release install/launch | `PASS` | processo stabile su Simulator, flag WeChat OFF |
 | `git diff --check` | `PASS` | nessun whitespace error |
+| Commit / PR | `OPEN / CI_QUEUED` | commit `2a632d27`, PR GitHub `#7`, mergeable |
 | Live WeChat Auth | `BLOCKED_EXTERNAL` | AppID/Universal Link/Associated Domains/device/accesso portale mancanti |
 
 ## External evidence

@@ -13,8 +13,9 @@ login-only fail-closed, URL/Universal Link warm/cold, config pubblica
 environment-driven e AppID scheme gate. Focused `12/12`, full XCTest
 `1.336 + 4 XCUITest` con `36` skip opt-in e zero failure, Release build PASS,
 Analyze Debug canonico PASS_WITH_NOTES solo per `Vendor 2/libxls`, secret/bundle
-scan e launch Release PASS. AppSecret resta server-only; flag default OFF. PR/CI
-e merge normale sono il prossimo step; live device resta `BLOCKED_EXTERNAL` su
+scan e launch Release PASS. AppSecret resta server-only; flag default OFF. Commit
+`2a632d27` e PR GitHub `#7` sono pushati/mergeable; required CI e merge normale
+sono il prossimo step. Live device resta `BLOCKED_EXTERNAL` su
 Mac bloccato, accesso portale, AppID/Universal Link/Associated Domains e device
 reali. Production, TestFlight/App Store e task precedenti restano invariati. File:
 `docs/TASKS/TASK-142-wechat-006-ios-provider-staging-activation.md`.)*
