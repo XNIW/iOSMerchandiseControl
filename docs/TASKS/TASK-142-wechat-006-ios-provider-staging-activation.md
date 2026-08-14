@@ -2,14 +2,15 @@
 
 ## Stato
 
-- Stato: `ACTIVE`
-- Fase: `EXECUTION`
+- Stato: `REVIEW_READY`
+- Fase: `REVIEW / EXTERNAL_ACTIVATION_PENDING`
 - Coordination key: `WECHAT-006`
 - Repository: `XNIW/iOSMerchandiseControl`
 - Baseline: `origin/main` `99aa69c483b6c98c70d20d0fc9311f41240b325b`
-- Branch: `codex/wechat-006-ios-provider`
+- Branch applicativa/merge: `codex/wechat-006-ios-provider` / `6571f4b661c4b815cfad4f6ad9139071b978f76d`
+- Branch documentale corrente: `codex/wechat-006-ios-closeout`
 - Apertura: `2026-08-13`
-- Responsabile attuale: `CODEX`
+- Responsabile attuale: `DESIGNATED_REVIEWER`
 - Autorizzazione: mandato utente WECHAT-006 per task, SDK/provider, test,
   commit, push, PR e merge normali; produzione e App Store esclusi.
 
@@ -125,12 +126,17 @@ all'approvazione e tutte le regressioni Auth/sync esistenti.
 - Commit applicativo `2a632d2772072e3f2efc00ac8b1fc433fa3ee1e2`
   pushato sul branch `codex/wechat-006-ios-provider`; PR normale GitHub
   `XNIW/iOSMerchandiseControl#7` aperta ready-for-review e mergeable.
+- Required CI pull request `31761529498` completata `PASS` in `25m55s`:
+  contract hashes, Debug build, full XCTest, Analyze e secret scan verdi.
+- PR `#7` unita normalmente il `2026-08-14` con merge commit
+  `6571f4b661c4b815cfad4f6ad9139071b978f76d`; commit applicativo e handoff
+  documentale sono antenati di `origin/main`, branch feature remoto rimosso.
 - Evidence privacy-safe: `docs/TASKS/EVIDENCE/TASK-142/README.md` e directory
   esterna ristretta WECHAT-006 indicata nel closeout coordinato.
 
 ## Review
 
-- Esito tecnico device-free: `READY_FOR_PR_REVIEW`.
+- Esito tecnico device-free: `READY_FOR_DESIGNATED_REVIEW`.
 - P0/P1 tecnici noti nel diff: `0`.
 - Login WeChat live, cold callback reale e cross-platform same-user non sono
   dichiarati PASS: mancano AppID, Universal Link/Associated Domains approvati,
@@ -146,8 +152,8 @@ all'approvazione e tutte le regressioni Auth/sync esistenti.
 
 ## Handoff
 
-`READY_FOR_CI_AND_EXTERNAL_ACTIVATION_HANDOFF` — attendere required CI della PR
-`#7`, quindi merge normale. L'attivazione live resta separata e richiede: Mac sbloccato,
+`MERGED_DEVICE_FREE_EXTERNAL_ACTIVATION_HANDOFF` — required CI e merge normale
+sono completati. L'attivazione live resta separata e richiede: Mac sbloccato,
 accesso portale WeChat approvato, AppID iOS reale, Universal Link verificato,
 Associated Domains e AppID URL scheme corrispondenti, device con WeChat e
 conferma puntuale prima di ogni modifica persistente nel portale. Fino ad allora
