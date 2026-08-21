@@ -4,6 +4,24 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
+**TASK-143 — ACTIVE / REVIEW — APPROVED AWAITING INTEGRATION — Mobile Storefront product control (iOS)**
+*(2026-08-21: autorizzazione USER_APPROVER del release train
+`MOBILE_STOREFRONT_PRODUCT_CONTROL`. La lane iOS estende l'editor prodotto
+Database con la sezione unica "App clienti", usando `Product.remoteID`, lo stesso
+contratto Storefront server-side Admin/Supabase, optimistic concurrency,
+idempotency, isolamento account/shop e pipeline immagini esistente. Il Client
+resta read-only. Execution completata con test mirati verdi, suite canonica
+`1321 PASS / 36 SKIP / 0 FAIL`, Analyze, build Release, localizzazioni, scan
+sensitive scoped e install/launch simulator PASS. La review indipendente ha
+richiesto un unico batch (`P1=1`, `P2=4`, `P3=1`), ora coperto da mapping
+`stale_revision`, replay con idempotency key persistita, delete post hide/archive,
+preview della candidata immagine, cache LRU bounded e XCUITest reali; gate fix
+`20` test mirati + `2` XCUITest e Release build PASS. La singola re-review
+read-only è `APPROVED`, con `P0=P1=P2=P3=0` e slice autonoma `5/5 PASS`;
+handoff all'integrazione PR/CI del train. `TASK-142` non viene riaperto o modificato e conserva il
+proprio handoff esterno. File:
+`docs/TASKS/TASK-143-mobile-storefront-product-control-ios.md`.)*
+
 **TASK-142 — REVIEW_READY / REVIEW — MERGED_DEVICE_FREE_EXTERNAL_ACTIVATION_HANDOFF — WECHAT-006 iOS provider and staging activation**
 *(2026-08-13: il mandato utente WECHAT-006 apre la singola lane iOS sul branch
 isolato `codex/wechat-006-ios-provider` dall'attuale `origin/main` `99aa69c4`.

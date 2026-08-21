@@ -563,6 +563,72 @@ actor ProductImageService {
         )
     }
 
+    func adoptForStorefront(
+        scope: ProductImageScope,
+        productID: UUID,
+        publicationID: UUID,
+        sourceImageVersionID: UUID
+    ) async throws -> UUID {
+        try Task.checkCancellation()
+        try authorize(scope)
+        let expectedLifecycleGeneration = lifecycleGeneration
+        let mutationID = try beginProductMutation(scope: scope, productID: productID)
+        defer { finishProductMutation(scope: scope, productID: productID, mutationID: mutationID) }
+        let session = try await validMutationSession(
+            for: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        let response = try await api.adoptForStorefront(
+            scope: scope,
+            publicationID: publicationID,
+            sourceImageVersionID: sourceImageVersionID,
+            accessToken: session.accessToken
+        )
+        try ensureMutationCurrent(
+            scope: scope,
+            productID: productID,
+            mutationID: mutationID,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        guard response.ok == true,
+              let imagePublicationID = response.imagePublicationId,
+              response.status == "finalized"
+                || response.status == "already_finalized"
+                || response.status == "noop" else {
+            throw ProductImageError.invalidResponse
+        }
+        _ = try await validCommittedSession(
+            for: scope,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        return imagePublicationID
+    }
+
+    func loadStorefrontPublicImage(
+        scope: ProductImageScope,
+        imagePublicationID: UUID,
+        publicURL: URL,
+        variant: StorefrontPublicImageVariant
+    ) async throws -> Data {
+        try Task.checkCancellation()
+        try authorize(scope)
+        let expectedLifecycleGeneration = lifecycleGeneration
+        _ = try await validSession(for: scope)
+        let data = try await api.downloadStorefrontPublicImage(
+            publicURL: publicURL,
+            imagePublicationID: imagePublicationID,
+            variant: variant
+        )
+        try Task.checkCancellation()
+        _ = try await validCommittedSession(
+            for: scope,
+            expectedLifecycleGeneration: expectedLifecycleGeneration
+        )
+        return data
+    }
+
     static func expectedCacheScope(accountID: UUID) -> String {
         let material = Data("product-image-account:\(accountID.uuidString.lowercased())".utf8)
         return SHA256.hash(data: material).map { String(format: "%02x", $0) }.joined()

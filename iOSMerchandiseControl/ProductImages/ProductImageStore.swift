@@ -39,6 +39,51 @@ nonisolated private enum ProductImageDownsampler {
             task.cancel()
         }
     }
+
+    static func decode(
+        _ data: Data,
+        variant: StorefrontPublicImageVariant
+    ) async throws -> ProductImageDecodedImage? {
+        let maximumPixelSize = variant.maxSide
+        let task = Task.detached(priority: .userInitiated) { () throws -> ProductImageDecodedImage? in
+            try autoreleasepool {
+                try Task.checkCancellation()
+                guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                        as? [CFString: Any],
+                      let width = properties[kCGImagePropertyPixelWidth] as? Int,
+                      let height = properties[kCGImagePropertyPixelHeight] as? Int,
+                      width > 0,
+                      height > 0,
+                      width <= 12_000,
+                      height <= 12_000,
+                      width.multipliedReportingOverflow(by: height).overflow == false,
+                      width * height <= 40_000_000 else {
+                    return nil
+                }
+                let options: [CFString: Any] = [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceShouldCacheImmediately: true,
+                    kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize
+                ]
+                guard let image = CGImageSourceCreateThumbnailAtIndex(
+                    source,
+                    0,
+                    options as CFDictionary
+                ), max(image.width, image.height) <= maximumPixelSize else {
+                    return nil
+                }
+                try Task.checkCancellation()
+                return ProductImageDecodedImage(image: UIImage(cgImage: image))
+            }
+        }
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
 }
 
 @MainActor
@@ -57,6 +102,12 @@ final class ProductImageStore: ObservableObject {
         let productID: UUID
     }
 
+    private struct StorefrontPublicImageKey: Hashable {
+        let scope: ProductImageScope
+        let imagePublicationID: UUID
+        let variant: StorefrontPublicImageVariant
+    }
+
     @Published private(set) var revision = 0
     @Published private(set) var loadingReferences: Set<ProductImageReference> = []
     @Published private(set) var failedReferences: Set<ProductImageReference> = []
@@ -65,6 +116,7 @@ final class ProductImageStore: ObservableObject {
     private let service: ProductImageService?
     private let scopeAuthorizationProvider: ProductImageScopeAuthorizationProvider
     private let memoryCache = NSCache<NSString, UIImage>()
+    private let storefrontMemoryCache = NSCache<NSString, UIImage>()
     private var memoryCosts: [ProductImageReference: Int] = [:]
     private var totalMemoryCost = 0
     private var memoryWarningCancellable: AnyCancellable?
@@ -92,6 +144,8 @@ final class ProductImageStore: ObservableObject {
         self.scopeAuthorizationProvider = scopeAuthorizationProvider
         memoryCache.countLimit = Self.maximumTrackedReferences
         memoryCache.totalCostLimit = Self.memoryCostLimit
+        storefrontMemoryCache.countLimit = 64
+        storefrontMemoryCache.totalCostLimit = 16 * 1_024 * 1_024
         memoryWarningCancellable = NotificationCenter.default.publisher(
             for: UIApplication.didReceiveMemoryWarningNotification
         )
@@ -156,6 +210,7 @@ final class ProductImageStore: ObservableObject {
         inFlightLoads.removeAll()
         loadIDs.removeAll()
         purgeMemoryCache(incrementRevision: false)
+        storefrontMemoryCache.removeAllObjects()
         failedReferenceOrder.removeAll()
         loadingReferences.removeAll()
         failedReferences.removeAll()
@@ -219,6 +274,123 @@ final class ProductImageStore: ObservableObject {
             return nil
         }
         return image
+    }
+
+    func storefrontPublicImage(
+        scope: ProductImageScope,
+        imagePublicationID: UUID,
+        variant: StorefrontPublicImageVariant
+    ) -> UIImage? {
+        _ = revision
+        guard activeScope == scope,
+              scopeAuthorizationProvider(scope) else { return nil }
+        let key = StorefrontPublicImageKey(
+            scope: scope,
+            imagePublicationID: imagePublicationID,
+            variant: variant
+        )
+        return storefrontMemoryCache.object(forKey: Self.storefrontMemoryKey(key) as NSString)
+    }
+
+    func loadStorefrontPublicImage(
+        scope: ProductImageScope,
+        imagePublicationID: UUID,
+        publicURL: URL,
+        variant: StorefrontPublicImageVariant
+    ) async {
+        guard let service,
+              scopeAuthorizationProvider(scope) else { return }
+        if activeScope != scope {
+            activate(scope: scope)
+        }
+        await scopeActivationTask?.value
+        let expectedGeneration = generation
+        guard expectedGeneration > 0,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope),
+              storefrontPublicImage(
+                  scope: scope,
+                  imagePublicationID: imagePublicationID,
+                  variant: variant
+              ) == nil else { return }
+        do {
+            let data = try await service.loadStorefrontPublicImage(
+                scope: scope,
+                imagePublicationID: imagePublicationID,
+                publicURL: publicURL,
+                variant: variant
+            )
+            try Task.checkCancellation()
+            guard let decoded = try await ProductImageDownsampler.decode(data, variant: variant) else {
+                throw ProductImageError.downloadedImageInvalid
+            }
+            try Task.checkCancellation()
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  scopeAuthorizationProvider(scope) else { return }
+            let key = StorefrontPublicImageKey(
+                scope: scope,
+                imagePublicationID: imagePublicationID,
+                variant: variant
+            )
+            let cost = decoded.image.cgImage.map { $0.bytesPerRow * $0.height } ?? data.count
+            storefrontMemoryCache.setObject(
+                decoded.image,
+                forKey: Self.storefrontMemoryKey(key) as NSString,
+                cost: cost
+            )
+            revision &+= 1
+        } catch {
+            return
+        }
+    }
+
+    func stageStorefrontPreviewCandidate(
+        scope: ProductImageScope,
+        imagePublicationID: UUID,
+        sourceProductID: UUID,
+        sourceImageVersionID: UUID
+    ) async {
+        guard activeScope == scope,
+              scopeAuthorizationProvider(scope) else { return }
+        let expectedGeneration = generation
+        let main = ProductImageReference(
+            scope: scope,
+            productID: sourceProductID,
+            versionID: sourceImageVersionID,
+            variant: .main
+        )
+        let thumb = ProductImageReference(
+            scope: scope,
+            productID: sourceProductID,
+            versionID: sourceImageVersionID,
+            variant: .thumb
+        )
+        if image(for: main) == nil, image(for: thumb) == nil {
+            await load(thumb)
+        }
+        guard expectedGeneration == generation,
+              activeScope == scope,
+              scopeAuthorizationProvider(scope),
+              let candidate = image(for: main)
+                ?? image(for: thumb)
+                ?? pendingPreviews[PendingPreviewKey(scope: scope, productID: sourceProductID)] else {
+            return
+        }
+        let cost = candidate.cgImage.map { $0.bytesPerRow * $0.height } ?? 1
+        for variant in [StorefrontPublicImageVariant.thumb, .detail] {
+            let key = StorefrontPublicImageKey(
+                scope: scope,
+                imagePublicationID: imagePublicationID,
+                variant: variant
+            )
+            storefrontMemoryCache.setObject(
+                candidate,
+                forKey: Self.storefrontMemoryKey(key) as NSString,
+                cost: cost
+            )
+        }
+        revision &+= 1
     }
 
     func isLoading(_ reference: ProductImageReference) -> Bool {
@@ -426,7 +598,10 @@ final class ProductImageStore: ObservableObject {
                 throw ProductImageError.accountChanged
             }
             async let decodedMain = ProductImageDownsampler.decode(prepared.main.data, variant: .main)
-            async let decodedThumb = ProductImageDownsampler.decode(prepared.thumb.data, variant: .thumb)
+            async let decodedThumb = ProductImageDownsampler.decode(
+                prepared.thumb.data,
+                variant: ProductImageVariant.thumb
+            )
             guard let main = try await decodedMain,
                   let thumb = try await decodedThumb else {
                 throw ProductImageError.decodeFailed
@@ -590,6 +765,63 @@ final class ProductImageStore: ObservableObject {
                 nonCancellableOperationIDs.remove(operationID)
             }
             scheduleReloadIfActive(scope: scope, productID: productID, versionID: versionID)
+            throw error
+        }
+    }
+
+    func adoptForStorefront(
+        scope: ProductImageScope,
+        productID: UUID,
+        publicationID: UUID,
+        sourceImageVersionID: UUID
+    ) async throws -> UUID {
+        guard let service else { throw ProductImageError.unavailable }
+        guard !accountStoreReplacementLeaseActive else { throw ProductImageError.accountChanged }
+        guard scopeAuthorizationProvider(scope) else { throw ProductImageError.invalidScope }
+        await scopeActivationTask?.value
+        guard activeScope == scope,
+              scopeAuthorizationProvider(scope),
+              operationIDs[productID] == nil else {
+            throw ProductImageError.accountChanged
+        }
+        let expectedGeneration = generation
+        let operationID = UUID()
+        operationIDs[productID] = operationID
+        operationScopes[productID] = scope
+        nonCancellableOperationIDs.insert(operationID)
+        operationStages[productID] = .finalizing
+        do {
+            let imagePublicationID = try await service.adoptForStorefront(
+                scope: scope,
+                productID: productID,
+                publicationID: publicationID,
+                sourceImageVersionID: sourceImageVersionID
+            )
+            guard generation == expectedGeneration,
+                  activeScope == scope,
+                  scopeAuthorizationProvider(scope),
+                  operationIDs[productID] == operationID else {
+                throw ProductImageError.accountChanged
+            }
+            operationStages[productID] = .completed
+            nonCancellableOperationIDs.remove(operationID)
+            finishMutationLease(scope: scope, productID: productID)
+            return imagePublicationID
+        } catch is CancellationError {
+            if operationIDs[productID] == operationID {
+                operationStages[productID] = .cancelled
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
+            }
+            throw CancellationError()
+        } catch {
+            if operationIDs[productID] == operationID {
+                operationStages[productID] = .failed
+                operationIDs[productID] = nil
+                operationScopes[productID] = nil
+                nonCancellableOperationIDs.remove(operationID)
+            }
             throw error
         }
     }
@@ -807,5 +1039,14 @@ final class ProductImageStore: ObservableObject {
             reference.versionID.uuidString.lowercased(),
             reference.variant.rawValue
         ].joined(separator: "/")
+    }
+
+    private static func storefrontMemoryKey(_ key: StorefrontPublicImageKey) -> String {
+        [
+            key.scope.accountID.uuidString.lowercased(),
+            key.scope.shopID.uuidString.lowercased(),
+            key.imagePublicationID.uuidString.lowercased(),
+            key.variant.rawValue
+        ].joined(separator: ":")
     }
 }

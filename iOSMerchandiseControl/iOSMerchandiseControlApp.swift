@@ -7,6 +7,7 @@ import SwiftData
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @StateObject private var productImageStore: ProductImageStore
+    @StateObject private var storefrontAuthoringStore: StorefrontAuthoringStore
     @StateObject private var syncStoreGenerationController: SyncStoreGenerationController
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
@@ -46,6 +47,7 @@ struct iOSMerchandiseControlApp: App {
         let productImageStore = dependencies.productImageStore
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         _productImageStore = StateObject(wrappedValue: productImageStore)
+        _storefrontAuthoringStore = StateObject(wrappedValue: dependencies.storefrontAuthoringStore)
         _syncStoreGenerationController = StateObject(wrappedValue: generationController)
         generationController.setPresentationBoundaryObserver { [weak productImageStore] presentationID in
             productImageStore?.advanceStoreGeneration(presentationID: presentationID)
@@ -94,7 +96,30 @@ struct iOSMerchandiseControlApp: App {
             SyncStoreGenerationFailureView()
         } else if let task126SmokeKind = Self.task126UISmokeKind {
             Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
-        } else if Self.isRunningHostedXCTest {
+        } else {
+            storefrontHarnessOrStandardRoot
+        }
+    }
+
+    @ViewBuilder
+    private var storefrontHarnessOrStandardRoot: some View {
+        #if DEBUG
+        if Self.task143StorefrontUITestRequested {
+            Task143StorefrontUITestHarness()
+                .environmentObject(supabaseAuthViewModel)
+                .environmentObject(productImageStore)
+                .environmentObject(storefrontAuthoringStore)
+        } else {
+            hostedXCTestOrContentRoot
+        }
+        #else
+        hostedXCTestOrContentRoot
+        #endif
+    }
+
+    @ViewBuilder
+    private var hostedXCTestOrContentRoot: some View {
+        if Self.isRunningHostedXCTest {
             HostedXCTestRootView()
         } else {
             ContentView(
@@ -106,6 +131,7 @@ struct iOSMerchandiseControlApp: App {
             )
             .environmentObject(supabaseAuthViewModel)
             .environmentObject(productImageStore)
+            .environmentObject(storefrontAuthoringStore)
             .onOpenURL { url in
                 _ = supabaseAuthViewModel.handleOpenURL(url)
             }
@@ -127,6 +153,14 @@ struct iOSMerchandiseControlApp: App {
         return value?.isEmpty == false ? value : nil
         #else
         return nil
+        #endif
+    }
+
+    private static var task143StorefrontUITestRequested: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["TASK143_STOREFRONT_UI_TEST"] == "1"
+        #else
+        false
         #endif
     }
 
@@ -167,7 +201,8 @@ struct iOSMerchandiseControlApp: App {
             syncEventOutboxDrainRecorder: nil,
             syncEventSignalWatcher: nil,
             shopDeviceRegistrationService: nil,
-            productImageStore: ProductImageStore(service: nil)
+            productImageStore: ProductImageStore(service: nil),
+            storefrontAuthoringStore: StorefrontAuthoringStore(service: nil)
         )
     }
 
@@ -244,6 +279,9 @@ struct iOSMerchandiseControlApp: App {
                 },
                 scopeAuthorizationProvider: productImageScopeAuthorization
             )
+            let storefrontAuthoringStore = StorefrontAuthoringStore(
+                service: SupabaseStorefrontAuthoringService(transport: supabaseTransportClient)
+            )
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(
                     authService: authService,
@@ -254,7 +292,8 @@ struct iOSMerchandiseControlApp: App {
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
                 syncEventSignalWatcher: syncEventSignalWatcher,
                 shopDeviceRegistrationService: shopDeviceRegistrationService,
-                productImageStore: productImageStore
+                productImageStore: productImageStore,
+                storefrontAuthoringStore: storefrontAuthoringStore
             )
         } catch SupabaseConfigError.configMissing {
             return SupabaseAppDependencies(
@@ -264,7 +303,8 @@ struct iOSMerchandiseControlApp: App {
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil,
                 shopDeviceRegistrationService: nil,
-                productImageStore: ProductImageStore(service: nil)
+                productImageStore: ProductImageStore(service: nil),
+                storefrontAuthoringStore: StorefrontAuthoringStore(service: nil)
             )
         } catch SupabaseConfigError.invalidConfig {
             return SupabaseAppDependencies(
@@ -274,7 +314,8 @@ struct iOSMerchandiseControlApp: App {
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil,
                 shopDeviceRegistrationService: nil,
-                productImageStore: ProductImageStore(service: nil)
+                productImageStore: ProductImageStore(service: nil),
+                storefrontAuthoringStore: StorefrontAuthoringStore(service: nil)
             )
         } catch {
             return SupabaseAppDependencies(
@@ -284,7 +325,8 @@ struct iOSMerchandiseControlApp: App {
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil,
                 shopDeviceRegistrationService: nil,
-                productImageStore: ProductImageStore(service: nil)
+                productImageStore: ProductImageStore(service: nil),
+                storefrontAuthoringStore: StorefrontAuthoringStore(service: nil)
             )
         }
     }
@@ -308,6 +350,143 @@ private struct HostedXCTestRootView: View {
     }
 }
 
+#if DEBUG
+private struct Task143StorefrontUITestHarness: View {
+    @StateObject private var shopContext = ShopContextStore()
+    @StateObject private var storefrontStore: StorefrontAuthoringStore
+    @State private var filter = StorefrontListFilter.all
+    private let scope: StorefrontScope
+    private let product: Product
+
+    init() {
+        let accountID = UUID(uuidString: "14300000-0000-4000-8000-000000000001")!
+        let shopID = UUID(uuidString: "14300000-0000-4000-8000-000000000002")!
+        let productID = UUID(uuidString: "14300000-0000-4000-8000-000000000003")!
+        scope = StorefrontScope(accountID: accountID, shopID: shopID)
+        product = Product(
+            barcode: "TASK143-UI",
+            remoteID: productID,
+            productName: "Prodotto interno sintetico",
+            retailPrice: 1_000
+        )
+        _storefrontStore = StateObject(
+            wrappedValue: StorefrontAuthoringStore(
+                service: Task143StorefrontUITestService(productID: productID)
+            )
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                StorefrontFilterBar(selection: $filter)
+                    .padding(.vertical, 8)
+                Form {
+                    StorefrontEditorSection(
+                        product: product,
+                        operationalName: "Synthetic product",
+                        operationalRetailPrice: 1_000,
+                        operationalCategoryRemoteID: nil
+                    )
+                }
+            }
+            .navigationTitle("Storefront UI Test")
+        }
+        .environmentObject(shopContext)
+        .environmentObject(storefrontStore)
+        .environment(\.task143StorefrontScopeOverride, scope)
+        .environment(\.task143StorefrontCanMutateOverride, true)
+    }
+}
+
+private actor Task143StorefrontUITestService: StorefrontAuthoringServicing {
+    let productID: UUID
+
+    init(productID: UUID) {
+        self.productID = productID
+    }
+
+    func read(
+        scope: StorefrontScope,
+        productIDs: [UUID]
+    ) async throws -> StorefrontAuthoringReadResponse {
+        let publication = try fixture(version: 7, name: "Nome pubblico sintetico")
+        return StorefrontAuthoringReadResponse(
+            ok: true,
+            code: "ok",
+            shopId: scope.shopID,
+            rows: productIDs.contains(productID) ? [publication] : [],
+            categories: [
+                StorefrontCategory(
+                    categoryId: UUID(uuidString: "14300000-0000-4000-8000-000000000004")!,
+                    sourceCategoryId: nil,
+                    publicName: "Categoria sintetica",
+                    status: "active",
+                    updatedAt: "2026-08-21T12:00:00Z"
+                )
+            ],
+            pagination: StorefrontPagination(total: 1)
+        )
+    }
+
+    func readSummary(
+        scope: StorefrontScope,
+        filter: StorefrontListFilter,
+        query: String?,
+        productIDs: [UUID]?,
+        page: Int
+    ) async throws -> StorefrontAuthoringSummaryResponse {
+        StorefrontAuthoringSummaryResponse(
+            ok: true,
+            code: "ok",
+            shopId: scope.shopID,
+            rows: [],
+            pagination: StorefrontPagination(page: page, total: 0)
+        )
+    }
+
+    func mutate(
+        scope: StorefrontScope,
+        productID: UUID,
+        operation: StorefrontMutationOperation,
+        draft: StorefrontEditorDraft,
+        expectedVersion: Int64,
+        idempotencyKey: UUID
+    ) async throws -> StorefrontAuthoringMutationResponse {
+        throw StorefrontAuthoringError.conflict(
+            try fixture(version: 8, name: "Aggiornato da Admin")
+        )
+    }
+
+    private func fixture(version: Int64, name: String) throws -> StorefrontPublication {
+        let json: [String: Any] = [
+            "publicationId": "14300000-0000-4000-8000-000000000005",
+            "sourceProductId": productID.uuidString.lowercased(),
+            "status": "draft",
+            "publicName": name,
+            "publicDescription": "Descrizione pubblica sintetica",
+            "storefrontCategoryId": "14300000-0000-4000-8000-000000000004",
+            "publicPrice": 1_000,
+            "priceSourceMode": "override",
+            "featured": false,
+            "homeOrder": 0,
+            "pickupEnabled": true,
+            "deliveryEnabled": false,
+            "reservationEnabled": false,
+            "availability": "available",
+            "version": version,
+            "updatedAt": "2026-08-21T12:00:00Z",
+            "mutationSource": "admin",
+            "changedFields": ["publicName"]
+        ]
+        return try JSONDecoder().decode(
+            StorefrontPublication.self,
+            from: JSONSerialization.data(withJSONObject: json)
+        )
+    }
+}
+#endif
+
 private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
     let supabaseTransportClient: SupabaseTransportClient?
@@ -316,4 +495,5 @@ private struct SupabaseAppDependencies {
     let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     let productImageStore: ProductImageStore
+    let storefrontAuthoringStore: StorefrontAuthoringStore
 }
