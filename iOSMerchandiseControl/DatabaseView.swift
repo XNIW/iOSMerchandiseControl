@@ -1830,6 +1830,7 @@ struct DatabaseView: View {
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var productImageStore: ProductImageStore
+    @EnvironmentObject private var storefrontAuthoringStore: StorefrontAuthoringStore
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     // Tutti i prodotti dal database, ordinati per barcode
@@ -1845,6 +1846,7 @@ struct DatabaseView: View {
     @State private var selectedDatabaseSection: DatabaseSection = .products
     @State private var barcodeFilter: String = ""
     @State private var namedEntityFilter: String = ""
+    @State private var storefrontFilter: StorefrontListFilter = .all
     @State private var showAddSheet = false
     @State private var namedEntityEditor: DatabaseNamedEntityEditorPresentation?
     @State private var productToEdit: Product?
@@ -1855,6 +1857,7 @@ struct DatabaseView: View {
     @State private var pendingBarcodeForNewProduct: String? = nil
     @State private var productsPendingDeletion: [Product] = []
     @State private var showingDeleteProductsConfirmation = false
+    @State private var deletionValidationTask: Task<Void, Never>?
     @FocusState private var isSearchFocused: Bool
 
     // Export / import
@@ -1883,6 +1886,7 @@ struct DatabaseView: View {
     private struct FullImportResultView: View {
         let payload: FullImportResultPayload
         let onClose: () -> Void
+        let onVerify: () -> Void
 
         private var symbolName: String {
             switch payload.kind {
@@ -1968,6 +1972,12 @@ struct DatabaseView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.top, 4)
+
+                if case .success = payload.kind {
+                    Button(L("storefront.import.verify"), action: onVerify)
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
@@ -3302,6 +3312,7 @@ struct DatabaseView: View {
     private struct DatabaseProductRow: View {
         let product: Product
         let imageScope: ProductImageScope?
+        let storefrontScope: StorefrontScope?
         let onEdit: () -> Void
         let onHistory: () -> Void
 
@@ -3329,6 +3340,11 @@ struct DatabaseView: View {
                     metricsBlock
 
                     identityLabels
+
+                    StorefrontProductRowSummary(
+                        productID: product.remoteID,
+                        scope: storefrontScope
+                    )
 
                     if hasMetadata {
                         metadataLabels
@@ -3507,15 +3523,25 @@ struct DatabaseView: View {
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return products }
-
-        let lower = trimmed.lowercased()
-        return products.filter { product in
+        let textFiltered: [Product]
+        if trimmed.isEmpty {
+            textFiltered = products
+        } else {
+            let lower = trimmed.lowercased()
+            textFiltered = products.filter { product in
             if product.barcode.lowercased().contains(lower) { return true }
             if let item = product.itemNumber?.lowercased(), item.contains(lower) { return true }
             if let name = product.productName?.lowercased(), name.contains(lower) { return true }
             if let second = product.secondProductName?.lowercased(), second.contains(lower) { return true }
             return false
+            }
+        }
+        guard storefrontFilter != .all else { return textFiltered }
+        let allowed = storefrontFilter == .conflict
+            ? storefrontAuthoringStore.conflictedProductIDs
+            : storefrontAuthoringStore.filteredProductIDs
+        return textFiltered.filter { product in
+            product.remoteID.map(allowed.contains) ?? false
         }
     }
 
@@ -3644,6 +3670,10 @@ struct DatabaseView: View {
                     .accessibilityLabel(L("database.action.scan"))
                 }
             }
+
+            if selectedDatabaseSection == .products {
+                StorefrontFilterBar(selection: $storefrontFilter)
+            }
         }
         .padding(.horizontal)
         .padding(.top, 10)
@@ -3698,9 +3728,10 @@ struct DatabaseView: View {
         } description: {
             Text(L("database.empty.filtered_body"))
         } actions: {
-            Button {
-                barcodeFilter = ""
-            } label: {
+                Button {
+                    barcodeFilter = ""
+                    storefrontFilter = .all
+                } label: {
                 Label(L("database.search.clear"), systemImage: "xmark.circle")
             }
             .buttonStyle(.bordered)
@@ -3734,6 +3765,7 @@ struct DatabaseView: View {
                     DatabaseProductRow(
                         product: product,
                         imageScope: imageScope,
+                        storefrontScope: storefrontScope,
                         onEdit: {
                             productToEdit = product
                         },
@@ -3744,6 +3776,20 @@ struct DatabaseView: View {
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                 }
                 .onDelete(perform: deleteProducts)
+                if storefrontFilter != .all,
+                   storefrontFilter != .conflict,
+                   storefrontAuthoringStore.filterHasNextPage {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                    .listRowSeparator(.hidden)
+                    .task {
+                        guard let storefrontScope else { return }
+                        storefrontAuthoringStore.loadNextFilterPage(scope: storefrontScope)
+                    }
+                }
             }
             .id("database-products-\(resolvedLanguageCode)")
             .listStyle(.insetGrouped)
@@ -3901,6 +3947,18 @@ struct DatabaseView: View {
         .task {
             presentTask140UIAnalysisIfRequested()
         }
+        .task(id: storefrontFilterTaskID) {
+            guard let storefrontScope else {
+                storefrontAuthoringStore.activate(scope: nil)
+                return
+            }
+            storefrontAuthoringStore.activate(scope: storefrontScope)
+            storefrontAuthoringStore.resetFilter(
+                storefrontFilter,
+                query: barcodeFilter,
+                scope: storefrontScope
+            )
+        }
         .onChange(of: imageScope) { previousScope, nextScope in
             guard previousScope != nextScope else { return }
             dismissProductPresentationsForImageScopeChange()
@@ -4028,7 +4086,12 @@ struct DatabaseView: View {
         .sheet(item: $fullImportResultPayload) { payload in
             FullImportResultView(
                 payload: payload,
-                onClose: clearPresentedFullImportResult
+                onClose: clearPresentedFullImportResult,
+                onVerify: {
+                    clearPresentedFullImportResult()
+                    selectedDatabaseSection = .products
+                    storefrontFilter = .needsUpdate
+                }
             )
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
@@ -4246,7 +4309,17 @@ struct DatabaseView: View {
         )
     }
 
+    private var storefrontScope: StorefrontScope? {
+        resolvedStorefrontScope(auth: supabaseAuthViewModel, shopContext: shopContextStore)
+    }
+
+    private var storefrontFilterTaskID: String {
+        "\(storefrontScope?.cacheNamespace ?? "none").\(storefrontFilter.rawValue).\(barcodeFilter)"
+    }
+
     private func dismissProductPresentationsForImageScopeChange() {
+        deletionValidationTask?.cancel()
+        deletionValidationTask = nil
         scannerFallbackFocusTask?.cancel()
         scannerFallbackFocusTask = nil
         showScanner = false
@@ -4274,11 +4347,42 @@ struct DatabaseView: View {
     }
     
     private func deleteProducts(at offsets: IndexSet) {
-        productsPendingDeletion = offsets.compactMap { index in
+        let candidates: [Product] = offsets.compactMap { index -> Product? in
             guard filteredProducts.indices.contains(index) else { return nil }
             return filteredProducts[index]
         }
-        showingDeleteProductsConfirmation = !productsPendingDeletion.isEmpty
+        guard !candidates.isEmpty else { return }
+        let remoteIDs: [UUID] = candidates.compactMap { $0.remoteID }
+        if remoteIDs.isEmpty {
+            productsPendingDeletion = candidates
+            showingDeleteProductsConfirmation = true
+            return
+        }
+        guard let storefrontScope else {
+            importError = L("storefront.delete.validation_unavailable")
+            return
+        }
+        deletionValidationTask?.cancel()
+        deletionValidationTask = Task {
+            do {
+                let allowed = try await storefrontAuthoringStore.validateOperationalDeletion(
+                    scope: storefrontScope,
+                    productIDs: remoteIDs
+                )
+                guard !Task.isCancelled, self.storefrontScope == storefrontScope else { return }
+                if allowed {
+                    productsPendingDeletion = candidates
+                    showingDeleteProductsConfirmation = true
+                } else {
+                    importError = L("storefront.delete.publication_first")
+                }
+            } catch is CancellationError {
+            } catch {
+                guard !Task.isCancelled else { return }
+                importError = L("storefront.delete.validation_unavailable")
+            }
+            deletionValidationTask = nil
+        }
     }
 
     private func confirmDeleteProducts() {
@@ -5139,17 +5243,23 @@ struct DatabaseView: View {
                     await progressState.apply(snapshot)
                 }
             )
+            let storefrontDifferenceCount = await importStorefrontDifferenceCount()
+            let storefrontPayload = storefrontImportResultPayload(
+                result: result,
+                differenceCount: storefrontDifferenceCount
+            )
             pendingFullImportContext = nil
             if isFullDatabaseFlow {
                 progressState.resetRunningState()
                 deferFullImportResultUntilAnalysisDismiss(
-                    DatabaseImportUILocalizer.fullImportSuccessResult(from: result)
+                    storefrontPayload
                 )
                 importAnalysisSession = nil
                 return
             }
 
             progressState.finishSuccess(message: Self.userMessage(for: result))
+            deferFullImportResultUntilAnalysisDismiss(storefrontPayload)
         } catch {
             let applyMessage = L("database.error.apply_import", error.localizedDescription)
             pendingFullImportContext = nil
@@ -5172,6 +5282,35 @@ struct DatabaseView: View {
                 ]
             )
         }
+    }
+
+    private func importStorefrontDifferenceCount() async -> Int? {
+        guard let storefrontScope else { return nil }
+        do {
+            return try await storefrontAuthoringStore.needsUpdateCount(scope: storefrontScope)
+        } catch {
+            return nil
+        }
+    }
+
+    private func storefrontImportResultPayload(
+        result: ImportApplyResult,
+        differenceCount: Int?
+    ) -> FullImportResultPayload {
+        let updated = result.productsInserted + result.productsUpdated
+        let summary: String
+        if let differenceCount {
+            summary = L("storefront.import.summary", updated, differenceCount)
+        } else {
+            summary = L("storefront.import.summary_unverified", updated)
+        }
+        return FullImportResultPayload(
+            kind: .success,
+            title: L("database.progress.completed_title"),
+            summary: summary,
+            metrics: [],
+            notes: []
+        )
     }
 
     @MainActor

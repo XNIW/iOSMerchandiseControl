@@ -12,6 +12,25 @@ nonisolated enum ProductImageVariant: String, Codable, CaseIterable, Sendable {
     }
 }
 
+nonisolated enum StorefrontPublicImageVariant: String, Hashable, Sendable {
+    case thumb
+    case detail
+
+    var maxBytes: Int {
+        switch self {
+        case .thumb: 120 * 1_024
+        case .detail: 900 * 1_024
+        }
+    }
+
+    var maxSide: Int {
+        switch self {
+        case .thumb: 384
+        case .detail: 1_600
+        }
+    }
+}
+
 nonisolated struct ProductImageScope: Hashable, Sendable {
     let accountID: UUID
     let shopID: UUID

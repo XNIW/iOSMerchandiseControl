@@ -236,6 +236,15 @@ struct EditProductView: View {
                     }
                 }
             }
+
+            if existingProduct != nil {
+                StorefrontEditorSection(
+                    product: existingProduct,
+                    operationalName: name,
+                    operationalRetailPrice: parseOperationalRetailPrice,
+                    operationalCategoryRemoteID: existingProduct?.category?.remoteID
+                )
+            }
         }
         .navigationTitle(existingProduct == nil ? L("product.title.new") : L("product.title.edit"))
         .toolbar {
@@ -492,6 +501,13 @@ struct EditProductView: View {
             binding: bindingStore.currentBinding,
             hasPendingReplacement: bindingStore.hasPendingReplacementJournal
         )
+    }
+
+    private var parseOperationalRetailPrice: Double? {
+        switch parseOptionalCLPriceInput(retailPrice) {
+        case .value(let value): value
+        case .empty, .invalid, .negative: nil
+        }
     }
 
     private var canWriteProductImage: Bool {

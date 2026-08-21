@@ -56,6 +56,12 @@ nonisolated struct ProductImageRemoveResponse: Decodable, Sendable {
     }
 }
 
+nonisolated struct StorefrontImageAdoptResponse: Decodable, Sendable {
+    let imagePublicationId: UUID?
+    let ok: Bool?
+    let status: String?
+}
+
 nonisolated struct ProductImageReadResponse: Decodable, Sendable {
     struct Item: Decodable, Sendable {
         let expiresAt: String?
@@ -112,6 +118,12 @@ actor ProductImageAPIClient {
         let expectedVersionId: UUID
         let productId: UUID
         let shopId: UUID
+    }
+
+    private struct StorefrontAdoptRequest: Encodable {
+        let publicationId: UUID
+        let shopId: UUID
+        let sourceImageVersionId: UUID
     }
 
     private struct ReadRequest: Encodable {
@@ -218,6 +230,23 @@ actor ProductImageAPIClient {
                 expectedVersionId: versionID,
                 productId: productID,
                 shopId: scope.shopID
+            ),
+            accessToken: accessToken
+        )
+    }
+
+    func adoptForStorefront(
+        scope: ProductImageScope,
+        publicationID: UUID,
+        sourceImageVersionID: UUID,
+        accessToken: String
+    ) async throws -> StorefrontImageAdoptResponse {
+        try await post(
+            path: "api/shop/storefront/images/adopt",
+            body: StorefrontAdoptRequest(
+                publicationId: publicationID,
+                shopId: scope.shopID,
+                sourceImageVersionId: sourceImageVersionID
             ),
             accessToken: accessToken
         )
@@ -359,6 +388,61 @@ actor ProductImageAPIClient {
               data.count <= maximumBytes,
               ProductImageProcessor.isJPEG(data),
               !ProductImageProcessor.containsForbiddenMetadata(data) else {
+            throw ProductImageError.downloadedImageInvalid
+        }
+        return data
+    }
+
+    func downloadStorefrontPublicImage(
+        publicURL: URL,
+        imagePublicationID: UUID,
+        variant: StorefrontPublicImageVariant
+    ) async throws -> Data {
+        let pathSegments = publicURL.path.split(separator: "/").map(String.init)
+        let fileName = publicURL.lastPathComponent
+        guard storageBaseURL.scheme?.lowercased() == "https",
+              let storageHost = storageBaseURL.host?.lowercased(),
+              let components = URLComponents(url: publicURL, resolvingAgainstBaseURL: false),
+              components.scheme?.lowercased() == "https",
+              components.host?.lowercased() == storageHost,
+              components.port == URLComponents(
+                  url: storageBaseURL,
+                  resolvingAgainstBaseURL: false
+              )?.port,
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              publicURL.path.hasPrefix("/storage/v1/object/public/storefront-product-images/"),
+              pathSegments.contains(imagePublicationID.uuidString.lowercased()),
+              fileName.hasPrefix("\(variant.rawValue)-"),
+              fileName.hasSuffix(".webp") else {
+            throw ProductImageError.signedURLInvalid
+        }
+        var request = URLRequest(url: publicURL)
+        request.httpMethod = "GET"
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let bounded = try await BoundedURLSessionDataLoader.data(
+            for: request,
+            configuration: storageSession.configuration,
+            maximumBytes: variant.maxBytes
+        ) { response in
+            guard response.statusCode == 200 else {
+                throw ProductImageError.downloadFailed(status: response.statusCode)
+            }
+            let contentType = response.value(forHTTPHeaderField: "Content-Type")?
+                .split(separator: ";", maxSplits: 1)
+                .first?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            guard contentType == "image/webp" else {
+                throw ProductImageError.downloadedImageInvalid
+            }
+        }
+        let data = bounded.0
+        guard data.count >= 12,
+              data.prefix(4) == Data("RIFF".utf8),
+              data.dropFirst(8).prefix(4) == Data("WEBP".utf8) else {
             throw ProductImageError.downloadedImageInvalid
         }
         return data
