@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/tmp/mc-task144-ios/f02-red.log",
+    "bytes": 1494465,
+    "sha256": "f052717e0b6511540d900d3a1867220523bb41f66c11bdd8e4e67f096f8845a4"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/compiler-check/build-for-testing-pass2.log",
+    "bytes": 332467,
+    "sha256": "8da92afb95a05ef6830c1e97ca82b69f77dc0bda22ec1bdd47593ed3eb2aaf97"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/compiler-check/build-for-testing-pass3.log",
+    "bytes": 438121,
+    "sha256": "18ff1aef72e336f1ab979744940480ec41d76b14be32918c4a963a1ad05a3914"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/compiler-check/build-for-testing-pass4.log",
+    "bytes": 494638,
+    "sha256": "e2f6968cd73fec2ad063872d001e86ee42e39a00e40c05107f572a1ace51ee68"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/compiler-check/build-for-testing-pass5.log",
+    "bytes": 536436,
+    "sha256": "ab6e5465678df6bd7fd1732dc77a8598725e9765e0e04208c5a3c4ce2ce50b49"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/compiler-check/build-for-testing.log",
+    "bytes": 2785688,
+    "sha256": "76ae9bcf3e519880ea277f6ceeb844882c8c41028b26be4ac3742f795ec14ab9"
+  }
+]

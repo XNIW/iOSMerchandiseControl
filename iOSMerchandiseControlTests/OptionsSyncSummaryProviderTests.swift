@@ -83,7 +83,7 @@ final class OptionsSyncSummaryProviderTests: XCTestCase {
         XCTAssertNil(provider.syncCountDriftReport)
         XCTAssertTrue(provider.isCheckingRemoteCounts)
 
-        await remote.release()
+        remote.release()
         try await waitForDrift(provider)
         XCTAssertEqual(provider.syncCountDriftReport?.mismatches, [.products])
         XCTAssertFalse(provider.isCheckingRemoteCounts)
@@ -212,7 +212,8 @@ final class OptionsSyncSummaryProviderTests: XCTestCase {
     }
 }
 
-private actor SlowRemoteCountFetcher: OptionsSyncRemoteCountFetching {
+@MainActor
+private final class SlowRemoteCountFetcher: OptionsSyncRemoteCountFetching {
     private let snapshot: SyncInventoryCountSnapshot
     private var continuation: CheckedContinuation<Void, Never>?
     private var released = false

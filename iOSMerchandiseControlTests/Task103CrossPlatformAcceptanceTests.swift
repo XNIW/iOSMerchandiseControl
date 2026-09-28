@@ -716,16 +716,21 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             "product_price_create=pass product_price_correction=pass product_price_tombstone=not_supported_append_only " +
             "history_create=pass history_update=pass history_tombstone=pass"
         )
-        print(
-            "\(fixture.logPrefix)_IOS_WRITE_TIMINGS " +
-            "localCatalogSaveMs=\(localCatalogSaveMs) " +
-            "catalogPushAndEventsMs=\(initialCatalogPushMs + updateCatalogPushMs + tombstoneCatalogPushMs) " +
-            "pricePushAndEventsMs=\(initialPricePushMs + correctionPricePushMs) " +
-            "localHistorySaveMs=\(localHistorySaveMs) " +
-            "historyPushAndEventsMs=\(initialHistoryPushMs + updateHistoryPushMs + tombstoneHistoryPushMs) " +
-            "totalMatrixMs=\(Int(Date().timeIntervalSince(matrixStarted) * 1000)) " +
+        let catalogPushAndEventsMs = initialCatalogPushMs + updateCatalogPushMs + tombstoneCatalogPushMs
+        let pricePushAndEventsMs = initialPricePushMs + correctionPricePushMs
+        let historyPushAndEventsMs = initialHistoryPushMs + updateHistoryPushMs + tombstoneHistoryPushMs
+        let totalMatrixMs = Int(Date().timeIntervalSince(matrixStarted) * 1000)
+        let writeTimingFields: [String] = [
+            "\(fixture.logPrefix)_IOS_WRITE_TIMINGS",
+            "localCatalogSaveMs=\(localCatalogSaveMs)",
+            "catalogPushAndEventsMs=\(catalogPushAndEventsMs)",
+            "pricePushAndEventsMs=\(pricePushAndEventsMs)",
+            "localHistorySaveMs=\(localHistorySaveMs)",
+            "historyPushAndEventsMs=\(historyPushAndEventsMs)",
+            "totalMatrixMs=\(totalMatrixMs)",
             "syncType=EVENT_INCREMENTAL fullPull=false"
-        )
+        ]
+        print(writeTimingFields.joined(separator: " "))
     }
 
     func test072CIOSCreateUpdateTombstoneHistoryHarness() async throws {

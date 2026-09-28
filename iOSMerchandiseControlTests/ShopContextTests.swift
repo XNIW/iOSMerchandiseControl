@@ -308,9 +308,9 @@ final class ShopContextTests: XCTestCase {
         try await fetcher.waitForCallCount(1)
         let refreshB = Task { await contextStore.refresh(ownerUserID: ownerB) }
         try await fetcher.waitForCallCount(2)
-        await fetcher.resume(call: 1, shops: [shopB])
+        fetcher.resume(call: 1, shops: [shopB])
         await refreshB.value
-        await fetcher.resume(call: 0, shops: [shopA])
+        fetcher.resume(call: 0, shops: [shopA])
         await refreshA.value
 
         XCTAssertEqual(
@@ -342,13 +342,13 @@ final class ShopContextTests: XCTestCase {
 
         let initialRefresh = Task { await contextStore.refresh(ownerUserID: ownerUserID) }
         try await fetcher.waitForCallCount(1)
-        await fetcher.resume(call: 0, shops: [shopA, shopB])
+        fetcher.resume(call: 0, shops: [shopA, shopB])
         await initialRefresh.value
 
         let staleRefresh = Task { await contextStore.refresh(ownerUserID: ownerUserID) }
         try await fetcher.waitForCallCount(2)
         contextStore.selectShop(shopB.shopID, ownerUserID: ownerUserID)
-        await fetcher.resume(call: 1, shops: [shopA, shopB])
+        fetcher.resume(call: 1, shops: [shopA, shopB])
         await staleRefresh.value
 
         XCTAssertEqual(contextStore.context.selectedShop?.shopID, shopB.shopID)
@@ -467,7 +467,8 @@ private struct ThrowingLinkedShopFetcher: LinkedShopFetching {
     }
 }
 
-private actor DeferredLinkedShopFetcher: LinkedShopFetching {
+@MainActor
+private final class DeferredLinkedShopFetcher: LinkedShopFetching {
     private var continuations: [CheckedContinuation<[LinkedShop], Error>?] = []
 
     func fetchLinkedShops() async throws -> [LinkedShop] {

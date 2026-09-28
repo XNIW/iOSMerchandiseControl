@@ -377,7 +377,8 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
     }
 }
 
-private actor MockProductPricePreviewFetching: SupabaseProductPricePreviewFetching {
+@MainActor
+private final class MockProductPricePreviewFetching: SupabaseProductPricePreviewFetching {
     private let rows: [RemoteInventoryProductPriceRow]
     private let cancellationCall: Int?
     private let errorCall: Int?
@@ -385,7 +386,7 @@ private actor MockProductPricePreviewFetching: SupabaseProductPricePreviewFetchi
     private var callCount = 0
     private var ranges: [(from: Int, to: Int)] = []
 
-    init(
+    nonisolated init(
         rows: [RemoteInventoryProductPriceRow],
         cancellationCall: Int? = nil,
         errorCall: Int? = nil,

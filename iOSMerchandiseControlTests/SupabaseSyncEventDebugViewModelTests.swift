@@ -13,7 +13,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .loading)
 
-        await fetcher.succeed(rows: [syncEvent(id: 1)])
+        fetcher.succeed(rows: [syncEvent(id: 1)])
         await loadTask.value
 
         XCTAssertEqual(viewModel.state, .successWithEvents)
@@ -100,7 +100,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.displayRows.count, 0)
         XCTAssertNil(viewModel.summary)
 
-        await fetcher.succeed(rows: [syncEvent(id: 2)])
+        fetcher.succeed(rows: [syncEvent(id: 2)])
         await loadTask.value
 
         XCTAssertEqual(viewModel.state, .idle)
@@ -135,7 +135,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.displayRows.count, 0)
         XCTAssertNil(viewModel.summary)
 
-        await fetcher.succeed(rows: [syncEvent(id: 30)])
+        fetcher.succeed(rows: [syncEvent(id: 30)])
         await loadTask.value
 
         XCTAssertEqual(viewModel.state, .idle)
@@ -153,10 +153,10 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
         let secondLoad = Task { await viewModel.loadLatestEvents() }
         await secondLoad.value
 
-        let requestCount = await fetcher.requestCount()
+        let requestCount = fetcher.requestCount()
         XCTAssertEqual(requestCount, 1)
 
-        await fetcher.succeed(rows: [syncEvent(id: 4)])
+        fetcher.succeed(rows: [syncEvent(id: 4)])
         await firstLoad.value
         XCTAssertEqual(viewModel.state, .successWithEvents)
     }
@@ -181,7 +181,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
 
         await viewModel.loadLatestEvents()
 
-        let limits = await fetcher.recordedLimits()
+        let limits = fetcher.recordedLimits()
         XCTAssertEqual(limits, [50])
         XCTAssertEqual(viewModel.summary?.effectiveLimit, 50)
         XCTAssertEqual(viewModel.summary?.isLimitClamped, false)
@@ -273,7 +273,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
         line: UInt = #line
     ) async throws {
         for _ in 0..<100 {
-            if await fetcher.requestCount() == expectedCount {
+            if fetcher.requestCount() == expectedCount {
                 return
             }
             try await Task.sleep(nanoseconds: 10_000_000)
@@ -288,7 +288,8 @@ private enum ImmediateSyncEventOutcome: Sendable {
     case serviceError(SupabaseTransportClientError)
 }
 
-private actor ImmediateSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
+@MainActor
+private final class ImmediateSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
     private let outcome: ImmediateSyncEventOutcome
     private var limits: [Int] = []
 
@@ -312,7 +313,8 @@ private actor ImmediateSyncEventPreviewFetching: SupabaseSyncEventPreviewFetchin
     }
 }
 
-private actor ControlledSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
+@MainActor
+private final class ControlledSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
     private var requests = 0
     private var continuations: [CheckedContinuation<[RemoteSyncEventRow], Error>] = []
 

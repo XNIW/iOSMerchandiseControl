@@ -28,7 +28,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 ownerUserID: fixture.ownerUserID
             )
         } catch {
-            let counts = await transport.counts()
+            let counts = transport.counts()
             let accountHash = AccountBindingStore.accountHash(for: fixture.ownerUserID)
             let activeMatches = fixture.defaults.string(
                 forKey: "mobile.shopContext.activeAccountHash.v1"
@@ -51,10 +51,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryJournalURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 2)
         XCTAssertEqual(counts.pages, ShopSyncRecoveryDomain.allCases.count)
-        let checkpointCalls = await transport.checkpointCallsForTesting()
+        let checkpointCalls = transport.checkpointCallsForTesting()
         XCTAssertEqual(checkpointCalls.count, 2)
         XCTAssertEqual(checkpointCalls[0].verifiedBaselineID, "0")
         XCTAssertNil(checkpointCalls[0].expectedBaselineScopeKey)
@@ -136,7 +136,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertTrue(resumed.completedRecoveryJournal)
         XCTAssertNil(bindingStore.pendingRecoveryJournal)
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryJournalURL.path))
-        let resumeCalls = await resumeTransport.counts()
+        let resumeCalls = resumeTransport.counts()
         XCTAssertEqual(resumeCalls.checkpoints, 0)
         XCTAssertEqual(resumeCalls.pages, 0)
     }
@@ -164,7 +164,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
         XCTAssertNil(fixture.controller.activeManifest)
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 4)
         XCTAssertEqual(counts.pages, ShopSyncRecoveryDomain.allCases.count * 2)
     }
@@ -283,7 +283,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let baseline = try XCTUnwrap(context.fetch(FetchDescriptor<SupabaseCatalogBaselineRun>()).first)
         XCTAssertEqual(baseline.productCount, 1)
         XCTAssertEqual(baseline.tombstoneCount, 1)
-        let markerBaselineIDs = await transport.markerBaselineIDsForTesting()
+        let markerBaselineIDs = transport.markerBaselineIDsForTesting()
         XCTAssertEqual(markerBaselineIDs, ["42"])
         XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
     }
@@ -370,7 +370,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
         XCTAssertNil(fixture.controller.activeManifest)
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
-        let counts = await transport.counts()
+        let counts = transport.counts()
         // A local single-writer invariant violation is deterministic, not a
         // transient A/B drift. Fail immediately instead of retrying the same
         // unsafe generation loop.
@@ -400,7 +400,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(manifest.checkpoint.maxEventID, 42)
         XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 2)
         XCTAssertEqual(counts.pages, ShopSyncRecoveryDomain.allCases.count)
         XCTAssertEqual(counts.tailPages, 1)
@@ -429,7 +429,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
         XCTAssertNil(fixture.controller.activeManifest)
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 2)
         XCTAssertEqual(counts.tailPages, 1)
     }
@@ -458,7 +458,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.recoveryJournalURL.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 2)
         XCTAssertEqual(counts.pages, ShopSyncRecoveryDomain.allCases.count)
         XCTAssertEqual(counts.tailPages, 0)
@@ -515,7 +515,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
         let context = ModelContext(fixture.controller.modelContainer)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), 0)
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 1)
         XCTAssertEqual(counts.pages, 3)
     }
@@ -564,7 +564,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
         XCTAssertNil(fixture.controller.activeManifest)
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.checkpoints, 1)
         XCTAssertEqual(counts.pages, 5)
     }
@@ -858,7 +858,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             )
         }
 
-        let counts = await transport.counts()
+        let counts = transport.counts()
         XCTAssertEqual(counts.pages, 1)
         XCTAssertNil(fixture.controller.activeManifest)
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
@@ -1296,7 +1296,8 @@ private nonisolated struct AtomicRecoveryCheckpointCall: Sendable {
     let expectedBaselineScopeKey: String?
 }
 
-private actor AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting {
+@MainActor
+private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting {
     private let ownerUserID: UUID
     private let checkpoints: [ShopSyncRecoveryCheckpoint]
     private let cancellationDomain: ShopSyncRecoveryDomain?

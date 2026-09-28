@@ -26,7 +26,7 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
         XCTAssertEqual(preview.outcome, .success)
         XCTAssertEqual(preview.remoteCounts.products, 3)
         XCTAssertEqual(preview.newProducts.count, 3)
-        let productRanges = await mock.productRangeLog()
+        let productRanges = mock.productRangeLog()
         XCTAssertEqual(productRanges, ["0...1", "2...3"])
     }
 
@@ -104,7 +104,7 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
         XCTAssertEqual(preview.remoteCounts.productPrices, 1_000)
         XCTAssertFalse(preview.sourceErrors.contains { $0.relatedKey == "inventory_product_prices" })
         XCTAssertTrue(preview.warnings.contains { $0.code == .priceHistoryPagedApplyRequired })
-        let ranges = await mock.productPriceRangeLog()
+        let ranges = mock.productPriceRangeLog()
         XCTAssertEqual(ranges, ["0...999"])
     }
 
@@ -218,7 +218,8 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
     }
 }
 
-private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching, SupabaseInventoryLookupByIDFetching {
+@MainActor
+private final class MockSupabaseInventoryFetching: SupabaseInventoryFetching, SupabaseInventoryLookupByIDFetching {
     private let products: [RemoteInventoryProductRow]
     private let suppliersByID: [UUID: RemoteInventorySupplierRow]
     private let categoriesByID: [UUID: RemoteInventoryCategoryRow]

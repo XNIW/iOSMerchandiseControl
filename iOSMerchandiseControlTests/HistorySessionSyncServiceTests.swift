@@ -67,7 +67,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(result.uploadedCount, 1)
         XCTAssertEqual(result.skippedCleanCount, 0)
-        let upsertedRemoteIDs = await remote.upsertedRemoteIDs()
+        let upsertedRemoteIDs = remote.upsertedRemoteIDs()
         XCTAssertEqual(upsertedRemoteIDs, [entry.remoteID])
         XCTAssertEqual(entry.syncStatus, .syncedSuccessfully)
         XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
@@ -121,7 +121,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(result.uploadedCount, 0)
-        let uploadedRemoteIDs = await remote.upsertedRemoteIDs()
+        let uploadedRemoteIDs = remote.upsertedRemoteIDs()
         XCTAssertEqual(uploadedRemoteIDs, [])
         XCTAssertNil(legacyEntry.shopID)
         XCTAssertNil(legacyEntry.storeID)
@@ -177,7 +177,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(result.uploadedCount, 1)
         XCTAssertEqual(entry.shopID, shopID)
         XCTAssertEqual(entry.storeID, shopID.uuidString.lowercased())
-        let uploaded = await remote.upsertedRows()
+        let uploaded = remote.upsertedRows()
         XCTAssertEqual(uploaded.single?.shopID, shopID)
         XCTAssertEqual(entry.syncStatus, .syncedSuccessfully)
     }
@@ -219,7 +219,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(precise.uploadedCount, 0)
         XCTAssertEqual(precise.skippedCleanCount, 1)
         XCTAssertEqual(full.uploadedCount, 1)
-        let upsertedRemoteIDs = await remote.upsertedRemoteIDs()
+        let upsertedRemoteIDs = remote.upsertedRemoteIDs()
         XCTAssertEqual(upsertedRemoteIDs, [remoteID])
         XCTAssertEqual(entry.remoteID, remoteID)
         XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
@@ -557,7 +557,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(result.uploadedCount, 1)
         XCTAssertEqual(result.pushedRemoteIDs, [remoteID])
         XCTAssertEqual(result.pushedTombstoneRemoteIDs, [remoteID])
-        let upserted = await remote.upsertedRows()
+        let upserted = remote.upsertedRows()
         XCTAssertEqual(upserted.single?.remoteID, remoteID)
         XCTAssertNotNil(upserted.single?.deletedAt)
         XCTAssertFalse(entry.isHistorySessionDirtyForCloud)
@@ -913,7 +913,8 @@ final class HistorySessionSyncServiceTests: XCTestCase {
     }
 }
 
-private actor FakeHistorySessionRemote: HistorySessionRemoteSyncing {
+@MainActor
+private final class FakeHistorySessionRemote: HistorySessionRemoteSyncing {
     private let ownerUserID: UUID
     private var rows: [RemoteSharedSheetSessionRow]
     private var upserted: [SharedSheetSessionUpsertRow] = []

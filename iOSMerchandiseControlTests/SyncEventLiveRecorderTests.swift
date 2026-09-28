@@ -851,7 +851,8 @@ private struct FakeSessionProvider: SyncEventLiveRecorderSessionProviding {
     }
 }
 
-private actor FakeRPCTransport: SyncEventRPCTransport {
+@MainActor
+private final class FakeRPCTransport: SyncEventRPCTransport {
     nonisolated enum Response: Sendable {
         case json(String)
         case transportError(SyncEventRPCTransportError)
@@ -868,11 +869,11 @@ private actor FakeRPCTransport: SyncEventRPCTransport {
     private var responseIndex = 0
     private var calls: [Call] = []
 
-    init(_ response: Response) {
+    nonisolated init(_ response: Response) {
         self.responses = [response]
     }
 
-    init(_ responses: [Response]) {
+    nonisolated init(_ responses: [Response]) {
         self.responses = responses
     }
 

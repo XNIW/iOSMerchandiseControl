@@ -224,7 +224,7 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         XCTAssertNotNil(adapter.stagedPreviewForLocalApply)
         adapter.clearStagedPreviewForLocalApply()
         XCTAssertNil(adapter.stagedPreviewForLocalApply)
-        let productFetchCount = await fetcher.productFetchCount()
+        let productFetchCount = fetcher.productFetchCount()
         XCTAssertEqual(productFetchCount, 1)
     }
 
@@ -394,7 +394,8 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
     }
 }
 
-private actor RemotePreviewInventoryFetcherFake: SupabaseInventoryFetching {
+@MainActor
+private final class RemotePreviewInventoryFetcherFake: SupabaseInventoryFetching {
     private let products: [RemoteInventoryProductRow]
     private var productCalls = 0
 

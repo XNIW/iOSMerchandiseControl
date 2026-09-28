@@ -295,7 +295,7 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertEqual(firstPlan.productPriceBatch?.plan.summary.localDuplicateSameKey, 2)
         XCTAssertEqual(firstPlan.productPriceBatch?.plan.summary.readyCandidates, 1)
         XCTAssertEqual(firstPlan.fingerprint, secondPlan.fingerprint)
-        let calls = await fetcher.snapshotCalls()
+        let calls = fetcher.snapshotCalls()
         XCTAssertEqual(calls.count, 2)
         XCTAssertEqual(calls.first?.productIDs, [productID])
     }
@@ -335,7 +335,7 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertTrue(plan.blockers.isEmpty)
         XCTAssertEqual(plan.counts.selectedProductPriceChanges, 1)
         XCTAssertEqual(plan.productPriceBatch?.plan.summary.readyCandidates, 1)
-        let calls = await fetcher.snapshotCalls()
+        let calls = fetcher.snapshotCalls()
         XCTAssertEqual(calls.first?.productIDs, [productID])
     }
 
@@ -464,7 +464,8 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
     }
 }
 
-private actor MockAggregatedPriceRemoteFetcher: SupabaseProductPricePushDryRunRemoteFetching {
+@MainActor
+private final class MockAggregatedPriceRemoteFetcher: SupabaseProductPricePushDryRunRemoteFetching {
     struct Call: Sendable, Equatable {
         let ownerUserID: UUID
         let productIDs: [UUID]
