@@ -4,7 +4,10 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-143 — ACTIVE / REVIEW — APPROVED AWAITING INTEGRATION — Mobile Storefront product control (iOS)**
+
+**TASK-144 — ACTIVE / REVIEW — Mobile parity root-cause** (mandato utente 2026-09-28; planning coordinato autorizzato, executor ios e reviewer indipendente). File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. Baseline `30d226d0fb9b8679a1dd034c6e82319645337f22`; checkout isolato `codex/mobile-parity-root-cause-ios`. Gli stati storici sotto restano evidenze delle rispettive date; harness Excel sospeso invariato.
+
+**TASK-143 — INTEGRATED / VALIDATION_LIMITS_RECORDED — Mobile Storefront product control (iOS)**
 *(2026-08-21: autorizzazione USER_APPROVER del release train
 `MOBILE_STOREFRONT_PRODUCT_CONTROL`. La lane iOS estende l'editor prodotto
 Database con la sezione unica "App clienti", usando `Product.remoteID`, lo stesso
@@ -18,7 +21,7 @@ richiesto un unico batch (`P1=1`, `P2=4`, `P3=1`), ora coperto da mapping
 preview della candidata immagine, cache LRU bounded e XCUITest reali; gate fix
 `20` test mirati + `2` XCUITest e Release build PASS. La singola re-review
 read-only è `APPROVED`, con `P0=P1=P2=P3=0` e slice autonoma `5/5 PASS`;
-handoff all'integrazione PR/CI del train. `TASK-142` non viene riaperto o modificato e conserva il
+integrazione ora verificata: PR #10 merged, SHA `30d226d0`, CI merge `32526432062` SUCCESS. Le prove fisiche e la distribuzione restano separate; il precedente handoff pre-merge è storico. `TASK-142` non viene riaperto o modificato e conserva il
 proprio handoff esterno. File:
 `docs/TASKS/TASK-143-mobile-storefront-product-control-ios.md`.)*
 
@@ -171,14 +174,7 @@ tree del merge è identico. CI pull request `31331876775` e CI push sul merge
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
-**ACTIVE — TASK-141 / REVIEW.** Il closeout TASK-140 del 2026-07-27 ha
-superseduto cronologicamente lo snapshot TASK-131 del 2026-05-29 riportato in
-questa sezione. TASK-131 resta un blocker storico, non viene riaperto, chiuso o
-marcato DONE da TASK-141. Il task corrente è soltanto
-`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`; ultimo completato
-TASK-140 `DONE / USER_CONFIRMED_CLOSURE`. Il finding `R2-I141-01` è verificato
-risolto; TASK-141 resta `ACTIVE / REVIEW`, approvato e in attesa di conferma
-utente con handoff `CODEX_REVIEW_APPROVED_AWAITING_USER_CONFIRMATION`.
+**ACTIVE — TASK-144 / EXECUTION.** File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-143 implementato e integrato con PR #10 e CI sul merge 30d226d0; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici restano riconciliati dalle evidenze già registrate, senza riaperture.
 
 **TASK-122 — DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING:** file **`docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-122/`**. Chiuso per override utente dopo TASK-123; local architecture execution e final remote-domain strangler accettati come baseline storica.
 

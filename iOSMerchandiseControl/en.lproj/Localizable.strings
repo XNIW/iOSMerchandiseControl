@@ -1842,3 +1842,5 @@
 "storefront.import.summary" = "%d internal products updated. %d public products now differ from internal data.";
 "storefront.import.summary_unverified" = "%d internal products updated. Public differences could not be verified offline.";
 "storefront.import.verify" = "Review differences";
+
+"storefront.error.local_persistence" = "Could not save on this device. Your input is still here; free some space and try again.";

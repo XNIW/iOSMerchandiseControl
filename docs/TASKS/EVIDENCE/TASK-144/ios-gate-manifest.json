@@ -1,0 +1,100 @@
+{
+  "baseline": "30d226d0fb9b8679a1dd034c6e82319645337f22",
+  "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+  "destination_note": "Actual invocations used dedicated simulator UUID, redacted from tracked reports; unique simulator name is equivalent for reproduction.",
+  "test_runs": [
+    {
+      "kind": "first_full_failed",
+      "counts": {
+        "PASS": 1353,
+        "FAIL": 1,
+        "SKIP": 36
+      },
+      "source_fingerprint": "f7ea4f49b2ac11ac26fa31b45c1c75b0825c3e52fb993c22eecf6723ef18b71b",
+      "command": "xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=TASK144 Parity Isolated iPhone 17' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -resultBundlePath /tmp/mc-task144-ios/full-final.xcresult",
+      "raw_log": "/tmp/mc-task144-ios/full-final.log",
+      "log_sha256": "74d986b34a2f976f0c14ba1ab7ad3c5daf06bd8b379a26b0ffc1df5a02ad4fdc",
+      "result_bundle": "/tmp/mc-task144-ios/full-final.xcresult"
+    },
+    {
+      "kind": "unchanged_crashed_case_replay",
+      "counts": {
+        "PASS": 1,
+        "FAIL": 0,
+        "SKIP": 0
+      },
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+      "command": "xcodebuild test-without-building -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=TASK144 Parity Isolated iPhone 17' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never -only-testing:iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests/testPagedFullPullAppliesLargeProductPriceHistoryWithoutFixedTotalLimit -resultBundlePath /tmp/mc-task144-ios/full-crash-isolated.xcresult",
+      "raw_log": "/tmp/mc-task144-ios/full-crash-isolated.log",
+      "log_sha256": "c514997bf19515f69394c4ac0304255ed5f1adee81b1b780e3bdbd10d2df6a09",
+      "result_bundle": "/tmp/mc-task144-ios/full-crash-isolated.xcresult"
+    },
+    {
+      "kind": "canonical_final_full",
+      "counts": {
+        "PASS": 1355,
+        "FAIL": 0,
+        "SKIP": 36
+      },
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+      "command": "xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=TASK144 Parity Isolated iPhone 17' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never -resultBundlePath /tmp/mc-task144-ios/full-post-guard-sequential.xcresult",
+      "raw_log": "/tmp/mc-task144-ios/full-post-guard-sequential.log",
+      "log_sha256": "4a6112bdd1749738d71acc3cf1d763b3e5163e138ef2450ddcf6db42aaeb439a",
+      "result_bundle": "/tmp/mc-task144-ios/full-post-guard-sequential.xcresult"
+    },
+    {
+      "kind": "final_focused_and_UI",
+      "counts": {
+        "PASS": 50,
+        "FAIL": 0,
+        "SKIP": 0
+      },
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+      "command": "xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=TASK144 Parity Isolated iPhone 17' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never -only-testing:iOSMerchandiseControlTests/StorefrontAuthoringContractTests -only-testing:iOSMerchandiseControlTests/StorefrontImageAdoptionTests -only-testing:iOSMerchandiseControlTests/StorefrontAuthoringStoreTests -only-testing:iOSMerchandiseControlTests/StorefrontFilterGenerationTests -only-testing:iOSMerchandiseControlUITests/StorefrontEditorUITests -resultBundlePath /tmp/mc-task144-ios/post-review-final.xcresult",
+      "raw_log": "/tmp/mc-task144-ios/post-review-final.log",
+      "log_sha256": "eab31c8dd50176c154df8c860ab687c69d2d1eb89a7ccdb7ef1e9e72643ea2a5",
+      "result_bundle": "/tmp/mc-task144-ios/post-review-final.xcresult"
+    },
+    {
+      "kind": "separate_existing_synthetic_benchmarks",
+      "counts": {
+        "PASS": 2,
+        "FAIL": 0,
+        "SKIP": 0
+      },
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+      "command": "xcodebuild test-without-building -xctestrun /tmp/mc-task144-ios/d100l-two-tests.xctestrun -destination 'platform=iOS Simulator,name=TASK144 Parity Isolated iPhone 17' -resultBundlePath /tmp/mc-task144-ios/d100l-two-tests.xcresult -parallel-testing-enabled NO -collect-test-diagnostics never -only-testing:iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100ESyncPreviewLargeSyntheticPagingBenchmarkWhenEnabled -only-testing:iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100FProductPriceCurrentPreviousLargeBenchmarkWhenEnabled",
+      "raw_log": "/tmp/mc-task144-ios/d100l-two-tests.log",
+      "log_sha256": "be3d89ddad5021b78c5ebdebbaa6527d7be6d6d5aa6fc314fb74cb0e244820bc",
+      "result_bundle": "/tmp/mc-task144-ios/d100l-two-tests.xcresult"
+    }
+  ],
+  "other_checks": [
+    {
+      "kind": "build",
+      "result": "PASS",
+      "command": "xcodebuild build -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/mc-task144-ios/ReleaseDerivedData CODE_SIGNING_ALLOWED=NO",
+      "raw_log": "/tmp/mc-task144-ios/release-post-guard.log",
+      "log_sha256": "6bca574a6306fd280749aa74cff7ebdf26b89c091b4f88b4f38050462c71e904",
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d"
+    },
+    {
+      "kind": "analyze",
+      "result": "PASS",
+      "command": "xcodebuild analyze -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/mc-task144-ios/ReleaseDerivedData CODE_SIGNING_ALLOWED=NO",
+      "raw_log": "/tmp/mc-task144-ios/analyze-final.log",
+      "log_sha256": "b8e0a3c9d88fa46e373aac442c891c778ea8cc582f60c05e03ef564ab34c0381",
+      "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d"
+    }
+  ],
+  "benchmark_flag": "TASK100_D100L=1 in EnvironmentVariables of temporary copied xctestrun only; TESTROOT expanded to original products. No scheme/sentinel change.",
+  "runner_note": "First full failed on simulator shutdown by previous runner. Final full ran alone; zero restarts; no retry flags. Final diagnostics flag disables only post-failure sysdiagnose.",
+  "warnings": "18 vendor +8 baseline/unmodified-source Swift analyze warnings; final full one runtime QoS warning in unchanged SyncEventIncrementalDomainApplyServiceTests.",
+  "UI_classification": "8 executed XCUITest =4 CatalogTextImport +4 Storefront; real SwiftUI/system interactions, synthetic local datasets/DEBUG services, not authenticated mobile E2E.",
+  "skip_counts": {
+    "live_or_external": 29,
+    "large_synthetic_opt_in": 4,
+    "suspended_Excel_opt_in": 2,
+    "physical_device": 1
+  }
+}

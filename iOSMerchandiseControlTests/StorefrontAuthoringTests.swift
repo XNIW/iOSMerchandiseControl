@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 import XCTest
@@ -296,14 +297,19 @@ final class StorefrontImageAdoptionTests: XCTestCase {
 final class StorefrontAuthoringStoreTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
+    private var pendingDirectory: URL!
+    private var pendingStorage: StorefrontPendingFileStorage!
 
     override func setUp() {
         super.setUp()
         suiteName = "StorefrontAuthoringStoreTests.\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
+        pendingDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(suiteName)
+        pendingStorage = StorefrontPendingFileStorage(directory: pendingDirectory)
     }
 
     override func tearDown() {
+        try? FileManager.default.removeItem(at: pendingDirectory)
         defaults.removePersistentDomain(forName: suiteName)
         defaults = nil
         suiteName = nil
@@ -312,7 +318,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
 
     func testVisibleSummariesAreBatchedAndNeverExceedOneHundredIDs() async throws {
         let service = StorefrontServiceSpy()
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         let productIDs = (0..<150).map { _ in UUID() }
         store.activate(scope: scope)
@@ -322,7 +328,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         }
         try await Task.sleep(for: .milliseconds(450))
 
-        let batches = await service.summaryProductIDBatches()
+        let batches = service.summaryProductIDBatches()
         XCTAssertEqual(batches.reduce(0) { $0 + $1.count }, 150)
         XCTAssertTrue(batches.allSatisfy { !$0.isEmpty && $0.count <= 100 })
         XCTAssertEqual(Set(productIDs).filter { store.summary(for: $0) != nil }.count, 150)
@@ -332,7 +338,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         let productID = UUID()
         let publication = try makePublication(productID: productID, version: 4, publicName: "Server")
         let service = StorefrontServiceSpy(publication: publication)
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
 
@@ -341,14 +347,14 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
 
         var local = online.draft
         local.publicName = "Offline draft"
-        store.saveLocalDraft(
+        try store.saveLocalDraft(
             local,
             baseDraft: online.baseDraft,
             expectedVersion: 4,
             scope: scope,
             productID: productID
         )
-        await service.setReadError(.offline)
+        service.setReadError(.offline)
 
         let cached = try await store.loadEditor(scope: scope, productID: productID)
         XCTAssertTrue(cached.isLocalDraft)
@@ -369,13 +375,13 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         let productID = UUID()
         let versionFour = try makePublication(productID: productID, version: 4, publicName: "Base")
         let service = StorefrontServiceSpy(publication: versionFour)
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
         let online = try await store.loadEditor(scope: scope, productID: productID)
         var local = online.draft
         local.publicPrice = 2_000
-        store.saveLocalDraft(
+        try store.saveLocalDraft(
             local,
             baseDraft: online.baseDraft,
             expectedVersion: 4,
@@ -383,7 +389,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             productID: productID
         )
         let versionFive = try makePublication(productID: productID, version: 5, publicName: "Changed elsewhere")
-        await service.setPublication(versionFive)
+        service.setPublication(versionFive)
 
         let reconnected = try await store.loadEditor(scope: scope, productID: productID)
         XCTAssertEqual(reconnected.conflict?.version, 5)
@@ -393,7 +399,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
 
     func testAccountOrShopSwitchDropsLateSummaryCallback() async throws {
         let service = StorefrontServiceSpy(summaryDelay: .milliseconds(180))
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let productID = UUID()
         let first = StorefrontScope(accountID: UUID(), shopID: UUID())
         let second = StorefrontScope(accountID: UUID(), shopID: UUID())
@@ -409,7 +415,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         let productID = UUID()
         let publication = try makePublication(productID: productID, version: 1, publicName: "Public")
         let service = StorefrontServiceSpy(publication: publication)
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
         var draft = StorefrontEditorDraft(publication: publication)
@@ -429,7 +435,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             draft: draft,
             expectedVersion: first.version
         )
-        let keys = await service.idempotencyKeys()
+        let keys = service.idempotencyKeys()
         XCTAssertEqual(keys.count, 2)
         XCTAssertEqual(Set(keys).count, 2)
         XCTAssertEqual(second.version, first.version + 1)
@@ -439,13 +445,13 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         let productID = UUID()
         let publication = try makePublication(productID: productID, version: 4, publicName: "Base")
         let service = StorefrontServiceSpy(publication: publication)
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
         let online = try await store.loadEditor(scope: scope, productID: productID)
         var local = online.draft
         local.publicPrice = 2_000
-        await service.setMutationError(.offline)
+        service.setMutationError(.offline)
 
         do {
             _ = try await store.mutate(
@@ -460,12 +466,12 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? StorefrontAuthoringError, .offline)
         }
-        let firstKeys = await service.idempotencyKeys()
+        let firstKeys = service.idempotencyKeys()
         let firstKey = try XCTUnwrap(firstKeys.first)
-        await service.setMutationError(nil)
+        service.setMutationError(nil)
 
         let replayed = try await store.loadEditor(scope: scope, productID: productID)
-        let keys = await service.idempotencyKeys()
+        let keys = service.idempotencyKeys()
         XCTAssertEqual(keys, [firstKey, firstKey])
         XCTAssertFalse(replayed.isLocalDraft)
         XCTAssertEqual(replayed.publication?.version, 5)
@@ -481,7 +487,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             status: "published"
         )
         let service = StorefrontServiceSpy(publication: publication)
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
         let allowed = try await store.validateOperationalDeletion(scope: scope, productIDs: [productID])
@@ -491,12 +497,12 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
     func testOperationalDeleteAllowsOnlyUnpublishedHiddenOrArchived() async throws {
         let productID = UUID()
         let service = StorefrontServiceSpy()
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
 
         for deniedStatus in ["draft", "scheduled", "published"] {
-            await service.setPublication(try makePublication(
+            service.setPublication(try makePublication(
                 productID: productID,
                 version: 1,
                 publicName: "Public",
@@ -509,7 +515,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             XCTAssertFalse(allowed)
         }
         for allowedStatus in ["paused", "ended"] {
-            await service.setPublication(try makePublication(
+            service.setPublication(try makePublication(
                 productID: productID,
                 version: 2,
                 publicName: "Public",
@@ -521,7 +527,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             )
             XCTAssertTrue(allowed)
         }
-        await service.setPublication(nil)
+        service.setPublication(nil)
         let allowedWithoutPublication = try await store.validateOperationalDeletion(
             scope: scope,
             productIDs: [productID]
@@ -529,15 +535,459 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         XCTAssertTrue(allowedWithoutPublication)
     }
 
+    func testSavedDraftIsRecoverableOfflineWithoutEditorCache() async throws {
+        let service = StorefrontServiceSpy()
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let productID = UUID()
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "Durable draft"
+        try store.saveLocalDraft(draft, baseDraft: StorefrontEditorDraft(), expectedVersion: 0, scope: scope, productID: productID)
+        service.setReadError(.offline)
+        let restarted = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        restarted.activate(scope: scope)
+        let recovered = try await restarted.loadEditor(scope: scope, productID: productID)
+        XCTAssertEqual(recovered.draft, draft)
+        XCTAssertTrue(recovered.isLocalDraft)
+        XCTAssertFalse(recovered.isServerVerified)
+    }
+
+    func testAllOperationsReuseImmutableIntentAfterLostAckAndRestart() async throws {
+        for operation in [StorefrontMutationOperation.saveDraft, .publish, .schedule, .hide, .archive] {
+            let productID = UUID()
+            let service = ReceiptStorefrontService(productID: productID)
+            let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+            let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+            store.activate(scope: scope)
+            var draft = StorefrontEditorDraft()
+            draft.publicName = "A"
+            do {
+                _ = try await store.mutate(scope: scope, productID: productID, operation: operation, draft: draft, expectedVersion: 0)
+                XCTFail("ACK deliberately lost")
+            } catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+            let restarted = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+            restarted.activate(scope: scope)
+            let result = try await restarted.mutate(scope: scope, productID: productID, operation: operation, draft: draft, expectedVersion: 0)
+            XCTAssertEqual(result.version, 1)
+            let keys = service.keys
+            XCTAssertEqual(keys.count, 2)
+            XCTAssertEqual(Set(keys).count, 1, operation.rawValue)
+        }
+    }
+
+    func testLostAckThenEditedPayloadReconcilesOldIntentBeforeNewMutation() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do {
+            _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+            XCTFail("ACK deliberately lost")
+        } catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        draft.publicName = "B"
+        let updated = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(updated.publicName, "B")
+        XCTAssertEqual(updated.version, 2)
+        let keys = service.keys
+        XCTAssertEqual(keys.count, 3)
+        XCTAssertEqual(keys[0], keys[1])
+        XCTAssertNotEqual(keys[1], keys[2])
+    }
+
+    func testDiskFailureKeepsInputAndNeverCallsRemoteMutation() async throws {
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let failing = FailingStorefrontPendingStorage(underlying: pendingStorage)
+        failing.failWrites = true
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: failing)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "Unsaved input"
+        XCTAssertThrowsError(try store.saveLocalDraft(draft, baseDraft: draft, expectedVersion: 0, scope: scope, productID: productID)) {
+            XCTAssertEqual($0 as? StorefrontAuthoringError, .localPersistence)
+        }
+        do {
+            _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+            XCTFail("Disk failure must precede the network")
+        } catch { XCTAssertEqual(error as? StorefrontAuthoringError, .localPersistence) }
+        let keys = service.keys
+        XCTAssertTrue(keys.isEmpty)
+        XCTAssertEqual(draft.publicName, "Unsaved input")
+    }
+
+    func testFileStorageReportsActualFilesystemError() throws {
+        try Data("file blocks directory".utf8).write(to: pendingDirectory)
+        let storage = StorefrontPendingFileStorage(directory: pendingDirectory)
+        XCTAssertThrowsError(try storage.write(Data("draft".utf8), key: "synthetic"))
+    }
+
+    func testDurableDraftsSurviveNewStorageAcrossProductsAccountAndShopSwitch() async throws {
+        let service = StorefrontServiceSpy()
+        service.setReadError(.offline)
+        let first = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let scopes = [first, StorefrontScope(accountID: first.accountID, shopID: UUID()),
+                      StorefrontScope(accountID: UUID(), shopID: first.shopID)]
+        let products = [UUID(), UUID()]
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        for (scopeIndex, scope) in scopes.enumerated() {
+            store.activate(scope: scope)
+            for (index, product) in products.enumerated() {
+                var draft = StorefrontEditorDraft()
+                draft.publicName = "Draft \(scopeIndex)-\(index)"
+                try store.saveLocalDraft(draft, baseDraft: StorefrontEditorDraft(), expectedVersion: 7, scope: scope, productID: product)
+            }
+        }
+        store.activate(scope: nil)
+        do { _ = try await store.loadEditor(scope: first, productID: products[0]); XCTFail("Signed out access denied") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .invalidScope) }
+        let newStorage = StorefrontPendingFileStorage(directory: pendingDirectory)
+        let restarted = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: newStorage)
+        for (scopeIndex, scope) in scopes.enumerated() {
+            restarted.activate(scope: scope)
+            for (index, product) in products.enumerated() {
+                let value = try await restarted.loadEditor(scope: scope, productID: product)
+                XCTAssertEqual(value.draft.publicName, "Draft \(scopeIndex)-\(index)")
+                XCTAssertEqual(value.localExpectedVersion, 7)
+            }
+        }
+    }
+
+    func testLegacyDraftMigrationPreservesDataUntilDurableWriteSucceeds() async throws {
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let productID = UUID()
+        let key = "storefront.draft.v1.\(scope.cacheNamespace).\(productID.uuidString.lowercased())"
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "Legacy saved draft"
+        let jsonDraft = try JSONSerialization.jsonObject(with: JSONEncoder().encode(draft))
+        defaults.set(try JSONSerialization.data(withJSONObject: ["draft": jsonDraft, "baseDraft": jsonDraft, "expectedVersion": 3]), forKey: key)
+        let service = StorefrontServiceSpy()
+        service.setReadError(.offline)
+        let failing = FailingStorefrontPendingStorage(underlying: pendingStorage)
+        failing.failWrites = true
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: failing)
+        store.activate(scope: scope)
+        do { _ = try await store.loadEditor(scope: scope, productID: productID); XCTFail("Migration write must fail") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .localPersistence) }
+        XCTAssertNotNil(defaults.data(forKey: key))
+        failing.failWrites = false
+        let recovered = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertEqual(recovered.draft, draft)
+        XCTAssertEqual(recovered.localExpectedVersion, 3)
+        XCTAssertNil(defaults.data(forKey: key))
+        XCTAssertNotNil(try pendingStorage.read(key: key))
+    }
+
+    func testLostAckOnLoadUsesReceiptBeforeVersionComparison() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "Committed A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        let reloaded = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertNil(reloaded.conflict)
+        XCTAssertFalse(reloaded.isLocalDraft)
+        XCTAssertEqual(reloaded.publication?.version, 1)
+        XCTAssertEqual(reloaded.draft.publicName, "Committed A")
+    }
+
+    func testLostAckThenConcurrentChangePreservesEditedDraftAndReportsActualServer() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        service.setPublication(try makePublication(productID: productID, version: 2, publicName: "Other platform"))
+        draft.publicName = "Edited B"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Concurrent update requires explicit conflict") }
+        catch StorefrontAuthoringError.conflict(let server) { XCTAssertEqual(server?.publicName, "Other platform") }
+        let reloaded = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertEqual(reloaded.conflict?.version, 2)
+        XCTAssertEqual(reloaded.draft.publicName, "Edited B")
+        let keys = service.keys
+        XCTAssertEqual(keys.count, 2)
+        XCTAssertEqual(Set(keys).count, 1)
+    }
+
+    func testValidationRejectionThenEditUsesNewIdentity() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        service.setPreCommitError(.server(code: "validation_failed"))
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Invalid request") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .server(code: "validation_failed")) }
+        service.setPreCommitError(nil)
+        service.setLoseNextAck(false)
+        draft.publicName = "B"
+        let updated = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(updated.publicName, "B")
+        let keys = service.keys
+        XCTAssertEqual(keys.count, 2)
+        XCTAssertEqual(Set(keys).count, 2)
+    }
+
+    func testTimeoutBeforeCommitRetainsSameIntentAndDoesNotDuplicate() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        service.setPreCommitError(.offline)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .publish, draft: draft, expectedVersion: 0); XCTFail("Pre-commit timeout") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        service.setPreCommitError(nil)
+        service.setLoseNextAck(false)
+        let updated = try await store.mutate(scope: scope, productID: productID, operation: .publish, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(updated.version, 1)
+        let keys = service.keys
+        XCTAssertEqual(keys.count, 2)
+        XCTAssertEqual(Set(keys).count, 1)
+    }
+
+    func testAuthorizationPrecheckCannotDiscardUnknownCommittedIntent() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        service.setPreCommitError(.permissionDenied)
+        draft.publicName = "B"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Permission denied") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .permissionDenied) }
+        service.setPreCommitError(nil)
+        let updated = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(updated.publicName, "B")
+        XCTAssertEqual(updated.version, 2)
+        let keys = service.keys
+        XCTAssertEqual(keys.count, 4)
+        XCTAssertEqual(Set(keys.prefix(3)).count, 1)
+        XCTAssertNotEqual(keys[2], keys[3])
+    }
+
+    func testReceiptSettlementRebasesOnlySuccessorDeltaBeforeConcurrentConflict() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let original = try makePublication(productID: productID, version: 7, publicName: "Original", publicPrice: 1_000)
+        service.setPublication(original)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        let base = StorefrontEditorDraft(publication: original)
+        var sent = base
+        sent.publicName = "A acknowledged name"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: sent, expectedVersion: 7, baseDraft: base); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        let concurrent = try makePublication(productID: productID, version: 9, publicName: "C remote name", publicPrice: 1_000)
+        service.setPublication(concurrent)
+        var successor = sent
+        successor.publicPrice = 2_000
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: successor, expectedVersion: 7, baseDraft: base); XCTFail("Concurrent successor needs conflict") }
+        catch StorefrontAuthoringError.conflict(let server) { XCTAssertEqual(server?.version, 9) }
+        XCTAssertEqual(store.reconciledBase(scope: scope, productID: productID)?.version, 8)
+        let reloaded = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertEqual(reloaded.baseDraft.publicName, "A acknowledged name")
+        XCTAssertEqual(reloaded.localExpectedVersion, 8)
+        let dirty = storefrontChangedFields(base: reloaded.baseDraft, draft: reloaded.draft)
+        XCTAssertEqual(dirty, [.publicPrice])
+        let reapplied = storefrontOverlay(server: StorefrontEditorDraft(publication: concurrent), local: reloaded.draft, fields: dirty)
+        XCTAssertEqual(reapplied.publicName, "C remote name")
+        XCTAssertEqual(reapplied.publicPrice, 2_000)
+    }
+
+    func testIdenticalRetryAfterReceiptAndConcurrentUpdateAdoptsCurrentServerWithoutFalseConflict() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        service.setPublication(try makePublication(productID: productID, version: 2, publicName: "Current C"))
+        let acknowledged = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(acknowledged.version, 2)
+        XCTAssertEqual(acknowledged.publicName, "Current C")
+        XCTAssertEqual(Set(service.keys).count, 1)
+        let reloaded = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertFalse(reloaded.isLocalDraft)
+        XCTAssertNil(reloaded.conflict)
+    }
+
+    func testReceiptExpiryRequiresCurrentVersionCheckBeforeAnyReplay() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        let key = "storefront.draft.v1.\(scope.cacheNamespace).\(productID.uuidString.lowercased())"
+        var journal = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(pendingStorage.read(key: key))) as? [String: Any])
+        var intent = try XCTUnwrap(journal["intent"] as? [String: Any])
+        intent["createdAt"] = Date().addingTimeInterval(-8 * 24 * 60 * 60).timeIntervalSinceReferenceDate
+        journal["intent"] = intent
+        try pendingStorage.write(JSONSerialization.data(withJSONObject: journal), key: key)
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Expired receipt is not safe to replay blindly") }
+        catch StorefrontAuthoringError.conflict(let server) { XCTAssertEqual(server?.version, 1) }
+        XCTAssertEqual(service.keys.count, 1)
+        let recovered = try await store.loadEditor(scope: scope, productID: productID)
+        XCTAssertEqual(recovered.draft.publicName, "A")
+        XCTAssertNotNil(recovered.conflict)
+    }
+
+    func testAckCleanupDiskFailureRetainsIntentForIdempotentRecovery() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        service.setLoseNextAck(false)
+        let failing = FailingStorefrontPendingStorage(underlying: pendingStorage)
+        service.afterCommit = { failing.failWrites = true }
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: failing)
+        store.activate(scope: scope)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Local cleanup disk failure") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .localPersistence) }
+        failing.failWrites = false
+        service.afterCommit = nil
+        let result = try await store.mutate(scope: scope, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(result.version, 1)
+        XCTAssertEqual(service.keys.count, 2)
+        XCTAssertEqual(Set(service.keys).count, 1)
+    }
+
+    func testScopeSwitchDuringMutationRejectsLateAckAndRetainsIntent() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        service.setLoseNextAck(false)
+        let started = expectation(description: "Mutation entered transport")
+        service.suspendNextMutation = true
+        service.onMutation = { started.fulfill() }
+        let first = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let second = StorefrontScope(accountID: first.accountID, shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: first)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        let work = Task {
+            do { _ = try await store.mutate(scope: first, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Late old-scope ACK") }
+            catch is CancellationError { }
+            catch { XCTFail("Unexpected \(error)") }
+        }
+        await fulfillment(of: [started], timeout: 2)
+        store.activate(scope: second)
+        service.resumeMutation()
+        await work.value
+        XCTAssertNil(store.summary(for: productID))
+        store.activate(scope: first)
+        service.onMutation = nil
+        let recovered = try await store.mutate(scope: first, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0)
+        XCTAssertEqual(recovered.version, 1)
+        XCTAssertEqual(Set(service.keys).count, 1)
+    }
+
+    func testScopeSwitchDuringReceiptReadbackCannotApplyOfflineFallbackToNewScope() async throws {
+        let productID = UUID()
+        let service = ReceiptStorefrontService(productID: productID)
+        let first = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let second = StorefrontScope(accountID: first.accountID, shopID: UUID())
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: first)
+        var draft = StorefrontEditorDraft()
+        draft.publicName = "A"
+        do { _ = try await store.mutate(scope: first, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Lost ACK") }
+        catch { XCTAssertEqual(error as? StorefrontAuthoringError, .offline) }
+        let readStarted = expectation(description: "Receipt readback started")
+        service.suspendNextRead = true
+        service.onRead = { readStarted.fulfill() }
+        let work = Task {
+            do { _ = try await store.mutate(scope: first, productID: productID, operation: .saveDraft, draft: draft, expectedVersion: 0); XCTFail("Old-scope fallback must cancel") }
+            catch is CancellationError { }
+            catch { XCTFail("Unexpected \(error)") }
+        }
+        await fulfillment(of: [readStarted], timeout: 2)
+        store.activate(scope: second)
+        service.readError = .offline
+        service.resumeRead()
+        await work.value
+        XCTAssertNil(store.summary(for: productID))
+        XCTAssertTrue(store.conflictedProductIDs.isEmpty)
+    }
+
+    func testDurableSaveAndReloadMicrobenchmark() async throws {
+        let service = StorefrontServiceSpy()
+        service.setReadError(.offline)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let productID = UUID()
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
+        store.activate(scope: scope)
+        var samples: [Double] = []
+        for index in 0..<30 {
+            var draft = StorefrontEditorDraft()
+            draft.publicName = "Synthetic draft \(index)"
+            let started = ContinuousClock.now
+            try store.saveLocalDraft(draft, baseDraft: StorefrontEditorDraft(), expectedVersion: 7, scope: scope, productID: productID)
+            let reopened = StorefrontAuthoringStore(service: service, defaults: defaults,
+                pendingStorage: StorefrontPendingFileStorage(directory: pendingDirectory))
+            reopened.activate(scope: scope)
+            let recovered = try await reopened.loadEditor(scope: scope, productID: productID)
+            let elapsed = started.duration(to: .now).components
+            samples.append(Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1e15)
+            XCTAssertEqual(recovered.draft, draft)
+        }
+        samples.sort()
+        print("TASK144_PERF durable_save_new_storage_reload n=30 p50_ms=\(samples[14]) p95_ms=\(samples[28]) max_ms=\(samples[29]) synthetic_products=1 network=offline disk=simulator_temporary_file_storage")
+    }
+
+    func testSharedUnicodeCLPFixtureDecodesAndPersistsWithoutSemanticLoss() throws {
+        struct Fixture: Decodable { struct Case: Decodable { let operation: StorefrontMutationOperation; let expectedVersion: Int64; let draft: StorefrontEditorDraft }; let cases: [Case] }
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/MOBILE-PARITY/mobile-storefront-intent-parity-v1.json")
+        let fixture = try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: url))
+        XCTAssertEqual(fixture.cases.count, 2)
+        XCTAssertEqual(fixture.cases[0].draft.publicName, "Té 茶 — caffè")
+        XCTAssertEqual(fixture.cases[0].draft.publicPrice, 12_990)
+        for value in fixture.cases {
+            XCTAssertEqual(value.operation, .saveDraft)
+            let data = try JSONEncoder().encode(value.draft)
+            XCTAssertEqual(try JSONDecoder().decode(StorefrontEditorDraft.self, from: data), value.draft)
+            XCTAssertEqual(value.draft.publicPrice.map { $0 % 1 }, 0)
+        }
+    }
+
     func testEditorCacheIsBoundedWithoutEvictingPendingDrafts() async throws {
         let service = StorefrontServiceSpy()
-        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         store.activate(scope: scope)
         let pendingProductID = UUID()
         var pending = StorefrontEditorDraft()
         pending.publicName = "Pending"
-        store.saveLocalDraft(
+        try store.saveLocalDraft(
             pending,
             baseDraft: StorefrontEditorDraft(),
             expectedVersion: 0,
@@ -547,7 +997,7 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
 
         for index in 0..<(StorefrontAuthoringStore.editorCacheMaximum + 8) {
             let productID = UUID()
-            await service.setPublication(try makePublication(
+            service.setPublication(try makePublication(
                 productID: productID,
                 version: 1,
                 publicName: "Product \(index)"
@@ -560,11 +1010,254 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
             keys.filter { $0.hasPrefix("storefront.editor.v1.") && !$0.hasSuffix(".index") }.count,
             StorefrontAuthoringStore.editorCacheMaximum
         )
-        XCTAssertEqual(keys.filter { $0.hasPrefix("storefront.draft.v1.") }.count, 1)
+        service.setReadError(.offline)
+        let recovered = try await store.loadEditor(scope: scope, productID: pendingProductID)
+        XCTAssertEqual(recovered.draft.publicName, "Pending")
     }
 }
 
-private actor StorefrontServiceSpy: StorefrontAuthoringServicing {
+@MainActor
+final class StorefrontFilterGenerationTests: XCTestCase {
+    func testResetStartsNewFilterWhilePreviousRequestIsSuspended() async throws {
+        let firstStarted = expectation(description: "A started")
+        let secondStarted = expectation(description: "B started before A finishes")
+        let service = ControlledStorefrontFilterService { index in
+            (index == 0 ? firstStarted : secondStarted).fulfill()
+        }
+        let defaults = UserDefaults(suiteName: "FilterGeneration.\(UUID())")!
+        let store = StorefrontAuthoringStore(service: service, defaults: defaults)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        store.activate(scope: scope)
+        store.resetFilter(.published, query: "A", scope: scope)
+        await fulfillment(of: [firstStarted], timeout: 2)
+        store.resetFilter(.draft, query: "B", scope: scope)
+        await fulfillment(of: [secondStarted], timeout: 2)
+        service.finishAll()
+        store.resetFilter(.all, query: nil, scope: scope)
+        XCTAssertFalse(store.isFilterLoading)
+    }
+    func testSameFilterNewQueryDropsLateErrorWithoutStoppingNewLoading() async throws {
+        let started = [expectation(description: "A"), expectation(description: "B")]
+        let service = ControlledStorefrontFilterService { started[$0].fulfill() }
+        let store = StorefrontAuthoringStore(service: service)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        store.activate(scope: scope)
+        store.resetFilter(.draft, query: "A", scope: scope)
+        await fulfillment(of: [started[0]], timeout: 2)
+        let oldTask = store.filterTask
+        store.resetFilter(.draft, query: "B", scope: scope)
+        await fulfillment(of: [started[1]], timeout: 2)
+        let currentTask = store.filterTask
+        service.fail(0, error: StorefrontAuthoringError.offline)
+        await oldTask?.value
+        XCTAssertTrue(store.isFilterLoading)
+        XCTAssertNil(store.errorCode)
+        let productID = UUID()
+        service.finish(1, ids: [productID])
+        await currentTask?.value
+        XCTAssertEqual(store.filteredProductIDs, [productID])
+        XCTAssertFalse(store.isFilterLoading)
+    }
+
+    func testAllImmediatelyClearsLoadingAndIgnoresLateCancellation() async throws {
+        let started = expectation(description: "A")
+        let service = ControlledStorefrontFilterService { _ in started.fulfill() }
+        let store = StorefrontAuthoringStore(service: service)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        store.activate(scope: scope)
+        store.resetFilter(.published, query: nil, scope: scope)
+        await fulfillment(of: [started], timeout: 2)
+        let oldTask = store.filterTask
+        store.resetFilter(.all, query: nil, scope: scope)
+        XCTAssertFalse(store.isFilterLoading)
+        XCTAssertFalse(store.filterHasNextPage)
+        service.fail(0, error: CancellationError())
+        await oldTask?.value
+        XCTAssertFalse(store.isFilterLoading)
+        XCTAssertNil(store.errorCode)
+        XCTAssertTrue(store.filteredProductIDs.isEmpty)
+    }
+
+    func testInvertedResponsesApplyOnlyCurrentFilterRows() async throws {
+        let started = [expectation(description: "A"), expectation(description: "B")]
+        let service = ControlledStorefrontFilterService { started[$0].fulfill() }
+        let store = StorefrontAuthoringStore(service: service)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        store.activate(scope: scope)
+        store.resetFilter(.published, query: nil, scope: scope)
+        await fulfillment(of: [started[0]], timeout: 2)
+        let oldTask = store.filterTask
+        store.resetFilter(.draft, query: nil, scope: scope)
+        await fulfillment(of: [started[1]], timeout: 2)
+        let currentTask = store.filterTask
+        let current = UUID()
+        service.finish(1, ids: [current])
+        await currentTask?.value
+        service.finish(0, ids: [UUID()], totalPages: 99)
+        await oldTask?.value
+        XCTAssertEqual(store.filteredProductIDs, [current])
+        XCTAssertFalse(store.filterHasNextPage)
+        XCTAssertFalse(store.isFilterLoading)
+    }
+
+    func testNextPageDuringResetCannotPolluteNewQueryOrPagination() async throws {
+        let started = (0..<3).map { expectation(description: "Request \($0)") }
+        let service = ControlledStorefrontFilterService { started[$0].fulfill() }
+        let store = StorefrontAuthoringStore(service: service)
+        let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
+        store.activate(scope: scope)
+        store.resetFilter(.draft, query: "A", scope: scope)
+        await fulfillment(of: [started[0]], timeout: 2)
+        let firstTask = store.filterTask
+        service.finish(0, ids: [UUID()], totalPages: 2)
+        await firstTask?.value
+        XCTAssertTrue(store.filterHasNextPage)
+        store.loadNextFilterPage(scope: scope)
+        await fulfillment(of: [started[1]], timeout: 2)
+        let pageTask = store.filterTask
+        store.resetFilter(.draft, query: "B", scope: scope)
+        await fulfillment(of: [started[2]], timeout: 2)
+        let currentTask = store.filterTask
+        service.finish(1, ids: [UUID()], totalPages: 4)
+        await pageTask?.value
+        XCTAssertTrue(store.isFilterLoading)
+        XCTAssertTrue(store.filteredProductIDs.isEmpty)
+        let current = UUID()
+        service.finish(2, ids: [current])
+        await currentTask?.value
+        XCTAssertEqual(service.pages, [1, 2, 1])
+        XCTAssertEqual(store.filteredProductIDs, [current])
+        XCTAssertFalse(store.filterHasNextPage)
+    }
+
+    func testShopSwitchRejectsLateErrorAndRowsFromPreviousScope() async throws {
+        let started = [expectation(description: "Shop A"), expectation(description: "Shop B")]
+        let service = ControlledStorefrontFilterService { started[$0].fulfill() }
+        let store = StorefrontAuthoringStore(service: service)
+        let first = StorefrontScope(accountID: UUID(), shopID: UUID())
+        let second = StorefrontScope(accountID: first.accountID, shopID: UUID())
+        store.activate(scope: first)
+        store.resetFilter(.draft, query: nil, scope: first)
+        await fulfillment(of: [started[0]], timeout: 2)
+        let oldTask = store.filterTask
+        store.activate(scope: second)
+        store.resetFilter(.draft, query: nil, scope: second)
+        await fulfillment(of: [started[1]], timeout: 2)
+        let currentTask = store.filterTask
+        service.fail(0, error: StorefrontAuthoringError.permissionDenied)
+        await oldTask?.value
+        XCTAssertTrue(store.isFilterLoading)
+        XCTAssertNil(store.errorCode)
+        let current = UUID()
+        service.finish(1, ids: [current])
+        await currentTask?.value
+        XCTAssertEqual(store.filteredProductIDs, [current])
+    }
+
+}
+
+@MainActor
+private final class ControlledStorefrontFilterService: StorefrontAuthoringServicing {
+    private var requests: [(StorefrontScope, CheckedContinuation<StorefrontAuthoringSummaryResponse, any Error>?)] = []
+    private(set) var pages: [Int] = []
+    private let onRequest: @Sendable (Int) -> Void
+
+    init(onRequest: @escaping @Sendable (Int) -> Void) { self.onRequest = onRequest }
+
+    func readSummary(scope: StorefrontScope, filter: StorefrontListFilter, query: String?, productIDs: [UUID]?, page: Int) async throws -> StorefrontAuthoringSummaryResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            pages.append(page)
+            requests.append((scope, continuation))
+            onRequest(requests.count - 1)
+        }
+    }
+
+    func finish(_ index: Int, ids: [UUID] = [], totalPages: Int = 1) {
+        let (scope, continuation) = requests[index]
+        requests[index].1 = nil
+        let rows = ids.map { StorefrontPublicationSummary(sourceProductId: $0, status: "draft", publicName: "Synthetic",
+                    publicPrice: 1_000, storefrontCategoryId: nil, publicImageId: nil, version: 1, updatedAt: nil, differsFromOperational: false) }
+        continuation?.resume(returning: StorefrontAuthoringSummaryResponse(ok: true, code: "ok", shopId: scope.shopID, rows: rows,
+            pagination: StorefrontPagination(page: pages[index], total: totalPages * 100, totalPages: totalPages)))
+    }
+
+    func fail(_ index: Int, error: any Error) {
+        let continuation = requests[index].1
+        requests[index].1 = nil
+        continuation?.resume(throwing: error)
+    }
+
+    func finishAll() {
+        for index in requests.indices { finish(index) }
+    }
+
+    func read(scope: StorefrontScope, productIDs: [UUID]) async throws -> StorefrontAuthoringReadResponse { throw StorefrontAuthoringError.unavailable }
+    func mutate(scope: StorefrontScope, productID: UUID, operation: StorefrontMutationOperation, draft: StorefrontEditorDraft, expectedVersion: Int64, idempotencyKey: UUID) async throws -> StorefrontAuthoringMutationResponse { throw StorefrontAuthoringError.unavailable }
+}
+
+@MainActor
+private final class ReceiptStorefrontService: StorefrontAuthoringServicing {
+    let productID: UUID
+    var publication: StorefrontPublication?
+    var suspendNextRead = false
+    var onRead: (() -> Void)?
+    var readError: StorefrontAuthoringError?
+    private var readContinuation: CheckedContinuation<Void, Never>?
+    func resumeRead() { readContinuation?.resume(); readContinuation = nil }
+    var afterCommit: (() -> Void)?
+    var onMutation: (() -> Void)?
+    var suspendNextMutation = false
+    private var mutationContinuation: CheckedContinuation<Void, Never>?
+    func resumeMutation() { mutationContinuation?.resume(); mutationContinuation = nil }
+    var loseNextAck = true
+    var preCommitError: StorefrontAuthoringError?
+    func setPreCommitError(_ value: StorefrontAuthoringError?) { preCommitError = value }
+    func setLoseNextAck(_ value: Bool) { loseNextAck = value }
+    func setPublication(_ value: StorefrontPublication) { publication = value }
+    var keys: [UUID] = []
+    private var receipts: [UUID: (StorefrontMutationOperation, StorefrontEditorDraft, Int64, StorefrontPublication)] = [:]
+    init(productID: UUID) { self.productID = productID }
+    func read(scope: StorefrontScope, productIDs: [UUID]) async throws -> StorefrontAuthoringReadResponse {
+        if suspendNextRead {
+            suspendNextRead = false
+            await withCheckedContinuation { continuation in
+                readContinuation = continuation
+                onRead?()
+            }
+        }
+        if let readError { throw readError }
+        return StorefrontAuthoringReadResponse(ok: true, code: "ok", shopId: scope.shopID, rows: publication.map { [$0] } ?? [], categories: [], pagination: StorefrontPagination(total: publication == nil ? 0 : 1))
+    }
+    func readSummary(scope: StorefrontScope, filter: StorefrontListFilter, query: String?, productIDs: [UUID]?, page: Int) async throws -> StorefrontAuthoringSummaryResponse { throw StorefrontAuthoringError.unavailable }
+    func mutate(scope: StorefrontScope, productID: UUID, operation: StorefrontMutationOperation, draft: StorefrontEditorDraft, expectedVersion: Int64, idempotencyKey: UUID) async throws -> StorefrontAuthoringMutationResponse {
+        keys.append(idempotencyKey)
+        if suspendNextMutation {
+            suspendNextMutation = false
+            await withCheckedContinuation { continuation in
+                mutationContinuation = continuation
+                onMutation?()
+            }
+        } else { onMutation?() }
+        if let preCommitError { throw preCommitError }
+        if let receipt = receipts[idempotencyKey] {
+            guard receipt.0 == operation, receipt.1 == draft, receipt.2 == expectedVersion else { throw StorefrontAuthoringError.server(code: "idempotency_conflict") }
+            return response(receipt.3, scope: scope, idempotent: true)
+        }
+        guard expectedVersion == publication?.version ?? 0 else { throw StorefrontAuthoringError.conflict(publication) }
+        let updated = try makePublication(productID: productID, version: expectedVersion + 1, publicName: draft.publicName)
+        publication = updated
+        afterCommit?()
+        receipts[idempotencyKey] = (operation, draft, expectedVersion, updated)
+        if loseNextAck { loseNextAck = false; throw StorefrontAuthoringError.offline }
+        return response(updated, scope: scope, idempotent: false)
+    }
+    private func response(_ publication: StorefrontPublication, scope: StorefrontScope, idempotent: Bool) -> StorefrontAuthoringMutationResponse {
+        StorefrontAuthoringMutationResponse(ok: true, code: "ok", shopId: scope.shopID, targetId: publication.publicationId, idempotent: idempotent, payload: publication, server: nil)
+    }
+}
+
+@MainActor
+private final class StorefrontServiceSpy: StorefrontAuthoringServicing {
     private var publication: StorefrontPublication?
     private var readError: StorefrontAuthoringError?
     private let summaryDelay: Duration?
@@ -734,4 +1427,20 @@ nonisolated private func requestBodyData(_ request: URLRequest) -> Data? {
         result.append(buffer, count: count)
     }
     return result
+}
+
+@MainActor
+private final class FailingStorefrontPendingStorage: StorefrontPendingPersisting {
+    let underlying: any StorefrontPendingPersisting
+    var failWrites = false
+    init(underlying: any StorefrontPendingPersisting) { self.underlying = underlying }
+    func read(key: String) throws -> Data? { try underlying.read(key: key) }
+    func write(_ data: Data, key: String) throws {
+        if failWrites { throw CocoaError(.fileWriteOutOfSpace) }
+        try underlying.write(data, key: key)
+    }
+    func remove(key: String) throws {
+        if failWrites { throw CocoaError(.fileWriteOutOfSpace) }
+        try underlying.remove(key: key)
+    }
 }

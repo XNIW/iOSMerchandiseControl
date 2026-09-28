@@ -1,0 +1,17 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "3DDC59C3-187B-411F-9435-5ADE0DB1A5D0",
+        "deviceName" : "TASK144 Parity Isolated iPhone 17",
+        "exportedFileName" : "1AE93548-99F2-4CC4-A434-3CDF3D520CBA.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Screenshot of Target Application 'com.niwcyber.iOSMerchandiseControl'_0_AD930B85-EE35-40CD-ACF6-525BE07FB3C0.png",
+        "timestamp" : 1790618525.371
+      }
+    ],
+    "testIdentifier" : "StorefrontEditorUITests/testRapidFilterSwitchStartsNewRequestAndAllClearsLoading()",
+    "testIdentifierURL" : "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlUITests/StorefrontEditorUITests/testRapidFilterSwitchStartsNewRequestAndAllClearsLoading"
+  }
+]

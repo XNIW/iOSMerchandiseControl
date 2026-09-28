@@ -2,7 +2,7 @@
 
 ## Stato
 
-- Stato: `ACTIVE`
+- Stato: `INTEGRATED / VALIDATION_LIMITS_RECORDED`
 - Fase: `REVIEW`
 - Release train: `MOBILE_STOREFRONT_PRODUCT_CONTROL`
 - Autorizzazione: prompt `USER_APPROVER` del 2026-08-21, valido per execution,
@@ -157,3 +157,16 @@
   reviewer.
 
 `CODEX_REVIEW_APPROVED_AWAITING_INTEGRATION`
+
+
+### Riconciliazione F04 — 2026-09-28
+
+Verifica corrente con `git fetch origin main`, `gh pr view 10` e `gh run list`:
+
+- Implementazione: head PR `dbc4938d1cfe96803eeab37d45fefb46971d5856`.
+- Integrazione: [PR #10](https://github.com/XNIW/iOSMerchandiseControl/pull/10) `MERGED` il 2026-08-21T21:00:43Z, merge `30d226d0fb9b8679a1dd034c6e82319645337f22`, attuale `origin/main` verificato il 2026-09-28.
+- CI PR: [32524006454](https://github.com/XNIW/iOSMerchandiseControl/actions/runs/32524006454) `SUCCESS`; CI sul merge: [32526432062](https://github.com/XNIW/iOSMerchandiseControl/actions/runs/32526432062) `SUCCESS` sullo SHA esatto.
+- Validazione: evidenze storiche locali sopra preservate; la CI storica non prova i nuovi scenari F01/F02/F03, ora in TASK-144. Device fisico/staging delle app non dichiarati verificati da questo riallineamento.
+- Distribuzione: nessuna evidence nuova di TestFlight/App Store/production; `NOT_VERIFIED`, nessun deploy eseguito.
+
+Handoff attuale: `INTEGRATED_ON_MAIN_VALIDATION_LIMITS_PRESERVED`; il vecchio `AWAITING_INTEGRATION` descriveva l'istantanea pre-merge. TASK-143 non è più la lane attiva e non viene dichiarato DONE per cancellare prove mancanti. Il solo task attivo è TASK-144.

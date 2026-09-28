@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-09-28T17:23:24Z",
+  "platform": "ios",
+  "originalCheckout": "/Users/minxiang/Desktop/iOSMerchandiseControl",
+  "originalHead": "c55e3a93449c4f432bf28f4d7b1f5ac1e5f9b502",
+  "originalStatus": "M iOSMerchandiseControl.xcodeproj/xcshareddata/xcschemes/iOSMerchandiseControl.xcscheme\n?? docs/TASKS/EVIDENCE/TASK-141/agent-runs/\n?? docs/TASKS/EVIDENCE/TASK-142/",
+  "isolatedCheckout": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios",
+  "branch": "codex/mobile-parity-root-cause-ios",
+  "baseline": "30d226d0fb9b8679a1dd034c6e82319645337f22",
+  "originMain": "30d226d0fb9b8679a1dd034c6e82319645337f22",
+  "openPRsAtStart": [],
+  "baselineCI": [
+    {
+      "conclusion": "success",
+      "databaseId": 32526432062,
+      "headSha": "30d226d0fb9b8679a1dd034c6e82319645337f22",
+      "status": "completed"
+    }
+  ]
+}

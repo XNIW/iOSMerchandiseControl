@@ -423,6 +423,7 @@ nonisolated enum StorefrontAuthoringError: Error, Equatable, Sendable {
     case offline
     case server(code: String)
     case contractInvalid
+    case localPersistence
 }
 
 nonisolated func storefrontMutationFailure(
@@ -729,6 +730,43 @@ actor SupabaseStorefrontAuthoringService: StorefrontAuthoringServicing {
 }
 
 @MainActor
+protocol StorefrontPendingPersisting {
+    func read(key: String) throws -> Data?
+    func write(_ data: Data, key: String) throws
+    func remove(key: String) throws
+}
+
+@MainActor
+final class StorefrontPendingFileStorage: StorefrontPendingPersisting {
+    private let directory: URL
+
+    init(directory: URL? = nil) {
+        self.directory = directory ?? URL.applicationSupportDirectory
+            .appendingPathComponent("StorefrontPending", isDirectory: true)
+    }
+
+    func read(key: String) throws -> Data? {
+        let url = directory.appendingPathComponent(key).appendingPathExtension("json")
+        do { return try Data(contentsOf: url) }
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return nil }
+    }
+
+    func remove(key: String) throws {
+        let url = directory.appendingPathComponent(key).appendingPathExtension("json")
+        do { try FileManager.default.removeItem(at: url) }
+        catch let error as CocoaError where error.code == .fileNoSuchFile { }
+    }
+
+    func write(_ data: Data, key: String) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try data.write(
+            to: directory.appendingPathComponent(key).appendingPathExtension("json"),
+            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+        )
+    }
+}
+
+@MainActor
 final class StorefrontAuthoringStore: ObservableObject {
     struct EditorSnapshot: Codable, Equatable, Sendable {
         let publication: StorefrontPublication?
@@ -738,6 +776,7 @@ final class StorefrontAuthoringStore: ObservableObject {
         let isLocalDraft: Bool
         let isServerVerified: Bool
         let conflict: StorefrontPublication?
+        var localExpectedVersion: Int64? = nil
     }
 
     private struct LocalDraftRecord: Codable, Sendable {
@@ -745,6 +784,24 @@ final class StorefrontAuthoringStore: ObservableObject {
         let baseDraft: StorefrontEditorDraft
         let expectedVersion: Int64
         let idempotencyKey: UUID?
+    }
+
+    private struct MutationIntent: Codable {
+        let operation: StorefrontMutationOperation
+        let draft: StorefrontEditorDraft
+        let expectedVersion: Int64
+        let idempotencyKey: UUID
+        let createdAt: Date
+    }
+
+    private struct IntentAcknowledgement {
+        let receipt: StorefrontPublication
+        let current: StorefrontPublication
+    }
+
+    private struct PendingJournal: Codable {
+        var draft: LocalDraftRecord?
+        var intent: MutationIntent?
     }
 
     static let editorCacheMaximum = 24
@@ -760,18 +817,27 @@ final class StorefrontAuthoringStore: ObservableObject {
     let isAvailable: Bool
     private let service: (any StorefrontAuthoringServicing)?
     private let defaults: UserDefaults
+    private let pendingStorage: any StorefrontPendingPersisting
+    private var mutatingProducts = Set<String>()
+    private var editorReceiptBase: (scope: StorefrontScope, productID: UUID, publication: StorefrontPublication)?
+    private var filterGeneration = 0
     private var activeScope: StorefrontScope?
     private var generation = 0
     private var pendingSummaryIDs = Set<UUID>()
     private var pendingSummaryTask: Task<Void, Never>?
-    private var filterTask: Task<Void, Never>?
+    private(set) var filterTask: Task<Void, Never>?
     private var currentFilter: StorefrontListFilter = .all
     private var currentQuery: String?
     private var currentFilterPage = 0
 
-    init(service: (any StorefrontAuthoringServicing)?, defaults: UserDefaults = .standard) {
+    init(
+        service: (any StorefrontAuthoringServicing)?,
+        defaults: UserDefaults = .standard,
+        pendingStorage: (any StorefrontPendingPersisting)? = nil
+    ) {
         self.service = service
         self.defaults = defaults
+        self.pendingStorage = pendingStorage ?? StorefrontPendingFileStorage()
         self.isAvailable = service != nil
     }
 
@@ -783,9 +849,13 @@ final class StorefrontAuthoringStore: ObservableObject {
     func activate(scope: StorefrontScope?) {
         guard activeScope != scope else { return }
         generation &+= 1
+        filterGeneration &+= 1
         activeScope = scope
+        editorReceiptBase = nil
         pendingSummaryTask?.cancel()
         filterTask?.cancel()
+        pendingSummaryTask = nil
+        filterTask = nil
         pendingSummaryIDs.removeAll()
         summaries.removeAll()
         filteredProductIDs.removeAll()
@@ -813,7 +883,11 @@ final class StorefrontAuthoringStore: ObservableObject {
     }
 
     func resetFilter(_ filter: StorefrontListFilter, query: String?, scope: StorefrontScope) {
+        guard activeScope == scope else { return }
+        filterGeneration &+= 1
         filterTask?.cancel()
+        filterTask = nil
+        isFilterLoading = false
         currentFilter = filter
         currentQuery = query
         currentFilterPage = 0
@@ -837,10 +911,18 @@ final class StorefrontAuthoringStore: ObservableObject {
               currentFilterPage == 0 || filterHasNextPage else { return }
         isFilterLoading = true
         let expectedGeneration = generation
+        let expectedFilterGeneration = filterGeneration
         let page = currentFilterPage + 1
         let filter = currentFilter
         let query = currentQuery
         filterTask = Task { [weak self] in
+            defer {
+                if let self, self.generation == expectedGeneration,
+                   self.filterGeneration == expectedFilterGeneration, self.activeScope == scope {
+                    self.isFilterLoading = false
+                    self.filterTask = nil
+                }
+            }
             do {
                 let response = try await service.readSummary(
                     scope: scope,
@@ -852,8 +934,10 @@ final class StorefrontAuthoringStore: ObservableObject {
                 guard let self,
                       !Task.isCancelled,
                       self.generation == expectedGeneration,
+                      self.filterGeneration == expectedFilterGeneration,
                       self.activeScope == scope,
-                      self.currentFilter == filter else { return }
+                      self.currentFilter == filter,
+                      self.currentQuery == query else { return }
                 guard response.ok else {
                     self.errorCode = response.code
                     self.isFilterLoading = false
@@ -868,11 +952,11 @@ final class StorefrontAuthoringStore: ObservableObject {
                 self.isFilterLoading = false
             } catch is CancellationError {
             } catch let error as StorefrontAuthoringError {
-                guard let self, self.generation == expectedGeneration else { return }
+                guard let self, !Task.isCancelled, self.generation == expectedGeneration, self.filterGeneration == expectedFilterGeneration, self.activeScope == scope else { return }
                 self.errorCode = self.code(for: error)
                 self.isFilterLoading = false
             } catch {
-                guard let self, self.generation == expectedGeneration else { return }
+                guard let self, !Task.isCancelled, self.generation == expectedGeneration, self.filterGeneration == expectedFilterGeneration, self.activeScope == scope else { return }
                 self.errorCode = "unknown"
                 self.isFilterLoading = false
             }
@@ -880,52 +964,60 @@ final class StorefrontAuthoringStore: ObservableObject {
     }
 
     func loadEditor(scope: StorefrontScope, productID: UUID) async throws -> EditorSnapshot {
-        guard let service, activeScope == scope else {
-            if let cached = cachedEditor(scope: scope, productID: productID) { return cached }
+        guard activeScope == scope else { throw StorefrontAuthoringError.invalidScope }
+        guard let service else {
+            if let cached = try cachedEditor(scope: scope, productID: productID) { return cached }
             throw StorefrontAuthoringError.unavailable
         }
         let expectedGeneration = generation
         do {
-            let response = try await service.read(scope: scope, productIDs: [productID])
-            guard generation == expectedGeneration, activeScope == scope else {
-                throw CancellationError()
-            }
+            var response = try await service.read(scope: scope, productIDs: [productID])
+            try validateCurrentScope(scope, generation: expectedGeneration)
             guard response.ok else { throw StorefrontAuthoringError.server(code: response.code) }
-            let publication = response.rows.first(where: { $0.sourceProductId == productID })
-            let serverDraft = publication.map(StorefrontEditorDraft.init(publication:)) ?? StorefrontEditorDraft()
-            let localDraft = cachedLocalDraft(scope: scope, productID: productID)
-            let serverVersion = publication?.version ?? 0
-            if let localDraft,
-               localDraft.expectedVersion == serverVersion,
-               let replayed = try await replayLocalDraft(
-                   localDraft,
-                   scope: scope,
-                   productID: productID,
-                   publication: publication,
-                   categories: response.categories,
-                   expectedGeneration: expectedGeneration
-               ) {
-                cacheEditor(replayed, scope: scope, productID: productID)
-                return replayed
+            var journal = try pendingJournal(scope: scope, productID: productID)
+            // A sent draft can have committed with its ACK lost. Resolve its receipt
+            // before comparing versions; a version increment alone is not a conflict.
+            if let intent = journal.intent, intent.operation == .saveDraft {
+                do {
+                    _ = try await sendIntent(intent, scope: scope, productID: productID, generation: expectedGeneration, reconciling: true)
+                    response = try await service.read(scope: scope, productIDs: [productID])
+                    try validateCurrentScope(scope, generation: expectedGeneration)
+                    guard response.ok else { throw StorefrontAuthoringError.server(code: response.code) }
+                    journal = try pendingJournal(scope: scope, productID: productID)
+                } catch StorefrontAuthoringError.conflict { /* retain the draft for explicit reapply */
+                    journal = try pendingJournal(scope: scope, productID: productID)
+                } catch StorefrontAuthoringError.offline { }
+                catch StorefrontAuthoringError.unavailable { }
             }
+            var publication = response.rows.first(where: { $0.sourceProductId == productID })
+            var local = journal.draft
+            if journal.intent == nil, let record = local,
+               record.expectedVersion == publication?.version ?? 0 {
+                do {
+                    publication = try await mutate(
+                        scope: scope, productID: productID, operation: .saveDraft,
+                        draft: record.draft, expectedVersion: record.expectedVersion, baseDraft: record.baseDraft
+                    )
+                    local = try pendingJournal(scope: scope, productID: productID).draft
+                } catch StorefrontAuthoringError.offline { }
+                catch StorefrontAuthoringError.unavailable { }
+                catch StorefrontAuthoringError.conflict(let server) { publication = server ?? publication }
+            }
+            let serverDraft = publication.map(StorefrontEditorDraft.init(publication:)) ?? StorefrontEditorDraft()
             let snapshot = EditorSnapshot(
-                publication: publication,
-                categories: response.categories,
-                draft: localDraft?.draft ?? serverDraft,
-                baseDraft: localDraft?.baseDraft ?? serverDraft,
-                isLocalDraft: localDraft != nil,
-                isServerVerified: true,
-                conflict: localDraft.flatMap { $0.expectedVersion == serverVersion ? nil : publication }
+                publication: publication, categories: response.categories,
+                draft: local?.draft ?? serverDraft, baseDraft: local?.baseDraft ?? serverDraft,
+                isLocalDraft: local != nil, isServerVerified: true,
+                conflict: local.flatMap { $0.expectedVersion == publication?.version ?? 0 ? nil : publication },
+                localExpectedVersion: local?.expectedVersion
             )
             cacheEditor(snapshot, scope: scope, productID: productID)
             return snapshot
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let error as StorefrontAuthoringError {
+        } catch is CancellationError { throw CancellationError() }
+        catch let error as StorefrontAuthoringError {
+            try validateCurrentScope(scope, generation: expectedGeneration)
             if error == .offline || error == .unavailable,
-               let cached = cachedEditor(scope: scope, productID: productID) {
-                return cached
-            }
+               let cached = try cachedEditor(scope: scope, productID: productID) { return cached }
             throw error
         }
     }
@@ -972,62 +1064,61 @@ final class StorefrontAuthoringStore: ObservableObject {
         expectedVersion: Int64,
         baseDraft: StorefrontEditorDraft? = nil
     ) async throws -> StorefrontPublication {
-        guard let service, activeScope == scope else { throw StorefrontAuthoringError.unavailable }
+        guard service != nil, activeScope == scope else { throw StorefrontAuthoringError.unavailable }
+        let key = localDraftKey(scope: scope, productID: productID)
+        guard mutatingProducts.insert(key).inserted else { throw StorefrontAuthoringError.unavailable }
+        defer { mutatingProducts.remove(key) }
         let expectedGeneration = generation
-        let idempotencyKey: UUID
+        editorReceiptBase = nil
+        let canonical = canonicalDraft(draft, operation: operation)
+        var nextVersion = expectedVersion
+        var journal = try pendingJournal(scope: scope, productID: productID)
+        if let old = journal.intent {
+            if operation == .saveDraft {
+                journal.draft = LocalDraftRecord(draft: draft, baseDraft: baseDraft ?? journal.draft?.baseDraft ?? draft,
+                                                expectedVersion: expectedVersion, idempotencyKey: nil)
+                try writeJournal(journal, scope: scope, productID: productID)
+            }
+            let same = old.operation == operation && old.draft == canonical && old.expectedVersion == expectedVersion
+            do {
+                let acknowledged = try await sendIntent(old, scope: scope, productID: productID, generation: expectedGeneration, reconciling: true)
+                if same { return acknowledged.current }
+                if expectedVersion == old.expectedVersion {
+                    nextVersion = acknowledged.receipt.version
+                    editorReceiptBase = (scope, productID, acknowledged.receipt)
+                }
+                if acknowledged.current.version != acknowledged.receipt.version,
+                   expectedVersion != acknowledged.current.version {
+                    conflictedProductIDs.insert(productID)
+                    throw StorefrontAuthoringError.conflict(acknowledged.current)
+                }
+            } catch let error as StorefrontAuthoringError {
+                // A definitive rejection resolves uncertainty. An explicit edited
+                // request may proceed; an unknown outcome must never be overwritten.
+                guard !same, isDefinitiveRejection(error),
+                      try pendingJournal(scope: scope, productID: productID).intent == nil else { throw error }
+                if case .conflict = error, expectedVersion == old.expectedVersion { throw error }
+            }
+            journal = try pendingJournal(scope: scope, productID: productID)
+        }
+        let intent = MutationIntent(operation: operation, draft: canonical, expectedVersion: nextVersion,
+                                    idempotencyKey: UUID(), createdAt: Date())
+        journal.intent = intent
         if operation == .saveDraft {
-            let existing = cachedLocalDraft(scope: scope, productID: productID)
-            idempotencyKey = existing.flatMap {
-                $0.expectedVersion == expectedVersion && $0.draft == draft
-                    ? $0.idempotencyKey
-                    : nil
-            } ?? UUID()
-            persistLocalDraft(
-                LocalDraftRecord(
-                    draft: draft,
-                    baseDraft: baseDraft ?? existing?.baseDraft ?? draft,
-                    expectedVersion: expectedVersion,
-                    idempotencyKey: idempotencyKey
-                ),
-                scope: scope,
-                productID: productID
-            )
-        } else {
-            idempotencyKey = UUID()
-        }
-        do {
-            let response = try await service.mutate(
-                scope: scope,
-                productID: productID,
-                operation: operation,
-                draft: draft,
-                expectedVersion: expectedVersion,
-                idempotencyKey: idempotencyKey
-            )
-            guard generation == expectedGeneration, activeScope == scope else {
-                throw CancellationError()
+            let acknowledgedBase = reconciledBase(scope: scope, productID: productID).flatMap {
+                expectedVersion < $0.version ? StorefrontEditorDraft(publication: $0) : nil
             }
-            guard let publication = response.payload, response.ok else {
-                throw StorefrontAuthoringError.contractInvalid
-            }
-            conflictedProductIDs.remove(productID)
-            clearLocalDraft(scope: scope, productID: productID)
-            summaries[productID] = StorefrontPublicationSummary(
-                sourceProductId: productID,
-                status: publication.status,
-                publicName: publication.publicName,
-                publicPrice: publication.publicPrice,
-                storefrontCategoryId: publication.storefrontCategoryId,
-                publicImageId: publication.publicImageId,
-                version: publication.version,
-                updatedAt: publication.updatedAt,
-                differsFromOperational: false
-            )
-            return publication
-        } catch StorefrontAuthoringError.conflict(let server) {
-            conflictedProductIDs.insert(productID)
-            throw StorefrontAuthoringError.conflict(server)
+            journal.draft = LocalDraftRecord(draft: draft, baseDraft: acknowledgedBase ?? baseDraft ?? journal.draft?.baseDraft ?? draft,
+                                            expectedVersion: nextVersion, idempotencyKey: intent.idempotencyKey)
         }
+        try writeJournal(journal, scope: scope, productID: productID)
+        return try await sendIntent(intent, scope: scope, productID: productID, generation: expectedGeneration).current
+    }
+
+    func reconciledBase(scope: StorefrontScope, productID: UUID) -> StorefrontPublication? {
+        guard activeScope == scope, let base = editorReceiptBase,
+              base.scope == scope, base.productID == productID else { return nil }
+        return base.publication
     }
 
     func saveLocalDraft(
@@ -1036,28 +1127,113 @@ final class StorefrontAuthoringStore: ObservableObject {
         expectedVersion: Int64,
         scope: StorefrontScope,
         productID: UUID
-    ) {
-        guard activeScope == scope else { return }
-        let existing = cachedLocalDraft(scope: scope, productID: productID)
-        let idempotencyKey = existing.flatMap {
-            $0.expectedVersion == expectedVersion && $0.draft == draft
-                ? $0.idempotencyKey
-                : nil
-        } ?? UUID()
-        persistLocalDraft(
-            LocalDraftRecord(
-                draft: draft,
-                baseDraft: baseDraft,
-                expectedVersion: expectedVersion,
-                idempotencyKey: idempotencyKey
-            ),
-            scope: scope,
-            productID: productID
-        )
+    ) throws {
+        guard activeScope == scope else { throw StorefrontAuthoringError.invalidScope }
+        var journal = try pendingJournal(scope: scope, productID: productID)
+        journal.draft = LocalDraftRecord(draft: draft, baseDraft: baseDraft, expectedVersion: expectedVersion,
+                                        idempotencyKey: nil)
+        try writeJournal(journal, scope: scope, productID: productID)
     }
 
-    func clearLocalDraft(scope: StorefrontScope, productID: UUID) {
-        defaults.removeObject(forKey: localDraftKey(scope: scope, productID: productID))
+    func clearLocalDraft(scope: StorefrontScope, productID: UUID) throws {
+        guard activeScope == scope else { throw StorefrontAuthoringError.invalidScope }
+        var journal = try pendingJournal(scope: scope, productID: productID)
+        // Conflict reload is an intentional discard, but an uncertain sent
+        // mutation must first be reconciled and cannot be silently forgotten.
+        guard journal.intent == nil else { throw StorefrontAuthoringError.unavailable }
+        journal.draft = nil
+        try writeJournal(journal, scope: scope, productID: productID)
+    }
+
+    private func validateCurrentScope(_ scope: StorefrontScope, generation expected: Int) throws {
+        guard !Task.isCancelled, activeScope == scope, generation == expected else { throw CancellationError() }
+    }
+
+    private func canonicalDraft(_ draft: StorefrontEditorDraft, operation: StorefrontMutationOperation) -> StorefrontEditorDraft {
+        if operation == .hide || operation == .archive { return StorefrontEditorDraft() }
+        var result = draft
+        result.publicName = result.publicName.trimmingCharacters(in: .whitespacesAndNewlines)
+        result.publicDescription = result.publicDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        result.publicBrand = result.publicBrand.trimmingCharacters(in: .whitespacesAndNewlines)
+        return result
+    }
+
+    private func isDefinitiveRejection(_ error: StorefrontAuthoringError) -> Bool {
+        switch error {
+        case .conflict, .invalidInput, .permissionDenied: true
+        case .server(let code): ["validation_failed", "invalid_state", "not_found", "stale_revision", "permission_denied"].contains(code)
+        default: false
+        }
+    }
+
+    private func sendIntent(_ intent: MutationIntent, scope: StorefrontScope, productID: UUID,
+                            generation expectedGeneration: Int, reconciling: Bool = false) async throws -> IntentAcknowledgement {
+        guard let service else { throw StorefrontAuthoringError.unavailable }
+        do {
+            if Date().timeIntervalSince(intent.createdAt) >= 7 * 24 * 60 * 60 {
+                let read = try await service.read(scope: scope, productIDs: [productID])
+                try validateCurrentScope(scope, generation: expectedGeneration)
+                guard read.ok else { throw StorefrontAuthoringError.contractInvalid }
+                let server = read.rows.first { $0.sourceProductId == productID }
+                guard server?.version ?? 0 == intent.expectedVersion else { throw StorefrontAuthoringError.conflict(server) }
+            }
+            let response = try await service.mutate(scope: scope, productID: productID, operation: intent.operation,
+                                                    draft: intent.draft, expectedVersion: intent.expectedVersion,
+                                                    idempotencyKey: intent.idempotencyKey)
+            try validateCurrentScope(scope, generation: expectedGeneration)
+            guard response.ok, let publication = response.payload else { throw StorefrontAuthoringError.contractInvalid }
+            var journal = try pendingJournal(scope: scope, productID: productID)
+            guard journal.intent?.idempotencyKey == intent.idempotencyKey else { throw CancellationError() }
+            journal.intent = nil
+            if let local = journal.draft {
+                if local.expectedVersion == intent.expectedVersion,
+                   canonicalDraft(local.draft, operation: intent.operation) == intent.draft,
+                   intent.operation != .hide && intent.operation != .archive {
+                    journal.draft = nil
+                } else if local.expectedVersion == intent.expectedVersion {
+                    journal.draft = LocalDraftRecord(draft: local.draft, baseDraft: StorefrontEditorDraft(publication: publication),
+                                                    expectedVersion: publication.version, idempotencyKey: nil)
+                }
+            }
+            try writeJournal(journal, scope: scope, productID: productID)
+            if reconciling { editorReceiptBase = (scope, productID, publication) }
+            // Settle the receipt durably before reading a potentially newer row:
+            // the acknowledged A becomes the base of any saved successor B.
+            var current = publication
+            if response.idempotent {
+                do {
+                    let read = try await service.read(scope: scope, productIDs: [productID])
+                    try validateCurrentScope(scope, generation: expectedGeneration)
+                    guard read.ok else { throw StorefrontAuthoringError.contractInvalid }
+                    guard let latest = read.rows.first(where: { $0.sourceProductId == productID }) else {
+                        throw StorefrontAuthoringError.conflict(nil)
+                    }
+                    current = latest
+                } catch StorefrontAuthoringError.offline {
+                    // The receipt itself is an ACK. A successor still uses its
+                    // exact version and is protected by the server version check.
+                } catch StorefrontAuthoringError.unavailable { }
+            }
+            try validateCurrentScope(scope, generation: expectedGeneration)
+            conflictedProductIDs.remove(productID)
+            updateSummary(current, productID: productID)
+            return IntentAcknowledgement(receipt: publication, current: current)
+        } catch let error as StorefrontAuthoringError {
+            try validateCurrentScope(scope, generation: expectedGeneration)
+            let observedConflict: Bool
+            if case .conflict = error { observedConflict = true } else { observedConflict = false }
+            // Authorization/resource/payload prechecks happen before receipt lookup.
+            // Their rejection cannot resolve an earlier request with an unknown ACK.
+            if observedConflict || (!reconciling && isDefinitiveRejection(error)) {
+                var journal = try pendingJournal(scope: scope, productID: productID)
+                if journal.intent?.idempotencyKey == intent.idempotencyKey {
+                    journal.intent = nil
+                    try writeJournal(journal, scope: scope, productID: productID)
+                }
+            }
+            if case .conflict = error { conflictedProductIDs.insert(productID) }
+            throw error
+        }
     }
 
     private func flushVisibleSummaries(scope: StorefrontScope, generation expectedGeneration: Int) async {
@@ -1100,119 +1276,50 @@ final class StorefrontAuthoringStore: ObservableObject {
         touchEditorCacheKey(key)
     }
 
-    private func cachedEditor(scope: StorefrontScope, productID: UUID) -> EditorSnapshot? {
+    private func cachedEditor(scope: StorefrontScope, productID: UUID) throws -> EditorSnapshot? {
         let key = editorCacheKey(scope: scope, productID: productID)
-        guard let data = defaults.data(forKey: key),
-              let cached = try? JSONDecoder().decode(EditorSnapshot.self, from: data) else {
-            removeEditorCacheKey(key)
-            return nil
-        }
-        touchEditorCacheKey(key)
-        var snapshot = EditorSnapshot(
-            publication: cached.publication,
-            categories: cached.categories,
-            draft: cached.draft,
-            baseDraft: cached.baseDraft,
-            isLocalDraft: cached.isLocalDraft,
-            isServerVerified: false,
-            conflict: cached.conflict
-        )
-        if let local = cachedLocalDraft(scope: scope, productID: productID) {
-            snapshot = EditorSnapshot(
-                publication: snapshot.publication,
-                categories: snapshot.categories,
-                draft: local.draft,
-                baseDraft: local.baseDraft,
-                isLocalDraft: true,
-                isServerVerified: false,
-                conflict: snapshot.publication.flatMap {
-                    $0.version == local.expectedVersion ? nil : $0
-                }
-            )
-        }
-        return snapshot
+        let local = try pendingJournal(scope: scope, productID: productID).draft
+        let cached = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(EditorSnapshot.self, from: $0) }
+        guard cached != nil || local != nil else { removeEditorCacheKey(key); return nil }
+        if cached != nil { touchEditorCacheKey(key) }
+        let serverDraft = cached?.draft ?? StorefrontEditorDraft()
+        return EditorSnapshot(publication: cached?.publication, categories: cached?.categories ?? [],
+                              draft: local?.draft ?? serverDraft, baseDraft: local?.baseDraft ?? cached?.baseDraft ?? serverDraft,
+                              isLocalDraft: local != nil, isServerVerified: false,
+                              conflict: cached?.conflict, localExpectedVersion: local?.expectedVersion)
     }
 
-    private func cachedLocalDraft(scope: StorefrontScope, productID: UUID) -> LocalDraftRecord? {
-        guard let data = defaults.data(forKey: localDraftKey(scope: scope, productID: productID)) else { return nil }
-        return try? JSONDecoder().decode(LocalDraftRecord.self, from: data)
-    }
-
-    private func persistLocalDraft(
-        _ record: LocalDraftRecord,
-        scope: StorefrontScope,
-        productID: UUID
-    ) {
-        guard let data = try? JSONEncoder().encode(record) else { return }
-        defaults.set(data, forKey: localDraftKey(scope: scope, productID: productID))
-    }
-
-    private func replayLocalDraft(
-        _ record: LocalDraftRecord,
-        scope: StorefrontScope,
-        productID: UUID,
-        publication: StorefrontPublication?,
-        categories: [StorefrontCategory],
-        expectedGeneration: Int
-    ) async throws -> EditorSnapshot? {
-        guard let service else { return nil }
-        let idempotencyKey = record.idempotencyKey ?? UUID()
-        if record.idempotencyKey == nil {
-            persistLocalDraft(
-                LocalDraftRecord(
-                    draft: record.draft,
-                    baseDraft: record.baseDraft,
-                    expectedVersion: record.expectedVersion,
-                    idempotencyKey: idempotencyKey
-                ),
-                scope: scope,
-                productID: productID
-            )
-        }
+    private func pendingJournal(scope: StorefrontScope, productID: UUID) throws -> PendingJournal {
+        let key = localDraftKey(scope: scope, productID: productID)
         do {
-            let response = try await service.mutate(
-                scope: scope,
-                productID: productID,
-                operation: .saveDraft,
-                draft: record.draft,
-                expectedVersion: record.expectedVersion,
-                idempotencyKey: idempotencyKey
-            )
-            guard generation == expectedGeneration, activeScope == scope else {
-                throw CancellationError()
+            if let data = try pendingStorage.read(key: key) {
+                return try JSONDecoder().decode(PendingJournal.self, from: data)
             }
-            guard response.ok, let updated = response.payload else {
-                throw StorefrontAuthoringError.contractInvalid
+            // Upgrade atomically before removing the legacy UserDefaults record.
+            if let legacy = defaults.data(forKey: key) {
+                let draft = try JSONDecoder().decode(LocalDraftRecord.self, from: legacy)
+                let intent = draft.idempotencyKey.map {
+                    MutationIntent(operation: .saveDraft, draft: canonicalDraft(draft.draft, operation: .saveDraft),
+                                   expectedVersion: draft.expectedVersion, idempotencyKey: $0, createdAt: .distantPast)
+                }
+                let journal = PendingJournal(draft: draft, intent: intent)
+                try writeJournal(journal, scope: scope, productID: productID)
+                return journal
             }
-            clearLocalDraft(scope: scope, productID: productID)
-            conflictedProductIDs.remove(productID)
-            updateSummary(updated, productID: productID)
-            let acknowledged = StorefrontEditorDraft(publication: updated)
-            return EditorSnapshot(
-                publication: updated,
-                categories: categories,
-                draft: acknowledged,
-                baseDraft: acknowledged,
-                isLocalDraft: false,
-                isServerVerified: true,
-                conflict: nil
-            )
-        } catch StorefrontAuthoringError.offline {
-            return nil
-        } catch StorefrontAuthoringError.unavailable {
-            return nil
-        } catch StorefrontAuthoringError.conflict(let server) {
-            conflictedProductIDs.insert(productID)
-            return EditorSnapshot(
-                publication: server ?? publication,
-                categories: categories,
-                draft: record.draft,
-                baseDraft: record.baseDraft,
-                isLocalDraft: true,
-                isServerVerified: true,
-                conflict: server ?? publication
-            )
-        }
+            return PendingJournal()
+        } catch { throw StorefrontAuthoringError.localPersistence }
+    }
+
+    private func writeJournal(_ journal: PendingJournal, scope: StorefrontScope, productID: UUID) throws {
+        let key = localDraftKey(scope: scope, productID: productID)
+        do {
+            if journal.draft == nil && journal.intent == nil {
+                try pendingStorage.remove(key: key)
+            } else {
+                try pendingStorage.write(JSONEncoder().encode(journal), key: key)
+            }
+            defaults.removeObject(forKey: key)
+        } catch { throw StorefrontAuthoringError.localPersistence }
     }
 
     private func updateSummary(_ publication: StorefrontPublication, productID: UUID) {
@@ -1265,6 +1372,7 @@ final class StorefrontAuthoringStore: ObservableObject {
         case .offline: "offline"
         case .server(let code): code
         case .contractInvalid: "contract_invalid"
+        case .localPersistence: "local_persistence"
         }
     }
 }

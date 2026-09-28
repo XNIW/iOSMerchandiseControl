@@ -1,0 +1,31 @@
+{
+  "runs": [
+    {
+      "command": "./tools/agent/mc-agent.sh scan sensitive iOSMerchandiseControl iOSMerchandiseControlTests contracts .github/workflows/ios-product-images-ci.yml",
+      "result": "PASS",
+      "exit_code": 0,
+      "raw_log": "/tmp/mc-task144-ios/sensitive-canonical-isolated.log",
+      "log_sha256": "023cbfaa7e6e8f272645daabc860153ce2e1efa3cb47d6306e7b05ba843786f0",
+      "scope": [
+        "iOSMerchandiseControl",
+        "iOSMerchandiseControlTests",
+        "contracts",
+        ".github/workflows/ios-product-images-ci.yml"
+      ]
+    },
+    {
+      "command": "./tools/agent/mc-agent.sh scan sensitive iOSMerchandiseControlUITests docs/TASKS/EVIDENCE/TASK-144 docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md",
+      "result": "PASS",
+      "exit_code": 0,
+      "raw_log": "/tmp/mc-task144-ios/sensitive-evidence-freeze.log",
+      "log_sha256": "bbc65cc8225979bc4431c4d4c41d734b2a7784d4e81246dc950790caef06b276",
+      "scope": [
+        "iOSMerchandiseControlUITests",
+        "docs/TASKS/EVIDENCE/TASK-144",
+        "docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md"
+      ]
+    }
+  ],
+  "runner_config": "Explicit temporary scan-isolated.env sets MC_IOS_REPO to this worktree and MC_EVIDENCE_DIR to /tmp; no primary config modification.",
+  "note": "Canonical scanner filters supported text extensions in directory arguments; screenshot is synthetic, manually inspected. No protected values copied to tracked evidence."
+}

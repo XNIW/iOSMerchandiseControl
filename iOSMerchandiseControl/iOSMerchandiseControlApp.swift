@@ -371,7 +371,10 @@ private struct Task143StorefrontUITestHarness: View {
         )
         _storefrontStore = StateObject(
             wrappedValue: StorefrontAuthoringStore(
-                service: Task143StorefrontUITestService(productID: productID)
+                service: Task143StorefrontUITestService(productID: productID),
+                defaults: UserDefaults(suiteName: "Task143UI.\(UUID())")!,
+                pendingStorage: StorefrontPendingFileStorage(directory:
+                    FileManager.default.temporaryDirectory.appendingPathComponent("Task143UI.\(UUID())"))
             )
         )
     }
@@ -381,6 +384,8 @@ private struct Task143StorefrontUITestHarness: View {
             VStack(spacing: 0) {
                 StorefrontFilterBar(selection: $filter)
                     .padding(.vertical, 8)
+                Text(storefrontStore.isFilterLoading ? "loading" : "\(filter.rawValue):\(storefrontStore.filteredProductIDs.count)")
+                    .accessibilityIdentifier("storefront.filter.result")
                 Form {
                     StorefrontEditorSection(
                         product: product,
@@ -392,6 +397,10 @@ private struct Task143StorefrontUITestHarness: View {
             }
             .navigationTitle("Storefront UI Test")
         }
+        .task { storefrontStore.activate(scope: scope) }
+        .onChange(of: filter) { _, value in
+            storefrontStore.resetFilter(value, query: nil, scope: scope)
+        }
         .environmentObject(shopContext)
         .environmentObject(storefrontStore)
         .environment(\.task143StorefrontScopeOverride, scope)
@@ -399,8 +408,11 @@ private struct Task143StorefrontUITestHarness: View {
     }
 }
 
-private actor Task143StorefrontUITestService: StorefrontAuthoringServicing {
+@MainActor
+private final class Task143StorefrontUITestService: StorefrontAuthoringServicing {
     let productID: UUID
+    private var suspendedMutation: CheckedContinuation<StorefrontAuthoringMutationResponse, any Error>?
+    private var suspendedPublished: CheckedContinuation<StorefrontAuthoringSummaryResponse, any Error>?
 
     init(productID: UUID) {
         self.productID = productID
@@ -436,12 +448,21 @@ private actor Task143StorefrontUITestService: StorefrontAuthoringServicing {
         productIDs: [UUID]?,
         page: Int
     ) async throws -> StorefrontAuthoringSummaryResponse {
-        StorefrontAuthoringSummaryResponse(
-            ok: true,
-            code: "ok",
-            shopId: scope.shopID,
-            rows: [],
-            pagination: StorefrontPagination(page: page, total: 0)
+        suspendedMutation?.resume(throwing: StorefrontAuthoringError.conflict(try fixture(version: 8, name: "Changed by Admin")))
+        suspendedMutation = nil
+        if filter == .published {
+            return try await withCheckedThrowingContinuation { suspendedPublished = $0 }
+        }
+        suspendedPublished?.resume(throwing: StorefrontAuthoringError.offline)
+        suspendedPublished = nil
+        let row = StorefrontPublicationSummary(
+            sourceProductId: productID, status: "draft", publicName: "Synthetic draft",
+            publicPrice: 1_000, storefrontCategoryId: nil, publicImageId: nil,
+            version: 7, updatedAt: nil, differsFromOperational: false
+        )
+        return StorefrontAuthoringSummaryResponse(
+            ok: true, code: "ok", shopId: scope.shopID, rows: [row],
+            pagination: StorefrontPagination(page: page, total: 1)
         )
     }
 
@@ -453,6 +474,9 @@ private actor Task143StorefrontUITestService: StorefrontAuthoringServicing {
         expectedVersion: Int64,
         idempotencyKey: UUID
     ) async throws -> StorefrontAuthoringMutationResponse {
+        if ProcessInfo.processInfo.environment["TASK144_MUTATION_UI_TEST"] == "1" {
+            return try await withCheckedThrowingContinuation { suspendedMutation = $0 }
+        }
         throw StorefrontAuthoringError.conflict(
             try fixture(version: 8, name: "Aggiornato da Admin")
         )

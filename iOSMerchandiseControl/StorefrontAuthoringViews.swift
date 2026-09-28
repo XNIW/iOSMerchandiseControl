@@ -133,6 +133,7 @@ struct StorefrontEditorSection: View {
     let operationalCategoryRemoteID: UUID?
 
     @State private var expanded = false
+    @State private var draftExpectedVersion: Int64 = 0
     @State private var publication: StorefrontPublication?
     @State private var categories: [StorefrontCategory] = []
     @State private var draft = StorefrontEditorDraft()
@@ -151,6 +152,7 @@ struct StorefrontEditorSection: View {
         Section {
             DisclosureGroup(isExpanded: $expanded) {
                 expandedEditor
+                    .disabled(loading || mutating || adoptingImage)
             } label: {
                 collapsedSummary
                     .accessibilityIdentifier("storefront.editor.disclosure")
@@ -182,6 +184,9 @@ struct StorefrontEditorSection: View {
             operationTask?.cancel()
             conflict = nil
             publication = nil
+            draftExpectedVersion = 0
+            mutating = false
+            adoptingImage = false
             categories = []
             draft = StorefrontEditorDraft()
             baseDraft = StorefrontEditorDraft()
@@ -532,6 +537,7 @@ struct StorefrontEditorSection: View {
             let snapshot = try await store.loadEditor(scope: scope, productID: productID)
             guard isActive, self.scope == scope, !Task.isCancelled else { return }
             publication = snapshot.publication
+            draftExpectedVersion = snapshot.localExpectedVersion ?? snapshot.publication?.version ?? 0
             categories = snapshot.categories
             draft = snapshot.draft
             baseDraft = snapshot.baseDraft
@@ -548,7 +554,7 @@ struct StorefrontEditorSection: View {
             guard isActive else { return }
             message = L("storefront.error.contract")
         }
-        if isActive { loading = false }
+        if isActive, self.scope == scope, !Task.isCancelled { loading = false }
     }
 
     private func mutate(_ operation: StorefrontMutationOperation) {
@@ -559,7 +565,7 @@ struct StorefrontEditorSection: View {
         mutating = true
         message = nil
         let candidate = draft
-        let expectedVersion = publication?.version ?? 0
+        let expectedVersion = draftExpectedVersion
         operationTask = Task {
             do {
                 let updated = try await store.mutate(
@@ -572,6 +578,7 @@ struct StorefrontEditorSection: View {
                 )
                 guard isActive, self.scope == scope, !Task.isCancelled else { return }
                 publication = updated
+                draftExpectedVersion = updated.version
                 draft = StorefrontEditorDraft(publication: updated)
                 baseDraft = draft
                 conflict = nil
@@ -580,28 +587,32 @@ struct StorefrontEditorSection: View {
             } catch is CancellationError {
             } catch StorefrontAuthoringError.offline where operation == .saveDraft {
                 guard isActive, self.scope == scope else { return }
-                store.saveLocalDraft(
-                    candidate,
-                    baseDraft: baseDraft,
-                    expectedVersion: expectedVersion,
-                    scope: scope,
-                    productID: productID
-                )
+                adoptReconciledBaseIfNeeded(scope: scope, productID: productID)
                 draft = candidate
                 localDraft = true
                 message = L("storefront.local_draft.pending")
             } catch StorefrontAuthoringError.conflict(let server) {
                 guard isActive, self.scope == scope else { return }
+                adoptReconciledBaseIfNeeded(scope: scope, productID: productID)
                 conflict = server
                 message = L("storefront.conflict")
             } catch let error as StorefrontAuthoringError {
                 guard isActive, self.scope == scope else { return }
+                adoptReconciledBaseIfNeeded(scope: scope, productID: productID)
                 message = message(for: error)
             } catch {
                 guard isActive, self.scope == scope else { return }
                 message = L("storefront.error.contract")
             }
-            if isActive { mutating = false }
+            if isActive, self.scope == scope, !Task.isCancelled { mutating = false }
+        }
+    }
+
+    private func adoptReconciledBaseIfNeeded(scope: StorefrontScope, productID: UUID) {
+        if let acknowledged = store.reconciledBase(scope: scope, productID: productID),
+           acknowledged.version > draftExpectedVersion {
+            baseDraft = StorefrontEditorDraft(publication: acknowledged)
+            draftExpectedVersion = acknowledged.version
         }
     }
 
@@ -659,19 +670,21 @@ struct StorefrontEditorSection: View {
                 guard isActive else { return }
                 message = L("storefront.image.error")
             }
-            if isActive { adoptingImage = false }
+            if isActive, self.imageScope == imageScope, !Task.isCancelled { adoptingImage = false }
         }
     }
 
     private func reloadFromConflict(_ server: StorefrontPublication) {
+        if let scope, let productID = product?.remoteID {
+            do { try store.clearLocalDraft(scope: scope, productID: productID) }
+            catch { message = L("storefront.error.local_persistence"); return }
+        }
         publication = server
+        draftExpectedVersion = server.version
         draft = StorefrontEditorDraft(publication: server)
         baseDraft = draft
         conflict = nil
         localDraft = false
-        if let scope, let productID = product?.remoteID {
-            store.clearLocalDraft(scope: scope, productID: productID)
-        }
     }
 
     private func reapplyConflict(_ server: StorefrontPublication) {
@@ -680,6 +693,7 @@ struct StorefrontEditorSection: View {
         draft = storefrontOverlay(server: serverDraft, local: draft, fields: dirty)
         baseDraft = serverDraft
         publication = server
+        draftExpectedVersion = server.version
         conflict = nil
         mutate(.saveDraft)
     }
@@ -757,6 +771,7 @@ struct StorefrontEditorSection: View {
 
     private func message(for error: StorefrontAuthoringError) -> String {
         switch error {
+        case .localPersistence: L("storefront.error.local_persistence")
         case .permissionDenied: L("storefront.error.permission")
         case .offline: L("storefront.error.network_required")
         case .unauthenticated: L("storefront.error.unauthenticated")

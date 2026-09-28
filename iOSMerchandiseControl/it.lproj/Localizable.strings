@@ -1841,3 +1841,5 @@
 "storefront.import.summary" = "%d prodotti interni aggiornati. %d prodotti pubblici ora differiscono dai dati interni.";
 "storefront.import.summary_unverified" = "%d prodotti interni aggiornati. Differenze pubbliche non verificabili offline.";
 "storefront.import.verify" = "Verifica";
+
+"storefront.error.local_persistence" = "Impossibile salvare sul dispositivo. I dati inseriti sono ancora qui; libera spazio e riprova.";
