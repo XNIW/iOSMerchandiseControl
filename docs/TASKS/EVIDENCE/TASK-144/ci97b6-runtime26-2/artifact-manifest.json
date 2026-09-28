@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/tmp/mc-task144-ios/ci97b6-deinit-diagnosis/baseline-ios26.2.log",
+    "bytes": 67304,
+    "sha256": "c7117f2565b312b9f6627615ba3ecefab2583ecc6404d436d8c6ebb9e3f1ca99"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/ci97b6-deinit-diagnosis/baseline-crash.ips",
+    "bytes": 34699,
+    "sha256": "a6bc3aff64ccc1fa12ae14deff2ab7c21f72f41a798fb04d07ffbdb94a4ee818"
+  },
+  {
+    "path": "/tmp/mc-task144-ios/ci97b6-deinit-diagnosis/green-storefront-ios26.2.log",
+    "bytes": 60371,
+    "sha256": "57791be58641fc2a58039b762a2c1d8a468a3d94364c4ed6ee1d643dfca3fb03"
+  }
+]

@@ -620,10 +620,18 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         XCTAssertEqual(draft.publicName, "Unsaved input")
     }
 
-    func testFileStorageReportsActualFilesystemError() throws {
-        try Data("file blocks directory".utf8).write(to: pendingDirectory)
+    // A Swift task keeps isolated storage deinit off the broken task-local
+    // allocation path used by synchronous XCTest on the iOS 26.2 runtime.
+    func testFileStorageReportsActualFilesystemError() async throws {
+        let blockingData = Data("file blocks directory".utf8)
+        try blockingData.write(to: pendingDirectory)
         let storage = StorefrontPendingFileStorage(directory: pendingDirectory)
-        XCTAssertThrowsError(try storage.write(Data("draft".utf8), key: "synthetic"))
+        XCTAssertThrowsError(try storage.write(Data("draft".utf8), key: "synthetic")) { error in
+            let cocoaError = error as NSError
+            XCTAssertEqual(cocoaError.domain, NSCocoaErrorDomain)
+            XCTAssertEqual(cocoaError.code, CocoaError.fileWriteFileExists.rawValue)
+        }
+        XCTAssertEqual(try Data(contentsOf: pendingDirectory), blockingData)
     }
 
     func testDurableDraftsSurviveNewStorageAcrossProductsAccountAndShopSwitch() async throws {

@@ -279,6 +279,58 @@ nonisolated struct ShopSyncRecoveryDomainEventMaxIDs: Codable, Equatable, Sendab
     let history: String
 }
 
+nonisolated enum ShopSyncRecoveryCheckpointDenial: String, Error, Sendable, CustomStringConvertible {
+    case resourceExceeded = "checkpoint_resource_exceeded"
+    case invalidBaseline = "checkpoint_invalid_baseline"
+    case integrityBlocked = "checkpoint_integrity_blocked"
+    case unsupportedStatus = "checkpoint_status_unsupported"
+    case markerResourceExceeded = "convergence_marker_resource_exceeded"
+    case markerInvalidBaseline = "convergence_marker_invalid_baseline"
+    case markerIntegrityBlocked = "convergence_marker_integrity_blocked"
+    case markerUnsupportedStatus = "convergence_marker_status_unsupported"
+
+    var description: String { rawValue }
+}
+
+private nonisolated struct ShopSyncRecoveryEnvelope: Decodable {
+    let schemaVersion: String
+    let status: String
+    let shopId: UUID
+    let scope: ShopSyncRecoveryScope
+
+    func requireReady(
+        expectedSchemaVersion: String,
+        expectedShopID: UUID,
+        expectedDeviceIdentifier: String,
+        expectedOwnerUserID: UUID,
+        expectedBaselineScopeKey: String?,
+        expectedScope: ShopSyncRecoveryScope? = nil
+    ) throws {
+        guard schemaVersion == expectedSchemaVersion,
+              shopId == expectedShopID,
+              expectedScope.map({ $0 == scope }) ?? true,
+              expectedBaselineScopeKey.map({ $0 == scope.key }) ?? true else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+        try scope.validate(
+            expectedShopID: expectedShopID,
+            expectedDeviceIdentifier: expectedDeviceIdentifier,
+            expectedOwnerUserID: expectedOwnerUserID
+        )
+        switch (status, expectedSchemaVersion == "shop-sync-convergence-marker-v1") {
+        case ("ready", _): return
+        case ("resource_exceeded", false): throw ShopSyncRecoveryCheckpointDenial.resourceExceeded
+        case ("invalid_baseline", false): throw ShopSyncRecoveryCheckpointDenial.invalidBaseline
+        case ("integrity_blocked", false): throw ShopSyncRecoveryCheckpointDenial.integrityBlocked
+        case ("resource_exceeded", true): throw ShopSyncRecoveryCheckpointDenial.markerResourceExceeded
+        case ("invalid_baseline", true): throw ShopSyncRecoveryCheckpointDenial.markerInvalidBaseline
+        case ("integrity_blocked", true): throw ShopSyncRecoveryCheckpointDenial.markerIntegrityBlocked
+        case (_, false): throw ShopSyncRecoveryCheckpointDenial.unsupportedStatus
+        case (_, true): throw ShopSyncRecoveryCheckpointDenial.markerUnsupportedStatus
+        }
+    }
+}
+
 nonisolated struct ShopSyncRecoveryCheckpoint: Codable, Equatable, Sendable {
     let schemaVersion: String
     let status: String
@@ -782,6 +834,17 @@ actor ShopSyncRecoveryRemoteAdapter {
             scope,
             defaults: defaultsBox.value
         )
+        // Early server refusals intentionally omit every success digest. Bind
+        // their envelope to the authenticated scope before reading the status;
+        // only a ready response may enter the unchanged strict success decoder.
+        let envelope = try decoder.decode(ShopSyncRecoveryEnvelope.self, from: data)
+        try envelope.requireReady(
+            expectedSchemaVersion: "shop-sync-recovery-checkpoint-v1",
+            expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID,
+            expectedOwnerUserID: ownerUserID,
+            expectedBaselineScopeKey: expectedBaselineScopeKey
+        )
         let checkpoint = try decoder.decode(ShopSyncRecoveryCheckpoint.self, from: data)
         try checkpoint.validate(
             expectedShopID: scope.shopID,
@@ -890,6 +953,18 @@ actor ShopSyncRecoveryRemoteAdapter {
             throw ShopSyncRecoveryContractError.authenticationChanged
         }
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaultsBox.value)
+        // The marker derives server refusals from the same checkpoint and may
+        // contain null success sections. It must pass the same scoped status
+        // discrimination before any success DTO can be decoded or activated.
+        let envelope = try decoder.decode(ShopSyncRecoveryEnvelope.self, from: data)
+        try envelope.requireReady(
+            expectedSchemaVersion: "shop-sync-convergence-marker-v1",
+            expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID,
+            expectedOwnerUserID: ownerUserID,
+            expectedBaselineScopeKey: baselineCheckpoint.scope.key,
+            expectedScope: baselineCheckpoint.scope
+        )
         let marker = try decoder.decode(ShopSyncRecoveryConvergenceMarker.self, from: data)
         try marker.validates(
             localVerification: localVerification,

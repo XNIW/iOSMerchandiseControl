@@ -32,9 +32,15 @@ StorefrontAuthoringStore.resetFilter cancella filterTask ma non libera isFilterL
 
 StorefrontAuthoring.swift, StorefrontAuthoringTests.swift, UI harness e XCUITest esistenti; EditProductView.swift/DatabaseView.swift solo se necessari ai finding; documenti master/task143 per F04.
 
+### Addendum planning autorizzato — R-I02 checkpoint short envelope, 2026-09-28
+
+Il collaudo Android autenticato e la verifica read-only del preflight TEST hanno dimostrato un ramo `resource_exceeded` con `compressed_legacy_history_requires_remediation` (16 history compresse). Il contratto checkpoint distribuito restituisce correttamente un envelope breve privo delle sezioni del successo; entrambe le app decodificano il DTO completo prima del discriminante. Il difetto equivalente iOS va riprodotto rosso e corretto in questo task (CA-07/CA-10), preservando journal/dati e i controlli di autorizzazione. Nessun valore di default deve trasformare il rifiuto in successo; niente remediation dati/backend o loop automatici per un rifiuto stabile. Il blocco discovery corrente del device iOS è precedente al checkpoint e rimane una diagnosi separata da provare sul runtime attuale. Review mirata e gate aggiornati richiesti; la CI97b6c812 fallita è conservata e deve essere diagnosticata senza rilanci ciechi.
+
 ## Mandato e separazione dei ruoli
 
 Richiesta utente 2026-09-28 `MERCHANDISECONTROL — AUDIT FUNZIONALE, ROOT-CAUSE FIXES, PARITÀ ANDROID/iOS E SINCRONIZZAZIONE`. Il prompt autorizza orchestrazione/planning, executor separati, correzioni funzionali, test, review indipendente e preparazione commit/PR. Questo planning è registrato dal parent orchestratore prima delle patch; gli executor aggiornano Execution/Fix/Handoff. Nessuna chiusura DONE automatica o merge autorizzato per inferenza dai train storici.
+
+**Mandato coordinato aggiornato:** consenso diretto utente al coordinamento con «Completa attivazione WECHAT-010» e nuovo prompt con autorizzazione esplicita a commit/push/PR/merge delle modifiche verificate, rispettando le protezioni. Il parent di questo task mantiene ownership esclusiva dell'integrazione nativa, dopo review e CI exact-SHA; segue verifica main e CI post-merge. Nessun deploy produzione o reset dei dati utente.
 
 Checkout primari con modifiche preesistenti preservati. Niente reset dati, force push, migrazioni/RLS/deploy production, nuove dipendenze, secondo motore sync o pipeline immagini. Harness Excel sospeso non riattivato. Client pubblico read-only; Admin/Supabase consultati solo per contratti e staging necessario. Task precedenti e gate fisici non chiusi automaticamente.
 
@@ -65,6 +71,13 @@ ACK perso e aggiornamento concorrente richiedono replay del contratto idempotent
 
 ## Execution
 
+### Addendum — R-I02 e crash CI97b6, 2026-09-28
+
+- Contratto checkpoint short-envelope riprodotto: 6 casi nuovi contro sorgente invariata, 2 PASS / 4 FAIL per `keyNotFound(catalog)`. Envelope scoped prima del DTO ready: 48/48 PASS nelle due suite recovery/contract. Review ha trovato lo stesso caso nel marker finale; riprodotto 1 PASS / 2 FAIL per `catalog=null`. Il batch finale copre entrambi i punti e conserva i controlli strict del successo, il journal e il binding. [Evidenza R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/README.md).
+- CI97b6 ha terminato con crash runtime nel test filesystem, non con una semplice assertion. Riprodotto isolato su iOS26.2 con compiler Xcode27: stack `TaskLocal::StopLookupScope` / `swift_task_deinitOnExecutorImpl` durante deinit dello storage a fine test sincrono. Minima correzione test-only `async throws`, assertion errore conservata e rafforzata; Storefront 29/29 PASS sul runtime26.2 senza restart. [Prova e stack](EVIDENCE/TASK-144/ci97b6-runtime26-2/README.md). Nessuna modifica allo storage applicativo.
+- I 1355 PASS / 36 SKIP precedenti restano uno snapshot storico. Dopo re-review APPROVED, full finale nuovo batch: **1366 PASS / 0 FAIL / 36 SKIP**, totale 1402; 1358 unit/integration + 8 XCUITest, nessun retry/restart/esclusione o runner locale concorrente. Release e analyze PASS; 8 warning Swift unici preesistenti emessi per 2 architetture, nessuno nuovo; i 18 Vendor storici non sono risolti dal silenzio della cache incrementale. Scan e fingerprint separati nel [manifest finale R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json). CI exact-SHA finale resta competenza del coordinatore.
+- La sessione della build TEST Release originale non sopravvive al rilancio nella prova del coordinatore. Artefatto originale senza signing: strict fallita, entitlement Simulator assente; probe su item Keychain sintetico isolato restituisce -34018. Nuovo Release con firma Automatic canonica e profilo Simulator generato da Xcode: strict PASS, add/read dopo terminate+relaunch/delete = 0. Bundle consegnato al coordinatore per login reale/restart/discovery, senza installare sul suo device. Nessun cambiamento a auth storage/produzione, gruppo Keychain o lettura di token. [Receipt](EVIDENCE/TASK-144/ri02-checkpoint-denial/signed-test-artifact.json).
+
 ### Esecuzione — 2026-09-28
 
 Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-execution.md). Baseline e checkout primario preservati; sorgente applicativa congelata con [manifest](EVIDENCE/TASK-144/ios-source-manifest.json).
@@ -92,13 +105,13 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 | CA-07 | ESEGUITO locale; NON ESEGUITO live da executor | Test sync/outbox/paging/no-op e scope; EXTERNAL_DEPENDENCY collaudo autenticato Android↔iOS owner separato, nessuna promessa di 3 s. |
 | CA-08 | NON ESEGUITO integralmente; regressioni locali ESEGUITE | Suite esistenti import/export/images e fixture Unicode/CLP condivisa; camera/upload reale EXTERNAL_DEPENDENCY, harness Excel sospeso resta skip. |
 | CA-09 | NON ESEGUITO integralmente; misure core ESEGUITE | n = 30 draft + n = 1 S100-E/F, dataset/condizioni espliciti; nessuna misura di background/force-stop/convergenza live. |
-| CA-10 | ESEGUITO — VERIFIED locale | Full finale 1355 PASS / 0 FAIL / 36 SKIP; mirati 50/0/0, benchmark separati 2/0/0, build/analyze PASS. Primo full failed conservato e isolato PASS. Nessuna esclusione/override app. |
-| CA-11 | ESEGUITO review/fix/re-review; NON ESEGUITO PR/CI da executor | Sorgente APPROVED senza P0/P1/P2; coordinatore integra e verifica exact SHA, NOT_MERGED finché non autorizzato. |
+| CA-10 | ESEGUITO — VERIFIED locale; CI exact-SHA finale esterna | R-I02 full finale 1366 PASS / 0 FAIL / 36 SKIP; mirati 81/0/0, Release/analyze PASS. CI97b6 crash conservato, riproduzione runtime26.2 e fix test-only 29/29 PASS. Nessuna esclusione/override app; precedenti benchmark core invariati. |
+| CA-11 | ESEGUITO review/fix/re-review; NON ESEGUITO PR/CI da executor | Sorgente APPROVED senza P0/P1/P2; coordinatore integra e verifica exact SHA, Snapshot non integrato finché i gate remoti del nuovo commit non sono verdi; merge già autorizzato. |
 | CA-12 | ESEGUITO evidence iOS; NON ESEGUITO report coordinato da executor | Manifest e limiti espliciti; parent integra report complessivo/live/PR. Nessuna dichiarazione DONE. |
 
 ## Review
 
-Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01 e la guardia finale. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
+Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02 e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
 
 ## Fix
 
@@ -106,17 +119,18 @@ R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di 
 
 ## Handoff
 
-**LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Sorgente e documentazione executor congelate dopo gate finale. [Manifest comandi, conteggi e hash](EVIDENCE/TASK-144/ios-gate-manifest.json); [tutti i casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
+**R-I02/crash CI: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Gate finali nuovi completati nel [manifest R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json); commit/CI exact SHA e accettazione mobile autenticata restano separati. Snapshot storico al commit97b6: [Manifest precedente](EVIDENCE/TASK-144/ios-gate-manifest.json); [precedenti casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
 
 - Parent integra commit/PR iOS e CI sull'exact SHA; commit compatibilità già separato `4575eefb`. Nessun commit/push dell'executor.
-- Primo full fallito per shutdown del simulatore richiesto da precedente runner; prova preservata, nessun difetto applicativo attribuito senza evidenza. Final full senza restart sul fingerprint finale `3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d`.
+- Primo full fallito per shutdown del simulatore richiesto da precedente runner; prova preservata, nessun difetto applicativo attribuito senza evidenza. Full storico 97b6 senza restart sul fingerprint `3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d`.
+- Fingerprint corrente R-I02: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`, 325 file app/test/resource verificati identici dopo i gate. I conteggi e hash precedenti sono snapshot storici, non il nuovo batch.
 - 36 skip: 29 live/esterni, 4 benchmark sintetici opt-in (due richiesti eseguiti separatamente), 2 harness Excel sospeso, 1 camera fisica. Non trasformarli in accettazione live.
 - Build TEST con configurazione publishable già autorizzata dal parent è distinta dai gate e dagli artifact Release senza config. Prosegue fuori dai file tracked, con manifest/path/hash separato in `/tmp/mc-task144-ios/`; nessuna installazione su device altrui da questo executor. Sessione/app-auth e verifica bidirezionale sono owner del coordinatore live.
-- Nessun XCTest esistente attiva semplicemente l'app installata senza fixture; i veri target UI esistenti usano DEBUG harness. Lo script legacy `tools/sim_ui.sh` non è un probe XCTest ed è deprecato. Nessun nuovo probe introdotto in questo task.
+- Nessun XCTest esistente attiva semplicemente l'app installata senza fixture; i veri target UI esistenti usano DEBUG harness. Lo script legacy `tools/sim_ui.sh` non è un probe XCTest ed è deprecato. Nessun nuovo probe tracked/target CI introdotto. Dopo i gate, copia privata del probe coordinatore autorizzata soltanto in /tmp e sul simulatore executor per i residui CA-08, senza app fixture override.
 - Restano EXTERNAL_DEPENDENCY il collaudo autenticato Android↔iOS, gli stati background/sospensione/force-stop, permessi/upload reali e giudizio hardware/VoiceOver. Il parent mantiene separati codice, integrazione, runtime locale, live e distribuzione.
 
 ### Coordinamento e pubblicazione — parent
 
 Matrice completa: [functional-matrix.md](EVIDENCE/TASK-144/functional-matrix.md). Rapporti comandi, casi, hash e limiti sono versionati; il rapporto aggregato esterno `MERCHANDISECONTROL_MOBILE_PARITY_ROOT_CAUSE_RESULT.md` registra SHA/PR/CI finali senza commit autoreferenziali. Le PR possono essere integrate indipendentemente sul contratto backend esistente; nessun deploy/migrazione prerequisite.
 
-Il consenso diretto dell'utente al coordinamento con «Completa attivazione WECHAT-010» è stato verificato. I suoi dispositivi restano separati: quella lane possiede installazione senza reset, autenticazione e collaudo live; questa lane possiede sorgenti e build native. Nessun test live viene dichiarato PASS prima della relativa ricevuta. Stato attuale NOT_MERGED / NOT_DEPLOYED; nessun DONE finché restano i limiti documentati.
+Il consenso diretto dell'utente al coordinamento con «Completa attivazione WECHAT-010» è stato verificato. I suoi dispositivi restano separati: quella lane possiede installazione senza reset, autenticazione e collaudo live; questa lane possiede sorgenti e build native. Nessun test live viene dichiarato PASS prima della relativa ricevuta. Snapshot pre-push del nuovo batch: NOT_MERGED / NOT_DEPLOYED. Il mandato coordinato diretto autorizza commit/push/PR/merge normale; il parent verifica review e CI sullo SHA esatto, poi main/CI post-merge. Stato corrente remoto nel report aggregato, senza commit autoreferenziali. Nessun DONE finché restano i limiti documentati.

@@ -4,6 +4,215 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testShortMarkerDenialAfterBPreservesRecoveryWithoutActivationOrRetry() async throws {
+        try await assertShortMarkerDenial(expectedCode: "convergence_marker_resource_exceeded")
+    }
+
+    func testOtherMarkerDenialsAfterBRemainExplicitAndBounded() async throws {
+        for (status, code) in [
+            ("invalid_baseline", "convergence_marker_invalid_baseline"),
+            ("integrity_blocked", "convergence_marker_integrity_blocked"),
+            ("unknown-status-with-private-detail", "convergence_marker_status_unsupported")
+        ] {
+            try await assertShortMarkerDenial(expectedCode: code) { $0["status"] = status }
+        }
+    }
+
+    func testShortMarkerValidatesBaselineScopeBeforeReportingDenial() async throws {
+        try await assertShortMarkerDenial(expectedCode: "invalidCheckpoint") { payload in
+            var scope = payload["scope"] as! [String: Any]
+            scope["key"] = String(repeating: "0", count: 64)
+            payload["scope"] = scope
+        }
+    }
+
+    func testReadyMarkerStillRequiresCompleteSuccessPayload() async throws {
+        try await assertShortMarkerDenial(expectedCode: nil) { $0["status"] = "ready" }
+    }
+
+    private func assertShortMarkerDenial(
+        expectedCode: String?,
+        mutation: ((inout [String: Any]) -> Void)? = nil
+    ) async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "marker-denial")
+        let fixtureURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/MOBILE-PARITY/mobile-parity-recovery-marker-resource-exceeded.json")
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any])
+        payload["shopId"] = fixture.shopID.uuidString.lowercased()
+        payload["scope"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(checkpoint.scope))
+        mutation?(&payload)
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint],
+            rawMarker: try JSONSerialization.data(withJSONObject: payload)
+        )
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let beforeBinding = bindingStore.currentBinding
+        let originalContainer = fixture.controller.modelContainer
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A refused or incomplete marker must never publish the staged generation")
+        } catch {
+            if let expectedCode {
+                XCTAssertEqual(String(describing: error), expectedCode)
+            } else {
+                XCTAssertTrue(error is DecodingError)
+            }
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 2)
+        XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        XCTAssertEqual(transport.markerBaselineIDsForTesting(), ["41"])
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertTrue(fixture.controller.modelContainer === originalContainer)
+        XCTAssertEqual(bindingStore.currentBinding, beforeBinding)
+        XCTAssertNotNil(bindingStore.pendingRecoveryJournal)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal?.watermark)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+    }
+
+    func testShortResourceExceededCheckpointPreservesJournalAndStopsRecoveryAttempt() async throws {
+        try await assertShortCheckpointDenial(
+            fixtureName: "mobile-parity-recovery-short-resource-exceeded",
+            expectedCode: "checkpoint_resource_exceeded"
+        )
+    }
+
+    func testShortInvalidBaselineCheckpointPreservesJournalAndStopsRecoveryAttempt() async throws {
+        try await assertShortCheckpointDenial(
+            fixtureName: "mobile-parity-recovery-short-invalid-baseline",
+            expectedCode: "checkpoint_invalid_baseline"
+        )
+    }
+
+    func testCheckpointIntegrityAndUnknownDenialsUseSafeCodesWithoutSuccessFields() async throws {
+        for (status, code) in [
+            ("integrity_blocked", "checkpoint_integrity_blocked"),
+            ("unknown-status-with-private-detail", "checkpoint_status_unsupported")
+        ] {
+            try await assertShortCheckpointDenial(
+                fixtureName: "mobile-parity-recovery-short-resource-exceeded",
+                expectedCode: code,
+                mutation: { $0["status"] = status }
+            )
+        }
+    }
+
+    func testCheckpointDenialValidatesScopeBeforeReportingServerStatus() async throws {
+        for field in ["shopId", "schemaVersion", "accountKey", "deviceKey", "key"] {
+            try await assertShortCheckpointDenial(
+                fixtureName: "mobile-parity-recovery-short-resource-exceeded",
+                expectedCode: field == "accountKey" ? "authenticationChanged" : "invalidCheckpoint",
+                mutation: { payload in
+                    if field == "shopId" { payload[field] = UUID().uuidString }
+                    else if field == "schemaVersion" { payload[field] = "unsupported" }
+                    else {
+                        var scope = payload["scope"] as! [String: Any]
+                        scope[field] = field == "key" ? "invalid" : String(repeating: "0", count: 64)
+                        payload["scope"] = scope
+                    }
+                }
+            )
+        }
+    }
+
+    func testReadyCheckpointStillRequiresCompleteSuccessPayload() async throws {
+        try await assertShortCheckpointDenial(
+            fixtureName: "mobile-parity-recovery-short-resource-exceeded",
+            expectedCode: nil,
+            mutation: { $0["status"] = "ready" }
+        )
+    }
+
+    func testCheckpointWithoutStatusCannotDefaultToReadyOrDenial() async throws {
+        try await assertShortCheckpointDenial(
+            fixtureName: "mobile-parity-recovery-short-resource-exceeded",
+            expectedCode: nil,
+            mutation: { $0.removeValue(forKey: "status") }
+        )
+    }
+
+    func testCheckpointDenialCannotCrossTheExpectedBaselineScopeFence() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "scope-fence")
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint],
+            rawCheckpoint: try JSONSerialization.data(withJSONObject: [
+                "schemaVersion": checkpoint.schemaVersion,
+                "status": "resource_exceeded",
+                "shopId": fixture.shopID.uuidString,
+                "scope": JSONSerialization.jsonObject(with: JSONEncoder().encode(checkpoint.scope))
+            ])
+        )
+        let remote = ShopSyncRecoveryRemoteAdapter(transport: transport, defaults: fixture.defaults)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults
+        )
+        do {
+            _ = try await remote.checkpoint(
+                ownerUserID: fixture.ownerUserID, scope: scope,
+                verifiedBaselineID: "1", expectedBaselineScopeKey: String(repeating: "0", count: 64)
+            )
+            XCTFail("A response from another baseline scope must not be accepted")
+        } catch {
+            XCTAssertEqual(error as? ShopSyncRecoveryContractError, .invalidCheckpoint)
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 1)
+        XCTAssertEqual(transport.counts().pages, 0)
+    }
+
+    private func assertShortCheckpointDenial(
+        fixtureName: String,
+        expectedCode: String?,
+        mutation: ((inout [String: Any]) -> Void)? = nil
+    ) async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "short-denial")
+        let fixtureURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/MOBILE-PARITY/\(fixtureName).json")
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any])
+        // Preserve the deployed envelope, binding only the synthetic identity to
+        // this test's fresh scope. No real account, device, or shop is involved.
+        payload["shopId"] = fixture.shopID.uuidString.lowercased()
+        payload["scope"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(checkpoint.scope))
+        mutation?(&payload)
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint],
+            rawCheckpoint: try JSONSerialization.data(withJSONObject: payload)
+        )
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults
+        )
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(
+            accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            reason: "short-denial-test", deviceIdentityHash: scope.deviceIdentityHash
+        ))
+        let beforeJournal = bindingStore.pendingRecoveryJournal
+        let beforeBinding = bindingStore.currentBinding
+        let beforeJournalBytes = try Data(contentsOf: fixture.recoveryJournalURL)
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A denied or incomplete checkpoint must never publish a generation")
+        } catch {
+            if let expectedCode {
+                XCTAssertEqual(String(describing: error), expectedCode)
+            } else {
+                XCTAssertTrue(error is DecodingError, "Incomplete payload must remain a decoding failure")
+            }
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 1, "Stable denial must not retry this invocation")
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertEqual(bindingStore.pendingRecoveryJournal, beforeJournal)
+        XCTAssertEqual(bindingStore.currentBinding, beforeBinding)
+        XCTAssertEqual(try Data(contentsOf: fixture.recoveryJournalURL), beforeJournalBytes)
+    }
+
     func testEmptySnapshotPublishesOneGenerationAndCompletesJournal() async throws {
         let fixture = try makeFixture()
         let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "stable")
@@ -1310,6 +1519,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
     private let tailBehavior: AtomicRecoveryTailBehavior
     private let markerFailure: ShopSyncRecoveryContractError?
     private let markerMutation: (@Sendable () throws -> Void)?
+    private let rawCheckpoint: Data?
+    private let rawMarker: Data?
     private var checkpointIndex = 0
     private var checkpointCalls = 0
     private var pageCalls = 0
@@ -1331,7 +1542,9 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         checkpointMutation: (@Sendable (Int) throws -> Void)? = nil,
         tailBehavior: AtomicRecoveryTailBehavior = .safe,
         markerFailure: ShopSyncRecoveryContractError? = nil,
-        markerMutation: (@Sendable () throws -> Void)? = nil
+        markerMutation: (@Sendable () throws -> Void)? = nil,
+        rawCheckpoint: Data? = nil,
+        rawMarker: Data? = nil
     ) {
         self.ownerUserID = ownerUserID
         self.checkpoints = checkpoints
@@ -1345,6 +1558,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         self.tailBehavior = tailBehavior
         self.markerFailure = markerFailure
         self.markerMutation = markerMutation
+        self.rawCheckpoint = rawCheckpoint
+        self.rawMarker = rawMarker
     }
 
     func authenticatedUserID() async throws -> UUID {
@@ -1361,6 +1576,7 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
             expectedBaselineScopeKey: parameters.expectedBaselineScopeKey
         ))
         try checkpointMutation?(checkpointCalls)
+        if let rawCheckpoint { return rawCheckpoint }
         let index = min(checkpointIndex, checkpoints.count - 1)
         checkpointIndex += 1
         let fixtureCheckpoint = checkpoints[index]
@@ -1482,6 +1698,7 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         try markerMutation?()
         if let markerFailure { throw markerFailure }
         markerBaselineIDs.append(parameters.verifiedBaselineID)
+        if let rawMarker { return rawMarker }
         guard let checkpoint = latestCheckpoint ?? checkpoints.first,
               checkpoint.shopId == parameters.shopID,
               checkpoint.scope.key == parameters.expectedBaselineScopeKey,

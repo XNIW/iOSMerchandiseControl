@@ -1,7 +1,3 @@
-# Esito finale del sorgente
-
-Android e iOS APPROVED nella re-review indipendente; i verdetti intermedi sotto sono cronologici e superati dagli addendum finali. Il parent ha poi verificato la full iOS sequenziale definitiva: 1355 PASS/0 FAIL/36 SKIP, stesso fingerprint finale. La prima full interrotta da un vecchio runner resta FAIL e conservata. CI e accettazione live sono gate distinti.
-
 # Audit funzionale indipendente — 2026-09-28
 
 Reviewer: agente `independent_reviewer`, separato dagli executor Android/iOS. Prima fase: ispezione sorgente read-only; nessuna build/test avviata e nessuna modifica ai repository. Baseline assegnate: Android `d7c4953c4ed6bc2a33cc5dbfd009eb862f70feac`, iOS `30d226d0fb9b8679a1dd034c6e82319645337f22`. Worktree: `/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/{MerchandiseControlSplitView,ios}`. Questo documento non è ancora la review del diff finale.
@@ -151,6 +147,71 @@ Il test controllato `testScopeSwitchDuringReceiptReadbackCannotApplyOfflineFallb
 
 **iOS: slice finale e gate build/static verificati PASS.** Lettura diretta con `xcresulttool get test-results summary` di `post-review-final.xcresult`: **50 PASS, 0 FAIL, 0 SKIP**, 46 unit +4 UI; include `testScopeSwitchDuringReceiptReadbackCannotApplyOfflineFallbackToNewScope`. Log Release post-guard: BUILD SUCCEEDED; log analyze: ANALYZE SUCCEEDED. I 303 hash `final_files` del manifest coincidono con il working tree esaminato. La feature non è ancora nel commit HEAD `4575eefbd4e71914f0031c580de43325f3942b30` al momento della verifica; manifest valida il sorgente finale, mentre l'exact commit sarà verificato dopo il commit/CI.
 
-La ricostruzione in memoria dei due file della full precedente mediante inversione di `post-full-scope-guard.json` coincide esattamente con entrambi gli hash `full_differing_files`. Quella full precede l'ultima guardia ed è quindi distinta dal gate finale 50-test. Il log attuale contiene **1.353 test-case unici passati, 36 skipped, zero failed**; il precedente riepilogo 1.352 differisce di uno. Il risultato ufficiale della full resta da attendere perché xcresult sta finalizzando diagnostica. Non sommare full e slice come test unici.
+La ricostruzione in memoria dei due file della full precedente mediante inversione di `post-full-scope-guard.patch` coincide esattamente con entrambi gli hash `full_differing_files`. Quella full precede l'ultima guardia ed è quindi distinta dal gate finale 50-test. Il log attuale contiene **1.353 test-case unici passati, 36 skipped, zero failed**; il precedente riepilogo 1.352 differisce di uno. Il risultato ufficiale della full resta da attendere perché xcresult sta finalizzando diagnostica. Non sommare full e slice come test unici.
 
 **Conclusione locale:** sorgente APPROVED, regressioni mirate e gate finali Android/iOS sopracitati confermati. Nessuna nuova build o audit effettuata dal reviewer. Restano separati CI sui commit finali, completamento ufficiale della full iOS e accettazione autenticata mobile↔mobile/staging; nessuna dichiarazione di rilascio o di E2E completo.
+
+## Review mirata R-A04 — bootstrap identità prima del recovery confermato
+
+**R-A04 chiuso nel sorgente; APPROVED condizionato ai nuovi gate e al ritest live dello stesso scenario.** Delta revisionato rispetto a HEAD `575ea71`; nessun nuovo audit generale, nessuna build o modifica del reviewer.
+
+La riproduzione autenticata del coordinator è concreta: binding presente, device_state e journal assenti, DB/queue vuoti; Review→Replace fallisce `binding_replace_device_identity_missing`. Il percorso ordinario di registrazione richiede READY, che il recovery deve ripristinare. La patch rompe questo ciclo senza dichiarare READY anticipatamente:
+
+- `replaceMismatchedBusinessDataAndBind` usa `DeviceInstallIdProvider.getOrCreate()` dentro la transazione Room già esistente per il journal. Il DAO canonico ha chiave singleton e INSERT IGNORE: identità presente riusata, nessuna rotazione; failure su identity/journal fa rollback di entrambe. Binding e dati precedenti restano fino all'attivazione verificata.
+- `ShopSyncRecoveryCoordinator` richiede il callback di registrazione esplicito, eseguito solo in `MISMATCH_REPLACE_CONFIRMED`. `MerchandiseControlApplication` collega l'RPC canonica `registerShopDeviceForShop`, con target shop catturato dal recovery. Nessun bypass al gate ordinario, lease fabbricato o mutazione backend.
+- Prima e dopo la sospensione RPC vengono verificati auth/shop tramite `scopeStillValid`, identità dispositivo e uguaglianza completa del journal del run. Solo risposta `ok` sullo stesso shop procede; autorizzazione checkpoint A e verifiche B/C/digest/attivazione preesistenti restano obbligatorie.
+- Denial, errore rete, shop errato, scope cambiato e journal più recente impediscono checkpoint/attivazione. CancellationException viene ripropagata dopo registrazione durevole del retry; la vecchia generazione resta integra.
+- Factory androidTest aggiornata con fake esplicito, nessun permissive default introdotto in produzione.
+
+**Prove lette direttamente:** `/tmp/task143-ra04-red.log`: 1 test eseguito/1 failure su identità mancante, BUILD FAILED 16s. `/tmp/task143-ra04-green.log`: BUILD SUCCESSFUL 27s. XML correnti: 331 test totali, **330 PASS, 1 SKIP, 0 FAIL/ERROR**: 66 recovery,20 binding,218 repository (1 fixture live SKIP),15 integrity,6 authorization,6 application. I 10 test nuovi coprono bootstrap idempotente, due rollback SQLite reali, ordine registrazione/checkpoint, identità riusata, denial/shop errato/network/retry, scope stale, journal concorrente e cancellazione. `git diff --check` PASS.
+
+La precedente accettazione locale riguarda il commit precedente. R-A04 richiede nuovo build/lint/test/CI e installazione/ritest autenticato coordinato prima della chiusura live; questi risultati non sono inferiti dalle prove JVM.
+
+### Gate canonico R-A04 verificato indipendentemente
+
+**PASS locale sul delta congelato.** Verificati `android-ra04-test-manifest.json`, `android-ra04-build-receipt.json`, XML e log effettivi; nessun file tracked modificato dal reviewer.
+
+- Sei hash sorgente/test correnti coincidono tra filesystem, manifest e build receipt. I tre hash produzione coincidono con quelli letti alla review R-A04. Il digest effettivo `git diff 575ea71 -- app` è `3b5f335b7cc069763f92f1c14216ad66a2ec33d6b6eb959daba46456e104505d`, identico a entrambe le evidenze: nessun delta produzione aggiuntivo.
+- Tutti gli XML elencati coincidono con i conteggi del manifest: **977 JVM debug, 970 PASS,7 SKIP,0 FAIL/ERROR;5 Compose PASS,0 SKIP/FAIL/ERROR** su emulator-5554. JVM release correttamente NON ESEGUITI.
+- `/tmp/task143-ra04-final.log`: cinque test device avviati e `BUILD SUCCESSFUL in 1m 31s`. XML lint letto direttamente: **0 errori,53 warning**; intersezione indipendente con le righe modificate del diff app: **zero**.
+- SHA256 del candidato APK letto direttamente: `0ebd6f8147d34669540aaa6faf943a7553dc2c1a8b79ddab0658156101b43e41`, uguale alla receipt. Verificato anche hash dell'APK precedente preservato. La receipt dichiara correttamente build da base575ea71 più patch non ancora committata; non attribuisce falsamente il nuovo APK al solo commit precedente.
+
+R-A04 ha ora review sorgente e gate canonico locale verificati. Commit/CI finale e ritest autenticato dello stesso APK sul dispositivo del coordinator rimangono evidenze separate e non vengono anticipati da questo PASS locale. Nessun accesso del reviewer al dispositivo o a configurazione/credenziali protette.
+
+## Review mirata Android R-A05 — short denial checkpoint/convergence marker
+
+**Sorgente APPROVED condizionato al nuovo gate canonico e al retry autenticato. R-A05 chiuso nel codice; nessun nuovo P0/P1/P2.** Review limitata al delta rispetto `78d1fbc8163b7e06f5dc8d5d92406450c59b182f`. Otto hash del freeze `/tmp/task143-ra05-freeze.json` coincidono con i file correnti (3 produzione,2 test,3 fixture); nessuna build o modifica del reviewer.
+
+- `validateResponseStatus` decodifica l'envelope obbligatoria prima dei cinque domain success-only: schema, shop, scope/account/device/legacy-owner, history kind, digest checkpoint e scope atteso vengono controllati prima di interpretare status. Aggiunto confronto `expectedBaselineScopeKey` anche quando non è presente l'intero expectedScope.
+- La logica è comune a checkpoint e convergence marker; controllato il costruttore SQL canonico del marker, che deriva status/scope/digest dal checkpoint e può avere domain null nel rifiuto breve. Il test marker esercita proprio quel caso. Denial riconosciuti `resource_exceeded`, `invalid_baseline`, `integrity_blocked`; status ignoti diventano codice statico unsupported, senza riportare il valore remoto non fidato.
+- Solo `ready` prosegue verso i DTO completi originali, ancora rigorosi. I cinque domain non ricevono default vuoti; missing status, ready incompleto e JSON non decodificabile sono errori di contratto. Budget e trasporto bounded/controlli di scope esistenti non modificati. Le due fixture coincidono semanticamente con gli envelope sintetici prodotti dalla diagnosi SQL; non sono catture di una sessione app.
+- Il coordinator conserva il motivo nel journal retry e la generazione precedente, cancella staging non attivato e restituisce Rejected per i rifiuti deterministici. Il scheduler esistente termina **la finestra corrente**; un successivo trigger può ritentare dopo una correzione server. Questo non viene descritto come blocco permanente di ogni trigger automatico. Nessuna publication o recovery riuscita viene sintetizzata.
+- Diagnostica limitata a codice/RPC noti e nomi dei campi mancanti filtrati; niente payload, account/shop/device o dati business nei nuovi log.
+
+**Prove lette:** `/tmp/task143-ra05-red.xml`:2 test/2 failure MissingFieldException dei cinque domain. `/tmp/task143-ra05-scope-red.xml`:test scope fallito con denial al posto di baseline_scope_key_mismatch prima dell'ultima guardia. `/tmp/task143-ra05-green2.log`:BUILD SUCCESSFUL11s; XML congelati in `/tmp/task143-ra05-targeted/`:113 PASS,0 FAIL/ERROR/SKIP. Coperti denial, ready incompleto, scope/account/device/shop/schema errati, marker breve, diagnostic privacy, conservazione dati/journal e recupero dopo trigger successivo.
+
+Il difetto classificazione è corretto; il preflight reale `resourceExceeded` relativo a storia compressa resta un blocco server da riportare, non è risolto dal decoder. La sua attribuzione al request autenticato esatto richiede il retry del coordinator. Nessuna autorizzazione implicita a decomprimere/cambiare dati o allargare limiti/policy.
+
+## Review mirata iOS R-I02 + crash test runtime26.2
+
+**R-I02: CHANGES_REQUIRED per un solo completamento concreto, P2 marker breve.** Il checkpoint patchato valida schema/shop/scope/account/device/legacy-owner e expectedBaselineScopeKey dopo i controlli di sessione/local lease e budget, prima dello status. Solo ready raggiunge il DTO rigoroso originale; rifiuti e status sconosciuti hanno codici statici. Il servizio atomico propaga il denial senza consumare il secondo tentativo riservato a checkpointChanged, senza pubblicare staging; test confrontano anche byte del journal e binding. Nessun finding aggiuntivo su questa parte.
+
+**Finding R-I02-marker [P2], `ShopSyncRecoveryContract.swift`, metodo `ShopSyncRecoveryRemoteAdapter.marker`, decode completo originariamente a riga945:** questo metodo continua a decodificare `ShopSyncRecoveryConvergenceMarker` prima dello status. Il costruttore SQL canonico `shop_sync_convergence_marker_v1` deriva lo status dal checkpoint e, se il preflight diventa resource_exceeded/invalid_baseline tra B e C, restituisce catalog/prices/history/images null e integrity.totalViolationCount null. Ne segue ancora DecodingError prima che sia possibile classificare il rifiuto server. Stesso root cause già coperto dal marker Android; richiesta estensione dell'envelope stretta anche al marker iOS, verificando schema marker e scope completo/chiave della baseline prima del codice denial, mantenendo il DTO ready invariato. Richieste regressioni del marker breve e dei mismatch, conservazione journal/staging senza falso successo. Nessuna build del reviewer; segnalato al parent per lo stesso batch.
+
+Evidenze primo freeze: due fixture iOS semanticamente identiche alle fixture diagnostiche sintetiche. `/tmp/mc-task144-ios/ri02/red.log`:6 test con4 casi falliti (9 assertion failure) e2 pass, missing catalog/keyNotFound. `green.xcresult` letto direttamente:48 PASS,0 FAIL/SKIP (26 atomic +22 contract). Il verde non copre il finding marker sopra.
+
+**Crash test26.2: delta APPROVED, condizionato ai gate finali/CI.** Verificato indipendentemente che cambia soltanto `testFileStorageReportsActualFilesystemError`: entry point async, stessa chiamata reale al filesystem, assertThrows conservato e rafforzato con dominio/codice Foundation e byte del file bloccante intatti. Contenuto fuori dalla funzione identico al baseline97b6c812; produzione StorefrontAuthoring.swift byte-per-byte invariata. Nessun actor setting globale, skip, fake o indebolimento.
+
+Verificati gli hash dei tre artefatti raw elencati in `ci97b6-runtime26-2/artifact-manifest.json`; summary baseline0PASS/1CRASH/0SKIP, stack locale SIGABRT TaskLocal::StopLookupScope→swift_task_deinitOnExecutorImpl→StorefrontPendingFileStorage deinit→funzione test. Summary verde29PASS/0FAIL/0SKIP sullo stesso runtime26.2. Il runtime coincide con CI; il compilatore locale27.0 differisce dal CI26.6 e il rapporto lo dichiara: la riproduzione non viene spacciata per stack CI esatto. Nessun test del reviewer e nessun accesso device.
+
+### Re-review finale R-I02-marker
+
+**Finding marker chiuso; sorgente iOS R-I02 APPROVED condizionato ai gate canonici e CI. Nessun nuovo P0/P1/P2 nel delta.** L'envelope comune viene ora applicata anche al marker dopo budget/auth/local-scope freshness e prima del DTO completo. Verifica schema marker, shop, intero scope della baseline, chiave attesa e binding account/device/legacy prima dello status. Otto codici statici checkpoint/marker allineati ad Android; unsupported non riporta valori remoti. Le risposte ready attraversano ancora il decoder e la validazione completa originali.
+
+La regressione attraversa realmente checkpoint A, pagine, checkpoint B e marker rifiutato; verifica due checkpoint, una sola chiamata marker, nessuna attivazione/finalization, stesso modelContainer e binding, journal conservato senza watermark. Il caso scope differente non può essere classificato come normale denial. Ready marker con domain null resta DecodingError. Fixture marker coerente con builder SQL canonico (quattro domain null, integrity total null, eligibility false).
+
+Evidenze `.xcresult` lette direttamente con xcresulttool: `marker-red.xcresult` **1 PASS,2 FAIL,0 SKIP**; entrambe le failure erano DecodingError/valueNotFound a catalog prima di denial o scope check. `marker-green.xcresult` **81 PASS,0 FAIL,0 SKIP**:30 atomic,22 contract,29 Storefront. Quindi include anche il test storage rafforzato, oltre alla sua precedente prova29/29 su runtime26.2. Reviewer `git diff --check` PASS, nessuna build.
+
+Hash congelati letti alla re-review: `ShopSyncRecoveryContract.swift` b929be1006a846e94617548b53cc787e08ebb5e2dc70d35b67629c9fa7aec772; `AtomicGenerationRecoverySnapshotPullServiceTests.swift` ea7727ac87f4959f785a01f326af0380e3349e8e330caacf34290b8f35f08d0c; `StorefrontAuthoringTests.swift` a9ce902874d156f25bbc2445edabeb737f39405416cd12803ae0a60c94b002fd.
+
+Android R-A05 e iOS R-I02 sono ora entrambi approvati sul sorgente; resta distinto il rifiuto reale di policy/storage sul TEST shop, che il client deve mostrare fedelmente senza attivare snapshot incompleti. Nessuna modifica backend/data autorizzata da questo verdetto.

@@ -1,0 +1,128 @@
+{
+  "base_commit": "97b6c812c53420b30a0151344a40425296427a6c",
+  "status": "LOCAL_VERIFIED / SOURCE_APPROVED; exact-SHA CI and authenticated native acceptance remain separate",
+  "source_fingerprint": "9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d",
+  "full": {
+    "command": "xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,id=<REDACTED_DEVICE_ID>' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never -resultBundlePath /tmp/mc-task144-ios/ri02/final-full.xcresult",
+    "result": "PASS",
+    "total": 1402,
+    "passed": 1366,
+    "failed": 0,
+    "skipped": 36,
+    "unit_integration_pass": 1358,
+    "xcuitest_pass": 8,
+    "retry_or_restart": false,
+    "parallel_testing": false,
+    "other_local_build_test_or_perf_runner": false,
+    "raw_log": "/tmp/mc-task144-ios/ri02/final-full.log",
+    "log_sha256": "ce9d55a24754aa3f3aead7572709cf5171931334dc43c084921c1fd01b86ddf6",
+    "xcresult": "/tmp/mc-task144-ios/ri02/final-full.xcresult",
+    "summary": "final-full-summary.json",
+    "skip_categories": {
+      "live_or_external": 29,
+      "large_synthetic_opt_in": 4,
+      "suspended_Excel_opt_in": 2,
+      "physical_device": 1
+    },
+    "no_test_exclusions": true,
+    "no_global_actor_override": true
+  },
+  "release": {
+    "command": [
+      "xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/tmp/mc-task144-ios/signed-test/DerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/tmp/mc-task144-ios/compiler-check/DerivedData/SourcePackages"
+    ],
+    "result": "PASS",
+    "raw_log": "/tmp/mc-task144-ios/signed-test/build.log",
+    "log_sha256": "f6bfc08722cdb22da9629fa03d310fb6f0182cbf3ac76ddb1360a99dcac727ef",
+    "configuration_note": "Authorized TEST config only; canonical project Automatic signing, no signing/profile override. Auth source unchanged. Original bundles preserved."
+  },
+  "analyze": {
+    "command": "xcodebuild analyze -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/mc-task144-ios/ReleaseDerivedData CODE_SIGNING_ALLOWED=NO",
+    "result": "PASS",
+    "raw_log": "/tmp/mc-task144-ios/ri02/final-analyze.log",
+    "log_sha256": "a107e5b02691e5c3fbe037c76ac15d935ae4e80d0ef8d7bcd7b5792666a47363",
+    "new_warnings_vs_previous": 0
+  },
+  "targeted": {
+    "passed": 81,
+    "failed": 0,
+    "skipped": 0,
+    "manifest": "manifest.json"
+  },
+  "historical_ci97b6": {
+    "result": "FAIL",
+    "passed": 1354,
+    "skipped": 36,
+    "crashed": 1,
+    "cause": "CI invalid-free crash in filesystem test. Local iOS26.2 reproduction identifies isolated storage deinitializer reaching Swift task-local teardown outside Swift task; minimally fixed in test async context. No application storage changes.",
+    "evidence": "../ci97b6-runtime26-2/README.md"
+  },
+  "benchmark_note": "Prior separate D100-L E/F core benchmark results preserved; no repeat because paths unchanged. No new UI or live timing inferred.",
+  "toolchain": "Local final gates: Xcode27/Swift6.4, iPhone17 iOS27. CI97b6: Xcode26.6 / iPhoneSimulator26.5 SDK. The crash was reproduced locally on a separate iOS26.2 runtime; do not infer that this was the CI runtime. Final exact-SHA CI remains pending.",
+  "sensitive_scan": {
+    "result": "CANONICAL_SCOPES_PASS; explicit changed-file extension has one reviewed unchanged synthetic fixture match",
+    "reports": [
+      {
+        "kind": "sensitive-source",
+        "result": "PASS",
+        "raw_stdout": "/tmp/mc-task144-ios/ri02/sensitive-source.log",
+        "report_json": "/tmp/mc-task144-ios/ri02/scan/agent-runs/20260928T192900Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p16550.json",
+        "sha256": "97421c892085ea779f22eea92bd876d6626dc4842c8ce65704aa4dd093397bcf"
+      },
+      {
+        "kind": "sensitive-evidence",
+        "result": "PASS",
+        "raw_stdout": "/tmp/mc-task144-ios/ri02/sensitive-evidence.log",
+        "report_json": "/tmp/mc-task144-ios/ri02/scan/agent-runs/20260928T193446Z-scan-sensitive-iOSMerchandiseControlUITests-docs-TASKS-EVIDENCE-TASK-144-docs-TASKS-TASK-144-mobile-parity-root-cause-iosmd-p23442.json",
+        "sha256": "6f8a412c1f2e5d5335e10a0d12dbbdd6a6d6b6e4f10fdea2bf2d57c3a40ceacd"
+      },
+      {
+        "kind": "sensitive-recovery",
+        "result": "PASS",
+        "raw_stdout": "/tmp/mc-task144-ios/ri02/sensitive-recovery.log",
+        "report_json": "/tmp/mc-task144-ios/ri02/scan/agent-runs/20260928T193449Z-scan-sensitive-iOSMerchandiseControl-Sync-Automatic-Recovery-ShopSyncRecoveryContractswift-p25554.json",
+        "sha256": "4c8a615e5fadf7b0c4b166aa093c81fe9dad973e6de35e53f9e7cd965251ad7d"
+      },
+      {
+        "kind": "sensitive-atomic-tests",
+        "result": "PASS",
+        "raw_stdout": "/tmp/mc-task144-ios/ri02/sensitive-atomic-tests.log",
+        "report_json": "/tmp/mc-task144-ios/ri02/scan/agent-runs/20260928T193449Z-scan-sensitive-iOSMerchandiseControlTests-AtomicGenerationRecoverySnapshotPullServiceTestsswift-p26036.json",
+        "sha256": "bddfc1a0b04f0bf640c071b989b12482b391f077c09793b6719ef34f877186d5"
+      },
+      {
+        "kind": "sensitive-storefront-tests",
+        "result": "EXPECTED_SYNTHETIC_BASELINE_MATCH",
+        "raw_stdout": "/tmp/mc-task144-ios/ri02/sensitive-storefront-tests.log",
+        "report_json": "/tmp/mc-task144-ios/ri02/scan/agent-runs/20260928T193450Z-scan-sensitive-iOSMerchandiseControlTests-StorefrontAuthoringTestsswift-p26517.json",
+        "sha256": "df62fd25cd1864452ac732d5afcf560c80df3e707c87434c47a230ad5b126551"
+      }
+    ],
+    "scope": "Canonical source/tests/contracts/workflow + UI/task evidence directory arguments. Explicit changed Swift files additionally scanned because canonical directory enumeration does not include Swift.",
+    "reviewed_match": {
+      "file": "iOSMerchandiseControlTests/StorefrontAuthoringTests.swift",
+      "line": 94,
+      "test": "testPublicImageURLFailsClosed",
+      "reason": "Reserved example.test negative URL userinfo fixture matches the email regex; unchanged byte-for-byte from97b6. No real credential or account data.",
+      "baseline_line_sha256": "de160d629c8498c6a7c778b45212c154b7636de725d5737cb10e7d24c45b71e4"
+    },
+    "preflight_failures": [
+      "Initial combined scanner invocation exceeded report filename limit; split into bounded argument lists.",
+      "First evidence scan identified dedicated simulator id in command receipts; tracked copies now redact it, raw exact commands remain private /tmp."
+    ],
+    "protected_data_matches_after_redaction": 0
+  }
+}
