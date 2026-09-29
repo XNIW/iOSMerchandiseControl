@@ -1,0 +1,32 @@
+{
+  "app_path": "/tmp/mc-task144-ios/signed-test-ri03-final/Artifact/iOSMerchandiseControl.app",
+  "source_head": "5dbcb6e745b41a863d53632fbca3c4e2ba440aa8",
+  "source_uncommitted_paths": [
+    "iOSMerchandiseControl/OptionsView.swift",
+    "iOSMerchandiseControlTests/OptionsLocalDatabaseCloudStatusTests.swift",
+    "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+    "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift"
+  ],
+  "source_fingerprint": "44adf90701d3336815a071f34fdc1fc5e4a4fb0d6ef543bf1c706c3a29807c9b",
+  "configuration": "Release iPhoneSimulator, canonical project Automatic signing; no signing/profile overrides",
+  "build_result": "PASS",
+  "signature_strict_deep_pass": true,
+  "target_TEST": true,
+  "base_config_matches_primary": true,
+  "only_config_delta": "PRODUCT_IMAGE_API_BASE_URL",
+  "bundle_id_unchanged": true,
+  "application_identifier_present_in_simulated_entitlements": true,
+  "embedded_simulated_entitlements_equal_xcode_generated": true,
+  "simulated_entitlement_keys": [
+    "application-identifier",
+    "com.apple.developer.associated-domains"
+  ],
+  "original_unsigned_embedded_entitlements_present": false,
+  "entitlements_storage_note": "Simulator effective entitlements are embedded by Xcode in __TEXT,__entitlements, not in the empty ad hoc signature entitlement dictionary. Effective Simulator entitlements verified against the Xcode-generated profile; no manual identity or keychain group overrides.",
+  "keychain_group_override": false,
+  "auth_source_changed": false,
+  "image_api_configured": true,
+  "wechat_flags_unchanged": true,
+  "binary_sha256": "092208c0740500093022f4f0899873e82e78f6bf1e76a7dab2bc9ac8b7d1e237",
+  "installed_on_live_device_by_executor": false
+}

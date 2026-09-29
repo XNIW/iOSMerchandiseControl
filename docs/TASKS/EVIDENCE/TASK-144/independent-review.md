@@ -215,3 +215,80 @@ Evidenze `.xcresult` lette direttamente con xcresulttool: `marker-red.xcresult` 
 Hash congelati letti alla re-review: `ShopSyncRecoveryContract.swift` b929be1006a846e94617548b53cc787e08ebb5e2dc70d35b67629c9fa7aec772; `AtomicGenerationRecoverySnapshotPullServiceTests.swift` ea7727ac87f4959f785a01f326af0380e3349e8e330caacf34290b8f35f08d0c; `StorefrontAuthoringTests.swift` a9ce902874d156f25bbc2445edabeb737f39405416cd12803ae0a60c94b002fd.
 
 Android R-A05 e iOS R-I02 sono ora entrambi approvati sul sorgente; resta distinto il rifiuto reale di policy/storage sul TEST shop, che il client deve mostrare fedelmente senza attivare snapshot incompleti. Nessuna modifica backend/data autorizzata da questo verdetto.
+
+## Gate locale finale iOS R-I02 e test26.2 — evidenza verificata
+
+**Full finale, Release e analyze PASS sul sorgente già approvato.** Fingerprint ricalcolata indipendentemente dal mapping JSON ordinato compatto: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`. Verificati325/325 file app/test/resource correnti e hash project/scheme; elenco completo coincide con tracked/nonignored untracked nei tre alberi. I tre hash del delta R-I02/test crash coincidono con la re-review: nessuna nuova patch sorgente.
+
+Lettura diretta di `final-full.xcresult` con xcresulttool: **1.402 totali,1.366 PASS,36 SKIP,0 FAIL**; dal tree dei bundle1358 unit/integration PASS e8 XCUITest PASS. I36 skip sono esplicitamente live/external29, synthetic opt-in4, Excel sospeso2 e physical1. Nessun PASS attribuito agli skip. Summary registra un runtime warning QoS in `SyncEventIncrementalDomainApplyServiceTests`, distinto dai risultati dei test e dai warning analyzer; nessun test fallito.
+
+Hash dei log full/Release/analyze coincidono con `final-gate-manifest.json`; Release ha BUILD SUCCEEDED, analyze ha ANALYZE SUCCEEDED. Manifest dichiara zero nuovi warning analyze rispetto alla precedente baseline. La review non ha eseguito build/test.
+
+Al momento di questa verifica, `sensitive_scan` nel manifest finale è ancora **Pending final evidence scan**: il riepilogo scan generale già disponibile riferisce i pass precedenti, non è assunto come scan della nuova evidenza congelata. Attesa conferma dell'executor per questa sola voce. CI sull'exact commit iOS e accettazione autenticata restano gate separati; Android merge/CI sono gestiti dal parent e non rianalizzati in questo passaggio.
+
+### Chiusura scan evidenze iOS finale
+
+Riletta la versione congelata di `final-gate-manifest.json`: il campo `sensitive_scan` ora contiene i report finali. **Scope canonici source/evidence PASS**, più scan esplicito dei file Swift cambiati (lo scanner per directory non include Swift). Verificati gli hash dei cinque report JSON. Recovery e atomic-tests espliciti PASS; Storefront-tests presenta un solo match della regex email nella URL negativa `example.test` di `testPublicImageURLFailsClosed`, riga94, verificata byte-per-byte identica a97b6c812 e con hash baseline corrispondente. Nessun nuovo dato sensibile;0 match protetti dopo redazione. La segnalazione sintetica preesistente è classificata esplicitamente, non nascosta come zero-match scan.
+
+Questo addendum risolve l'attesa scan della sezione precedente. Gate locali finali iOS ora verificati per full1366PASS/36SKIP/0FAIL inclusi8UI, Release, analyze e scan con l'eccezione sintetica documentata, sul fingerprint9f1d2742…10a2d. Restano separati exact-SHA CI e accettazione autenticata; nessuna modifica tracked o build del reviewer.
+
+
+## Follow-up live iOS post-5db — attribution of displayed catalog error
+
+Read-only investigation at source commit `5dbcb6e7`; no build, test execution, device access or tracked edits. Read only the route/error labels from the authorized UI attachment, excluding identity/session values. The attachment shows `Owner-scope sync`, `anonymous`, and a truncated `keyNotFound(...catalog...)`; it does not contain the codingPath or prove a fresh RPC failure.
+
+Source-grounded diagnostic defect (executor owns red reproduction and fix):
+- `OptionsView.swift`, `AutomaticSyncDiagnosticsSnapshot.init` lines 1917–1933 reads a historical watermark-derived scope and prioritizes `sync.runtime.automatic.lastError` over the canonical orchestrator error.
+- `accountAndStoreScope` at 2086 selects the lexicographically last historical watermark key, not the authenticated current scope. `shopSourceText` at 1972 maps `anonymous` to the owner-scope label. Thus this UI label is not route evidence.
+- `lastErrorText` at 2002 attaches `lastProgressAt ?? startedAt` to whichever error was selected, so a prior error can acquire the current retry timestamp.
+- `AutomaticSyncEngine.recordDiagnostic` at 484 and `recordVerifiedRecoveryDiagnostics` at 474 write/clear automatic diagnostics only under `#if DEBUG`. A Release installation preserving defaults can retain a previous Debug error.
+- `SyncStateStore` completion at 191–207 records the current completion time and writes/removes the current orchestrator error in Release as well, but Options can obscure it with the older automatic key.
+
+Routing inspection: Retry in `OptionsView.actionRow` calls explicit recovery for `recoveryRequired`, otherwise the automatic cloud-check callback. `AutomaticSyncEngine.recoverRemoteSnapshot` captures/revalidates the owner/shop scope and delegates only to an atomic provider. `AtomicGenerationRecoverySnapshotPullService.recoverFromRemoteSnapshot` uses `ShopSyncRecoveryRemoteAdapter`; the only remote checkpoint and marker full DTO decoders found are at `ShopSyncRecoveryContract.swift:848` and `:968`, both preceded by the approved R-I02 scope/status envelope. No owner-scope decoder bypass is established. A truncated `catalog` key could also be nested; it is not sufficient to attribute a new contract failure.
+
+Proposed deterministic tests for executor: seed an old automatic error and anonymous watermark, then a current scoped orchestrator denial at T2; assert current error/scope and correctly associated time. Current completion without an error must not resurrect the old automatic error. Any retained historical diagnostic must remain explicitly historical and must not receive a new progress timestamp. Existing `Task118AutomaticDomainTests` checks UI source strings, not this precedence/freshness behavior. Tests not run by reviewer. Await the executor red/frozen patch and selective fresh runtime evidence; do not claim new decoder regression or current recovery success from the UI packet alone.
+
+
+## R-I03 — scoped review of the frozen Options diagnostics fix
+
+**Source verdict: APPROVED**, no concrete P0/P1/P2 findings in the three-file application/test delta against `5dbcb6e7`. No production change outside OptionsView, no decoder/auth/storage modification, no reviewer build or test execution. Parent task/master documentation was excluded from this limited source review.
+
+Reviewed behavior:
+- Signed-in card supplies the authenticated session UUID; signed-out state supplies nil. The snapshot requires its account hash to equal the current shop-context account, reads the resolved selection for that account, and applies the existing `LinkedShop.isValidSelection`. Missing/mismatched/unresolved/nonselectable scope stays unavailable. This displays the selected shop, not a write authorization or legacy watermark-derived scope.
+- `SelectedShopStore.init`, `selectedShop` and `isResolutionReady` are pure preference reads; this code neither captures a lease nor creates device identity. Added runtime assertion compares the complete isolated defaults dictionary before/after snapshot creation.
+- Last error reads canonical `orchestrator.lastRunErrorCode`, falling back only to canonical `lastRunBlockReason`. Both are written/removed by `SyncStateStore.recordRunResult` in Release. A current success therefore cannot resurrect the old DEBUG-only error.
+- Error display uses the same canonical result's `lastRunCompletedAt`; later progress does not relabel an old error with a new time. Missing completion time leaves the error undated. Existing truncation is preserved; no new payload/token logging or preference writes.
+- Existing release UI source-contract test only updates its struct-boundary delimiter from private to internal; every assertion is retained. Six added runtime tests cover precedence, block/success, later progress, missing timestamp, authenticated resolved shop, and signed-out/account-change/unresolved scope.
+
+Freeze hashes independently recalculated and matched `review-source-hashes.json` (3/3):
+- OptionsView.swift `df163923ebe2720274992ac05d38accc20dfd039d4f14ff0ce437e07c5f5b209`
+- Task118AutomaticDomainTests.swift `66c87646b94d995a2c2ad038d02d424a976417b86d952d4414990a7eb4c6e070`
+- SupabaseManualSyncReleaseUITests.swift `c73c5dff706dd95534a5c213e94586ef830ef464c52cf146d40bedca4d01aa7b`
+
+Evidence read directly using xcresulttool (read-only, no rerun): `/tmp/mc-task144-ios/ri03/red.xcresult` reports 0 PASS / 6 FAIL / 0 SKIP, all six added diagnostics cases failing on the original behavior; `green.xcresult` reports 123 PASS / 0 FAIL / 0 SKIP. Green log confirms 30 atomic recovery + 29 Storefront + 26 release UI source-contract + 38 Task118 tests; these release UI source-contract tests are unit/source checks, not an authenticated XCUITest result. Initial failed compile attempt is retained in the executor evidence and precedes the frozen green source.
+
+Parent reports the second authenticated retry now records `checkpoint_resource_exceeded` while the old DEBUG error remains unchanged, supporting the original attribution and R-I02 live classification. This was not independently performed by this reviewer. Final canonical gates, exact-SHA CI and validation of the newly built live diagnostics UI remain separate from this source approval.
+
+
+## R-I03 adjacent general Options label — source attribution
+
+Parent reports the newly installed live diagnostics now show the correct `checkpoint_resource_exceeded`, selected scope and completion time, but the general local-database card says “Cloud permission problem” while authentication is connected. No additional private payload was needed for source attribution.
+
+Read-only confirmation: `LocalDatabaseCloudStatusResolver.resolve` in OptionsView.swift at 1085–1086 maps any generic `.failed` sync phase/outcome or `syncCountDriftCheckFailed` to `.cloudPermissionProblem`, even with `isAuthFailed == false`. An ordinary nonempty, unaligned recovery failure therefore gets the permission-specific title. Real auth failure has an earlier distinct branch at 1061, and `.deviceNotActive` has a distinct block-reason mapping at 1167.
+
+Executor owns red reproduction and minimal copy/resolver fix. Review guardrails sent: cover all three generic triggers; preserve actual auth/device permission, sign-in, network/offline, aligned historical-failure behavior and the existing automatic-retry policy. Existing `OptionsLocalDatabaseCloudStatusTests` has no regression for the generic-failure/permission distinction. No build/test/source edit by reviewer. Await frozen patch and evidence before a verdict.
+
+
+## R-I03 — final scoped card-label extension review
+
+**Source verdict: APPROVED**, no concrete P0/P1/P2 finding. The adjunct introduces `.cloudCheckFailed`, reuses the existing localized generic title/detail, and changes only the generic failed phase/outcome/count-check branch to that reason. Reversing these six changed production lines in memory exactly recreates the prior approved OptionsView SHA (`df163923...5b209`); no further production delta is hidden in this review.
+
+The real auth-failure, deviceNotActive, authRequired, network/offline, aligned historical failure, resolution precedence and `shouldRequestAutomaticCloudCheck` behavior are unchanged. Existing strings were inspected in Italian, English, Spanish and simplified Chinese: each says the cloud check failed and a retry is available, without incorrectly asserting a permission problem. No localization files changed. Two runtime tests add the three generic triggers and explicit auth/device/authRequired/network guards; existing assertions are unchanged.
+
+Four freeze hashes independently matched `/tmp/mc-task144-ios/ri03/card-review-source-hashes.json`:
+- OptionsView.swift `d57bb1a45fb947c3ed22f9ae6d74214cd5774eb6baa6e23669b8a9c5742b0527`
+- Task118AutomaticDomainTests.swift `66c87646b94d995a2c2ad038d02d424a976417b86d952d4414990a7eb4c6e070`
+- SupabaseManualSyncReleaseUITests.swift `c73c5dff706dd95534a5c213e94586ef830ef464c52cf146d40bedca4d01aa7b`
+- OptionsLocalDatabaseCloudStatusTests.swift `426e45715b9e2c9271ba951da498cd45b46c112a48013cf560429638f0672269`
+
+Direct read-only xcresult summary verification: `card-red.xcresult` 12 PASS / 1 FAIL / 0 SKIP (generic failure regression), `card-green.xcresult` 136 PASS / 0 FAIL / 0 SKIP. These are executor-run results, not reviewer test executions. No build, device action or tracked file modification by reviewer. Signed final artifact, full canonical gate, exact-SHA CI and updated live UI validation remain separate.

@@ -123,6 +123,40 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
         XCTAssertNotEqual(conflictStatus.titleKey, "options.localDatabase.needsCheck.title")
     }
 
+    func testGenericCloudCheckFailuresDoNotClaimPermissionFailure() {
+        let inputs = [
+            makeInput(syncPhase: .failed),
+            makeInput(lastOutcome: .failed),
+            makeInput(syncCountDriftCheckFailed: true)
+        ]
+        for input in inputs {
+            let status = LocalDatabaseCloudStatusResolver.resolve(input)
+            XCTAssertEqual(status.titleKey, "options.supabase.automaticSync.root.error.title")
+            XCTAssertEqual(status.detailKey, "options.supabase.automaticSync.root.error.detail")
+            XCTAssertNotEqual(status, .requiresUserAction(.cloudPermissionProblem))
+            XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
+        }
+    }
+
+    func testActualAccessFailuresRetainSpecificUserAction() {
+        XCTAssertEqual(
+            LocalDatabaseCloudStatusResolver.resolve(makeInput(isAuthFailed: true, syncPhase: .failed)),
+            .requiresUserAction(.cloudPermissionProblem)
+        )
+        XCTAssertEqual(
+            LocalDatabaseCloudStatusResolver.resolve(makeInput(syncPhase: .blocked(.deviceNotActive), lastOutcome: .failed)),
+            .requiresUserAction(.cloudPermissionProblem)
+        )
+        XCTAssertEqual(
+            LocalDatabaseCloudStatusResolver.resolve(makeInput(syncPhase: .blocked(.authRequired), lastOutcome: .failed)),
+            .requiresUserAction(.signInRequired)
+        )
+        XCTAssertEqual(
+            LocalDatabaseCloudStatusResolver.resolve(makeInput(syncPhase: .blocked(.networkUnavailable), lastOutcome: .failed)),
+            .offlineCloudCheckPending
+        )
+    }
+
     func testOptionsPublicCardsDoNotRenderPendingRows() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

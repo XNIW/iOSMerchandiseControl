@@ -71,6 +71,28 @@ ACK perso e aggiornamento concorrente richiedono replay del contratto idempotent
 
 ## Execution
 
+### Esecuzione — R-I03 diagnostica corrente, 2026-09-28
+
+**File modificati:**
+- `OptionsView.swift` — diagnostica legata a risultato e orario canonici; account/shop correnti verificati con getter senza effetti collaterali; errore cloud generico distinto dai permessi.
+- `Task118AutomaticDomainTests.swift` — 6 regressioni runtime su errore, tempo e scope, inclusa invariabilità delle preferenze.
+- `OptionsLocalDatabaseCloudStatusTests.swift` — 2 regressioni: tre trigger di fallimento generico e precedenza auth/device/offline.
+- `SupabaseManualSyncReleaseUITests.swift` — solo delimitatore della sezione sorgente aggiornato alla visibilità internal del test seam; asserzioni conservate.
+
+**Azioni ed evidenze:**
+1. Riprodotta la diagnostica storica: 0 PASS / 6 FAIL. Dopo fix, 123 PASS; rifinitura della scheda cloud riprodotta 12 PASS / 1 FAIL, poi mirati integrati **136 PASS / 0 FAIL / 0 SKIP**. Review indipendente APPROVED su tutti i 4 hash; nessun finding aperto.
+2. UI/UX intenzionale: gli errori generici non implicano più un problema di permessi; si riusano titolo/dettaglio già tradotti IT/EN/ES/ZH. Autenticazione, dispositivo bloccato, offline, stato allineato e policy di retry restano invariati. Nessuna modifica recovery/auth/backend.
+3. Prima full R-I03 preservata: **1371 PASS / 1 FAIL / 36 SKIP**. L'assert del titolo Recents falliva perché il picker Files ricordava Browse > On My iPhone dopo il probe normale CA-08. Il video prova UI inglese e apertura corretta del picker. Ripristinato Recents dalla UI normale solo sul simulatore executor: test canonico invariato **1/1 PASS**, senza reset, edit preferenze, esclusioni o indebolimento assert.
+4. Full finale sul nuovo fingerprint: **1374 PASS / 0 FAIL / 36 SKIP**, totale 1410, con 1366 unit/integration e 8 XCUITest; nessun retry/restart. Release firmata Automatic canonica, analyze e scan sensitive PASS. Nuovi warning statici: 0; precedenti warning e skip restano documentati. Il runtime warning QoS nel test SyncEventIncrementalDomainApplyServiceTests resta riportato nel summary ufficiale, senza soppressioni. [Manifest R-I03](EVIDENCE/TASK-144/ri03-current-diagnostics/final-gate-manifest.json).
+5. Nuovo bundle TEST separato dal precedente, con sola configurazione immagini già autorizzata. Firma/effective Simulator entitlements verificati, nessuna lettura token e nessuna installazione sul device live da executor. Receipt e fingerprint nel manifest; collaudo autenticato appartiene al coordinatore.
+
+**Check obbligatori:** build Release ESEGUITO; analyze ESEGUITO; warning nuovi ESEGUITO (nessuno introdotto); coerenza planning ESEGUITO; criteri locali ESEGUITI con limiti live e CA-08/09 invariati. I benchmark core invariati non sono stati ripetuti. Fonte, red/green, prima full fallita, ripristino UI e gate finali sono separati nell'evidenza. CI exact-SHA del nuovo commit resta esterna; nessuna dichiarazione DONE.
+
+
+### Addendum diagnostica runtime — parent, 2026-09-28
+
+Dopo Google reale/restart riusciti sul bundle347b, Options mostrava keyNotFound(catalog) vicino al nuovo orario Retry. Il confronto selettivo delle preferenze ha attribuito il messaggio al vecchio `automatic.lastError` (write/clear DEBUG-only), mentre il risultato Release corrente è `deviceNotActive`, senza nuova recovery avviata. Lo scope UI deriva inoltre da un watermark storico. Nessun nuovo errore decoder R-I02 provato. Autorizzato nel mandato corrente un fix minimo di presentazione con test rosso/verde su precedence, tempo e scope; reviewer indipendente separato. Nessun reset preferenze/dati o bypass autorizzazione. Snapshot durante il fix: PR11 riportata draft e CI5dbcb6e7 cancellata perché superata dal nuovo delta, non contata PASS. Il delta R-I03 finale è ora SOURCE_APPROVED / LOCAL_VERIFIED, full1374PASS/36SKIP; il parent pubblica il commit e verifica CI/merge/main prima dell'integrazione.
+
 ### Addendum — R-I02 e crash CI97b6, 2026-09-28
 
 - Contratto checkpoint short-envelope riprodotto: 6 casi nuovi contro sorgente invariata, 2 PASS / 4 FAIL per `keyNotFound(catalog)`. Envelope scoped prima del DTO ready: 48/48 PASS nelle due suite recovery/contract. Review ha trovato lo stesso caso nel marker finale; riprodotto 1 PASS / 2 FAIL per `catalog=null`. Il batch finale copre entrambi i punti e conserva i controlli strict del successo, il journal e il binding. [Evidenza R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/README.md).
@@ -105,25 +127,27 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 | CA-07 | ESEGUITO locale; NON ESEGUITO live da executor | Test sync/outbox/paging/no-op e scope; EXTERNAL_DEPENDENCY collaudo autenticato Android↔iOS owner separato, nessuna promessa di 3 s. |
 | CA-08 | NON ESEGUITO integralmente; regressioni locali ESEGUITE | Suite esistenti import/export/images e fixture Unicode/CLP condivisa; camera/upload reale EXTERNAL_DEPENDENCY, harness Excel sospeso resta skip. |
 | CA-09 | NON ESEGUITO integralmente; misure core ESEGUITE | n = 30 draft + n = 1 S100-E/F, dataset/condizioni espliciti; nessuna misura di background/force-stop/convergenza live. |
-| CA-10 | ESEGUITO — VERIFIED locale; CI exact-SHA finale esterna | R-I02 full finale 1366 PASS / 0 FAIL / 36 SKIP; mirati 81/0/0, Release/analyze PASS. CI97b6 crash conservato, riproduzione runtime26.2 e fix test-only 29/29 PASS. Nessuna esclusione/override app; precedenti benchmark core invariati. |
+| CA-10 | ESEGUITO — VERIFIED locale; CI exact-SHA finale esterna | R-I03 full finale 1374 PASS / 0 FAIL / 36 SKIP; mirati integrati136/0/0, Release/analyze PASS. Prima full R-I03 1371/1/36 e ripristino Files normale1/1 preservati. CI97b6 crash/fix runtime26.2 e R-I02 restano storici. Nessuna esclusione/override app; benchmark core invariati. |
 | CA-11 | ESEGUITO review/fix/re-review; NON ESEGUITO PR/CI da executor | Sorgente APPROVED senza P0/P1/P2; coordinatore integra e verifica exact SHA, Snapshot non integrato finché i gate remoti del nuovo commit non sono verdi; merge già autorizzato. |
 | CA-12 | ESEGUITO evidence iOS; NON ESEGUITO report coordinato da executor | Manifest e limiti espliciti; parent integra report complessivo/live/PR. Nessuna dichiarazione DONE. |
 
 ## Review
 
-Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02 e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
+Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
 
 ## Fix
+
+R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope visibile da owner autenticato e shop risolto, senza side effects. La scheda cloud distingue fallimenti generici da reali permessi/auth. Sei test diagnostica e due card aggiunti; red/green e due approvazioni indipendenti nel [manifest](EVIDENCE/TASK-144/ri03-current-diagnostics/manifest.json). Nessuna modifica recovery/auth/retry e nessuna assertion indebolita.
 
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
 
-**R-I02/crash CI: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Gate finali nuovi completati nel [manifest R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json); commit/CI exact SHA e accettazione mobile autenticata restano separati. Snapshot storico al commit97b6: [Manifest precedente](EVIDENCE/TASK-144/ios-gate-manifest.json); [precedenti casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
+**R-I03: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full finale1374/0/36, mirati136/0/0, Release/analyze/scan PASS nel [manifest R-I03](EVIDENCE/TASK-144/ri03-current-diagnostics/final-gate-manifest.json). Fingerprint325file `44adf90701d3336815a071f34fdc1fc5e4a4fb0d6ef543bf1c706c3a29807c9b`; bundle signed finale e source receipt separati. Precedenti R-I02/crash CI sono snapshot storici verificati. Gate finali nuovi completati nel [manifest R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json); commit/CI exact SHA e accettazione mobile autenticata restano separati. Snapshot storico al commit97b6: [Manifest precedente](EVIDENCE/TASK-144/ios-gate-manifest.json); [precedenti casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
 
 - Parent integra commit/PR iOS e CI sull'exact SHA; commit compatibilità già separato `4575eefb`. Nessun commit/push dell'executor.
 - Primo full fallito per shutdown del simulatore richiesto da precedente runner; prova preservata, nessun difetto applicativo attribuito senza evidenza. Full storico 97b6 senza restart sul fingerprint `3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d`.
-- Fingerprint corrente R-I02: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`, 325 file app/test/resource verificati identici dopo i gate. I conteggi e hash precedenti sono snapshot storici, non il nuovo batch.
+- Fingerprint snapshot R-I02 al commit5dbcb6e7: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`, 325 file app/test/resource verificati identici dopo i gate. I conteggi e hash precedenti sono snapshot storici, non il nuovo batch.
 - 36 skip: 29 live/esterni, 4 benchmark sintetici opt-in (due richiesti eseguiti separatamente), 2 harness Excel sospeso, 1 camera fisica. Non trasformarli in accettazione live.
 - Build TEST con configurazione publishable già autorizzata dal parent è distinta dai gate e dagli artifact Release senza config. Prosegue fuori dai file tracked, con manifest/path/hash separato in `/tmp/mc-task144-ios/`; nessuna installazione su device altrui da questo executor. Sessione/app-auth e verifica bidirezionale sono owner del coordinatore live.
 - Nessun XCTest esistente attiva semplicemente l'app installata senza fixture; i veri target UI esistenti usano DEBUG harness. Lo script legacy `tools/sim_ui.sh` non è un probe XCTest ed è deprecato. Nessun nuovo probe tracked/target CI introdotto. Dopo i gate, copia privata del probe coordinatore autorizzata soltanto in /tmp e sul simulatore executor per i residui CA-08, senza app fixture override.

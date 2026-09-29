@@ -1,0 +1,53 @@
+[
+  {
+    "scope": [
+      "iOSMerchandiseControl",
+      "iOSMerchandiseControlTests"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-0.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005635Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-p51612.json"
+  },
+  {
+    "scope": [
+      "iOSMerchandiseControlUITests",
+      "contracts",
+      ".github/workflows"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-1.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005637Z-scan-sensitive-iOSMerchandiseControlUITests-contracts-github-workflows-p52361.json"
+  },
+  {
+    "scope": [
+      "iOSMerchandiseControl/OptionsView.swift"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-2.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005637Z-scan-sensitive-iOSMerchandiseControl-OptionsViewswift-p52948.json"
+  },
+  {
+    "scope": [
+      "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-3.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005638Z-scan-sensitive-iOSMerchandiseControlTests-Task118AutomaticDomainTestsswift-p53428.json"
+  },
+  {
+    "scope": [
+      "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-4.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005639Z-scan-sensitive-iOSMerchandiseControlTests-SupabaseManualSyncReleaseUITestsswift-p53909.json"
+  },
+  {
+    "scope": [
+      "iOSMerchandiseControlTests/OptionsLocalDatabaseCloudStatusTests.swift"
+    ],
+    "exit_code": 0,
+    "raw_output": "/tmp/mc-task144-ios/ri03/scan/source-5.stdout.log",
+    "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T005640Z-scan-sensitive-iOSMerchandiseControlTests-OptionsLocalDatabaseCloudStatusTestsswift-p54389.json"
+  }
+]

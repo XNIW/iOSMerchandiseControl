@@ -1158,6 +1158,87 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertTrue(options.contains("isTechnicalCloudEventNote"))
     }
 
+
+    @MainActor
+    func testDiagnosticsCurrentRecoveryErrorSupersedesHistoricalDebugError() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: Date(timeIntervalSince1970: 2_000))
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastError, "checkpoint_resource_exceeded")
+        XCTAssertFalse(snapshot.lastErrorText.contains("keyNotFound"))
+        XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.automatic.lastError"), "old keyNotFound catalog")
+    }
+
+    @MainActor
+    func testDiagnosticsCurrentBlockAndSuccessNeverResurrectHistoricalError() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.blocked(.deviceNotActive), now: Date(timeIntervalSince1970: 2_000))
+        let blocked = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(blocked.lastError, "deviceNotActive")
+        store.recordRunResult(.success(didWork: false, verifiedConvergence: true), now: Date(timeIntervalSince1970: 3_000))
+        let success = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertNil(success.lastError)
+        XCTAssertFalse(success.hasLastError)
+    }
+
+    @MainActor
+    func testDiagnosticsErrorKeepsItsCompletedTimestampDuringLaterProgress() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let observedAt = Date(timeIntervalSince1970: 2_000)
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: observedAt)
+        store.updatePhase(.checking, now: Date(timeIntervalSince1970: 8_000))
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastErrorText, String(format: L("options.supabase.automaticSync.diagnostics.errorObserved"), "checkpoint_resource_exceeded", observedAt.formatted(date: .abbreviated, time: .shortened)))
+    }
+
+    @MainActor
+    func testDiagnosticsErrorWithoutItsOwnTimestampDoesNotBorrowProgressTime() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("checkpoint_resource_exceeded", forKey: "sync.runtime.orchestrator.lastRunErrorCode")
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(phase: .failed, lastProgressAt: Date(timeIntervalSince1970: 8_000)), pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastErrorText, "checkpoint_resource_exceeded")
+    }
+
+    @MainActor
+    func testDiagnosticsUsesAuthenticatedResolvedShopInsteadOfHistoricalWatermark() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set(42, forKey: "sync.events.watermark.account.zzzz-historical.store.anonymous")
+        let before = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.accountHash, String(AccountBindingStore.accountHash(for: owner).prefix(12)) + "...")
+        XCTAssertEqual(snapshot.storeScope, String(fixture.storeIdentity.rawValue.prefix(12)) + "...")
+        XCTAssertEqual(snapshot.shopSourceText, "TASK118 fixture shop")
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, before, "Diagnostics must not create device identity or mutate preferences")
+    }
+
+    @MainActor
+    func testDiagnosticsCannotInferScopeWhenSignedOutUnresolvedOrAccountChanges() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set(42, forKey: "sync.events.watermark.account.zzzz-historical.store.anonymous")
+        let signedOut = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertNil(signedOut.accountHash)
+        XCTAssertNil(signedOut.storeScope)
+        let switched = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: UUID(), defaults: fixture.defaults)
+        XCTAssertNil(switched.storeScope)
+        SelectedShopStore(defaults: fixture.defaults).markResolutionUnresolved(accountHash: AccountBindingStore.accountHash(for: owner))
+        let unresolved = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertNil(unresolved.storeScope)
+        XCTAssertNotEqual(unresolved.shopSourceText, L("options.supabase.automaticSync.diagnostics.ownerScope"))
+    }
+
     private func makeAutomaticScopeFixture(
         ownerUserID: UUID
     ) throws -> Task118AutomaticScopeFixture {
