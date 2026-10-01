@@ -87,7 +87,34 @@ Aggiungere la fixture sintetica condivisa di 45 timestamp e un test sul vero `re
 
 La CI d05d163c/36932145104 è fallita nella selezione destinazione prima di build/test: Xcode26.6 ha riportato solo placeholder. Autorizzata correzione minima del workflow: inizializzare CoreSimulator, riusare la prima destinazione realmente compatibile; se manca, creare un iPhoneCI sul runtime installato e richiedere nuovamente una destinazione dello scheme. Un runtime assente/incompatibile deve ancora fallire; vietati skip/bypass o modifiche alle invocazioni build/full test/analyze/scan. Verifica controllata del vero script e review indipendente precedono nuovo commit/CI exact-SHA. Nessuna app dependency o configurazione production modificata.
 
+### Addendum planning autorizzato — CI sul commit candidato (2026-10-01)
+
+Il mandato richiede CI sullo SHA esatto. Il checkout predefinito della PR usa il merge temporaneo: metadata headSha non prova la revisione Git testata. Modifica minima autorizzata al solo input ref di actions/checkout: head.sha per pull_request, github.sha per push/workflow_dispatch. Versioni/pin, permessi, trigger e tutti i gate invariati; app/test/fixture invariati. Verificare indipendentemente il diff, quindi la revisione effettiva nel log e CI sul nuovo head prima del merge normale; conservare run precedenti con il loro tested SHA/tree. Nessun nuovo gate locale sull'app dedotto da questa modifica.
+
 ## Execution
+
+### Esecuzione — CI checkout del candidato, 2026-10-01 (root)
+
+**File modificati:**
+- .github/workflows/ios-product-images-ci.yml — solo input ref del checkout: SHA head della PR; fallback github.sha sugli altri eventi.
+- docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md — planning autorizzato ed evidenza di esecuzione.
+
+**Azioni eseguite:**
+1. Checkout PR predefinito constatato nel workflow; su Android run36938212309 checkout Git f4e5500d e head7363cae hanno tree7e1eb674 identico. Quel PASS è TREE_EQUIVALENT_MERGE_CHECKOUT, non exact Git head.
+2. App/test/fixture del candidato locale invariati; nessun nuovo PASS app dedotto dall'edit CI.
+3. Diff minimo e ricostruzione byte-identica dei workflow precedenti verificati nella review indipendente APPROVED ci-exact-head-checkout-review.md (SHA084c37e9). Pin/versioni, permessi, trigger e gate invariati.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/test app | ESEGUITO sul freeze app invariato | Gate canonici e hash del batch corrente riportati sotto; nessun nuovo compile locale per il solo checkout input. Nuova CI sul commit effettivo obbligatoria. |
+| Static workflow / diff | ESEGUITO | Ref minimo, inverso byte-identico; review APPROVED e git diff --check. |
+| Warning nuovi | ESEGUITO | Nessuna nuova modifica a sorgenti/build SDK; diagnostici del batch app conservati. |
+| Coerenza con planning | ESEGUITO | Solo provenance richiesta dal mandato exact-SHA. |
+| Criterio CI exact-head | NON ESEGUITO al commit | Da verificare nel nuovo run con actual git checkout SHA; metadata headSha da soli insufficienti. |
+
+**Handoff:** root conserva run precedenti e gestisce push/CI/merge normale/mainCI; nessun DONE o bypass.
+
 
 ### Esecuzione — R-I06 supplemento oracle condiviso, 2026-10-01
 
