@@ -1,0 +1,93 @@
+{
+  "verdict": "APPROVED",
+  "scope": "R-I06 History timestamp only; bounded independent read-only review",
+  "reviewed_at_utc": "2026-10-01T21:32:47.817929+00:00",
+  "source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "source_files": 326,
+  "all_live_source_hashes_match": true,
+  "manifest_path_coverage_matches_tracked_and_nonignored_untracked_app_test_ui_files": true,
+  "source_manifest_sha256": "a53de277168e9a860bb0a62808a2e30b41a2514f12670b736b42ae9e1ab9b032",
+  "prior_approved_ri05_fingerprint": "0fa8c144b61cc0fccc72218b0368735b0196ae75dc12f6900dc5f52fda6580eb",
+  "changed_from_ri05": {
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift": "6f30aa68594f09e5ab00c4a03c8b82ae5562466135fb78a21ab0714faff95ab0",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": "8d2089062988d3982b4d22c0082be5335f62a870526d76d6e22ba981e0521549",
+    "iOSMerchandiseControlTests/ShopSyncRecoveryContractTests.swift": "711f293d2c411c91b51c9c90737434c9981606ddfecb86a1e19c1c357fdee96d"
+  },
+  "auth_four_hashes_unchanged": {
+    "iOSMerchandiseControl/SupabaseAuthService.swift": "2f37c30835cb6cb0a80579e9856e13fb2efa1f3a6efe5999e890b0a8faabf5b1",
+    "iOSMerchandiseControl/SupabaseAuthViewModel.swift": "6f13de8ae1c05b2dbc3f9c6cdd9cad8e865051dc2ade96629f8f0c80922528d7",
+    "iOSMerchandiseControl/SupabaseClientProvider.swift": "482e0ed79bf37e74b3e9c67d4227963e1c20d62780ee77b0c115a826717b1ae3",
+    "iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift": "f1eeb4c951ddeab2f571931cd1732b4ebe3d76f1d954336fadfabc478f348aca"
+  },
+  "official_xcresulttool_readback": {
+    "red": {
+      "summary": {
+        "result": "Failed",
+        "totalTestCount": 1,
+        "passedTests": 0,
+        "failedTests": 1,
+        "skippedTests": 0,
+        "expectedFailures": 0
+      },
+      "official_cases": 1,
+      "unique_cases": 1,
+      "case_status": {
+        "Failed": 1
+      },
+      "suite_counts": {
+        "AtomicGenerationRecoverySnapshotPullServiceTests": 1
+      },
+      "export_summary_semantically_identical": true,
+      "summary_export_sha256": "f4f3a2011c2a4007b1b3c191f624d4e4de1ea76a9aa669529f30a0f79dc6d7b9",
+      "test_failure_text": [
+        "failed: caught error: \"nonCanonicalTimestamp\""
+      ]
+    },
+    "targeted": {
+      "summary": {
+        "result": "Passed",
+        "totalTestCount": 57,
+        "passedTests": 57,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "expectedFailures": 0
+      },
+      "official_cases": 57,
+      "unique_cases": 57,
+      "case_status": {
+        "Passed": 57
+      },
+      "suite_counts": {
+        "AtomicGenerationRecoverySnapshotPullServiceTests": 32,
+        "ShopSyncRecoveryContractTests": 25
+      },
+      "export_summary_semantically_identical": true,
+      "summary_export_sha256": "4351c0e9e486e04c91b9ffa51dafc458264c792e0703fadd2bb627df0ded6f3c",
+      "test_failure_text": []
+    }
+  },
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 0
+  },
+  "contract_checks": [
+    "History admits unchanged legacy form or exact ASCII YYYY-MM-DDTHH:mm:ss.SSSZ with full-match and 24 bytes",
+    "ISO year 0001..9999, proleptic Gregorian month/day/leap rules, hour 00..23 and minute/second 00..59",
+    "Original incoming timestamp is returned and used in History versionLine without Date normalization",
+    "Price effective/created legacy and updated/deleted UTC6 helpers and call sites remain unchanged",
+    "Actual recovery activates and reopens persisted SwiftData Date at independently verified epoch 1783266011.305",
+    "Normalized-seconds checkpoint is refused with checkpointChanged; prior container and durable journal are retained",
+    "Negative precision, offsets, Unicode digits, whitespace, case and calendar variants are tested"
+  ],
+  "source_mutation_by_reviewer": false,
+  "build_or_test_run_by_reviewer": false,
+  "device_operations_by_reviewer": false,
+  "canonical_release_full_analyze_ci_live_gates_in_this_approval": false,
+  "limits": [
+    "Approval concerns the frozen source and official targeted results only. Canonical final gates, exact-SHA CI/integration and authenticated live convergence remain separate.",
+    "Supplied planned cross-platform grammar is matched; deployed backend/Android behavior was not independently re-audited in this bounded iOS lane.",
+    "No outbound/model/fingerprint change or exact fractional wire-roundtrip claim. Auth is hash-verified unchanged, not re-audited."
+  ]
+}

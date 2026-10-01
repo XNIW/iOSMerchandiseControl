@@ -18,7 +18,7 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
 
         XCTAssertEqual(result.status, .empty)
         XCTAssertEqual(result.summary, .empty)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -48,7 +48,7 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
         XCTAssertEqual(result.summary.notRegisterable, 0)
         XCTAssertEqual(counts.sent, 1)
         XCTAssertEqual(counts.retryable, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
     }
 
@@ -72,7 +72,7 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
         XCTAssertEqual(result.summary.registered, 0)
         XCTAssertEqual(result.summary.waiting, 1)
         XCTAssertEqual(result.summary.notRegisterable, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
     }
 
@@ -111,7 +111,7 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
         XCTAssertEqual(result.summary.waiting, 0)
         XCTAssertEqual(result.summary.notRegisterable, 1)
         XCTAssertEqual(counts.blocked, 1)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -202,7 +202,8 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
     }
 }
 
-private actor ReleaseActivityRegistrationRecorder: SyncEventRecording {
+@MainActor
+private final class ReleaseActivityRegistrationRecorder: SyncEventRecording {
     enum Response: Sendable {
         case success(RemoteSyncEventRow)
         case failure(SyncEventRecordError)

@@ -1,0 +1,13 @@
+{
+  "errors": [],
+  "warnings": [
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:14:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:26:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:42:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:54:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift:16:29: warning: main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift:612:13: warning: call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift:189:24: warning: main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift:382:35: warning: main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+  ]
+}

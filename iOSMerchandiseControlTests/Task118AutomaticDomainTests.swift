@@ -601,11 +601,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
             ownerUserID: owner,
             domain: "catalog"
         ))
-        let rowsAfterLoss = await remote.remoteProductRowCount()
+        let rowsAfterLoss = remote.remoteProductRowCount()
         XCTAssertEqual(rowsAfterLoss, 1)
 
         let retried = try await service.pushPendingCatalog(ownerUserID: owner)
-        let attemptedIDs = await remote.attemptedProductIDs()
+        let attemptedIDs = remote.attemptedProductIDs()
         let finalContext = ModelContext(container)
         let linkedID = try XCTUnwrap(fetchProduct(
             barcode: "TASK139-IDEMPOTENT-CREATE",
@@ -615,7 +615,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(retried.productCreates, 1)
         XCTAssertEqual(attemptedIDs.count, 2)
         XCTAssertEqual(Set(attemptedIDs), [linkedID])
-        let rowsAfterRetry = await remote.remoteProductRowCount()
+        let rowsAfterRetry = remote.remoteProductRowCount()
         XCTAssertEqual(rowsAfterRetry, 1)
         XCTAssertEqual(try activeChangeCount(context: finalContext, ownerUserID: owner), 0)
         XCTAssertEqual(try fetchOutboxEntries(
@@ -714,11 +714,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(result.productUpdates, 1)
         XCTAssertEqual(result.productCreates, 0)
         XCTAssertEqual(result.totalChanged, 1)
-        let updatedProductIDs = await remote.updatedProductIDs()
-        let createdProductPayloadCount = await remote.createdProductPayloadCount()
+        let updatedProductIDs = remote.updatedProductIDs()
+        let createdProductPayloadCount = remote.createdProductPayloadCount()
         XCTAssertEqual(updatedProductIDs, [remoteID])
         XCTAssertEqual(createdProductPayloadCount, 0)
-        let payloads = await remote.productUpdatePayloads()
+        let payloads = remote.productUpdatePayloads()
         XCTAssertEqual(payloads.count, 1)
         XCTAssertNotNil(payloads.first?.deletedAt)
 
@@ -735,7 +735,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let repeatResult = try await CatalogPushService(modelContainer: container, remote: remote, defaults: scopeFixture.defaults)
             .pushPendingCatalog(ownerUserID: owner)
         XCTAssertEqual(repeatResult.totalChanged, 0)
-        let repeatedUpdatedProductIDs = await remote.updatedProductIDs()
+        let repeatedUpdatedProductIDs = remote.updatedProductIDs()
         XCTAssertEqual(repeatedUpdatedProductIDs, [remoteID])
         XCTAssertNil(try fetchProduct(barcode: "TASK135_DELETE_REMOTE", context: ModelContext(container)))
     }
@@ -770,8 +770,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
             .pushPendingCatalog(ownerUserID: owner)
 
         XCTAssertEqual(result.totalChanged, 0)
-        let updatedProductIDs = await remote.updatedProductIDs()
-        let createdProductPayloadCount = await remote.createdProductPayloadCount()
+        let updatedProductIDs = remote.updatedProductIDs()
+        let createdProductPayloadCount = remote.createdProductPayloadCount()
         XCTAssertTrue(updatedProductIDs.isEmpty)
         XCTAssertEqual(createdProductPayloadCount, 0)
         let verifyContext = ModelContext(container)
@@ -822,10 +822,10 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(result.supplierUpdates, 1)
         XCTAssertEqual(result.categoryUpdates, 1)
         XCTAssertEqual(result.totalChanged, 2)
-        let updatedSupplierIDs = await remote.updatedSupplierIDs()
-        let updatedCategoryIDs = await remote.updatedCategoryIDs()
-        let supplierPayloads = await remote.supplierUpdatePayloads()
-        let categoryPayloads = await remote.categoryUpdatePayloads()
+        let updatedSupplierIDs = remote.updatedSupplierIDs()
+        let updatedCategoryIDs = remote.updatedCategoryIDs()
+        let supplierPayloads = remote.supplierUpdatePayloads()
+        let categoryPayloads = remote.categoryUpdatePayloads()
         XCTAssertEqual(updatedSupplierIDs, [supplierRemoteID])
         XCTAssertEqual(updatedCategoryIDs, [categoryRemoteID])
         XCTAssertNotNil(supplierPayloads.first?.deletedAt)
@@ -1109,7 +1109,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         XCTAssertEqual(result.insertedCount, 0)
         XCTAssertEqual(result.orphanedCount, 0)
-        let insertCallCount = await remote.insertCallCount()
+        let insertCallCount = remote.insertCallCount()
         XCTAssertEqual(insertCallCount, 0)
         let verifyContext = ModelContext(container)
         XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
@@ -1156,6 +1156,87 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousLastError"))
         XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousErrorNonBlocking"))
         XCTAssertTrue(options.contains("isTechnicalCloudEventNote"))
+    }
+
+
+    @MainActor
+    func testDiagnosticsCurrentRecoveryErrorSupersedesHistoricalDebugError() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: Date(timeIntervalSince1970: 2_000))
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastError, "checkpoint_resource_exceeded")
+        XCTAssertFalse(snapshot.lastErrorText.contains("keyNotFound"))
+        XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.automatic.lastError"), "old keyNotFound catalog")
+    }
+
+    @MainActor
+    func testDiagnosticsCurrentBlockAndSuccessNeverResurrectHistoricalError() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.blocked(.deviceNotActive), now: Date(timeIntervalSince1970: 2_000))
+        let blocked = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(blocked.lastError, "deviceNotActive")
+        store.recordRunResult(.success(didWork: false, verifiedConvergence: true), now: Date(timeIntervalSince1970: 3_000))
+        let success = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertNil(success.lastError)
+        XCTAssertFalse(success.hasLastError)
+    }
+
+    @MainActor
+    func testDiagnosticsErrorKeepsItsCompletedTimestampDuringLaterProgress() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let observedAt = Date(timeIntervalSince1970: 2_000)
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: observedAt)
+        store.updatePhase(.checking, now: Date(timeIntervalSince1970: 8_000))
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastErrorText, String(format: L("options.supabase.automaticSync.diagnostics.errorObserved"), "checkpoint_resource_exceeded", observedAt.formatted(date: .abbreviated, time: .shortened)))
+    }
+
+    @MainActor
+    func testDiagnosticsErrorWithoutItsOwnTimestampDoesNotBorrowProgressTime() async throws {
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set("checkpoint_resource_exceeded", forKey: "sync.runtime.orchestrator.lastRunErrorCode")
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(phase: .failed, lastProgressAt: Date(timeIntervalSince1970: 8_000)), pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.lastErrorText, "checkpoint_resource_exceeded")
+    }
+
+    @MainActor
+    func testDiagnosticsUsesAuthenticatedResolvedShopInsteadOfHistoricalWatermark() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set(42, forKey: "sync.events.watermark.account.zzzz-historical.store.anonymous")
+        let before = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertEqual(snapshot.accountHash, String(AccountBindingStore.accountHash(for: owner).prefix(12)) + "...")
+        XCTAssertEqual(snapshot.storeScope, String(fixture.storeIdentity.rawValue.prefix(12)) + "...")
+        XCTAssertEqual(snapshot.shopSourceText, "TASK118 fixture shop")
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, before, "Diagnostics must not create device identity or mutate preferences")
+    }
+
+    @MainActor
+    func testDiagnosticsCannotInferScopeWhenSignedOutUnresolvedOrAccountChanges() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        fixture.defaults.set(42, forKey: "sync.events.watermark.account.zzzz-historical.store.anonymous")
+        let signedOut = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        XCTAssertNil(signedOut.accountHash)
+        XCTAssertNil(signedOut.storeScope)
+        let switched = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: UUID(), defaults: fixture.defaults)
+        XCTAssertNil(switched.storeScope)
+        SelectedShopStore(defaults: fixture.defaults).markResolutionUnresolved(accountHash: AccountBindingStore.accountHash(for: owner))
+        let unresolved = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(), pendingCount: 0, baselineSummary: .absent, ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertNil(unresolved.storeScope)
+        XCTAssertNotEqual(unresolved.shopSourceText, L("options.supabase.automaticSync.diagnostics.ownerScope"))
     }
 
     private func makeAutomaticScopeFixture(
@@ -1291,7 +1372,8 @@ private enum Task118CatalogRemoteError: Error {
     case committedResponseLost
 }
 
-private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
+@MainActor
+private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     private let ownerUserID: UUID
     private let shopID: UUID
     private let failFirstProductCreateAfterCommit: Bool
@@ -1451,7 +1533,8 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 }
 
-private actor Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting {
+@MainActor
+private final class Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting {
     private var insertCalls = 0
 
     func insertCallCount() -> Int {

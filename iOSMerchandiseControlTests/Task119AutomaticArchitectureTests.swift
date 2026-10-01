@@ -217,7 +217,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     func testStaleGenerationAdmissionRejectsAllProvidersBeforeMutation() async {
         let owner = UUID()
-        let provider = Task119CountingCatalogProvider()
+        let provider = await Task119CountingCatalogProvider()
         let staleEngine = AutomaticSyncEngine(
             catalogPushProvider: provider,
             productPriceProvider: nil,
@@ -258,7 +258,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     func testOutboxOnlyPushDrainsWithoutFreshEntityMutation() async {
         let owner = UUID()
-        let outbox = Task139OutboxOnlyRegistrationProvider()
+        let outbox = await Task139OutboxOnlyRegistrationProvider()
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -286,8 +286,8 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             owner: owner,
             prefix: "Task139GenerationBoundary"
         )
-        let recovery = Task132SnapshotRecoveryProvider(defaults: defaults)
-        let catalog = Task119CountingCatalogProvider()
+        let recovery = await Task132SnapshotRecoveryProvider(defaults: defaults)
+        let catalog = await Task119CountingCatalogProvider()
         let engine = AutomaticSyncEngine(
             catalogPushProvider: catalog,
             productPriceProvider: nil,
@@ -314,10 +314,10 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132GapRecovery")
         defaults.set("stale_failure", forKey: "sync.runtime.automatic.lastError")
-        let incrementalProvider = Task132RecoveryRequiredIncrementalProvider(
+        let incrementalProvider = await Task132RecoveryRequiredIncrementalProvider(
             reason: "sync_event_missing_entity_ids"
         )
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -349,7 +349,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
     func testAutomaticEngineExplicitGapRecoveryFailsClosedWhenSnapshotProviderIsMissing() async {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132GapFailure")
-        let incrementalProvider = Task132RecoveryRequiredIncrementalProvider(
+        let incrementalProvider = await Task132RecoveryRequiredIncrementalProvider(
             reason: "sync_event_missing_remote"
         )
         let engine = AutomaticSyncEngine(
@@ -399,7 +399,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
     func testTask132DAutomaticEngineRunsSnapshotRecoveryForBootstrapAction() async {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132DBootstrap")
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -421,7 +421,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
     func testTask132DAutomaticEngineRunsSnapshotRecoveryForFullRecoveryAction() async {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132DFullRecovery")
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -454,8 +454,8 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132RequestRecovery")
         defaults.set("stale_failure", forKey: "sync.runtime.automatic.lastError")
         defaults.set("sync_event_missing_entity_ids", forKey: "sync.runtime.automatic.recovery.requestedReason")
-        let incrementalProvider = Task119CleanForcedReconcileProvider(watermark: 12)
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let incrementalProvider = await Task119CleanForcedReconcileProvider(watermark: 12)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -485,7 +485,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     func testAutomaticRequestRecoveryWithoutUserTriggerStaysRecoveryRequired() async {
         let defaults = UserDefaults(suiteName: "Task132RequestMissing-\(UUID().uuidString)")!
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -512,7 +512,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     func testAutomaticEngineExplicitRecoveryFailsClosedWithoutIncrementalProvider() async {
         let defaults = UserDefaults(suiteName: "Task132ExplicitMissing-\(UUID().uuidString)")!
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
             productPriceProvider: nil,
@@ -538,11 +538,11 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
     func testAutomaticEngineNormalGapStopsSnapshotAndPrecomputedPush() async {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task132RecoveryPlanAbort")
-        let incrementalProvider = Task132RecoveryRequiredIncrementalProvider(
+        let incrementalProvider = await Task132RecoveryRequiredIncrementalProvider(
             reason: "canonical_drift_detected"
         )
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
-        let catalogProvider = Task119CountingCatalogProvider()
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
+        let catalogProvider = await Task119CountingCatalogProvider()
         let engine = AutomaticSyncEngine(
             catalogPushProvider: catalogProvider,
             productPriceProvider: nil,
@@ -576,11 +576,11 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
     func testExplicitRetryPushesPendingThenRunsVerifiedSnapshotWhenGapPersists() async {
         let owner = UUID()
         let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task139PendingRecoveryRetry")
-        let incrementalProvider = Task132RecoveryRequiredIncrementalProvider(
+        let incrementalProvider = await Task132RecoveryRequiredIncrementalProvider(
             reason: "sync_event_missing_entity_ids"
         )
-        let recoveryProvider = Task132SnapshotRecoveryProvider(defaults: defaults)
-        let catalogProvider = Task119CountingCatalogProvider()
+        let recoveryProvider = await Task132SnapshotRecoveryProvider(defaults: defaults)
+        let catalogProvider = await Task119CountingCatalogProvider()
         let engine = AutomaticSyncEngine(
             catalogPushProvider: catalogProvider,
             productPriceProvider: nil,
@@ -692,8 +692,8 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             owner: owner,
             prefix: "Task139PendingRecoveryForcedReconcile"
         )
-        let incrementalProvider = Task119CleanForcedReconcileProvider(watermark: 139)
-        let catalogProvider = Task119CountingCatalogProvider()
+        let incrementalProvider = await Task119CleanForcedReconcileProvider(watermark: 139)
+        let catalogProvider = await Task119CountingCatalogProvider()
         let engine = AutomaticSyncEngine(
             catalogPushProvider: catalogProvider,
             productPriceProvider: nil,
@@ -728,7 +728,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             owner: owner,
             prefix: "Task139TerminalCancelEngine"
         )
-        let provider = Task132SnapshotRecoveryProvider(
+        let provider = await Task132SnapshotRecoveryProvider(
             defaults: defaults,
             pauseAfterCompletion: true
         )
@@ -795,7 +795,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             action: .sequence([.requestRecovery, .pushPending]),
             source: .releaseCard
         )
-        let callsAfterRejected = await catalog.callCount
+        let callsAfterRejected = catalog.callCount
         XCTAssertEqual(rejected.status, .recoveryRequired)
         XCTAssertEqual(callsAfterRejected, 0)
 
@@ -803,7 +803,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             action: .sequence([.pushPending, .requestRecovery]),
             source: .releaseCard
         )
-        let callsAfterAdmitted = await catalog.callCount
+        let callsAfterAdmitted = catalog.callCount
         XCTAssertEqual(admitted.status, .failed)
         XCTAssertEqual(callsAfterAdmitted, 1)
         XCTAssertTrue(bindingStore.hasPendingReplacementJournal)
@@ -865,7 +865,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             source: .foregroundPoll,
             forceIncremental: true
         )
-        let callCountBeforeRetry = await decisionProvider.callCount
+        let callCountBeforeRetry = decisionProvider.callCount
 
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
         XCTAssertTrue(runtime.actions.isEmpty)
@@ -875,7 +875,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         for _ in 0..<100 where runtime.actions.isEmpty {
             await Task.yield()
         }
-        let callCountAfterRetry = await decisionProvider.callCount
+        let callCountAfterRetry = decisionProvider.callCount
 
         XCTAssertEqual(runtime.actions, [.requestRecovery])
         XCTAssertEqual(runtime.sources, [.releaseCard])
@@ -1017,7 +1017,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
         orchestrator.cancelForegroundCheck()
         orchestrator.retryRootActionIfPossible()
-        let decisionCountWhileCancelling = await decisionProvider.callCount
+        let decisionCountWhileCancelling = decisionProvider.callCount
         XCTAssertEqual(runtime.runCount, 1)
         XCTAssertEqual(decisionCountWhileCancelling, 1)
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
@@ -1026,7 +1026,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         for _ in 0..<100 where runtime.runCount < 2 || stateStore.state.phase != .idle {
             await Task.yield()
         }
-        let finalDecisionCount = await decisionProvider.callCount
+        let finalDecisionCount = decisionProvider.callCount
 
         XCTAssertEqual(runtime.actions, [.requestRecovery, .requestRecovery])
         XCTAssertEqual(runtime.runCount, 2)
@@ -1190,7 +1190,8 @@ private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {
     }
 }
 
-private actor Task132RecoveryRequiredIncrementalProvider: SyncIncrementalPullProviding {
+@MainActor
+private final class Task132RecoveryRequiredIncrementalProvider: SyncIncrementalPullProviding {
     private let reason: String
     private var callCount = 0
     private var forcedFlags: [Bool] = []
@@ -1234,7 +1235,8 @@ private actor Task132RecoveryRequiredIncrementalProvider: SyncIncrementalPullPro
     }
 }
 
-private actor Task119CleanForcedReconcileProvider: SyncIncrementalPullProviding {
+@MainActor
+private final class Task119CleanForcedReconcileProvider: SyncIncrementalPullProviding {
     private let watermark: Int64
     private var forcedFlags: [Bool] = []
 
@@ -1267,7 +1269,8 @@ private actor Task119CleanForcedReconcileProvider: SyncIncrementalPullProviding 
     }
 }
 
-private actor Task119CountingCatalogProvider: SyncCatalogPushProviding {
+@MainActor
+private final class Task119CountingCatalogProvider: SyncCatalogPushProviding {
     private(set) var callCount = 0
 
     func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {
@@ -1278,7 +1281,8 @@ private actor Task119CountingCatalogProvider: SyncCatalogPushProviding {
     }
 }
 
-private actor Task139OutboxOnlyRegistrationProvider: SyncActivityRegistrationProviding {
+@MainActor
+private final class Task139OutboxOnlyRegistrationProvider: SyncActivityRegistrationProviding {
     private(set) var registerCallCount = 0
 
     func loadSyncActivityRegistrationSnapshot(
@@ -1442,7 +1446,8 @@ private final class Task119DelayedCancellationRecoveryRuntime: SyncAutomaticRunt
     }
 }
 
-private actor Task119NoOpDecisionInputProvider: SyncDecisionInputProviding {
+@MainActor
+private final class Task119NoOpDecisionInputProvider: SyncDecisionInputProviding {
     private(set) var callCount = 0
 
     func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async {}
@@ -1481,7 +1486,8 @@ private final class Task136NoWorkIncrementalProvider: SyncIncrementalPullProvidi
     }
 }
 
-private actor Task132SnapshotRecoveryProvider: SyncRecoverySnapshotPullProviding {
+@MainActor
+private final class Task132SnapshotRecoveryProvider: SyncRecoverySnapshotPullProviding {
     nonisolated let publicationMode = SyncRecoverySnapshotPublicationMode.atomicGeneration
     private let defaults: UserDefaults?
     private let pauseAfterCompletion: Bool

@@ -1,0 +1,7 @@
+[
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testInteractiveGenerationDoesNotBootstrapRetiredExpiredSession",
+    "result": "Failed",
+    "duration_seconds": 0.36978793144226074
+  }
+]

@@ -1,0 +1,60 @@
+{
+  "scope": {
+    "key": "caf7f7954d67a1bda046b29eaee991c3676a5172ee3cd12d64cc826e463189e6",
+    "kind": "authorized_shop_plus_legacy",
+    "deviceKey": "180ad731406f2800c49fc175cdb58563cfaf7e7118b19ccec75c488c239932b9",
+    "accountKey": "bd7662a5eeb41614e720d477abfcb2272e19a8a70a93b7e3bc8560d44ad326e9",
+    "historyKind": "authorized_shop_plus_legacy",
+    "legacyOwnerKey": "f6222a1106eefe4f6b25302a9d963cfaba14bedfefacc2c311967e41c61cffe4"
+  },
+  "images": null,
+  "prices": null,
+  "shopId": "22222222-2222-4222-8222-222222222222",
+  "status": "resource_exceeded",
+  "catalog": null,
+  "history": null,
+  "integrity": {
+    "totalViolationCount": null
+  },
+  "syncEvents": {
+    "maxId": "42",
+    "domainMaxIds": {
+      "prices": "41",
+      "catalog": "42",
+      "history": "40"
+    },
+    "scanComplete": false,
+    "blockingCount": null,
+    "inspectedCount": 0,
+    "inspectionLimit": 10000,
+    "newestBlockingId": null,
+    "oldestBlockingId": null,
+    "verifiedBaselineId": "0",
+    "requiresFullRecovery": true,
+    "historicalBlockingCountStatus": "not_scanned"
+  },
+  "markerDigest": "279698ad46797bb062be28f10b8b470fd672be3ae980b4147d41c45eb61db156",
+  "schemaVersion": "shop-sync-convergence-marker-v1",
+  "digestContract": {
+    "seedHex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "emptyDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stepEncoding": "previous-lowercase-hex + U+001F + decimal-byte-length + colon + value",
+    "valueEncoding": "utf8",
+    "rowSetAlgorithm": "sha256-chain-v1",
+    "checkpointAlgorithm": "postgres-jsonb-text-sha256-v1"
+  },
+  "checkpointDigest": "bfe3808361ccab15a768e9702ab0539b1a80d84717a7ac3757db623d8e62e2d4",
+  "serverNoWorkEligible": false,
+  "clientNoWorkRequirements": [
+    "scope_key_matches",
+    "account_shop_device_lease_valid",
+    "baseline_equals_event_max",
+    "all_domain_counts_match",
+    "all_domain_id_set_digests_match",
+    "all_domain_version_digests_match",
+    "checkpoint_digest_matches",
+    "local_pending_empty",
+    "outbox_empty",
+    "recovery_journal_empty"
+  ]
+}

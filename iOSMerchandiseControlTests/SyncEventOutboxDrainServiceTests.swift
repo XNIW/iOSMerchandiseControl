@@ -18,7 +18,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
 
         XCTAssertEqual(outcome.status, .noWork)
         XCTAssertEqual(outcome.attempted, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -36,9 +36,9 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.sent, 1)
         XCTAssertEqual(entry.status, .sent)
         XCTAssertNotNil(entry.sentAt)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.first?.clientEventID, "client-success")
         XCTAssertEqual(
             requests.first?.entityIDs,
@@ -72,7 +72,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.attempted, 1)
         XCTAssertEqual(outcome.sent, 1)
         XCTAssertEqual(entry.status, .sent)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.map(\.clientEventID), ["client-stale-sending"])
     }
 
@@ -91,7 +91,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.exhaustedCount, 0)
         XCTAssertEqual(outcome.skippedFreshSendingCount, 1)
         XCTAssertEqual(entry.status, .sending)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -116,7 +116,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.recoveredCount, 0)
         XCTAssertEqual(outcome.exhaustedCount, 1)
         XCTAssertEqual(entry.status, .dead)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -167,7 +167,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
 
         XCTAssertEqual(outcome.status, .drained)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.first?.entityIDs, entityIDs)
         XCTAssertEqual(requests.first?.metadata, metadata)
         XCTAssertEqual(requests.first?.source, "ios")
@@ -199,7 +199,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.lastErrorKind, .contract)
         XCTAssertEqual(entry.lastErrorCode, "payload_replay_missing_entity_ids")
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -217,7 +217,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.attempted, 0)
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.lastErrorCode, "payload_replay_invalid_entity_ids")
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -250,7 +250,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.attempted, 0)
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.lastErrorCode, "changed_count_limit")
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -275,7 +275,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(failed.attemptCount, 1)
         XCTAssertEqual(failed.nextRetryAt, now.addingTimeInterval(SyncEventOutboxDrainService.defaultRetryDelay))
         XCTAssertEqual(succeeds.status, .sent)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 2)
     }
 
@@ -294,7 +294,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(outcome.attempted, 1)
         XCTAssertEqual(exhausted.status, .pending)
         XCTAssertEqual(succeeds.status, .sent)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.map(\.clientEventID), ["client-after-exhausted"])
     }
 
@@ -319,7 +319,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(first.status, .sent)
         XCTAssertEqual(second.status, .sent)
         XCTAssertEqual(third.status, .pending)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 2)
     }
 
@@ -344,7 +344,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
 
         XCTAssertEqual(outcome.status, .noWork)
         XCTAssertEqual(capturedLimit, SyncEventOutboxDrainService.hardFetchScanLimit)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -367,7 +367,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
 
         XCTAssertEqual(outcome.status, .noWork)
         XCTAssertEqual(capturedScanLimit, SyncEventOutboxLocalStore.hardSendingRecoveryScanLimit)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -394,7 +394,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         }
 
         XCTAssertEqual(fetchCalls, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -412,7 +412,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             XCTAssertEqual(entry.status, .pending)
             XCTAssertEqual(entry.attemptCount, 0)
             XCTAssertNil(entry.sentAt)
-            let callCount = await recorder.callCount()
+            let callCount = recorder.callCount()
             XCTAssertEqual(callCount, 1)
         } catch {
             XCTFail("Expected CancellationError, got \(error).")
@@ -433,7 +433,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             XCTAssertEqual(entry.status, .pending)
             XCTAssertEqual(entry.attemptCount, 0)
             XCTAssertNil(entry.sentAt)
-            let callCount = await recorder.callCount()
+            let callCount = recorder.callCount()
             XCTAssertEqual(callCount, 1)
         } catch {
             XCTFail("Expected CancellationError, got \(error).")
@@ -459,7 +459,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         } catch is CancellationError {
             XCTAssertEqual(entry.status, .failedRetryable)
             XCTAssertNil(entry.sentAt)
-            let callCount = await recorder.callCount()
+            let callCount = recorder.callCount()
             XCTAssertEqual(callCount, 1)
         } catch {
             XCTFail("Expected CancellationError, got \(error).")
@@ -499,7 +499,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             XCTAssertEqual(recoveryCalls, 0)
             XCTAssertEqual(fetchCalls, 0)
             XCTAssertEqual(saveCalls, 0)
-            let callCount = await recorder.callCount()
+            let callCount = recorder.callCount()
             XCTAssertEqual(callCount, 0)
         } catch {
             XCTFail("Expected CancellationError, got \(error).")
@@ -542,7 +542,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(saveCalls, 1)
         XCTAssertEqual(rollbackCalls, 1)
         XCTAssertEqual(fetchCalls, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -586,7 +586,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(saveCalls, 0)
         XCTAssertEqual(rollbackCalls, 1)
         XCTAssertEqual(fetchCalls, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -630,7 +630,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(saveCalls, 1)
         XCTAssertEqual(rollbackCalls, 1)
         XCTAssertEqual(fetchCalls, 0)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -666,7 +666,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         }
 
         XCTAssertEqual(rollbackCalls, 1)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -702,7 +702,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         }
 
         XCTAssertEqual(rollbackCalls, 1)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -734,7 +734,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         }
 
         XCTAssertEqual(rollbackCalls, 1)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 0)
     }
 
@@ -788,9 +788,9 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
 
         XCTAssertEqual(first.state, firstSnapshot)
         XCTAssertEqual(second.state, secondSnapshot)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.map(\.clientEventID), ["client-foreign-result"])
 
         let verificationContext = ModelContext(context.container)
@@ -861,9 +861,9 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             currentStoreId: fixture.scope.storeIdentity.storeId
         ))
         XCTAssertEqual(second.state, secondSnapshot)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
-        let requests = await recorder.requests()
+        let requests = recorder.requests()
         XCTAssertEqual(requests.map(\.clientEventID), ["client-recorder-scope-mismatch"])
 
         let verificationContext = ModelContext(context.container)
@@ -891,13 +891,13 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             try await service.drainOnce(ownerUserID: ownerID, limit: 1)
         }
         let secondOutcome = try await second.value
-        await recorder.finish()
+        recorder.finish()
         let firstOutcome = try await first.value
 
         XCTAssertEqual(secondOutcome.status, .alreadyRunning)
         XCTAssertEqual(secondOutcome.attempted, 0)
         XCTAssertEqual(firstOutcome.status, .drained)
-        let callCount = await recorder.callCount()
+        let callCount = recorder.callCount()
         XCTAssertEqual(callCount, 1)
         XCTAssertEqual(entry.status, .sent)
     }
@@ -936,7 +936,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(firstSaveCalls, 1)
         XCTAssertTrue(didRollback)
         XCTAssertEqual(entry.status, .pending)
-        let firstCallCount = await firstRecorder.callCount()
+        let firstCallCount = firstRecorder.callCount()
         XCTAssertEqual(firstCallCount, 1)
 
         let retryRecorder = FakeDrainRecorder([.noOp(try row(id: 8, clientEventID: "client-save-failure"))])
@@ -955,7 +955,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(retryOutcome.status, .drained)
         XCTAssertEqual(retryOutcome.sent, 1)
         XCTAssertEqual(entry.status, .sent)
-        let retryCallCount = await retryRecorder.callCount()
+        let retryCallCount = retryRecorder.callCount()
         XCTAssertEqual(retryCallCount, 1)
     }
 
@@ -1161,7 +1161,8 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
     }
 }
 
-private actor FakeDrainRecorder: SyncEventRecording {
+@MainActor
+private final class FakeDrainRecorder: SyncEventRecording {
     enum Response: Sendable {
         case success(RemoteSyncEventRow)
         case noOp(RemoteSyncEventRow)
@@ -1208,7 +1209,8 @@ private actor FakeDrainRecorder: SyncEventRecording {
     }
 }
 
-private actor BlockingDrainRecorder: SyncEventRecording {
+@MainActor
+private final class BlockingDrainRecorder: SyncEventRecording {
     private let row: RemoteSyncEventRow
     private var recordedRequests: [SyncEventRecordRequest] = []
     private var waiters: [CheckedContinuation<Void, Never>] = []

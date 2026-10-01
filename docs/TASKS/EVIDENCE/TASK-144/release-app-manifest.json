@@ -1,0 +1,23 @@
+{
+  "path": "/tmp/mc-task144-ios/ReleaseDerivedData/Build/Products/Release-iphonesimulator/iOSMerchandiseControl.app",
+  "configuration": "Release, generic iOS Simulator, arm64 + x86_64; CODE_SIGNING_ALLOWED=NO",
+  "source_fingerprint": "3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d",
+  "binary_sha256": "699b938ee2ab38023e1c358427da49355260991e2862af910e46c615795d5b2c",
+  "bundle_file_count": 13,
+  "bundle_files_sha256": "468b3bfefb229044d6d521b89a1c08d67833328ec970a35b703bbec39ebd60bb",
+  "files": {
+    "Info.plist": "0a54bf6cfddf887bdf78d62dfe5ceef9b2e111cd80a51d3a0df8e82165cd442d",
+    "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "PrivacyInfo.xcprivacy": "3e4a93cbe86acef7dd7e063a28c849992f556e7f52cadc5f37c1e8b0e1b54686",
+    "SupabaseConfig.example.plist": "4f5bfb8d54bb5b988596544e2899c67f9a8545aa837e09896fd1761ce16f9b00",
+    "ZIPFoundation_ZIPFoundation.bundle/Info.plist": "36fbe1237b0dd950d6eec6dc72de6d9a315a339639bb8f729d9a03df53cdf14e",
+    "ZIPFoundation_ZIPFoundation.bundle/PrivacyInfo.xcprivacy": "9a2f930cedb8d58309a581b9bf9bf3673685ec02ae2197d9f1c56828b718dffd",
+    "en.lproj/Localizable.strings": "bfaf4b9c82c33f51c47fade33f3fe6c275f0b3ab0109f179339425064fbbca88",
+    "es.lproj/Localizable.strings": "774040716792c859e7e0d541044d432a1f6f8de0195b5b9223a5827cddc2f2d8",
+    "iOSMerchandiseControl": "699b938ee2ab38023e1c358427da49355260991e2862af910e46c615795d5b2c",
+    "it.lproj/Localizable.strings": "a43bad189836ff5c53251be945d2bfe93e089b08e7892242acc654fffe33432c",
+    "swift-crypto_Crypto.bundle/Info.plist": "65a435071c87c2628d5d453d0fb91ac5dd8fd8613b8b1961b098a931c7168d03",
+    "swift-crypto_Crypto.bundle/PrivacyInfo.xcprivacy": "42fb8a30dd8d7ba0900e1bf17fe64ed8c12cfdb8a9c791ab6b4e1eceb0f299c0",
+    "zh-Hans.lproj/Localizable.strings": "5d84d361ff7c4c439fcb3417d0f99dfc67bfa520eff99614ea68097bbca17b92"
+  }
+}

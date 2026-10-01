@@ -2266,6 +2266,7 @@ nonisolated struct ExcelAnalyzer {
     private static func parseSharedStringsXML(_ data: Data) -> [String] {
         let delegate = SharedStringsDelegate()
         let parser = XMLParser(data: data)
+        parser.shouldProcessNamespaces = true
         parser.delegate = delegate
         parser.parse()
         return delegate.values
@@ -2280,6 +2281,7 @@ nonisolated struct ExcelAnalyzer {
     ) -> [[String]] {
         let delegate = SheetDelegate(sharedStrings: sharedStrings, styles: styles)
         let parser = XMLParser(data: data)
+        parser.shouldProcessNamespaces = true
         parser.delegate = delegate
         parser.parse()
         return delegate.rows
@@ -2327,6 +2329,7 @@ nonisolated struct ExcelAnalyzer {
 
         let delegate = StylesDelegate()
         let parser = XMLParser(data: stylesData)
+        parser.shouldProcessNamespaces = true
         parser.delegate = delegate
         parser.parse()
         return delegate.styles
@@ -2400,6 +2403,7 @@ nonisolated struct ExcelAnalyzer {
     private static func parseWorkbookXML(_ data: Data) throws -> [WorkbookSheetReference] {
         let delegate = WorkbookXMLDelegate()
         let parser = XMLParser(data: data)
+        parser.shouldProcessNamespaces = true
         parser.delegate = delegate
 
         guard parser.parse() else {
@@ -2416,6 +2420,7 @@ nonisolated struct ExcelAnalyzer {
     private static func parseWorkbookRelationshipsXML(_ data: Data) throws -> [String: String] {
         let delegate = WorkbookRelationshipsDelegate()
         let parser = XMLParser(data: data)
+        parser.shouldProcessNamespaces = true
         parser.delegate = delegate
 
         guard parser.parse() else {

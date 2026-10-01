@@ -998,6 +998,7 @@ enum LocalDatabaseCloudStatus: Equatable {
 enum LocalDatabaseUserActionReason: Equatable {
     case signInRequired
     case cloudPermissionProblem
+    case cloudCheckFailed
     case accountMismatch
     case localStateUnavailable
     case requiresChoice
@@ -1008,6 +1009,8 @@ enum LocalDatabaseUserActionReason: Equatable {
             return "options.localDatabase.signInRequired.title"
         case .cloudPermissionProblem:
             return "options.localDatabase.permissionProblem.title"
+        case .cloudCheckFailed:
+            return "options.supabase.automaticSync.root.error.title"
         case .accountMismatch:
             return "options.localDatabase.accountMismatch.title"
         case .localStateUnavailable:
@@ -1023,6 +1026,8 @@ enum LocalDatabaseUserActionReason: Equatable {
             return "options.localDatabase.signInRequired.detail"
         case .cloudPermissionProblem:
             return "options.localDatabase.permissionProblem.detail"
+        case .cloudCheckFailed:
+            return "options.supabase.automaticSync.root.error.detail"
         case .accountMismatch:
             return "options.localDatabase.accountMismatch.detail"
         case .localStateUnavailable:
@@ -1083,7 +1088,7 @@ enum LocalDatabaseCloudStatusResolver {
             return input.syncPhase == .checking ? .checkingCloud : .reconciling
         }
         if input.syncPhase == .failed || input.lastOutcome == .failed || input.syncCountDriftCheckFailed {
-            return .requiresUserAction(.cloudPermissionProblem)
+            return .requiresUserAction(.cloudCheckFailed)
         }
         if input.pendingCount > 0 {
             return .pendingLocalChanges
@@ -1244,6 +1249,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             syncState: syncState,
             pendingCount: pendingCount,
             baselineSummary: baselineSummary,
+            ownerUserID: authViewModel.isSignedIn
+                ? authViewModel.sessionInfo?.userID
+                : nil,
             now: currentDate
         )
         let progress = progressState
@@ -1876,7 +1884,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     }
 }
 
-private struct AutomaticSyncDiagnosticsSnapshot {
+struct AutomaticSyncDiagnosticsSnapshot {
     private static let staleInterval: TimeInterval = 60
     private static let runningErrorInterval: TimeInterval = 30
 
@@ -1884,17 +1892,20 @@ private struct AutomaticSyncDiagnosticsSnapshot {
     let lastProgressAt: Date?
     let accountHash: String?
     let storeScope: String?
+    let shopSource: String?
     let deviceStatus: String?
     let deviceCanWrite: Bool
     let pendingCount: Int
     let retryCount: Int
     let lastError: String?
+    let errorObservedAt: Date?
     let cloudEventsIncompleteWithAlignedCatalog: Bool
 
     init(
         syncState: SyncState,
         pendingCount: Int,
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
+        ownerUserID: UUID? = nil,
         defaults: UserDefaults = .standard,
         now: Date = Date()
     ) {
@@ -1914,22 +1925,28 @@ private struct AutomaticSyncDiagnosticsSnapshot {
                 "sync.runtime.automatic.recovery.lastStartedAt"
             ]
         )
-        let scope = Self.accountAndStoreScope(defaults)
+        let scope = Self.accountAndStoreScope(defaults, ownerUserID: ownerUserID)
         self.startedAt = syncState.startedAt ?? fallbackStartedAt
         self.lastProgressAt = syncState.lastProgressAt ?? fallbackProgressAt ?? syncState.startedAt ?? fallbackStartedAt
         self.accountHash = scope.accountHash
         self.storeScope = scope.storeScope
+        self.shopSource = scope.shopSource
         self.deviceStatus = defaults.string(forKey: "sync.runtime.device.status")
         self.deviceCanWrite = defaults.bool(forKey: "sync.runtime.device.canWrite")
         self.pendingCount = pendingCount
         self.retryCount = defaults.integer(forKey: "sync.runtime.incremental.attemptWindow.count")
+        // The orchestrator records outcomes in both Release and Debug. Legacy
+        // DEBUG-only errors can survive upgrades and must not override this run.
         self.lastError = Self.string(
             defaults,
             keys: [
-                "sync.runtime.automatic.lastError",
                 "sync.runtime.orchestrator.lastRunErrorCode",
-                "sync.runtime.background.lastError"
+                "sync.runtime.orchestrator.lastRunBlockReason"
             ]
+        )
+        self.errorObservedAt = Self.date(
+            defaults,
+            keys: ["sync.runtime.orchestrator.lastRunCompletedAt"]
         )
         self.cloudEventsIncompleteWithAlignedCatalog = Self.cloudEventsIncompleteWithAlignedCatalog(
             defaults: defaults,
@@ -1970,10 +1987,7 @@ private struct AutomaticSyncDiagnosticsSnapshot {
     }
 
     var shopSourceText: String {
-        if storeScope == "anonymous" || (storeScope == nil && accountHash != nil) {
-            return L("options.supabase.automaticSync.diagnostics.ownerScope")
-        }
-        return L("options.supabase.automaticSync.diagnostics.unavailable")
+        shopSource ?? L("options.supabase.automaticSync.diagnostics.unavailable")
     }
 
     var deviceStatusText: String {
@@ -2003,7 +2017,7 @@ private struct AutomaticSyncDiagnosticsSnapshot {
             return L("options.supabase.automaticSync.diagnostics.none")
         }
         let redactedError = Self.redacted(lastError)
-        guard let observedAt = lastProgressAt ?? startedAt else {
+        guard let observedAt = errorObservedAt else {
             return redactedError
         }
         return String(
@@ -2085,18 +2099,33 @@ private struct AutomaticSyncDiagnosticsSnapshot {
         return hasPositiveCount
     }
 
-    private static func accountAndStoreScope(_ defaults: UserDefaults) -> (accountHash: String?, storeScope: String?) {
-        let prefix = "sync.events.watermark.account."
-        let separator = ".store."
-        let key = defaults.dictionaryRepresentation().keys
-            .filter { $0.hasPrefix(prefix) && $0.contains(separator) }
-            .sorted()
-            .last
-        guard let key else { return (nil, nil) }
-        let rest = String(key.dropFirst(prefix.count))
-        let parts = rest.components(separatedBy: separator)
-        guard parts.count == 2 else { return (nil, nil) }
-        return (shortHash(parts[0]), shortStoreScope(parts[1]))
+    private static func accountAndStoreScope(
+        _ defaults: UserDefaults,
+        ownerUserID: UUID?
+    ) -> (accountHash: String?, storeScope: String?, shopSource: String?) {
+        guard let ownerUserID else { return (nil, nil, nil) }
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        guard defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == accountHash else {
+            return (nil, nil, nil)
+        }
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        guard selectedStore.isResolutionReady(accountHash: accountHash),
+              let selected = selectedStore.selectedShop(accountHash: accountHash) else {
+            return (shortHash(accountHash), nil, nil)
+        }
+        let linked = LinkedShop(
+            shopID: selected.shopID,
+            code: selected.code,
+            name: selected.name,
+            role: selected.role,
+            status: selected.status,
+            selectable: selected.selectable,
+            canWrite: selected.canWrite
+        )
+        guard linked.isValidSelection else { return (shortHash(accountHash), nil, nil) }
+        // Display the authenticated, resolved selection; this is not a write
+        // authorization check. Do not capture a lease/create a device ID here.
+        return (shortHash(accountHash), shortStoreScope(selected.localStoreIdentity.rawValue), linked.name)
     }
 
     private static func shortHash(_ value: String) -> String {

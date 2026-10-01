@@ -1,0 +1,290 @@
+[
+  {
+    "file": "AccountOwnerStoreSafetyTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 348,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 2,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 6
+    }
+  },
+  {
+    "file": "AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 126,
+      "XCTFail": 13,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "AutomaticRecoverySnapshotPullServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 32,
+      "XCTFail": 2,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "CatalogGeneratedProductPriceSyncEventRecorderTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 9,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "HistorySessionSyncServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 120,
+      "XCTFail": 4,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "LocalPendingAggregatedPushPlannerTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 55,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "OptionsLocalDatabaseSummaryTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 16,
+      "XCTFail": 3,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 3,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "OptionsSyncSummaryProviderTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 20,
+      "XCTFail": 3,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 1,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 3,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "ShopContextTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 76,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 1,
+      "Task.sleep": 1,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 24,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseManualSyncRemotePreviewTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 69,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseProductPriceManualPushServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 66,
+      "XCTFail": 9,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 2,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseProductPricePreviewServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 79,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseProductPricePushDryRunServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 63,
+      "XCTFail": 0,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabasePullPreviewPaginationTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 19,
+      "XCTFail": 4,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseSyncEventDebugViewModelTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 69,
+      "XCTFail": 2,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 1,
+      "Task.sleep": 1,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SupabaseSyncEventPreviewServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 39,
+      "XCTFail": 2,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SyncEventLiveRecorderTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 74,
+      "XCTFail": 14,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "SyncEventOutboxDrainServiceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 172,
+      "XCTFail": 28,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 1,
+      "withCheckedThrowingContinuation": 1,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "Task089LargeDatasetBenchmarkTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 43,
+      "XCTFail": 1,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 2,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "Task100LargeDatasetAcceptanceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 102,
+      "XCTFail": 2,
+      "XCTSkip": 6,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 2,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "Task103CrossPlatformAcceptanceTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 173,
+      "XCTFail": 5,
+      "XCTSkip": 7,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "Task118AutomaticDomainTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 205,
+      "XCTFail": 2,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 0,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 0
+    }
+  },
+  {
+    "file": "Task119AutomaticArchitectureTests.swift",
+    "preserved_statement_counts": {
+      "XCTAssert": 194,
+      "XCTFail": 4,
+      "XCTSkip": 0,
+      "withCheckedContinuation": 4,
+      "withCheckedThrowingContinuation": 0,
+      "Task.sleep": 0,
+      "Task.yield": 10
+    }
+  }
+]

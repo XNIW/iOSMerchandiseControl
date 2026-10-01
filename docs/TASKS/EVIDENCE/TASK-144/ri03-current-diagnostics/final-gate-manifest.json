@@ -1,0 +1,90 @@
+{
+  "base_commit": "5dbcb6e745b41a863d53632fbca3c4e2ba440aa8",
+  "status": "LOCAL_VERIFIED / SOURCE_APPROVED; exact-SHA CI pending coordinator commit",
+  "source_fingerprint": "44adf90701d3336815a071f34fdc1fc5e4a4fb0d6ef543bf1c706c3a29807c9b",
+  "source_files_count": 325,
+  "targeted": {
+    "passed": 136,
+    "failed": 0,
+    "skipped": 0,
+    "red_failed": 6,
+    "card_red_passed": 12,
+    "card_red_failed": 1,
+    "manifest": "manifest.json"
+  },
+  "full": {
+    "command": "xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,id=<REDACTED_DEVICE_ID>' -derivedDataPath /tmp/mc-task144-ios/compiler-check/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -collect-test-diagnostics never -resultBundlePath /tmp/mc-task144-ios/ri03/final-full-after-card.xcresult",
+    "result": "PASS",
+    "total": 1410,
+    "passed": 1374,
+    "failed": 0,
+    "skipped": 36,
+    "unit_integration_pass": 1366,
+    "xcuitest_pass": 8,
+    "runtime_warnings": [
+      {
+        "issueType": "Runtime Warning",
+        "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+        "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+      }
+    ],
+    "retry_or_restart": false,
+    "parallel_testing": false,
+    "no_exclusions_or_global_actor_override": true,
+    "executor_own_heavy_jobs_sequenced": true,
+    "external_coordinator_note": "A separate owner may validate the signed app on its own live device; this executor only uses its dedicated17 and never resets the live device.",
+    "raw_log": "/tmp/mc-task144-ios/ri03/final-full-after-card.log",
+    "log_sha256": "468e1cbf55e845e09575f8e6ea0b9c71aaa7d93d6dc89a71643b875860932b50",
+    "xcresult": "/tmp/mc-task144-ios/ri03/final-full-after-card.xcresult",
+    "skip_categories": {
+      "live_or_external": 29,
+      "large_synthetic_opt_in": 4,
+      "suspended_Excel_opt_in": 2,
+      "physical_device": 1
+    }
+  },
+  "release": {
+    "command": [
+      "xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/tmp/mc-task144-ios/signed-test-ri03-final/DerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/tmp/mc-task144-ios/compiler-check/DerivedData/SourcePackages"
+    ],
+    "result": "PASS",
+    "raw_log": "/tmp/mc-task144-ios/signed-test-ri03-final/build.log",
+    "log_sha256": "16ae7568297868813c780da4fdf807b0180fc6ea0dfd482f31c6feb62c2a5a66",
+    "note": "Canonical project Automatic signing, TEST config has only previously authorized image-origin delta, no auth source/configprimary modifications. Previous bundles preserved."
+  },
+  "analyze": {
+    "command": "xcodebuild analyze -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/mc-task144-ios/ReleaseDerivedData CODE_SIGNING_ALLOWED=NO",
+    "result": "PASS",
+    "raw_log": "/tmp/mc-task144-ios/ri03/final-analyze.log",
+    "log_sha256": "f5d78cb52d76bee1efd0081dce1304679be5b39f700671f07ee73afeca9c6833",
+    "new_diagnostics_count": 0
+  },
+  "historical_gates": "First R-I03 full 1371PASS/1FAIL/36SKIP preserved: Files had retained Browse > On My iPhone from normal CA08. Video confirms English UI, unrelated to locale and app source. Normal Files UI restored Recents, unchanged picker test passed; no test exclusion/assertion change. R-I02 full1366 and CI97b6 crash/red-green remain separately preserved; no new decoder bug established by stale UI. Authenticated coordinator Retry returned checkpoint_resource_exceeded on R-I02 candidate.",
+  "toolchain": "Local Xcode27/Swift6.4 and iPhone17/iOS27. CI97b6 used Xcode26.6/SDK26.5; separate local crash reproduction used runtime26.2. Do not infer CI runtime from local reproduction.",
+  "sensitive_scan": {
+    "source": {
+      "result": "PASS",
+      "commands": 6,
+      "details": "sensitive-source-scan.json"
+    },
+    "evidence": {
+      "result": "PASS",
+      "report_json": "/tmp/mc-task144-ios/ri03/scan/agent-runs/20260929T010421Z-scan-sensitive-docs-TASKS-EVIDENCE-TASK-144-ri03-current-diagnostics-docs-TASKS-TASK-144-mobile-parity-root-cause-iosmd-p59873.json",
+      "scope": "New R-I03 evidence and task document; protected config omitted and dedicated simulator ID redacted in tracked copies."
+    }
+  },
+  "benchmark": "No repeat of unchanged core benchmarks; no UI/live performance inferred from these tests."
+}

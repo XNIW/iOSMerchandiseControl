@@ -1,0 +1,46 @@
+{
+  "devicesAndConfigurations": [
+    {
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "OWNED_IOS26_2_SIMULATOR",
+        "deviceName": "TASK144 filesystem crash 26.2",
+        "modelName": "iPhone 16e",
+        "osBuildNumber": "23C54",
+        "osVersion": "26.2",
+        "platform": "iOS Simulator"
+      },
+      "expectedFailures": 0,
+      "failedTests": 1,
+      "passedTests": 0,
+      "skippedTests": 0,
+      "testPlanConfiguration": {
+        "configurationId": "1",
+        "configurationName": "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription": "iOSMerchandiseControl \u00b7 Built with macOS 27.0",
+  "expectedFailures": 0,
+  "failedTests": 1,
+  "finishTime": 1790621903.31,
+  "passedTests": 0,
+  "result": "Failed",
+  "runtimeWarnings": [],
+  "skippedTests": 0,
+  "startTime": 1790621852.851,
+  "statistics": [],
+  "testFailures": [
+    {
+      "failureText": "Test crashed with signal abrt.",
+      "targetName": "iOSMerchandiseControlTests",
+      "testIdentifier": 1,
+      "testIdentifierString": "StorefrontAuthoringStoreTests/testFileStorageReportsActualFilesystemError()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/StorefrontAuthoringStoreTests/testFileStorageReportsActualFilesystemError",
+      "testName": "testFileStorageReportsActualFilesystemError()"
+    }
+  ],
+  "title": "Test - iOSMerchandiseControl",
+  "topInsights": [],
+  "totalTestCount": 1
+}

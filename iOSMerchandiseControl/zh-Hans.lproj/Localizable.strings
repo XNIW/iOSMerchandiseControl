@@ -1842,3 +1842,5 @@
 "storefront.import.summary" = "已更新 %d 个内部商品。现在有 %d 个公开商品与内部数据不同。";
 "storefront.import.summary_unverified" = "已更新 %d 个内部商品。离线状态无法验证公开差异。";
 "storefront.import.verify" = "检查";
+
+"storefront.error.local_persistence" = "无法保存到此设备。输入仍保留；请释放空间后重试。";

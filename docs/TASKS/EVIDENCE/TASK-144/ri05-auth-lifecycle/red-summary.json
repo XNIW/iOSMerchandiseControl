@@ -1,0 +1,81 @@
+{
+  "devicesAndConfigurations": [
+    {
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "<REDACTED_DEVICE_ID>",
+        "deviceName": "TASK144 Parity Isolated iPhone 17",
+        "modelName": "iPhone 17",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "expectedFailures": 0,
+      "failedTests": 4,
+      "passedTests": 1,
+      "skippedTests": 0,
+      "testPlanConfiguration": {
+        "configurationId": "1",
+        "configurationName": "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription": "iOSMerchandiseControl \u00b7 Built with macOS 27.0.1",
+  "expectedFailures": 0,
+  "failedTests": 4,
+  "finishTime": 1790883008.795,
+  "passedTests": 1,
+  "result": "Failed",
+  "runtimeWarnings": [],
+  "skippedTests": 0,
+  "startTime": 1790882957.237,
+  "statistics": [],
+  "testFailures": [
+    {
+      "failureText": "XCTAssertNil failed: \"Session(providerToken: nil, providerRefreshToken: nil, accessToken: \"synthetic-access-old-refresh\", tokenType: \"bearer\", expiresIn: 3600.0, expiresAt: 1790886607.943593, refreshToken: \"synthetic-refresh-old-refresh\", weakPassword: nil, user: Auth.User(id: <REDACTED_ID>, appMetadata: [:], userMetadata: [:], aud: \"authenticated\", confirmationSentAt: nil, recoverySentAt: nil, emailChangeSentAt: nil, newEmail: nil, invitedAt: nil, actionLink: nil, email: nil, phone: nil, createdAt: 2023-11-14 22:13:20 +0000, confirmedAt: nil, emailConfirmedAt: nil, phoneConfirmedAt: nil, lastSignInAt: nil, role: nil, updatedAt: 2023-11-14 22:13:20 +0000, identities: nil, isAnonymous: false, factors: nil))\"",
+      "targetName": "iOSMerchandiseControlTests",
+      "testIdentifier": 1,
+      "testIdentifierString": "SupabaseAuthLifecycleTests/testBackgroundProviderRefreshCannotRestoreForegroundLogout()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testBackgroundProviderRefreshCannotRestoreForegroundLogout",
+      "testName": "testBackgroundProviderRefreshCannotRestoreForegroundLogout()"
+    },
+    {
+      "failureText": "XCTAssertEqual failed: (\"Optional(\"synthetic-access-old-refresh\")\") is not equal to (\"Optional(\"synthetic-access-new-login\")\")",
+      "targetName": "iOSMerchandiseControlTests",
+      "testIdentifier": 2,
+      "testIdentifierString": "SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteDifferentAccountLogin()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteDifferentAccountLogin",
+      "testName": "testEarlierRefreshCannotOverwriteDifferentAccountLogin()"
+    },
+    {
+      "failureText": "XCTAssertEqual failed: (\"Optional(\"synthetic-access-old-refresh\")\") is not equal to (\"Optional(\"synthetic-access-new-login\")\")",
+      "targetName": "iOSMerchandiseControlTests",
+      "testIdentifier": 3,
+      "testIdentifierString": "SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteSameAccountNewLogin()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteSameAccountNewLogin",
+      "testName": "testEarlierRefreshCannotOverwriteSameAccountNewLogin()"
+    },
+    {
+      "failureText": "XCTAssertNil failed: \"SupabaseAuthSessionInfo(userID: <REDACTED_ID>, email: nil, provider: Optional(\"google\"), isExpired: false)\" - Late refresh must not restore the completed logout",
+      "targetName": "iOSMerchandiseControlTests",
+      "testIdentifier": 4,
+      "testIdentifierString": "SupabaseAuthLifecycleTests/testEarlierRefreshCannotRestoreCompletedLogoutOrRestart()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotRestoreCompletedLogoutOrRestart",
+      "testName": "testEarlierRefreshCannotRestoreCompletedLogoutOrRestart()"
+    }
+  ],
+  "title": "Test - iOSMerchandiseControl",
+  "topInsights": [
+    {
+      "category": "Common Failures",
+      "impact": "50% of failures",
+      "text": "4 runs of 2 tests failed with XCTAssertEqual failed: (\"Optional(\"synthetic-access-old-refresh\")\") is not equal to (\"Optional(\"synthetic-access-new-login\")\")"
+    },
+    {
+      "category": "Common Failures",
+      "impact": "25% of failures",
+      "text": "3 runs of 1 test failed with XCTAssertNil failed: \"Session(providerToken: nil, providerRefreshToken: nil, accessToken: \"synthetic-access-old-refresh\", tokenType: \"bearer\", expiresIn: 3600.0, expiresAt: 1790886607.943593, refreshToken: \"synthetic-refresh-old-refresh\", weakPassword: nil, user: Auth.User(id: <REDACTED_ID>, appMetadata: [:], userMetadata: [:], aud: \"authenticated\", confirmationSentAt: nil, recoverySentAt: nil, emailChangeSentAt: nil, newEmail: nil, invitedAt: nil, actionLink: nil, email: nil, phone: nil, createdAt: 2023-11-14 22:13:20 +0000, confirmedAt: nil, emailConfirmedAt: nil, phoneConfirmedAt: nil, lastSignInAt: nil, role: nil, updatedAt: 2023-11-14 22:13:20 +0000, identities: nil, isAnonymous: false, factors: nil))\""
+    }
+  ],
+  "totalTestCount": 5
+}

@@ -68,7 +68,7 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         )
         try await waitForDriftReport(provider)
 
-        let firstFetchCount = await remoteFetcher.numberOfFetches()
+        let firstFetchCount = remoteFetcher.numberOfFetches()
         XCTAssertEqual(firstFetchCount, 1)
         XCTAssertEqual(provider.syncCountDriftReport?.local.products, 0)
         XCTAssertEqual(provider.syncCountDriftReport?.remote.products, 0)
@@ -85,7 +85,7 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
             pendingChanges: []
         )
 
-        let cachedRefreshFetchCount = await remoteFetcher.numberOfFetches()
+        let cachedRefreshFetchCount = remoteFetcher.numberOfFetches()
         XCTAssertEqual(cachedRefreshFetchCount, 1)
         try await waitForDriftLocalProducts(provider, expected: 1)
         XCTAssertEqual(provider.syncCountDriftReport?.local.products, 1)
@@ -149,7 +149,7 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         expected: Int
     ) async throws {
         for _ in 0..<50 {
-            if await remoteFetcher.numberOfFetches() == expected {
+            if remoteFetcher.numberOfFetches() == expected {
                 return
             }
             try await Task.sleep(nanoseconds: 10_000_000)
@@ -158,7 +158,8 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
     }
 }
 
-private actor OptionsRemoteCountFetcher: OptionsSyncRemoteCountFetching {
+@MainActor
+private final class OptionsRemoteCountFetcher: OptionsSyncRemoteCountFetching {
     private let snapshot: SyncInventoryCountSnapshot
     private(set) var fetchCount = 0
 

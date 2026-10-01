@@ -213,7 +213,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         let fetcher = MockProductPricePushDryRunFetcher(rows: [])
         let service = SupabaseProductPricePushDryRunService(fetcher: fetcher)
         let plan = try await service.loadDryRun(context: context, sessionSnapshot: session())
-        let calls = await fetcher.calls
+        let calls = fetcher.calls
 
         XCTAssertEqual(plan.summary.readyCandidates, 205)
         XCTAssertEqual(calls.count, 3)
@@ -241,7 +241,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         )
 
         let plan = try await service.loadDryRun(context: context, sessionSnapshot: session())
-        let calls = await fetcher.calls
+        let calls = fetcher.calls
 
         XCTAssertEqual(calls.map { "\($0.from)-\($0.to)" }, ["0-1", "2-3"])
         XCTAssertEqual(plan.summary.remoteRowsRead, 3)
@@ -269,7 +269,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         )
 
         let plan = try await service.loadDryRun(context: context, sessionSnapshot: session())
-        let calls = await fetcher.calls
+        let calls = fetcher.calls
 
         XCTAssertEqual(calls.map { "\($0.from)-\($0.to)" }, ["0-1", "2-3"])
         XCTAssertEqual(plan.summary.remoteRowsRead, 3)
@@ -482,7 +482,8 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
     }
 }
 
-private actor MockProductPricePushDryRunFetcher: SupabaseProductPricePushDryRunRemoteFetching {
+@MainActor
+private final class MockProductPricePushDryRunFetcher: SupabaseProductPricePushDryRunRemoteFetching {
     struct Call: Sendable, Equatable {
         let ownerUserID: UUID
         let productIDs: [UUID]
@@ -493,7 +494,7 @@ private actor MockProductPricePushDryRunFetcher: SupabaseProductPricePushDryRunR
     private let rows: [RemoteInventoryProductPriceRow]
     private(set) var calls: [Call] = []
 
-    init(rows: [RemoteInventoryProductPriceRow]) {
+    nonisolated init(rows: [RemoteInventoryProductPriceRow]) {
         self.rows = rows.sorted {
             ($0.productID.uuidString, $0.type, $0.effectiveAt, $0.id.uuidString)
                 < ($1.productID.uuidString, $1.type, $1.effectiveAt, $1.id.uuidString)

@@ -1,0 +1,154 @@
+{
+  "packaged_on_client_date": "2026-10-01",
+  "exact_copies": {
+    "frozen-source-manifest.json": {
+      "source": "evidence/ios-ri06-shared-oracle/frozen-source-manifest.json",
+      "sha256": "2e368cd39b6905d9650bf5bf842121f7f82813ed5fd382bb7ee006561c71ec8c",
+      "copied_exactly": true
+    },
+    "targeted-summary.json": {
+      "source": "evidence/ios-ri06-shared-oracle/targeted-summary.json",
+      "sha256": "f965f077c114298676a5cbe3c11265b6fb980ed4c29486bd8796c0f1db7ca1c7",
+      "copied_exactly": true
+    },
+    "targeted-cases.json": {
+      "source": "evidence/ios-ri06-shared-oracle/targeted-cases.json",
+      "sha256": "56e6b5882915652b225d18b4a17aa3b5744848b6557b47d0dd69bc575dd9564f",
+      "copied_exactly": true
+    },
+    "targeted-warnings.json": {
+      "source": "evidence/ios-ri06-shared-oracle/targeted-warnings.json",
+      "sha256": "e5aeeda310907285cdd28af863cb72e16085d41d61a63661ddab3fae5f7c0a38",
+      "copied_exactly": true
+    },
+    "shared-oracle-runtime-receipt.json": {
+      "source": "evidence/ios-ri06-shared-oracle/shared-oracle-runtime-receipt.json",
+      "sha256": "1abb234e6392c99290ef297b0de1c2ce903197d0a93e956d0a8ef728f7d1a949",
+      "copied_exactly": true
+    },
+    "ios-ri06-shared-oracle-supplement-review.md": {
+      "source": "evidence/independent-review-resumed/ios-ri06-shared-oracle-supplement-review.md",
+      "sha256": "8388146d2416fb1f20d135be0bdf7732f6ce7e6eecfb8fb8ed7fd3be4df80925",
+      "copied_exactly": true
+    },
+    "ios-ri06-shared-oracle-supplement-receipt.json": {
+      "source": "evidence/independent-review-resumed/ios-ri06-shared-oracle-supplement-receipt.json",
+      "sha256": "8cafc046db19996e7748dddffcafb7298f5d119e7a24a3bffd0939ba0d986018",
+      "copied_exactly": true
+    },
+    "shared-history-oracle-review.md": {
+      "source": "evidence/independent-review-resumed/shared-history-oracle-review.md",
+      "sha256": "7823f2dd6c4d6c5caaaaf2a917611dfc1f044b850f52f091d4af3b8cd284e7f9",
+      "copied_exactly": true
+    },
+    "final-gate-manifest.json": {
+      "source": "evidence/ios-ri06-shared-oracle/final-gate-manifest.json",
+      "original_sha256": "0ef76ccc15e6bb8a7da7845a33bc008b8ba3726f6c0bee7cf432b29bc7aab358",
+      "sha256": "702f6d0030f25397cf75ce0da0fd8c43e6cb7348afb3ef3bd7692054abf9a993",
+      "copied_exactly": false,
+      "transformation": "Only isolated Simulator CLI destination IDs redacted. Raw manifest/logs and all counts/hashes unchanged."
+    },
+    "final-full-summary.json": {
+      "source": "evidence/ios-ri06-shared-oracle/final-full-summary.json",
+      "sha256": "888c2766af96cdbc2a4d963fef12508d35b7b4b1488f7a47dfec31779643db9d",
+      "copied_exactly": true
+    },
+    "full-final-cases.json": {
+      "source": "evidence/ios-ri06-shared-oracle/full-final-cases.json",
+      "sha256": "930ef81198299c354a83719849a9057cf859902fa599bdf0002a85f03b40259d",
+      "copied_exactly": true
+    },
+    "full-skips.json": {
+      "source": "evidence/ios-ri06-shared-oracle/full-skips.json",
+      "sha256": "a851a2f012444c2848f2fd827b2fd1afa01ecf288908f622d6d46ca45418e527",
+      "copied_exactly": true
+    },
+    "executor-final-tests-receipt.json": {
+      "source": "evidence/ios-ri06-shared-oracle/executor-final-tests-receipt.json",
+      "sha256": "cb27989bc879011b3d44ed73b68c26e2c0a6bdf146dc4a289e658987111db958",
+      "copied_exactly": true
+    },
+    "parent-verified-final-tests.json": {
+      "source": "evidence/ios-ri06-shared-oracle/parent-verified-final-tests.json",
+      "sha256": "979cc6d6327fadb400cac3156acf94cf72e82598b6b13cb6bff16c44a4691fc9",
+      "copied_exactly": true
+    },
+    "full-warnings.json": {
+      "source": "evidence/ios-ri06-shared-oracle/full-warnings.json",
+      "sha256": "9d5a31b2a612c6a26e5b885dc8c4fa5c06c13f8c82559b8d98e6ca15374fe0c5",
+      "copied_exactly": true
+    },
+    "release-warnings.json": {
+      "source": "evidence/ios-ri06-shared-oracle/release-warnings.json",
+      "sha256": "521bdbbd01ce6ea13f2bf9037c3ddcc259bdcf3fc6813bd551b9f597dffe9c4e",
+      "copied_exactly": true
+    },
+    "canonical-release-receipt.json": {
+      "source": "evidence/ios-ri06-shared-oracle/canonical-release-receipt.json",
+      "sha256": "d90a616c8b53ba6c8af42858cd50aa565a7b2ab7b7b968fef89662031d61d182",
+      "copied_exactly": true
+    },
+    "final-analyze-warnings.json": {
+      "source": "evidence/ios-ri06-shared-oracle/final-analyze-warnings.json",
+      "sha256": "d79d30ccff9ca02278716ad7cccc932b8a38503ac0db28a8e2e4f4b8af4b844c",
+      "copied_exactly": true
+    },
+    "signed-test-warnings.json": {
+      "source": "evidence/ios-ri06-shared-oracle/signed-test-warnings.json",
+      "sha256": "00720c1aae2e7f26572cdf9784d9b2be99617e565a0f97f254bddcc7af8d3797",
+      "copied_exactly": true
+    },
+    "app-byte-comparison.json": {
+      "source": "evidence/ios-ri06-shared-oracle/app-byte-comparison.json",
+      "sha256": "c97b0fa2373770fe7cde73c2a9a70617016c985f8f104c9b5190b3d38bf0bc97",
+      "copied_exactly": true
+    },
+    "source-sensitive-scan.json": {
+      "source": "evidence/ios-ri06-shared-oracle/source-sensitive-scan.json",
+      "sha256": "ca3df2473a1826b38d5b47b3113714a28bdc11c638b5906a4e726646bf55da4e",
+      "copied_exactly": true
+    },
+    "signed-test-artifact.json": {
+      "source": "test-builds/ios/signed-ri06-oracle/receipt.json",
+      "sha256": "e7de7a5adb44495a987260246cc59c7cab97a50827406f4c586709cea327352c",
+      "copied_exactly": true
+    },
+    "parent-verified-artifacts.json": {
+      "source": "evidence/ios-ri06-shared-oracle/parent-verified-artifacts.json",
+      "sha256": "660d3956ec19be6282335d0f0118fd04d596e15ac29580e8622085971daa2d2a",
+      "copied_exactly": true
+    }
+  },
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "current_source_hashes_verified": 326,
+  "application_hashes_verified_unchanged_vs_41eb": 207,
+  "fixture_sha256": {
+    "tests/fixtures/recovery/history-timestamp-compatibility-v1.json": "b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459"
+  },
+  "review_verdict": "APPROVED",
+  "actual_targeted_counts": [
+    58,
+    0,
+    0
+  ],
+  "runtime_vectors": 45,
+  "runtime_accepts_raw_equality": 11,
+  "runtime_rejects_nonCanonicalTimestamp": 34,
+  "vectors_counted_as_one_new_xctest": true,
+  "build_or_test_rerun_by_packager": false,
+  "device_operations": false,
+  "raw_log_or_config_copied": false,
+  "final_gates_in_this_packaging_snapshot": "PASS: current final local gates included",
+  "historical_coverage_review_boundary": "Source finding at historical Android hash; no global shared runtime parity claim",
+  "readme_sha256": "93932319b809b518424bdc5544a369ac60144ee07ad3f6865eda883e052532fb",
+  "final_gates_in_this_package": "PASS local canonical gates; root integration/CI/performance/live separate",
+  "initial_packaging_snapshot_status": "PENDING before final local invocations; preserved as historical preparation only",
+  "actual_final_counts": [
+    1403,
+    0,
+    36
+  ],
+  "unique_final_identifiers": 1439,
+  "actual_incremental_analyze_source_diagnostics": 0,
+  "historical_analyze_baseline_source_diagnostics": 26
+}

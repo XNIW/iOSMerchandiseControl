@@ -72,7 +72,7 @@ final class AutomaticRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRun>()), 0)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>()), 0)
 
-        let counters = await remote.operationCounters()
+        let counters = remote.operationCounters()
         XCTAssertEqual(counters.syncEventFetches, 2)
         XCTAssertEqual(counters.catalogProductFetches, 0)
         XCTAssertEqual(counters.catalogSupplierFetches, 0)
@@ -148,7 +148,7 @@ final class AutomaticRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRun>()), 0)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>()), 0)
 
-        let counters = await remote.operationCounters()
+        let counters = remote.operationCounters()
         XCTAssertEqual(counters.historyFetches, 0)
         XCTAssertEqual(counters.historyUpserts, 0)
         XCTAssertEqual(counters.productPriceApplyFetches, 0)
@@ -232,7 +232,8 @@ final class AutomaticRecoverySnapshotPullServiceTests: XCTestCase {
     }
 }
 
-private actor AutomaticRecoveryPreflightRemote:
+@MainActor
+private final class AutomaticRecoveryPreflightRemote:
     SupabaseInventoryFetching,
     SupabaseProductPricePreviewFetching,
     HistorySessionRemoteSyncing,

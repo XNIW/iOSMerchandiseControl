@@ -1,0 +1,33 @@
+{
+  "original_full": {
+    "summary": "/tmp/mc-task144-ios/ri03/final-full-summary.json",
+    "passed": 1371,
+    "failed": 1,
+    "skipped": 36,
+    "result": "FAIL",
+    "failed_test": "CatalogTextImportUITests.testDatabaseCSVImportPresentsSystemFilePicker",
+    "assertion": "XCTAssertTrue(app.staticTexts[\"Recents\"].exists)",
+    "failure_line": 45
+  },
+  "direct_video_evidence": {
+    "video": "/tmp/mc-task144-ios/ri03/picker-failure-raw/3D3D2C11-E622-4F3E-B785-BF1C3CFEE862.mp4",
+    "video_sha256": "bff7e567767d8b24b5a542584fa2bbe6263025be056076ff241bdb7df1ffe141",
+    "frame_at_seconds": 18,
+    "frame": "/tmp/mc-task144-ios/ri03/picker-failure.png",
+    "frame_sha256": "90f69161b0aa4f8a9533bf8dd573a085cd0a1f72566d2c0eb3a8865bf6163469",
+    "observed": "English system Files picker; Browse selected, On My iPhone title, TASK144 Fixtures folder; Recents is a bottom button rather than current static title. System provider retained location after executor CA08 normal UI exploration."
+  },
+  "restoration": "Only normal app CSV picker UI on dedicated executor simulator: tap Recents, observe static title, Cancel. No preference/DB write, deletion, reset, or source/test change. Temporary probe first attempted symbol tab identifier unavailable on normal app; corrected private probe to observed Database label.",
+  "restoration_evidence": "/tmp/mc-task144-ios/ri03/restore-files-precondition2.xcresult",
+  "unchanged_test_rerun": {
+    "result": "PASS",
+    "passed": 1,
+    "failed": 0,
+    "xcresult": "/tmp/mc-task144-ios/ri03/picker-restored.xcresult",
+    "raw_log": "/tmp/mc-task144-ios/ri03/picker-restored.log",
+    "log_sha256": "0c5ac7c52ec24694c663a286dae8e0d22c381f9375ae6ea06358f5e6144a6864"
+  },
+  "tracked_picker_test_changed": false,
+  "locale_cause": false,
+  "retry_blind": false
+}

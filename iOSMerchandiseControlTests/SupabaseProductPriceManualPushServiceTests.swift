@@ -461,7 +461,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         XCTAssertEqual(acknowledged, 1)
         XCTAssertEqual(covered.status, .acknowledged)
         XCTAssertEqual(notCovered.status, .pending)
-        let updates = await remote.updatedProducts()
+        let updates = remote.updatedProducts()
         XCTAssertEqual(updates.count, 1)
         XCTAssertEqual(updates.first?.id, productID)
         XCTAssertNil(updates.first?.payload.purchasePrice)
@@ -561,7 +561,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         viewModel.confirmPush()
         viewModel.confirmPush()
         try await waitUntil { viewModel.state.kind == .verifiedSuccess }
-        let insertCalls = await remote.insertCalls
+        let insertCalls = remote.insertCalls
 
         XCTAssertEqual(insertCalls, 1)
     }
@@ -832,7 +832,8 @@ private extension ProductPriceManualPushPayload {
     }
 }
 
-private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
+@MainActor
+private final class MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
     private var readBackRows: [RemoteInventoryProductPriceRow]
     private var readBackRowsByCall: [[RemoteInventoryProductPriceRow]]
     private let insertError: Error?
@@ -849,7 +850,7 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
     private(set) var readBackOwnerUserIDs: [UUID] = []
     private(set) var readBackProductIDs: [[UUID]] = []
 
-    init(
+    nonisolated init(
         readBackRows: [RemoteInventoryProductPriceRow] = [],
         readBackRowsByCall: [[RemoteInventoryProductPriceRow]] = [],
         insertError: Error? = nil,

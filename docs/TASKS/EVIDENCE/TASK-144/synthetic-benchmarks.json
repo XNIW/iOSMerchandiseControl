@@ -1,0 +1,41 @@
+{
+  "classification": "core XCTest synthetic; not UI/network/end-to-end; n=1 per S100 scenario",
+  "conditions": "Same dedicated simulator, warm compiled Debug test binary; no other build or tests running; previous full run was collecting background simctl diagnostics. No before/after performance comparison for S100; these are existing algorithms.",
+  "dataset": "D100-L: 12000 products, 480 suppliers, 320 categories, 48000 prices, page size 1000",
+  "metrics": [
+    {
+      "scenario_id": "S100-E-preview-D100-L",
+      "dataset_class": "D100-L",
+      "device_target": "XCTest_fake_SupabasePullPreviewService",
+      "row_counts": "products=12000;suppliers=480;categories=320;product_prices=48000;product_pages=13;price_pages=49",
+      "file_size_mb": "n/a",
+      "time_to_first_feedback_s": "0.000",
+      "total_duration_s": "5.147",
+      "result_state": "PASS",
+      "failure_mode": "none",
+      "notes_redacted": "D100-L paged preview uses bounded page size and synthetic remote rows"
+    },
+    {
+      "scenario_id": "S100-F-D100-L",
+      "dataset_class": "D100-L",
+      "device_target": "XCTest_SupabaseProductPriceApplyService",
+      "row_counts": "products=12000;product_prices=48000",
+      "file_size_mb": "n/a",
+      "time_to_first_feedback_s": "0.000",
+      "total_duration_s": "82.485",
+      "result_state": "PASS",
+      "failure_mode": "none",
+      "notes_redacted": "D100-L ProductPrice apply inserted current/previous purchase+retail and sample audit passed"
+    }
+  ],
+  "durable_save_reload": {
+    "n": 30,
+    "synthetic_products": 1,
+    "network": "offline",
+    "storage": "simulator temporary file storage",
+    "p50_ms": 1.155917,
+    "p95_ms": 1.367292,
+    "max_ms": 2.596959
+  },
+  "p50_p95_max_S100": "Not statistically meaningful for n=1; recorded single observed duration only."
+}

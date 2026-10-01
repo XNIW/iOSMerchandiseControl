@@ -1,0 +1,158 @@
+[
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 414,
+    "column": 9,
+    "message": "Access to field 'index' results in a dereference of a null pointer (loaded from variable 'row') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 481,
+    "column": 28,
+    "message": "Array access (via field 'value') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 527,
+    "column": 36,
+    "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 770,
+    "column": 17,
+    "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1050,
+    "column": 11,
+    "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1116,
+    "column": 7,
+    "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1128,
+    "column": 17,
+    "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1172,
+    "column": 47,
+    "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1182,
+    "column": 47,
+    "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1200,
+    "column": 47,
+    "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1289,
+    "column": 7,
+    "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1301,
+    "column": 17,
+    "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1337,
+    "column": 57,
+    "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1344,
+    "column": 63,
+    "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1352,
+    "column": 48,
+    "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1363,
+    "column": 56,
+    "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/xls.c",
+    "line": 1406,
+    "column": 81,
+    "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+  },
+  {
+    "path": "Vendor 2/libxls/src/ole.c",
+    "line": 667,
+    "column": 7,
+    "message": "Although the value stored to 'seeked' is used in the enclosing expression, the value is never actually read from 'seeked' [deadcode.DeadStores]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+    "line": 14,
+    "column": 9,
+    "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+    "line": 26,
+    "column": 9,
+    "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+    "line": 42,
+    "column": 9,
+    "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+    "line": 54,
+    "column": 9,
+    "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+    "line": 16,
+    "column": 29,
+    "message": "main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+    "line": 612,
+    "column": 13,
+    "message": "call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+    "line": 189,
+    "column": 24,
+    "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+  },
+  {
+    "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+    "line": 382,
+    "column": 35,
+    "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+  }
+]

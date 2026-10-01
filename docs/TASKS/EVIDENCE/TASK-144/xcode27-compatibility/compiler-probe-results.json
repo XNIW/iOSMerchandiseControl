@@ -1,0 +1,52 @@
+[
+  {
+    "case": "baseline",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/baseline.swift:2:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A: P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n"
+  },
+  {
+    "case": "mainactor_class",
+    "exit_code": 0,
+    "stderr": ""
+  },
+  {
+    "case": "mainactor_conformance",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/mainactor_conformance.swift:2:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A: @MainActor P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n"
+  },
+  {
+    "case": "nonisolated_conformance",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/nonisolated_conformance.swift:2:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A: nonisolated P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n"
+  },
+  {
+    "case": "nonisolated_extension",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/nonisolated_extension.swift:3:13: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A {var value = 0}\n3 | nonisolated extension A: P { func run() async -> Int {value += 1; return value}}\n  |             `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n4 | \n\n/tmp/mc-task144-ios/compiler-probe/nonisolated_extension.swift:3:55: error: actor-isolated property 'value' can not be mutated from the main actor\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n2 | actor A {var value = 0}\n  |              `- note: mutation of this property is only permitted within the actor\n3 | nonisolated extension A: P { func run() async -> Int {value += 1; return value}}\n  |                                                       |- error: actor-isolated property 'value' can not be mutated from the main actor\n  |                                                       `- note: consider declaring an isolated method on 'A' to perform the mutation\n4 | \n\n/tmp/mc-task144-ios/compiler-probe/nonisolated_extension.swift:3:74: error: actor-isolated property 'value' cannot be accessed from outside of the actor\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n2 | actor A {var value = 0}\n3 | nonisolated extension A: P { func run() async -> Int {value += 1; return value}}\n  |                                                                          `- error: actor-isolated property 'value' cannot be accessed from outside of the actor\n4 | \n"
+  },
+  {
+    "case": "nonisolated_initializer",
+    "exit_code": 0,
+    "stderr": ""
+  },
+  {
+    "case": "nonisolated_refinement",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/nonisolated_refinement.swift:3:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | nonisolated protocol TestP: P {}\n3 | actor A: TestP { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n4 | \n"
+  },
+  {
+    "case": "nonisolated_type",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/nonisolated_type.swift:2:1: error: 'nonisolated' modifier cannot be applied to this declaration\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n2 | nonisolated actor A: P { var value = 0; func run() async -> Int {value += 1; return value}}\n  | `- error: 'nonisolated' modifier cannot be applied to this declaration\n3 | \n\n/tmp/mc-task144-ios/compiler-probe/nonisolated_type.swift:2:19: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | nonisolated actor A: P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |                   `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n"
+  },
+  {
+    "case": "preconcurrency",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/preconcurrency.swift:2:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A: @preconcurrency P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n\n/tmp/mc-task144-ios/compiler-probe/preconcurrency.swift:2:7: warning: '@preconcurrency' on conformance to 'P' has no effect\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n2 | actor A: @preconcurrency P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- warning: '@preconcurrency' on conformance to 'P' has no effect\n3 | \n"
+  },
+  {
+    "case": "preconcurrency_import",
+    "exit_code": 1,
+    "stderr": "/tmp/mc-task144-ios/compiler-probe/preconcurrency_import.swift:2:7: error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n1 | @MainActor protocol P: Sendable {func run() async -> Int}\n  | `- note: 'P' is isolated to global actor 'MainActor' here\n2 | actor A: P { var value = 0; func run() async -> Int {value += 1; return value}}\n  |       `- error: actor 'A' cannot conform to global-actor-isolated protocol 'P'\n3 | \n"
+  }
+]

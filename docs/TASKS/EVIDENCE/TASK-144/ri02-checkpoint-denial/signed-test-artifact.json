@@ -1,0 +1,31 @@
+{
+  "app_path": "/tmp/mc-task144-ios/signed-test/Artifact/iOSMerchandiseControl.app",
+  "source_head": "97b6c812c53420b30a0151344a40425296427a6c",
+  "source_uncommitted_paths": [
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+    "iOSMerchandiseControlTests/StorefrontAuthoringTests.swift"
+  ],
+  "source_fingerprint": "9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d",
+  "configuration": "Release iPhoneSimulator, canonical project Automatic signing; no signing/profile overrides",
+  "build_result": "PASS",
+  "signature_strict_deep_pass": true,
+  "target_TEST": true,
+  "base_config_matches_primary": true,
+  "only_config_delta": "PRODUCT_IMAGE_API_BASE_URL",
+  "bundle_id_unchanged": true,
+  "application_identifier_present_in_simulated_entitlements": true,
+  "embedded_simulated_entitlements_equal_xcode_generated": true,
+  "simulated_entitlement_keys": [
+    "application-identifier",
+    "com.apple.developer.associated-domains"
+  ],
+  "original_unsigned_embedded_entitlements_present": false,
+  "entitlements_storage_note": "Simulator effective entitlements are embedded by Xcode in __TEXT,__entitlements, not in the empty ad hoc signature entitlement dictionary. Initial wrapper assertion assumed the device layout and was corrected after binary inspection. Build itself succeeded.",
+  "keychain_group_override": false,
+  "auth_source_changed": false,
+  "image_api_configured": true,
+  "wechat_flags_unchanged": true,
+  "binary_sha256": "347b383bf3e7e9db5c455861b92db3784e211f29ef2d10a79ecbc86682397d36",
+  "installed_on_live_device_by_executor": false
+}

@@ -1,0 +1,26 @@
+{
+  "baseline_sha": "97b6c812c53420b30a0151344a40425296427a6c",
+  "only_test_function_modified": true,
+  "production_storage_file_unchanged": true,
+  "runtime": "26.2",
+  "runtime_build": "23C54",
+  "local_xcode": "27.0 (27A266a)",
+  "ci_xcode": "26.6",
+  "ci_sdk": "26.5",
+  "ci_runtime": "26.2",
+  "baseline": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "exit": 65,
+    "kind": "SIGABRT in isolated deinit"
+  },
+  "green": {
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "exit": 0,
+    "runner_restarts": 0
+  },
+  "test_source_sha256": "a9ce902874d156f25bbc2445edabeb737f39405416cd12803ae0a60c94b002fd"
+}

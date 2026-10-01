@@ -116,7 +116,8 @@ final class CatalogGeneratedProductPriceSyncEventRecorderTests: XCTestCase {
     }
 }
 
-private actor MockGeneratedPriceRemote: SupabaseProductPricePushDryRunRemoteFetching {
+@MainActor
+private final class MockGeneratedPriceRemote: SupabaseProductPricePushDryRunRemoteFetching {
     private let rows: [RemoteInventoryProductPriceRow]
 
     init(rows: [RemoteInventoryProductPriceRow]) {

@@ -1,0 +1,171 @@
+{
+  "status": "TEST_ONLY LOCAL_VERIFIED / SOURCE_APPROVED; integration/CI, launch comparison and authenticated convergence remain separately owned by parent. Not DONE.",
+  "base_commit": "d05d163c5f6d113e108299685e1072aaadd1abe3",
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "source_file_count": 326,
+  "source_manifest": "frozen-source-manifest.json",
+  "prior_ri06_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "only_source_delta": [
+    "iOSMerchandiseControlTests/ShopSyncRecoveryContractTests.swift"
+  ],
+  "fixture_sha256": {
+    "tests/fixtures/recovery/history-timestamp-compatibility-v1.json": "b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459"
+  },
+  "app_source_files": 207,
+  "all_app_source_hashes_identical_vs_41eb": true,
+  "scope": "One new XCTest and byte-identical shared synthetic fixture. No iOS app, SDK, legacy, price, UTC6, schema/model, serializer or dependency delta. legacyAccepted remains annotation outside History.",
+  "shared_oracle": {
+    "runtime_vectors": 45,
+    "raw_accepts_checked": 11,
+    "canonical_rejects_checked": 34,
+    "new_xctest_cases": 1,
+    "receipt": "shared-oracle-runtime-receipt.json",
+    "global_android_backend_runtime_parity_claim": false
+  },
+  "targeted": {
+    "passed": 58,
+    "failed": 0,
+    "skipped": 0,
+    "unique": 58,
+    "summary": "targeted-summary.json",
+    "cases": "targeted-cases.json",
+    "log_sha256": "de1cdc033584618aa2accfac97de3420ba9d79b039efc017add071051dad05e3"
+  },
+  "review": {
+    "verdict": "APPROVED",
+    "report": "ios-ri06-shared-oracle-supplement-review.md",
+    "receipt": "ios-ri06-shared-oracle-supplement-receipt.json"
+  },
+  "full": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "test",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/DerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages",
+      "-parallel-testing-enabled",
+      "NO",
+      "CODE_SIGNING_ALLOWED=NO",
+      "-collect-test-diagnostics",
+      "never",
+      "-resultBundlePath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-shared-oracle/final-full.xcresult"
+    ],
+    "result": "PASS",
+    "unique": 1439,
+    "passed": 1403,
+    "failed": 0,
+    "skipped": 36,
+    "unit_integration_pass": 1395,
+    "xcuitest_pass": 8,
+    "auth_real_sdk_pass": 20,
+    "namespace_import_pass": 31,
+    "oracle_case_pass_in_full": true,
+    "summary": "final-full-summary.json",
+    "cases": "full-final-cases.json",
+    "skips": "full-skips.json",
+    "log_sha256": "b5b266c6d3ced274ec3b933f2c18c03a10144f6ad9c9f223b58dbfceae46dacf",
+    "xcresult": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-shared-oracle/final-full.xcresult",
+    "runtime_warnings": [
+      {
+        "issueType": "Runtime Warning",
+        "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+        "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+      }
+    ],
+    "runtime_warning_note": "Historical QoS warning retained, not suppressed.",
+    "parent_verification": "parent-verified-final-tests.json"
+  },
+  "release": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/CanonicalReleaseDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages"
+    ],
+    "result": "PASS",
+    "receipt": "canonical-release-receipt.json",
+    "all_22_artifact_files_byte_identical_vs_41eb": true,
+    "binary_sha256": "f78167224ff224c6bb9b7b04c00045cd0b2a957fbaead3beb760a699d439deb9",
+    "log_sha256": "5581ec9fe3b80adf6c95249a11c97d7a53c3f2369291b5554d69bcdfcb1dcafb"
+  },
+  "analyze": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "analyze",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Debug",
+      "-destination",
+      "generic/platform=iOS Simulator",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/AnalyzeDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages",
+      "CODE_SIGNING_ALLOWED=NO"
+    ],
+    "result": "PASS",
+    "actual_incremental_diagnostics": 0,
+    "historical_baseline_diagnostics": 26,
+    "new_diagnostics": 0,
+    "note": "Actual invocation on unchanged app source using prior DD; incremental diagnostic count does not claim historical warnings were fixed.",
+    "warnings": "final-analyze-warnings.json",
+    "log_sha256": "a87b192643b211550e7f4adac7b5eace4e6cb4f8adaef8ca2249851b465819e0"
+  },
+  "signed_test": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/SignedTESTDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages"
+    ],
+    "result": "PASS",
+    "receipt": "signed-test-artifact.json",
+    "all_23_artifact_files_byte_identical_vs_41eb": true,
+    "binary_sha256": "4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30",
+    "app_path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/test-builds/ios/signed-ri06-oracle/Artifact/iOSMerchandiseControl.app",
+    "signature_strict_deep_pass": true,
+    "effective_simulated_entitlements_match": true,
+    "primary_config_preserved": true,
+    "ignored_copy_removed": true,
+    "log_sha256": "d6753b3dc1cf74b34dfadfc5c671ecd715f772abd3a531dfef4f1807a7a20e0b"
+  },
+  "app_byte_comparison": "app-byte-comparison.json",
+  "source_sensitive_scan": "source-sensitive-scan.json",
+  "warning_new_count_all_gates": 0,
+  "limits": [
+    "36 explicit skips:29 live/external,4 opt-in synthetic benchmark,2 suspended Excel harness,1 physical camera; identifiers/reasons preserved.",
+    "Older 41eb full1402/0/36 and signed-ri06 artifacts remain intact as preceding test-source snapshots.",
+    "No Git, coordinator-device or performance operation by executor; canonical tests ran on the isolated executor simulator. Root owns workflow CI correction and exact-SHA integration."
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "signed_TEST": {
+    "file_count": 23,
+    "binary_sha256": "4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30",
+    "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+    "all_receipt_file_hashes_match": true,
+    "strict_deep_signature_fresh_pass": true,
+    "receipt_sha256": "e7de7a5adb44495a987260246cc59c7cab97a50827406f4c586709cea327352c",
+    "all_23_file_hashes_identical_to_previous_reviewed_app": true
+  },
+  "canonical_Release": {
+    "file_count": 22,
+    "binary_sha256": "f78167224ff224c6bb9b7b04c00045cd0b2a957fbaead3beb760a699d439deb9",
+    "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+    "all_receipt_file_hashes_match": true,
+    "strict_deep_signature_fresh_pass": true,
+    "receipt_sha256": "d90a616c8b53ba6c8af42858cd50aa565a7b2ab7b7b968fef89662031d61d182",
+    "all_22_file_hashes_identical_to_previous_reviewed_app": true
+  }
+}

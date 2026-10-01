@@ -1,0 +1,106 @@
+{
+  "total": 16,
+  "vendor": 0,
+  "swift": 16,
+  "new_vs_previous_analyze": [],
+  "warnings": [
+    {
+      "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "line": 189,
+      "column": 24,
+      "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "line": 382,
+      "column": 35,
+      "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 14,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 26,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 42,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 54,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+      "line": 16,
+      "column": 29,
+      "message": "main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+      "line": 612,
+      "column": 13,
+      "message": "call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "line": 189,
+      "column": 24,
+      "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "line": 382,
+      "column": 35,
+      "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 14,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 26,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 42,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "line": 54,
+      "column": 9,
+      "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+      "line": 16,
+      "column": 29,
+      "message": "main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "path": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+      "line": 612,
+      "column": 13,
+      "message": "call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]"
+    }
+  ],
+  "note": "Incremental analyzer may not emit unchanged Vendor diagnostics. Previous 18 Vendor findings remain unresolved; absence from incremental log is not a fix. This run emits the same 8 unique Swift diagnostics for arm64 and x86_64 (16 emissions); zero new diagnostics versus the previous recorded baseline.",
+  "unique_diagnostics": 8
+}

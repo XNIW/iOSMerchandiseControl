@@ -29,30 +29,45 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Verify shared contract hashes
         run: shasum -a 256 -c contracts/product-image-v1.sha256
 
       - name: Select an available iPhone Simulator
         run: |
+          # Initialize CoreSimulator before asking Xcode for concrete destinations.
+          xcrun simctl list devices available
+          select_device_id() {
+            printf '%s\n' "$1" | ruby -e '
+              device_id = nil
+              STDIN.each_line do |line|
+                next if line.include?("error:")
+                match = line.match(/\{ platform:iOS Simulator,.*id:([^,}]+),.*name:iPhone/)
+                next unless match
+
+                device_id = match[1].strip
+                break
+              end
+              abort "No scheme-compatible iPhone Simulator" unless device_id
+              puts device_id
+            '
+          }
           DESTINATIONS="$(xcodebuild \
             -project iOSMerchandiseControl.xcodeproj \
             -scheme iOSMerchandiseControl \
             -showdestinations 2>&1)"
-          if ! DEVICE_ID="$(printf '%s\n' "$DESTINATIONS" | ruby -e '
-            device_id = nil
-            STDIN.each_line do |line|
-              match = line.match(/\{ platform:iOS Simulator,.*id:([^,}]+),.*name:iPhone/)
-              next unless match
-
-              device_id = match[1].strip
-              break
-            end
-            abort "No scheme-compatible iPhone Simulator" unless device_id
-            puts device_id
-          ')"; then
+          if ! DEVICE_ID="$(select_device_id "$DESTINATIONS")"; then
             printf '%s\n' "$DESTINATIONS"
-            exit 1
+            # The runner can have an installed runtime but no concrete iPhone.
+            # Re-query the scheme so an incompatible runtime still fails the job.
+            xcrun simctl create "MerchandiseControl CI" "iPhone 17"
+            DESTINATIONS="$(xcodebuild \
+              -project iOSMerchandiseControl.xcodeproj \
+              -scheme iOSMerchandiseControl \
+              -showdestinations 2>&1)"
+            DEVICE_ID="$(select_device_id "$DESTINATIONS")"
           fi
           echo "Selected compatible simulator: $DEVICE_ID"
           xcrun simctl boot "$DEVICE_ID" || true

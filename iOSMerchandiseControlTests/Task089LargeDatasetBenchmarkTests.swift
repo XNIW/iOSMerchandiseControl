@@ -33,7 +33,7 @@ final class Task089LargeDatasetBenchmarkTests: XCTestCase {
         XCTAssertTrue(preview.conflicts.isEmpty)
         XCTAssertTrue(preview.sourceErrors.isEmpty)
 
-        let ranges = await fetcher.rangeSummary()
+        let ranges = fetcher.rangeSummary()
         XCTAssertEqual(ranges.productPages, expectedPagedFetchCalls(rowCount: spec.productCount, pageSize: spec.pageSize))
         XCTAssertEqual(ranges.supplierPages, expectedPagedFetchCalls(rowCount: spec.supplierCount, pageSize: spec.pageSize))
         XCTAssertEqual(ranges.categoryPages, expectedPagedFetchCalls(rowCount: spec.categoryCount, pageSize: spec.pageSize))
@@ -448,7 +448,8 @@ private struct Task089SyntheticDataset {
     }()
 }
 
-private actor Task089InventoryFetcherFake: SupabaseInventoryFetching {
+@MainActor
+private final class Task089InventoryFetcherFake: SupabaseInventoryFetching {
     private let dataset: Task089SyntheticDataset
     private var productRanges: [String] = []
     private var supplierRanges: [String] = []

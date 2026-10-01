@@ -576,7 +576,7 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             XCTAssertFalse(result.didWork)
         }
 
-        let outboundCalls = await recorder.totalCalls()
+        let outboundCalls = recorder.totalCalls()
         XCTAssertEqual(outboundCalls, 0)
     }
 
@@ -1053,10 +1053,10 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let recoveryCallCount = await recovery.callCount
+        let recoveryCallCount = recovery.callCount
         let operations = await operationRecorder.operations()
-        let forcedReconcileFlags = await tail.forceLightReconcileFlags()
-        let journalVisibility = await tail.journalVisibilityDuringCalls()
+        let forcedReconcileFlags = tail.forceLightReconcileFlags()
+        let journalVisibility = tail.journalVisibilityDuringCalls()
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertFalse(result.didWork)
@@ -1122,11 +1122,11 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let recoveryCallCount = await recovery.callCount
-        let tailCallCount = await tail.callCount
+        let recoveryCallCount = recovery.callCount
+        let tailCallCount = tail.callCount
         let operations = await operationRecorder.operations()
-        let observedWatermarks = await tail.observedWatermarks()
-        let forcedReconcileFlags = await tail.forceLightReconcileFlags()
+        let observedWatermarks = tail.observedWatermarks()
+        let forcedReconcileFlags = tail.forceLightReconcileFlags()
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertFalse(result.didWork)
@@ -1195,9 +1195,9 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let recoveryCallCount = await recovery.callCount
-        let tailCallCount = await tail.callCount
-        let observedWatermarks = await tail.observedWatermarks()
+        let recoveryCallCount = recovery.callCount
+        let tailCallCount = tail.callCount
+        let observedWatermarks = tail.observedWatermarks()
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertNotEqual(result.status, .success)
@@ -1250,10 +1250,10 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let recoveryCallCount = await recovery.callCount
-        let tailCallCount = await tail.callCount
-        let observedWatermarks = await tail.observedWatermarks()
-        let forcedReconcileFlags = await tail.forceLightReconcileFlags()
+        let recoveryCallCount = recovery.callCount
+        let tailCallCount = tail.callCount
+        let observedWatermarks = tail.observedWatermarks()
+        let forcedReconcileFlags = tail.forceLightReconcileFlags()
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertEqual(recoveryCallCount, 0)
@@ -1320,8 +1320,8 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             try await service.recoverFromRemoteSnapshot(ownerUserID: owner)
         }
 
-        let operationLog = await remote.operations()
-        let didInsertCatalogEvent = await remote.didInsertCatalogEvent()
+        let operationLog = remote.operations()
+        let didInsertCatalogEvent = remote.didInsertCatalogEvent()
         XCTAssertEqual(summary.watermarkAfter, 10)
         XCTAssertTrue(didInsertCatalogEvent)
         XCTAssertEqual(Array(operationLog.prefix(2)), ["events.after.0", "catalog.products"])
@@ -1365,7 +1365,7 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let recoveryCallCount = await recovery.callCount
+        let recoveryCallCount = recovery.callCount
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertEqual(recoveryCallCount, 1)
@@ -1410,8 +1410,8 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
             source: .networkReconnect,
             ownerUserID: owner
         )
-        let tailCallCount = await tail.callCount
-        let observedWatermarks = await tail.observedWatermarks()
+        let tailCallCount = tail.callCount
+        let observedWatermarks = tail.observedWatermarks()
 
         XCTAssertEqual(result.status, .failed)
         XCTAssertEqual(tailCallCount, 0)
@@ -2314,7 +2314,8 @@ private final class ReplacementBlockingCatalogProvider: SyncCatalogPushProviding
     }
 }
 
-private actor AutomaticRecoveryW0RemoteFake:
+@MainActor
+private final class AutomaticRecoveryW0RemoteFake:
     SupabaseInventoryFetching,
     SupabaseProductPricePreviewFetching,
     HistorySessionRemoteSyncing,
@@ -2474,7 +2475,8 @@ private final class RecordingReplacementRuntime: SyncAutomaticRuntimeProviding {
     }
 }
 
-private actor BootstrapDecisionInputProvider: SyncDecisionInputProviding {
+@MainActor
+private final class BootstrapDecisionInputProvider: SyncDecisionInputProviding {
     let ownerUserID: UUID
 
     init(ownerUserID: UUID) {
@@ -2511,7 +2513,8 @@ private actor BootstrapDecisionInputProvider: SyncDecisionInputProviding {
     }
 }
 
-private actor ReplacementRecoveryProvider: SyncRecoverySnapshotPullProviding {
+@MainActor
+private final class ReplacementRecoveryProvider: SyncRecoverySnapshotPullProviding {
     enum Mode: Sendable {
         case success(watermark: Int64)
         case successSequence(watermarks: [Int64])
@@ -2598,7 +2601,8 @@ private actor ReplacementOperationRecorder {
     }
 }
 
-private actor ReplacementTailProvider: SyncIncrementalPullProviding {
+@MainActor
+private final class ReplacementTailProvider: SyncIncrementalPullProviding {
     enum Mode: Sendable {
         case success([SyncIncrementalPullSummary])
         case alwaysAdvancing
@@ -2696,7 +2700,8 @@ private enum ReplacementRecoveryFixtureError: Error {
     case failed
 }
 
-private actor BusinessOutboundRecorder:
+@MainActor
+private final class BusinessOutboundRecorder:
     SyncCatalogPushProviding,
     SyncProductPriceSyncProviding,
     SyncHistorySessionPushProviding,

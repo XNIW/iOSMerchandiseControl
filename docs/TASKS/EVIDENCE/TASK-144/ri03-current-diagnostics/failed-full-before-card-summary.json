@@ -1,0 +1,63 @@
+{
+  "devicesAndConfigurations": [
+    {
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "<REDACTED_DEVICE_ID>",
+        "deviceName": "TASK144 Parity Isolated iPhone 17",
+        "modelName": "iPhone 17",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "expectedFailures": 0,
+      "failedTests": 1,
+      "passedTests": 1371,
+      "skippedTests": 36,
+      "testPlanConfiguration": {
+        "configurationId": "1",
+        "configurationName": "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription": "iOSMerchandiseControl · Built with macOS 27.0",
+  "expectedFailures": 0,
+  "failedTests": 1,
+  "finishTime": 1790642650.054,
+  "passedTests": 1371,
+  "result": "Failed",
+  "runtimeWarnings": [
+    {
+      "issueType": "Runtime Warning",
+      "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+    }
+  ],
+  "skippedTests": 36,
+  "startTime": 1790642245.875,
+  "statistics": [
+    {
+      "subtitle": "1 test run",
+      "title": "1 test collected performance metrics"
+    }
+  ],
+  "testFailures": [
+    {
+      "failureText": "XCTAssertTrue failed",
+      "targetName": "iOSMerchandiseControlUITests",
+      "testIdentifier": 1401,
+      "testIdentifierString": "CatalogTextImportUITests/testDatabaseCSVImportPresentsSystemFilePicker()",
+      "testIdentifierURL": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlUITests/CatalogTextImportUITests/testDatabaseCSVImportPresentsSystemFilePicker",
+      "testName": "testDatabaseCSVImportPresentsSystemFilePicker()"
+    }
+  ],
+  "title": "Test - iOSMerchandiseControl",
+  "topInsights": [
+    {
+      "category": "Longest Test Runs",
+      "impact": "75% of duration",
+      "text": "3 longest test runs with outlier durations exceeding 10.84s (three standard deviations)"
+    }
+  ],
+  "totalTestCount": 1408
+}

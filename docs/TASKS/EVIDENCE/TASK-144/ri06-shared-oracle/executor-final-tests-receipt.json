@@ -1,0 +1,29 @@
+{
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "source_files_verified": 326,
+  "fixture_sha256": {
+    "tests/fixtures/recovery/history-timestamp-compatibility-v1.json": "b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459"
+  },
+  "official_counts": {
+    "Passed": 1403,
+    "Skipped": 36
+  },
+  "unique_case_identifiers": 1439,
+  "unit_integration_pass": 1395,
+  "ui_pass": 8,
+  "oracle_case_in_full": {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/ShopSyncRecoveryContractTests/testHistoryTimestampMatchesSharedCompatibilityOracle",
+    "result": "Passed",
+    "duration_seconds": 0.026503920555114746,
+    "target_kind": "unit/integration"
+  },
+  "runtime_warnings": [
+    {
+      "issueType": "Runtime Warning",
+      "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+    }
+  ],
+  "full_log_sha256": "b5b266c6d3ced274ec3b933f2c18c03a10144f6ad9c9f223b58dbfceae46dacf",
+  "method": "executor source+fixture SHA256 check and fresh official xcresulttool summary/tests recount; parent verification separate"
+}

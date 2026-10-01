@@ -527,7 +527,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         XCTAssertEqual(preview.priceHistoryDiffs.count, spec.priceHistoryCount)
         XCTAssertTrue(preview.conflicts.isEmpty)
 
-        let ranges = await fetcher.rangeSummary()
+        let ranges = fetcher.rangeSummary()
         XCTAssertEqual(ranges.productPages, expectedPagedFetchCalls(rowCount: spec.productCount, pageSize: spec.pageSize))
         XCTAssertEqual(ranges.pricePages, expectedPagedFetchCalls(rowCount: spec.priceHistoryCount, pageSize: spec.pageSize))
 
@@ -572,7 +572,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         XCTAssertEqual(preview.priceHistoryDiffs.count, spec.priceHistoryCount)
         XCTAssertTrue(preview.conflicts.isEmpty)
 
-        let ranges = await fetcher.rangeSummary()
+        let ranges = fetcher.rangeSummary()
         XCTAssertEqual(ranges.productPages, expectedPagedFetchCalls(rowCount: spec.productCount, pageSize: spec.pageSize))
         XCTAssertEqual(ranges.pricePages, expectedPagedFetchCalls(rowCount: spec.priceHistoryCount, pageSize: spec.pageSize))
 
@@ -986,7 +986,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             XCTAssertEqual(preview.remoteCounts.productPrices, expectedPriceRows)
             XCTAssertEqual(preview.newProducts.count, productCount)
             XCTAssertEqual(preview.priceHistoryDiffs.count, expectedPriceRows)
-            let previewRanges = await scopedPreviewFetcher.rangeSummary()
+            let previewRanges = scopedPreviewFetcher.rangeSummary()
 
             recordMetric(
                 scenarioID: "S100-I-live-preview",
@@ -1201,7 +1201,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         try assertLiveCurrentPreviousPrices(context: readBackContext, prefix: prefix, productIndex: remoteProducts.count / 2)
         try assertLiveCurrentPreviousPrices(context: readBackContext, prefix: prefix, productIndex: remoteProducts.count - 1)
 
-        let previewRanges = await scopedPreviewFetcher.rangeSummary()
+        let previewRanges = scopedPreviewFetcher.rangeSummary()
         recordMetric(
             scenarioID: "S100-I-live-readonly-verify",
             datasetClass: "TASK100-LIVE",
@@ -2154,7 +2154,8 @@ private struct Task100ParsedPriceHistoryEntry {
     let source: String
 }
 
-private actor Task100InventoryFetcherFake: SupabaseInventoryFetching {
+@MainActor
+private final class Task100InventoryFetcherFake: SupabaseInventoryFetching {
     private let dataset: Task100SyntheticDataset
     private var productRanges: [String] = []
     private var supplierRanges: [String] = []
@@ -2201,7 +2202,8 @@ private actor Task100InventoryFetcherFake: SupabaseInventoryFetching {
     }
 }
 
-private actor Task100InventoryRowsFetcher: SupabaseInventoryFetching {
+@MainActor
+private final class Task100InventoryRowsFetcher: SupabaseInventoryFetching {
     private let products: [RemoteInventoryProductRow]
     private let suppliers: [RemoteInventorySupplierRow]
     private let categories: [RemoteInventoryCategoryRow]

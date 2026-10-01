@@ -1,3 +1,4 @@
+import CryptoKit
 import SwiftData
 import XCTest
 import ZIPFoundation
@@ -204,6 +205,82 @@ final class Task111ExcelImportParityTests: XCTestCase {
         for key in auditForbiddenKeys {
             XCTAssertFalse(previewRows.contains { $0.keys.contains(key) }, "\(key) leaked into previewRows")
         }
+    }
+
+    func testSharedPrefixedXLSXDecodesHeaderMetadataAndDuplicateLastRow() throws {
+        let url = try sharedWorkbookFixture("mobile-parity-contract.xlsx", sha256: "b1a4a408168d4a437f2c4554f447bebac66e79183a0f32b485e2829463d1bec9")
+        XCTAssertEqual(try ExcelAnalyzer.listSheetNames(at: url), ["Supplier Import"])
+        let rawRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "Supplier Import")
+        XCTAssertEqual(rawRows.count, 8)
+        let (_, header, rows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+        XCTAssertEqual(header, ["barcode", "itemNumber", "productName", "purchasePrice", "quantity", "supplier", "category", "retailPrice"])
+        XCTAssertEqual(rows.count, 4, "Metadata and totals must not become product rows.")
+        let result = ProductImportCore.analyzeImport(header: header, dataRows: rows, existingProductsByBarcode: [:])
+        XCTAssertTrue(result.errors.isEmpty)
+        XCTAssertEqual(result.newProducts.count, 3)
+        XCTAssertEqual(result.warnings.count, 1)
+        XCTAssertEqual(result.warnings.first?.barcode, "8888888800008")
+        let duplicate = try XCTUnwrap(result.newProducts.first { $0.barcode == "8888888800008" })
+        XCTAssertEqual(duplicate.itemNumber, "DUP-B")
+        XCTAssertEqual(duplicate.productName, "Duplicate last")
+        XCTAssertEqual(duplicate.purchasePrice, 220)
+        XCTAssertEqual(duplicate.retailPrice, 270)
+        XCTAssertEqual(duplicate.stockQuantity, 2)
+        XCTAssertTrue(result.newProducts.contains { $0.barcode == "7777777700007" && $0.itemNumber == "ART-777" })
+    }
+
+    func testSharedPrefixedUnicodeCLPXLSXPreservesIdentifiersAndValues() throws {
+        let url = try sharedWorkbookFixture("mobile-parity-unicode-clp.xlsx", sha256: "bb7d01475dcf8dc943f93ddc2a41fe0e432e9337c1f2aef54fb742b7886d9b8f")
+        let (_, header, rows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+        XCTAssertEqual(rows.count, 2)
+        let result = ProductImportCore.analyzeImport(header: header, dataRows: rows, existingProductsByBarcode: [:])
+        XCTAssertTrue(result.errors.isEmpty)
+        XCTAssertTrue(result.warnings.isEmpty)
+        XCTAssertEqual(result.newProducts.map(\.barcode), ["000123450001", "000123450002"])
+        XCTAssertEqual(result.newProducts.map(\.productName), ["Café 商品", "Tè 🍵"])
+        XCTAssertEqual(result.newProducts.map(\.supplierName), ["Proveedor Ñ", "Proveedor Ñ"])
+        XCTAssertEqual(result.newProducts.map(\.categoryName), ["茶類", "茶類"])
+        XCTAssertEqual(result.newProducts.map(\.stockQuantity), [2.5, 3.25])
+        XCTAssertEqual(result.newProducts.map(\.retailPrice), [1990, 2500])
+        for product in result.newProducts {
+            XCTAssertEqual(try XCTUnwrap(product.purchasePrice), 1234.56, accuracy: 0.0001)
+        }
+    }
+
+    func testPrefixedWorkbookRelationshipsSharedStringsAndStylesDecodeTogether() throws {
+        let entries = [
+            ("xl/workbook.xml", """
+            <x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><x:sheets><x:sheet name="Products" sheetId="1" r:id="rId1"/></x:sheets></x:workbook>
+            """),
+            ("xl/_rels/workbook.xml.rels", """
+            <p:Relationships xmlns:p="http://schemas.openxmlformats.org/package/2006/relationships"><p:Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></p:Relationships>
+            """),
+            ("xl/sharedStrings.xml", """
+            <x:sst xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:si><x:t>barcode</x:t></x:si><x:si><x:t>productName</x:t></x:si><x:si><x:t>retailPrice</x:t></x:si><x:si><x:t>Café 商品</x:t></x:si></x:sst>
+            """),
+            ("xl/styles.xml", """
+            <x:styleSheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:numFmts count="1"><x:numFmt numFmtId="164" formatCode="0000000000000"/></x:numFmts><x:cellXfs count="2"><x:xf numFmtId="0"/><x:xf numFmtId="164"/></x:cellXfs></x:styleSheet>
+            """),
+            ("xl/worksheets/sheet1.xml", """
+            <x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData><x:row r="1"><x:c r="A1" t="s"><x:v>0</x:v></x:c><x:c r="B1" t="s"><x:v>1</x:v></x:c><x:c r="C1" t="s"><x:v>2</x:v></x:c></x:row><x:row r="2"><x:c r="A2" s="1"><x:v>123456789</x:v></x:c><x:c r="B2" t="s"><x:v>3</x:v></x:c><x:c r="C2"><x:v>1990</x:v></x:c></x:row></x:sheetData></x:worksheet>
+            """)
+        ]
+        let url = try makeSyntheticArchive(entries: entries.map { (path: $0.0, data: Data($0.1.utf8)) })
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertEqual(try ExcelAnalyzer.listSheetNames(at: url), ["Products"])
+        XCTAssertEqual(try ExcelAnalyzer.readSheetByName(at: url, sheetName: "Products"), [
+            ["barcode", "productName", "retailPrice"],
+            ["0000123456789", "Café 商品", "1990"]
+        ])
+    }
+
+    private func sharedWorkbookFixture(_ name: String, sha256: String) throws -> URL {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/supplier-import").appendingPathComponent(name)
+        let digest = SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(digest, sha256, "Native platforms must consume the identical workbook bytes.")
+        return url
     }
 
     func testNewProductIdentityMatchesAndroidPrimaryOrSecondNameFallback() throws {

@@ -1,0 +1,16 @@
+{
+  "all_business_records_identical": true,
+  "canonical_hash_before": "c5fe1564f4f6a1d5dbe62be5d692d835dd401ce4b14fd1d8055b0984d1ca219d",
+  "canonical_hash_after": "c5fe1564f4f6a1d5dbe62be5d692d835dd401ce4b14fd1d8055b0984d1ca219d",
+  "table_counts_after": {
+    "ZPRODUCT": 5,
+    "ZPRODUCTPRICE": 10,
+    "ZSUPPLIER": 3,
+    "ZPRODUCTCATEGORY": 3,
+    "ZHISTORYENTRY": 0,
+    "ZLOCALPENDINGCHANGE": 21,
+    "ZSYNCEVENTOUTBOXENTRY": 0
+  },
+  "identity_fields_and_revisions_compared": true,
+  "comparison": "Every column of Product/ProductPrice/Supplier/ProductCategory/HistoryEntry/LocalPendingChange/SyncEventOutboxEntry ordered by persistent PK; blob identifiers exact hex and longer payload SHA. No-op preview disables Apply; cancellation causes no write."
+}

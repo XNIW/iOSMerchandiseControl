@@ -1,0 +1,20 @@
+{
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "source_files_verified": 326,
+  "result_bundle": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-shared-oracle/final-full.xcresult",
+  "official_counts": {
+    "Passed": 1403,
+    "Skipped": 36
+  },
+  "case_identifiers": 1439,
+  "unique_case_identifiers": 1439,
+  "runtime_warnings": [
+    {
+      "issueType": "Runtime Warning",
+      "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+    }
+  ],
+  "final_full_log_sha256": "b5b266c6d3ced274ec3b933f2c18c03a10144f6ad9c9f223b58dbfceae46dacf",
+  "method": "parent source SHA256 comparison and fresh xcresulttool official summary/tests recount"
+}

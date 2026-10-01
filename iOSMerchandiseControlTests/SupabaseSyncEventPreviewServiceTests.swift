@@ -278,11 +278,12 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
     }
 }
 
-private actor MockSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
+@MainActor
+private final class MockSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {
     private let rows: [RemoteSyncEventRow]
     private var limits: [Int] = []
 
-    init(rows: [RemoteSyncEventRow]) {
+    nonisolated init(rows: [RemoteSyncEventRow]) {
         self.rows = rows
     }
 

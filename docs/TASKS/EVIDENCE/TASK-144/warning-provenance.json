@@ -1,0 +1,28 @@
+{
+  "baseline": "30d226d0fb9b8679a1dd034c6e82319645337f22",
+  "initial_canonical_red_log": "/tmp/mc-task144-ios/f02-red.log",
+  "initial_log_sha256": "f052717e0b6511540d900d3a1867220523bb41f66c11bdd8e4e67f096f8845a4",
+  "warnings_precede_fake_conversion": [
+    {
+      "line": 7353,
+      "diagnostic": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift:189:24: warning: main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    },
+    {
+      "line": 7417,
+      "diagnostic": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift:382:35: warning: main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+    }
+  ],
+  "unchanged_helper_blocks": {
+    "Task119BlockingCatalogProvider": {
+      "same_as_baseline": true,
+      "sha256": "d04bbd7de6e082df1181e95afc82be22f08edf4924562e74093dc5dbb13e2fea",
+      "baseline_has_MainActor": false
+    },
+    "Task136NoWorkIncrementalProvider": {
+      "same_as_baseline": true,
+      "sha256": "f238b5d30a0750b05033f0525d9c9c35354449df3a30df2f0179b80dd86c65ff",
+      "baseline_has_MainActor": false
+    }
+  },
+  "explanation": "Both helper declarations remain private final class with unchanged bodies. MainActor isolation is inferred under the existing target default and protocol context; it is not a new explicit annotation or actor conversion. Both warnings occur in the initial canonical red log before the compatibility patch."
+}

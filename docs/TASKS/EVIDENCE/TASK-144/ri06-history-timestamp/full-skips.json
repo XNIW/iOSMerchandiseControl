@@ -1,0 +1,254 @@
+[
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/ProductImageAPIClientTests/testOptInLocalParityMutationRemovesProductImage",
+    "result": "Skipped",
+    "duration_seconds": 0.005668044090270996,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK138_LOCAL_PARITY_MUTATION_MODE=remove to authorize this local mutation."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/ProductImageAPIClientTests/testOptInLocalParityMutationReplacesProductImage",
+    "result": "Skipped",
+    "duration_seconds": 0.0008260011672973633,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK138_LOCAL_PARITY_MUTATION_MODE=replace to authorize this local mutation."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/ProductImageAPIClientTests/testOptInLocalParityNoImageAndProgressiveProductImage",
+    "result": "Skipped",
+    "duration_seconds": 0.0008690357208251953,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK138_LOCAL_PARITY_CONFIG_PATH to the privacy-safe Simulator /tmp config."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.003080010414123535,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live auth preflight is gated."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests/testWECHAT004RealLocalSupabaseFixtureConvergesThroughProductionIncrementalApply",
+    "result": "Skipped",
+    "duration_seconds": 0.0009599924087524414,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - WECHAT_004_LOCAL_E2E_FIXTURE is required for the real local gate"
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/testTask072DExportSessionForAndroidImport",
+    "result": "Skipped",
+    "duration_seconds": 0.0009729862213134766,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK072D live acceptance is gated. Set TASK072D_LIVE_ACCEPTANCE=1."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/testTask072DIOSCreateUpdateTombstoneHistoryHarness",
+    "result": "Skipped",
+    "duration_seconds": 0.0008689165115356445,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK072D live acceptance is gated. Set TASK072D_LIVE_ACCEPTANCE=1."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task097RuntimeSmokeTests/testTask097RuntimeSandboxReadBackEvidence",
+    "result": "Skipped",
+    "duration_seconds": 0.0010319948196411133,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK097_RUNTIME_SMOKE=1 to run the live TASK-097 Supabase read-back smoke."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests/test01PreflightAndCollisionScanReadOnly",
+    "result": "Skipped",
+    "duration_seconds": 0.001649022102355957,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK-098 live smoke is gated. Set TASK098_LIVE_SMOKE=1, or create /tmp/TASK098_LIVE_SMOKE for xcodebuild simulator runs, and run the selected live tests in the documented order."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests/test02PullApplyAndroidProductAAndLocalReadBack",
+    "result": "Skipped",
+    "duration_seconds": 0.000786900520324707,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK-098 live smoke is gated. Set TASK098_LIVE_SMOKE=1, or create /tmp/TASK098_LIVE_SMOKE for xcodebuild simulator runs, and run the selected live tests in the documented order."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests/test03IOSWriteProductBUsingReleaseServices",
+    "result": "Skipped",
+    "duration_seconds": 0.0025360584259033203,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK-098 live smoke is gated. Set TASK098_LIVE_SMOKE=1, or create /tmp/TASK098_LIVE_SMOKE for xcodebuild simulator runs, and run the selected live tests in the documented order."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests/test04RemoteReadBackB",
+    "result": "Skipped",
+    "duration_seconds": 0.0008499622344970703,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK-098 live smoke is gated. Set TASK098_LIVE_SMOKE=1, or create /tmp/TASK098_LIVE_SMOKE for xcodebuild simulator runs, and run the selected live tests in the documented order."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100BDatasetManifestLargeWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.001309037208557129,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_D100L=1 in the XCTest environment, or create /tmp/TASK100_D100L, to run the expensive D100-L acceptance scenarios."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100CImportExcelLargeDatasetLargeCoreBenchmarkWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0008060932159423828,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_D100L=1 in the XCTest environment, or create /tmp/TASK100_D100L, to run the expensive D100-L acceptance scenarios."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100ESyncPreviewLargeSyntheticPagingBenchmarkWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0011720657348632812,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_D100L=1 in the XCTest environment, or create /tmp/TASK100_D100L, to run the expensive D100-L acceptance scenarios."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100FProductPriceCurrentPreviousLargeBenchmarkWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0008630752563476562,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_D100L=1 in the XCTest environment, or create /tmp/TASK100_D100L, to run the expensive D100-L acceptance scenarios."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100ILiveSupabaseLargeWritePreviewAndCleanupWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0008320808410644531,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_LIVE_SUPABASE=1 in the XCTest environment, or create /tmp/TASK100_LIVE_SUPABASE, to run the live TASK-100 Supabase write/sync acceptance scenario."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100JLiveSupabaseCleanupPrefixWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0008149147033691406,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_LIVE_SUPABASE=1 in the XCTest environment, or create /tmp/TASK100_LIVE_SUPABASE, to run the live TASK-100 Supabase write/sync acceptance scenario."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testS100KLiveSupabaseReadOnlyVerificationForExistingPrefixWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0006589889526367188,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK100_LIVE_SUPABASE=1 in the XCTest environment, or create /tmp/TASK100_LIVE_SUPABASE, to run the live TASK-100 Supabase write/sync acceptance scenario."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testTask108RealExcelCleanSeedImportCountsWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.003248929977416992,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK108_EXCEL_PATH to run the TASK-108 real Excel harness."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests/testTask108RealExcelProductPricePagedFullPullNoopWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0006999969482421875,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Set TASK108_EXCEL_PATH to run the TASK-108 real Excel harness."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test01PreflightAndCollisionScanReadOnly",
+    "result": "Skipped",
+    "duration_seconds": 0.0012969970703125,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test02IOSWriteSmokeAndRemoteReadBack",
+    "result": "Skipped",
+    "duration_seconds": 0.001974940299987793,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test03IOSPullApplyAndroidSmokeAndNoOp",
+    "result": "Skipped",
+    "duration_seconds": 0.0009009838104248047,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test04MediumImportExportPushAndReadBack",
+    "result": "Skipped",
+    "duration_seconds": 0.0013239383697509766,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test05ConflictStaleRecoveryAndProductPriceFailClosed",
+    "result": "Skipped",
+    "duration_seconds": 0.0008649826049804688,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test06OfflineRetryCatalogPendingNoDuplicate",
+    "result": "Skipped",
+    "duration_seconds": 0.0008469820022583008,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test072CIOSCreateUpdateTombstoneHistoryHarness",
+    "result": "Skipped",
+    "duration_seconds": 0.0009279251098632812,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test07Task104Pass2ResidueScanReadOnly",
+    "result": "Skipped",
+    "duration_seconds": 0.0007369518280029297,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test08Task112ScopedCleanupWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.0007940530776977539,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore",
+    "result": "Skipped",
+    "duration_seconds": 0.000758051872253418,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - TASK114 iOS full pull is gated. Set TASK114_IOS_FULL_PULL=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSOfflineReconnectProductPriceHistoryMatrix",
+    "result": "Skipped",
+    "duration_seconds": 0.0008519887924194336,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSPullAndroidProductHistoryMatrix",
+    "result": "Skipped",
+    "duration_seconds": 0.0008180141448974609,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSWriteProductHistoryMatrix",
+    "result": "Skipped",
+    "duration_seconds": 0.0007560253143310547,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation",
+    "result": "Skipped",
+    "duration_seconds": 0.0007659196853637695,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment."
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task105RealOpsClosureTests/testPhysicalCameraBarcodeCaptureCapabilityWhenAvailable",
+    "result": "Skipped",
+    "duration_seconds": 0.0008600950241088867,
+    "target_kind": "unit/integration",
+    "reason": "Test skipped - Physical camera capability is only meaningful on a real iPhone."
+  }
+]

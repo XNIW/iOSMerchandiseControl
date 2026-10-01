@@ -1,0 +1,53 @@
+{
+  "source_fingerprint": "0fa8c144b61cc0fccc72218b0368735b0196ae75dc12f6900dc5f52fda6580eb",
+  "reports": [
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T195404Z-scan-sensitive-iOSMerchandiseControl-ExcelSessionViewModelswift-p21453.json",
+      "report_sha256": "baa64b4ed3f8a44d769c6e626c0036e3c2f51449eceeedd192609ec397af52ac",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControl/ExcelSessionViewModel.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    },
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T195404Z-scan-sensitive-iOSMerchandiseControl-SupabaseAuthServiceswift-p21449.json",
+      "report_sha256": "47d1684dc7000934f16ecf5482cd17eac7e8718d6f4c584d0813651f30377e93",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControl/SupabaseAuthService.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    },
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T195404Z-scan-sensitive-iOSMerchandiseControl-SupabaseAuthViewModelswift-p21450.json",
+      "report_sha256": "b94672a9e8bb65be3612a7ec64c8235968c59e28af4e1a2aeba2332411eecce6",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControl/SupabaseAuthViewModel.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    },
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T201741Z-scan-sensitive-iOSMerchandiseControl-SupabaseClientProviderswift-p33095.json",
+      "report_sha256": "1045f734c1a40f0ab41d7a1d0866af6e3bf3cc660c5cff643b3473f5bf0942d0",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControl/SupabaseClientProvider.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    },
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T195404Z-scan-sensitive-iOSMerchandiseControlTests-SupabaseAuthLifecycleTestsswift-p21452.json",
+      "report_sha256": "a78b7f7ae84640218d7ec4b157303d9d4c71353739ec4b2482e5ffb7be1b08a2",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    },
+    {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T195404Z-scan-sensitive-iOSMerchandiseControlTests-Task111ExcelImportParityTestsswift-p21454.json",
+      "report_sha256": "8171251b439623108e0ce13cef477299560738de26ab5b2cad14140ebcb20700",
+      "result": "PASS",
+      "exit_code": 0,
+      "scope": "scan sensitive iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift",
+      "scanner_environment_note": "Read-only static scan; template simulator26.5 labels do not indicate an executed device run."
+    }
+  ]
+}
