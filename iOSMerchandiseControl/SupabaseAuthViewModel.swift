@@ -19,6 +19,7 @@ final class SupabaseAuthViewModel: ObservableObject {
     private let authService: SupabaseAuthService?
     private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     private var authEventsTask: Task<Void, Never>?
+    private var authOperationID = UUID()
 
     init(
         authService: SupabaseAuthService?,
@@ -87,7 +88,11 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     func refreshCurrentSessionSnapshot() {
-        guard let currentSession = authService?.currentSession else { return }
+        guard let currentSession = authService?.currentSession else {
+            sessionInfo = nil
+            if !isTransitioning { state = authService == nil ? .unconfigured : .signedOut }
+            return
+        }
         sessionInfo = currentSession
         if currentSession.isExpired {
             if !isTransitioning {
@@ -101,20 +106,26 @@ final class SupabaseAuthViewModel: ObservableObject {
     func signInWithGoogle() {
         guard canSignIn, let authService else { return }
 
+        let operationID = UUID()
+        authOperationID = operationID
         state = .signingIn
 
         Task {
             do {
-                let info = try await authService.signInWithGoogle()
+                let result = try await authService.signInWithGoogle()
+                guard authOperationID == operationID,
+                      authService.acceptsAuthGeneration(result.generation) else { return }
+                let info = result.info
                 sessionInfo = info
                 state = info.isExpired ? .signedOut : .signedIn
                 if !info.isExpired {
                     registerShopDeviceIfReady(reason: "auth_sign_in")
                 }
-            } catch let error as SupabaseAuthServiceError {
-                await applySignInFailure(error, authService: authService)
+            } catch let failure as SupabaseAuthOperationFailure {
+                await applySignInFailure(failure, operationID: operationID, authService: authService)
             } catch {
-                await applySignInFailure(.unknown(message: String(describing: error)), authService: authService)
+                await applySignInFailure(.init(generation: authService.authGeneration,
+                    error: .unknown(message: String(describing: error))), operationID: operationID, authService: authService)
             }
         }
     }
@@ -122,19 +133,25 @@ final class SupabaseAuthViewModel: ObservableObject {
     func signInWithWeChat() {
         guard canSignInWithWeChat, let authService else { return }
 
+        let operationID = UUID()
+        authOperationID = operationID
         state = .signingIn
         Task {
             do {
-                let info = try await authService.signInWithWeChat()
+                let result = try await authService.signInWithWeChat()
+                guard authOperationID == operationID,
+                      authService.acceptsAuthGeneration(result.generation) else { return }
+                let info = result.info
                 sessionInfo = info
                 state = info.isExpired ? .signedOut : .signedIn
                 if !info.isExpired {
                     registerShopDeviceIfReady(reason: "auth_sign_in_wechat")
                 }
-            } catch let error as SupabaseAuthServiceError {
-                await applySignInFailure(error, authService: authService)
+            } catch let failure as SupabaseAuthOperationFailure {
+                await applySignInFailure(failure, operationID: operationID, authService: authService)
             } catch {
-                await applySignInFailure(.unknown(message: String(describing: error)), authService: authService)
+                await applySignInFailure(.init(generation: authService.authGeneration,
+                    error: .unknown(message: String(describing: error))), operationID: operationID, authService: authService)
             }
         }
     }
@@ -142,17 +159,22 @@ final class SupabaseAuthViewModel: ObservableObject {
     func signOut() {
         guard canSignOut, let authService else { return }
 
+        let operationID = UUID()
+        authOperationID = operationID
         state = .signingOut
 
         Task {
             do {
-                try await authService.signOut()
+                let generation = try await authService.signOut()
+                guard authOperationID == operationID, authService.authGeneration == generation else { return }
                 sessionInfo = nil
                 state = .signedOut
-            } catch let error as SupabaseAuthServiceError {
+            } catch let failure as SupabaseAuthOperationFailure {
+                guard authOperationID == operationID, authService.authGeneration == failure.generation else { return }
                 sessionInfo = authService.currentSession
-                state = .failed(error)
+                state = .failed(failure.error)
             } catch {
+                guard authOperationID == operationID else { return }
                 sessionInfo = authService.currentSession
                 state = .failed(.unknown(message: String(describing: error)))
             }
@@ -178,8 +200,9 @@ final class SupabaseAuthViewModel: ObservableObject {
         }
     }
 
-    private func apply(_ event: SupabaseAuthEvent) {
-        switch event {
+    func apply(_ change: SupabaseScopedAuthEvent) {
+        guard authService?.acceptsAuthGeneration(change.generation) == true else { return }
+        switch change.event {
         case .initialSession(let info), .tokenRefreshed(let info), .other(let info):
             sessionInfo = info
             if let info, !info.isExpired {
@@ -201,43 +224,48 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     private func applySignInFailure(
-        _ error: SupabaseAuthServiceError,
+        _ failure: SupabaseAuthOperationFailure,
+        operationID: UUID,
         authService: SupabaseAuthService
     ) async {
-        if let currentSession = await recoveredSessionAfterSignInFailure(error, authService: authService) {
+        guard authOperationID == operationID, authService.authGeneration == failure.generation else { return }
+        if let currentSession = await recoveredSessionAfterSignInFailure(failure.error,
+            generation: failure.generation, operationID: operationID, authService: authService) {
+            guard authOperationID == operationID,
+                  authService.acceptsAuthGeneration(failure.generation) else { return }
             sessionInfo = currentSession
             state = .signedIn
             registerShopDeviceIfReady(reason: "auth_recovered")
             return
         }
 
+        guard authOperationID == operationID, authService.authGeneration == failure.generation else { return }
         sessionInfo = authService.currentSession
-        state = .failed(error)
+        state = .failed(failure.error)
     }
 
     private func recoveredSessionAfterSignInFailure(
         _ error: SupabaseAuthServiceError,
+        generation: UUID,
+        operationID: UUID,
         authService: SupabaseAuthService
     ) async -> SupabaseAuthSessionInfo? {
+        guard authOperationID == operationID,
+              authService.acceptsAuthGeneration(generation) else { return nil }
         if let currentSession = authService.currentSession, !currentSession.isExpired {
             return currentSession
         }
 
-        guard shouldWaitForPostOAuthSession(error) else {
-            return nil
-        }
-
+        guard shouldWaitForPostOAuthSession(error) else { return nil }
         for _ in 0..<10 {
-            if Task.isCancelled {
-                return nil
-            }
-
+            if Task.isCancelled { return nil }
             try? await Task.sleep(nanoseconds: 250_000_000)
+            guard authOperationID == operationID,
+                  authService.acceptsAuthGeneration(generation) else { return nil }
             if let currentSession = authService.currentSession, !currentSession.isExpired {
                 return currentSession
             }
         }
-
         return nil
     }
 

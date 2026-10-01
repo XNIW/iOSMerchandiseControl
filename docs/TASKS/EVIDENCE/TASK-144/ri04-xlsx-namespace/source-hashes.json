@@ -1,0 +1,6 @@
+{
+  "iOSMerchandiseControl/ExcelSessionViewModel.swift": "a2cc836ae7b1edeae69cbaacc8260382da3f008a00df9c591388f0258dc81cdb",
+  "iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift": "3cc29b70c6e0319db8cc8a25992d5cd085438f30e25dae3d46a983b248efde8b",
+  "tests/fixtures/supplier-import/mobile-parity-contract.xlsx": "b1a4a408168d4a437f2c4554f447bebac66e79183a0f32b485e2829463d1bec9",
+  "tests/fixtures/supplier-import/mobile-parity-unicode-clp.xlsx": "bb7d01475dcf8dc943f93ddc2a41fe0e432e9337c1f2aef54fb742b7886d9b8f"
+}

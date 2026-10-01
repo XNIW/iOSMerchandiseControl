@@ -1,0 +1,27 @@
+[
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testBackgroundProviderRefreshCannotRestoreForegroundLogout",
+    "result": "Failed",
+    "duration_seconds": 0.5538699626922607
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteDifferentAccountLogin",
+    "result": "Failed",
+    "duration_seconds": 0.008870959281921387
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteSameAccountNewLogin",
+    "result": "Failed",
+    "duration_seconds": 0.0040318965911865234
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotRestoreCompletedLogoutOrRestart",
+    "result": "Failed",
+    "duration_seconds": 0.006620883941650391
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testOrdinaryRefreshAndBootstrapRemainValid",
+    "result": "Passed",
+    "duration_seconds": 0.0032159090042114258
+  }
+]

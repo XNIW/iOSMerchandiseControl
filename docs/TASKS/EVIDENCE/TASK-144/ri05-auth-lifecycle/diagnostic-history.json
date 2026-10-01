@@ -1,0 +1,126 @@
+{
+  "current_source_fingerprint": "0fa8c144b61cc0fccc72218b0368735b0196ae75dc12f6900dc5f52fda6580eb",
+  "history": [
+    {
+      "run": "red",
+      "result": "1PASS/4FAIL",
+      "purpose": "Original five realSDK tests before consumer fencing; not final source"
+    },
+    {
+      "run": "initial-green",
+      "result": "6PASS",
+      "purpose": "Original5 + localSignOutScope after basic wiring"
+    },
+    {
+      "run": "guardrails-1",
+      "result": "BUILD FAILED",
+      "purpose": "New test async argument in XCTest autoclosure; await moved outside assertion"
+    },
+    {
+      "run": "replacement-bootstrap-red",
+      "result": "0PASS/1FAIL; four assertions",
+      "purpose": "Confirmed replacementSDK bootstraps retained expiredA on the new generation"
+    },
+    {
+      "run": "guardrails-2",
+      "result": "22PASS/1FAIL/1SKIP",
+      "purpose": "New HTTP500 logout test expected one request; actual SDK retries. All requests local; adjusted new fixture and assertion, no existing assertion weakened"
+    },
+    {
+      "run": "guardrails-3",
+      "result": "54PASS/0FAIL/1SKIP",
+      "purpose": "Expanded guardrail suite green"
+    },
+    {
+      "run": "final-targeted",
+      "result": "54PASS/0FAIL/1SKIP",
+      "purpose": "Final frozen source independent review input"
+    },
+    {
+      "run": "normal Files private precondition",
+      "result": "First1FAIL then observed-label1PASS",
+      "purpose": "Standalone Files uses Italian Recenti. Initial probe expected English; actual UI already Recenti selected. Private probe label corrected; application/UI assertions/locales untouched"
+    },
+    {
+      "run": "final-full",
+      "result": "1397PASS/0FAIL/36SKIP",
+      "purpose": "Canonical full after APPROVED independent review; no exclusions/restarts"
+    },
+    {
+      "run": "post-warning-targeted-missed-scope",
+      "result": "53PASS/0FAIL/1SKIP",
+      "purpose": "Initial selector used nonexistent scope class; corrected selection below, not final55-count claim"
+    },
+    {
+      "run": "post-warning-targeted",
+      "result": "54PASS/0FAIL/1SKIP",
+      "purpose": "One-line weak-capture correction; supplemental review APPROVED; six computed-getter actor diagnostics subsequently found in Release"
+    },
+    {
+      "run": "postcapture Release",
+      "result": "BUILD SUCCEEDED; six new cross-actor warnings",
+      "purpose": "Provider HEAD stored let client was Sendable and cross-actor readable; new computed getter defaultMainActor introduced these diagnostics. Minimal lock-snapshot amendment required; not historical warnings"
+    },
+    {
+      "run": "before-snapshot-box-final-full",
+      "result": "1397PASS/0FAIL/36SKIP",
+      "purpose": "Second full naturally finished on75ce4a before the source box amendment; preserved, not final-source evidence"
+    },
+    {
+      "run": "snapshot-box-targeted",
+      "result": "54PASS/0FAIL/1SKIP",
+      "purpose": "Final provider box preserves original cross-actor client read; same20SDK cases and55unique selected cases"
+    },
+    {
+      "run": "final-release",
+      "result": "BUILD SUCCEEDED; zero Swift/source warnings",
+      "purpose": "After box amendment all7new diagnostics absent. Only unchanged Xcode AppIntents metadata extraction toolwarning remains"
+    },
+    {
+      "run": "final-full on0fa8",
+      "result": "1397PASS/0FAIL/36SKIP,1433unique",
+      "purpose": "Canonical auth-slice final gate; parent independently re-counted official xcresult; no restart/exclusion"
+    },
+    {
+      "run": "final-analyze",
+      "result": "PASS26historical source diagnostics/0new",
+      "purpose": "Fresh canonical analyzer,18Vendor+8Swift test diagnostics; tool metadata warnings separate"
+    },
+    {
+      "run": "signed TEST receipt first attempt",
+      "result": "Recipe assertion failure after successful build/strict signature",
+      "purpose": "Expected plist byte equality; Xcode converts resource to binary plist. Corrected receipt to semantic dictionary equality/source copy hash; artifact/source bytes unchanged"
+    },
+    {
+      "run": "signed TEST receipt corrected",
+      "result": "PASS; config copy removed; primary hash unchanged",
+      "purpose": "R-I05 historical snapshot preceding new R-I06 concrete finding; not final benchmark/live candidate"
+    }
+  ],
+  "log_sha256": {
+    "final-targeted.log": "8c14013e00adcb2c83a8d3ea17720d8aa31577e17fcdc82572e18500faba3fc9",
+    "before-warning-fix-final-release.log": "f5be99039beca728a23e6cdde7115d157144e1509294d01b39b03174f22b4ab8",
+    "red.log": "7d6d741f42be967e53963579a16949e91ccdd8594bbd808adc76e65d0df8b65b",
+    "before-snapshot-box-canonical-release-codesign.log": "ebc5e1d6c06fd5ced3255712d5ed79e19419db77c3b8b3ecdda44796889d68b3",
+    "before-snapshot-box-final-release.log": "fcb396972dae8adb22a7dac227a4759d1fb794192727e67d77fc21000a215cf1",
+    "post-warning-targeted-missed-scope.log": "b1c5ac2c708ffdd3c4dd8c09ffecb998f2b689003a30a06a4d142bcb70b80c30",
+    "final-release.log": "9724b05edf57b02ddd6b24b0680e0dc9bfe637775137b97f15dbedfa0bfe8f60",
+    "post-warning-targeted.log": "74fc818d434bb90077ced639058e3b8a1d7529c4199f3e598579b1021a93ebf3",
+    "snapshot-box-targeted.log": "8d8dc91121658a124fa6359487d73442787557a21c139051adb370df2a2b1981",
+    "replacement-bootstrap-red.log": "4ef00b3de5bbcfb167807660c0456eca013bfd011bde47c91e165a5f179f44b4",
+    "before-snapshot-box-final-full.log": "6c7d8b7f35c374a8abda031f4ad6edcf7abe88486e0032a04b1e7504a59ff83c",
+    "signed-test-build.log": "facc48dd5be2da80f94b38f11e61a7175a9e447c382f6c816fe0f7d4e033c4e1",
+    "final-analyze.log": "b5889376f1b21b8446d745eb373570baa6bca813d81ca0c38659bdb92ebcacfb",
+    "canonical-release-codesign.log": "ebc5e1d6c06fd5ced3255712d5ed79e19419db77c3b8b3ecdda44796889d68b3",
+    "guardrails-2.log": "0f77266d993f4d5a4828bf2163f8890ce0417f347dd4ee5c78eebb978dd0de3b",
+    "final-full.log": "cea89463dde4aac5bf6dac97fb043a70b920335fe47cadcf8fd28af73c51af7c",
+    "before-warning-fix-final-full.log": "8ae45c5b46a47c9ea6ea942a63c953a1b78cca9da7ce1b9ea3ac4b4c0b0fef68",
+    "initial-green.log": "39361a6970afafae38d81d453a48cd3bcd49f70cb16fee7aaf30260a5e2f6540",
+    "guardrails-3.log": "9ab6929dfc83bba6a81ffaf9667b90c97512e3d530bf753f54c72e9730dcda46",
+    "guardrails-1.log": "caf51e83dd5369898726a5755127117653abf5854bf0f9ac133712ff9dae7319"
+  },
+  "raw_output_root": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed",
+  "intermediate_runs_not_combined_with_final_counts": true,
+  "scan_wrapper_note": "Initial combined6path call could not create filename-too-long reports. Not counted. Six individual reports exist and PASS.",
+  "evidence_redaction_note": "First R-I05 sensitive-evidence scan found synthetic IDs/emails in two raw SDK red failure summaries. Only tracked-copy identifiers/emails were redacted; raw controlled xcresult/log kept unchanged, counts/assertions/synthetic token labels preserved."
+}

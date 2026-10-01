@@ -1207,12 +1207,45 @@ nonisolated enum ShopSyncRecoveryCanonical {
         return value
     }
 
-    /// Price effective/created timestamps and history business timestamps use
-    /// the legacy database canonical form, not an ISO/RFC3339 variant.
+    /// Price effective/created timestamps use the legacy database canonical form.
     static func requireLegacyTimestamp(_ value: String?) throws -> String {
         guard let value,
               let date = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: value),
               ProductPriceEffectiveAtCanonicalizer.canonicalString(from: date) == value else {
+            throw ShopSyncRecoveryContractError.nonCanonicalTimestamp
+        }
+        return value
+    }
+
+    /// History also contains the exact UTC millisecond form emitted by legacy
+    /// clients. Validate its calendar without normalizing the digest's bytes.
+    static func requireHistoryTimestamp(_ value: String?) throws -> String {
+        guard let value else {
+            throw ShopSyncRecoveryContractError.nonCanonicalTimestamp
+        }
+        if let legacy = try? requireLegacyTimestamp(value) { return legacy }
+        let expression = try NSRegularExpression(
+            pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$"#
+        )
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        guard value.utf8.count == 24,
+              expression.firstMatch(in: value, range: range)?.range == range else {
+            throw ShopSyncRecoveryContractError.nonCanonicalTimestamp
+        }
+        let bytes = Array(value.utf8)
+        func number(_ range: Range<Int>) -> Int {
+            range.reduce(0) { $0 * 10 + Int(bytes[$1] - 48) }
+        }
+        let year = number(0..<4)
+        let month = number(5..<7)
+        let day = number(8..<10)
+        guard year > 0, (1...12).contains(month),
+              number(11..<13) < 24, number(14..<16) < 60, number(17..<19) < 60 else {
+            throw ShopSyncRecoveryContractError.nonCanonicalTimestamp
+        }
+        let isLeapYear = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+        let daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        guard (1...daysInMonth[month - 1]).contains(day) else {
             throw ShopSyncRecoveryContractError.nonCanonicalTimestamp
         }
         return value
@@ -1445,7 +1478,7 @@ nonisolated enum ShopSyncRecoveryRowContract {
                 throw ShopSyncRecoveryContractError.invalidPage(domain: .history)
             }
             suffix = [
-                try ShopSyncRecoveryCanonical.requireLegacyTimestamp(row.timestamp),
+                try ShopSyncRecoveryCanonical.requireHistoryTimestamp(row.timestamp),
                 ShopSyncRecoveryCanonical.sha256(row.supplier),
                 ShopSyncRecoveryCanonical.sha256(row.category),
                 row.isManualEntry ? "true" : "false",

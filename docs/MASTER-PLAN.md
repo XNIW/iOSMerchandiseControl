@@ -5,7 +5,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
 
-**TASK-144 — ACTIVE / REVIEW — Mobile parity root-cause** (mandato utente 2026-09-28; planning coordinato autorizzato, executor ios e reviewer indipendente). File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. Baseline `30d226d0fb9b8679a1dd034c6e82319645337f22`; checkout isolato `codex/mobile-parity-root-cause-ios`. Gli stati storici sotto restano evidenze delle rispettive date; harness Excel sospeso invariato.
+**TASK-144 — ACTIVE / FIX — Mobile parity root-cause** (mandato utente 2026-09-28; planning coordinato autorizzato, executor ios e reviewer indipendente). File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. Baseline `30d226d0fb9b8679a1dd034c6e82319645337f22`; checkout isolato `codex/mobile-parity-root-cause-ios`. R-I04 import XML è approvato e verificato tramite Files/export/no-op. R-I05 logout/refresh e il nuovo login con bootstrap precedente sono corretti, con review indipendente del freeze `0fa8c144…`, test mirati54 PASS/1 SKIP e Release senza warning source; gate canonici finali in corso prima della nuova integrazione. Gli stati storici sotto restano evidenze delle rispettive date; harness Excel sospeso invariato.
 
 **TASK-143 — INTEGRATED / VALIDATION_LIMITS_RECORDED — Mobile Storefront product control (iOS)**
 *(2026-08-21: autorizzazione USER_APPROVER del release train
@@ -174,7 +174,7 @@ tree del merge è identico. CI pull request `31331876775` e CI push sul merge
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
-**ACTIVE — TASK-144 / EXECUTION.** File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-143 implementato e integrato con PR #10 e CI sul merge 30d226d0; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici restano riconciliati dalle evidenze già registrate, senza riaperture.
+**ACTIVE — TASK-144 / FIX.** File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-143 implementato e integrato con PR #10 e CI sul merge 30d226d0; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici restano riconciliati dalle evidenze già registrate, senza riaperture.
 
 **TASK-122 — DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING:** file **`docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-122/`**. Chiuso per override utente dopo TASK-123; local architecture execution e final remote-domain strangler accettati come baseline storica.
 

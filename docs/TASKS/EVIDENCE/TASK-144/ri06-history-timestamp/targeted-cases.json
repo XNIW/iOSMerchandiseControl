@@ -1,0 +1,236 @@
+{
+  "unique_cases": 57,
+  "counts": {
+    "Passed": 57
+  },
+  "cases": [
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testBackendCannotShrinkPageLimitIntoUnboundedRecoveryCalls()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCancellationDuringPagesPreservesOldStoreAndDurableRecoveryJournal()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCheckpointBWithDivergentSnapshotRetriesTwiceWithoutPublishingOrClearingRecovery()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCheckpointDenialCannotCrossTheExpectedBaselineScopeFence()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCheckpointDenialValidatesScopeBeforeReportingServerStatus()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCheckpointIntegrityAndUnknownDenialsUseSafeCodesWithoutSuccessFields()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testCheckpointWithoutStatusCannotDefaultToReadyOrDenial()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testEmptySnapshotPublishesOneGenerationAndCompletesJournal()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedMarkerResumesAfterCrashWithoutRemoteEqualityCheck()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testHistoryFullRowBudgetAcceptsExactLimitAndRejectsNextByte()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testImageTombstoneWithoutSameSnapshotProductTombstoneNeverActivates()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testIncompleteTailEntityIDsRetainJournalAndNeverActivate()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testISOHistoryCannotActivateAgainstNormalizedSecondsCheckpoint()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testISOThreeMillisecondHistoryActivatesWithRawLedgerAndPersistedDate()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testLeaseInvalidatedDuringMarkerPreservesJournalAndNeverActivatesGeneration()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testLegacyHistoryTombstoneDoesNotRequireMaterializablePayload()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testLivePagesMaterializingDivergentCheckpointBPublishOnlyAfterBProof()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testMalformedActiveHistoryTimestampFailsBeforeActivation()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testMarkerFailureKeepsRecoveryJournalAndNeverActivatesGeneration()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testMonotonicCheckpointBAdvancePublishesOnlyAfterSafeTailAndMarker()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testOtherMarkerDenialsAfterBRemainExplicitAndBounded()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testPriceForTombstonedProductRemainsInVerifiedLedgerWithoutVisibleOrphan()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testPriceForUnknownProductFailsClosedBeforeActivation()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testProductTombstoneWithImageTombstonePublishesAsImageDomainTombstone()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testReadyCheckpointStillRequiresCompleteSuccessPayload()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testReadyMarkerStillRequiresCompleteSuccessPayload()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testShortInvalidBaselineCheckpointPreservesJournalAndStopsRecoveryAttempt()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testShortMarkerDenialAfterBPreservesRecoveryWithoutActivationOrRetry()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testShortMarkerValidatesBaselineScopeBeforeReportingDenial()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testShortResourceExceededCheckpointPreservesJournalAndStopsRecoveryAttempt()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testStagingMutationDuringCheckpointBIsNeverPublished()",
+      "result": "Passed"
+    },
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testUppercaseRPCPriceUsesCanonicalDecimalForVerifiedMaterialization()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testCheckpointChainMatchesBackendGoldenVectorWithUTF8ByteCounts()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testControllerRejectsMismatchedDefaultsOwnership()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testCorruptJournalStaysUntouchedUntilExplicitDestructiveReplacement()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testDurableJournalCorruptionAndOversizeStayFailClosed()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testFailedPostRenameDurabilityProbeRestoresPointerAndForbidsStagingReuse()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testGenerationManifestAndDirectoryBudgetsFailClosed()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testGenerationRetentionIsBoundedUntilSafeRelaunchCleanup()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testHistoryContractRequiresServerPayloadDigests()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testHistoryMillisecondAdmissionDoesNotChangePriceOrUTC6Contracts()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testHistoryTimestampPreservesLegacyAndExactUTCMilliseconds()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testHistoryTimestampRejectsOtherGrammarAndInvalidGregorianDates()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testImageMetadataContractRejectsOversizeAndNonJPEGVariants()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testImageVersionDigestIncludesProductTombstoneTimestamp()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testPersistedLedgerRebuildsIndependentImageIDAndVersionOrdering()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testPersistedLedgerRejectsMissingNewlineAndOversizedRecordPrecisely()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testPersistedLedgerStreamsRecordsAcrossReadChunks()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testPriceContractUsesRPCDecimalAndRejectsMissingCanonicalField()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testProductContractIncludesItemNumberAndRejectsTombstoneRelations()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testQuarantinedGenerationIsNotReusedAcrossScopeChange()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testRetainedGenerationByteBudgetRequiresRelaunchBeforeThirdStore()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testSameScopeRecoveryPromotionRequiresExplicitDestructiveCoordinator()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testShopScopedGoldenVectorAndExplicitNullCursor()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testStandardDefaultsCannotBeRedirectedByTemporaryRepositoryRegistration()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testV6RecoveryFenceAdvancesOnlyAtExactDurableWatermarkAcrossRelaunch()",
+      "result": "Passed"
+    },
+    {
+      "id": "ShopSyncRecoveryContractTests/testVerifiedGenerationReopensBeforeBoundedLegacyStoreCleanup()",
+      "result": "Passed"
+    }
+  ]
+}

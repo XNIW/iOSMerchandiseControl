@@ -1,0 +1,13 @@
+{
+  "log": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/final-release.log",
+  "unique_source_diagnostics": 0,
+  "warnings": [],
+  "new_vs_historical": [],
+  "new_count": 0,
+  "tool_warnings": [
+    "2026-10-01 18:34:57.078 appintentsmetadataprocessor[62078:391317] warning: Metadata extraction skipped, no AppIntents.framework dependency found"
+  ],
+  "baseline": "TASK144 initial26(18Vendor+8Swift) plus R-I03 eight unchanged test diagnostics",
+  "normalization": "Only initializer argument-list names are normalized: Task097 original initializer warning expands with new defaulted internal test seams but the actor diagnostic/path/line/category is unchanged",
+  "cache_note": "Absence of unchanged diagnostics in an incremental run is not a claim they were fixed; historical Vendor/test diagnostics remain."
+}

@@ -1,0 +1,122 @@
+{
+  "packaged_on_client_date": "2026-10-01",
+  "exact_copies": {
+    "frozen-source-manifest.json": {
+      "source": "evidence/ios-ri06-history-timestamp/frozen-source-manifest.json",
+      "sha256": "a53de277168e9a860bb0a62808a2e30b41a2514f12670b736b42ae9e1ab9b032",
+      "copied_exactly": true
+    },
+    "red-summary.json": {
+      "source": "evidence/ios-ri06-history-timestamp/red-summary.json",
+      "sha256": "f4f3a2011c2a4007b1b3c191f624d4e4de1ea76a9aa669529f30a0f79dc6d7b9",
+      "copied_exactly": true
+    },
+    "red-cases.json": {
+      "source": "evidence/ios-ri06-history-timestamp/red-cases.json",
+      "sha256": "c3189e9a912aa6905b19801c4a7b0e46e65e4e18d48ab8ea0d65d3ad22e103cc",
+      "copied_exactly": true
+    },
+    "targeted-summary.json": {
+      "source": "evidence/ios-ri06-history-timestamp/targeted-summary.json",
+      "sha256": "4351c0e9e486e04c91b9ffa51dafc458264c792e0703fadd2bb627df0ded6f3c",
+      "copied_exactly": true
+    },
+    "targeted-cases.json": {
+      "source": "evidence/ios-ri06-history-timestamp/targeted-cases.json",
+      "sha256": "5e44374365e92eda9fe7ac8e4407d177a43fe1fe6e3d4a9c052a4ba15f9d9133",
+      "copied_exactly": true
+    },
+    "targeted-warnings.json": {
+      "source": "evidence/ios-ri06-history-timestamp/targeted-warnings.json",
+      "sha256": "91b154d524818a47a7ed551e39bfaf3b44a954f93baf8f99050e92be3ebde0b8",
+      "copied_exactly": true
+    },
+    "source-sensitive-scan.json": {
+      "source": "evidence/ios-ri06-history-timestamp/source-sensitive-scan.json",
+      "sha256": "56930be83f0ab9d1187c9d8a8c45b8d2474c438c2fb74ed24bc9e7753c35d252",
+      "copied_exactly": true
+    },
+    "ios-ri06-timestamp-review.md": {
+      "source": "evidence/independent-review-resumed/ios-ri06-timestamp-review.md",
+      "sha256": "d5ad08bbb64785573814b97b3c1ef2ab4ef77850e68c80403439cb26017f51f4",
+      "copied_exactly": true
+    },
+    "ios-ri06-timestamp-review-receipt.json": {
+      "source": "evidence/independent-review-resumed/ios-ri06-timestamp-review-receipt.json",
+      "sha256": "d6c253260a010beba7e99d1520980677c1d8e4ca94d0bfcc0c8c8b315eeccb56",
+      "copied_exactly": true
+    },
+    "final-gate-manifest.json": {
+      "source": "evidence/ios-ri06-history-timestamp/final-gate-manifest.json",
+      "original_sha256": "7e4e38f9f32d6c17ba9ff6d39abb3d0dcf1e5e019c84ad2142ecc1a77a7834dd",
+      "sha256": "e4482ae70a2e02e19b6672d7eca39fd894eaf11d75655b9b5efaf7b8afbd81a5",
+      "copied_exactly": false,
+      "transformation": "Only the isolated Simulator ID in three CLI destination arguments is redacted. Counts, source, binary/log hashes and raw persistent manifest/logs are unchanged."
+    },
+    "final-full-summary.json": {
+      "source": "evidence/ios-ri06-history-timestamp/final-full-summary.json",
+      "sha256": "6d43f4bfec4d5f9aa15c00304a157f3d1706596b14ab642a315988e054159c49",
+      "copied_exactly": true
+    },
+    "full-final-cases.json": {
+      "source": "evidence/ios-ri06-history-timestamp/full-final-cases.json",
+      "sha256": "a0d7e0d8710b523ac2dfc6d3d5997d2fc4065eb8f4cff0721b9734ac4a15844c",
+      "copied_exactly": true
+    },
+    "full-skips.json": {
+      "source": "evidence/ios-ri06-history-timestamp/full-skips.json",
+      "sha256": "44e3927edd35869f309108c500f7ab92877bc6bb9023f30c81fd381023484d7e",
+      "copied_exactly": true
+    },
+    "executor-final-tests-receipt.json": {
+      "source": "evidence/ios-ri06-history-timestamp/executor-final-tests-receipt.json",
+      "sha256": "15dcb95cf38a20190e10efa3b9e32c2a99d5634a616a6f7d7dc11afebd613905",
+      "copied_exactly": true
+    },
+    "parent-verified-final-tests.json": {
+      "source": "evidence/ios-ri06-history-timestamp/parent-verified-final-tests.json",
+      "sha256": "102c0708c92fce73ce5eeb5505c1021f1c8f771741559f2fd3d4a44a0654dd7c",
+      "copied_exactly": true
+    },
+    "full-warnings.json": {
+      "source": "evidence/ios-ri06-history-timestamp/full-warnings.json",
+      "sha256": "cb02a7aa764735ceaa34b552325f12f7cd27ba920fdb8c8d7ac35a3c4afe1041",
+      "copied_exactly": true
+    },
+    "release-warnings.json": {
+      "source": "evidence/ios-ri06-history-timestamp/release-warnings.json",
+      "sha256": "143c356ca0b575bfe05aacbe4bd52af8fa699a69c0d8c8ae14fb74de462704ff",
+      "copied_exactly": true
+    },
+    "canonical-release-receipt.json": {
+      "source": "evidence/ios-ri06-history-timestamp/canonical-release-receipt.json",
+      "sha256": "6475c6af2483f637f997977a96415ef37c9439a25f40782d762e77697eeebe9d",
+      "copied_exactly": true
+    },
+    "final-analyze-warnings.json": {
+      "source": "evidence/ios-ri06-history-timestamp/final-analyze-warnings.json",
+      "sha256": "6019fc79ad426dbb47758b4fbeb0997120d2e86ac22944c647c4b64fca861def",
+      "copied_exactly": true
+    },
+    "signed-test-warnings.json": {
+      "source": "evidence/ios-ri06-history-timestamp/signed-test-warnings.json",
+      "sha256": "d6c33249b95dde69b76bebab1383500af81b01c07db884a2e944dee28d397ce0",
+      "copied_exactly": true
+    },
+    "signed-test-artifact.json": {
+      "source": "test-builds/ios/signed-ri06/receipt.json",
+      "sha256": "f482e96219e6958fbcd04541a7f78fbaf7afeeae99c185b2748409646f72d1c5",
+      "copied_exactly": true
+    }
+  },
+  "source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "current_source_hashes_verified": 326,
+  "review_verdict": "APPROVED",
+  "summary_case_counts_verified": true,
+  "isolated_simulator_receipt_metadata_preserved_as_authorized": true,
+  "build_or_test_rerun_by_packager": false,
+  "device_operations": false,
+  "raw_log_or_config_copied": false,
+  "final_gates_in_this_package": "PASS:canonical full/Release/analyze/signed TEST; exact-SHA CI/integration, launch and authenticated convergence are separate",
+  "readme_sha256": "5ee8e473ba127696fbabda1d15438da262e88066417d2cbe3da1523dd32b32e3"
+}

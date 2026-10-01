@@ -1,0 +1,12 @@
+{
+  "unique_cases": 1,
+  "counts": {
+    "Failed": 1
+  },
+  "cases": [
+    {
+      "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testISOThreeMillisecondHistoryActivatesWithRawLedgerAndPersistedDate()",
+      "result": "Failed"
+    }
+  ]
+}

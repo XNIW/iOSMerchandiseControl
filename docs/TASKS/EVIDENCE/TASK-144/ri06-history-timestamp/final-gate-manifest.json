@@ -1,0 +1,188 @@
+{
+  "base_commit": "d217a751232af76c7260da3c3329f1087f7ab0bd",
+  "status": "R-I06 LOCAL_VERIFIED / SOURCE_APPROVED final local gates; parent integration, exact-SHA CI, launch comparison and authenticated live acceptance remain separate. Not DONE.",
+  "source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "source_files_count": 326,
+  "source_manifest": "frozen-source-manifest.json",
+  "source_recheck_mismatches": [],
+  "changed_from_ri05": {
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift": "6f30aa68594f09e5ab00c4a03c8b82ae5562466135fb78a21ab0714faff95ab0",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": "8d2089062988d3982b4d22c0082be5335f62a870526d76d6e22ba981e0521549",
+    "iOSMerchandiseControlTests/ShopSyncRecoveryContractTests.swift": "711f293d2c411c91b51c9c90737434c9981606ddfecb86a1e19c1c357fdee96d"
+  },
+  "auth_four_hashes_unchanged": {
+    "iOSMerchandiseControl/SupabaseClientProvider.swift": "482e0ed79bf37e74b3e9c67d4227963e1c20d62780ee77b0c115a826717b1ae3",
+    "iOSMerchandiseControl/SupabaseAuthService.swift": "2f37c30835cb6cb0a80579e9856e13fb2efa1f3a6efe5999e890b0a8faabf5b1",
+    "iOSMerchandiseControl/SupabaseAuthViewModel.swift": "6f13de8ae1c05b2dbc3f9c6cdd9cad8e865051dc2ade96629f8f0c80922528d7",
+    "iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift": "f1eeb4c951ddeab2f571931cd1732b4ebe3d76f1d954336fadfabc478f348aca"
+  },
+  "fixtures_sha256": {
+    "tests/fixtures/supplier-import/mobile-parity-contract.xlsx": "b1a4a408168d4a437f2c4554f447bebac66e79183a0f32b485e2829463d1bec9",
+    "tests/fixtures/supplier-import/mobile-parity-unicode-clp.xlsx": "bb7d01475dcf8dc943f93ddc2a41fe0e432e9337c1f2aef54fb742b7886d9b8f"
+  },
+  "policy": "History only: unchanged legacy or exact ASCII YYYY-MM-DDTHH:mm:ss.SSSZ; year0001..9999, proleptic Gregorian calendar, hours00..23 and minutes/seconds00..59. Return original string for digest; price legacy, UTC6, model/schema, fingerprint/outbound unchanged.",
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "error": "nonCanonicalTimestamp in actual atomic recovery",
+    "summary": "red-summary.json",
+    "cases": "red-cases.json",
+    "log_sha256": "51260034082b699bf41f646eb066f191ac8fcbf607f55014d5557455d5d08917"
+  },
+  "targeted": {
+    "passed": 57,
+    "failed": 0,
+    "skipped": 0,
+    "total": 57,
+    "recovery": 32,
+    "contract": 25,
+    "new_tests": 5,
+    "summary": "targeted-summary.json",
+    "cases": "targeted-cases.json",
+    "log_sha256": "c3d64bf896d971a949e33f3c152caf98edcc98a049c9b6d660a113ee35791c19"
+  },
+  "review": {
+    "verdict": "APPROVED",
+    "report": "ios-ri06-timestamp-review.md",
+    "receipt": "ios-ri06-timestamp-review-receipt.json",
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 0
+  },
+  "full": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "test",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/DerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages",
+      "-parallel-testing-enabled",
+      "NO",
+      "CODE_SIGNING_ALLOWED=NO",
+      "-collect-test-diagnostics",
+      "never",
+      "-resultBundlePath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/final-full.xcresult"
+    ],
+    "result": "PASS",
+    "total": 1438,
+    "unique": 1438,
+    "passed": 1402,
+    "failed": 0,
+    "skipped": 36,
+    "unit_integration_pass": 1394,
+    "xcuitest_pass": 8,
+    "auth_real_sdk_pass": 20,
+    "namespace_import_pass": 31,
+    "summary": "final-full-summary.json",
+    "cases": "full-final-cases.json",
+    "skips": "full-skips.json",
+    "runtime_warnings": [
+      {
+        "issueType": "Runtime Warning",
+        "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+        "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+      }
+    ],
+    "runtime_warning_note": "Same historical SyncEventIncrementalDomainApplyServiceTests QoS warning retained; not suppressed.",
+    "log_sha256": "2dd8d60a6bebb9339ae3d2fcc5790343fca7ed32a395a496eba93aa055e007f9",
+    "xcresult": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/final-full.xcresult",
+    "parent_verification": "parent-verified-final-tests.json"
+  },
+  "release": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/CanonicalReleaseDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages"
+    ],
+    "result": "PASS",
+    "configured": false,
+    "receipt": "canonical-release-receipt.json",
+    "binary_sha256": "f78167224ff224c6bb9b7b04c00045cd0b2a957fbaead3beb760a699d439deb9",
+    "log_sha256": "ca80f394534290202a290828046382902dc65001ecedf6ddfbab2275dc2803a0"
+  },
+  "analyze": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "analyze",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Debug",
+      "-destination",
+      "generic/platform=iOS Simulator",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/AnalyzeDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages",
+      "CODE_SIGNING_ALLOWED=NO"
+    ],
+    "result": "PASS",
+    "unique_historical_diagnostics": 26,
+    "new_diagnostics": 0,
+    "warnings": "final-analyze-warnings.json",
+    "log_sha256": "1bdc47b3b21811a61161c02ef418a754217f430684915d1feea8bc011057adca"
+  },
+  "signed_test": {
+    "command": [
+      "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+      "build",
+      "-project",
+      "iOSMerchandiseControl.xcodeproj",
+      "-scheme",
+      "iOSMerchandiseControl",
+      "-configuration",
+      "Release",
+      "-destination",
+      "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>",
+      "-derivedDataPath",
+      "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/SignedTESTDerivedData",
+      "-clonedSourcePackagesDirPath",
+      "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages"
+    ],
+    "result": "PASS",
+    "receipt": "signed-test-artifact.json",
+    "binary_sha256": "4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30",
+    "source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+    "app_path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/test-builds/ios/signed-ri06/Artifact/iOSMerchandiseControl.app",
+    "signature_strict_deep_pass": true,
+    "effective_simulated_entitlements_match": true,
+    "primary_config_unchanged": true,
+    "ignored_copy_removed": true,
+    "log_sha256": "f477cf73e66958d58ebb7a9d65ca6e1bd757278cb47e2c946b982afce40b3f49"
+  },
+  "source_sensitive_scan": {
+    "result": "PASS",
+    "count": 3,
+    "receipt": "source-sensitive-scan.json",
+    "initial_default_config_run": "NOT_COUNTED; only own generated reports removed from primary, preserved outside repo"
+  },
+  "warning_new_count_all_gates": 0,
+  "limits": [
+    "36 explicit skips remain:29 live/external,4 opt-in synthetic benchmark,2 suspended Excel harness,1 physical camera; identifiers and reasons identical to R-I05.",
+    "Exact-SHA integration/CI and launch benchmark owned by parent; no device installation/live acceptance by executor.",
+    "No real accounts, session/token reads, data rewrite/reset, dependency upgrade, SDK auth changes or fractional outbound wire-roundtrip claim."
+  ]
+}

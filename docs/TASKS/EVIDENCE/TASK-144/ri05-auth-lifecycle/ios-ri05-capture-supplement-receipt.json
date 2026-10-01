@@ -1,0 +1,16 @@
+{
+  "verdict": "APPROVED",
+  "scope": "SupabaseClientProvider.swift:117 explicit inner weak capture only",
+  "provider_sha256": "136d73b82c6e77751a89dc52dc2e5a9a183cf2986c9531743a211b11a62e9782",
+  "restored_old_provider_sha256": "5a0dd30dc65262bb6d85e9e0bfa730f53771279c61f372f29034464b8ced5bed",
+  "manifest_fingerprint": "75ce4a9781b8618803cd5a34579b96b80f3b198073db6d77dc85deb8df943e4d",
+  "manifest_files": 326,
+  "official_targeted": {
+    "total": 55,
+    "pass": 54,
+    "fail": 0,
+    "skip": 1,
+    "expected_failures": 0
+  },
+  "no_test_runner_by_reviewer": true
+}

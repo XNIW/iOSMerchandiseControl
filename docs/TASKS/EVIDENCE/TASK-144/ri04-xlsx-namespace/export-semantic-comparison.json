@@ -1,0 +1,22 @@
+{
+  "export_sha256": "4f4ee81cbd91305204fe8000e193075c6ea58723473416df14cf8710895af5b6",
+  "exported_product_count": 5,
+  "all_canonical_fields_match_local_store": true,
+  "fields_checked": [
+    "barcode exact leading zeros",
+    "itemNumber",
+    "productName Unicode",
+    "secondProductName",
+    "purchasePrice",
+    "retailPrice",
+    "stockQuantity",
+    "supplierName",
+    "categoryName"
+  ],
+  "blank_old_prices": "No previous price existed in this fixture; old price cells remain blank.",
+  "history_sessions": 0,
+  "price_history_rows": 10,
+  "local_pending_rows": 21,
+  "sync_event_outbox_rows": 0,
+  "all_pending_owner_nil": true
+}

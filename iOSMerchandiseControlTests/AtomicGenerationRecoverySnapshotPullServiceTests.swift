@@ -729,6 +729,107 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(counts.pages, 3)
     }
 
+    func testISOThreeMillisecondHistoryActivatesWithRawLedgerAndPersistedDate() async throws {
+        let fixture = try makeFixture()
+        let rawTimestamp = "2026-07-05T15:40:11.305Z"
+        let row = AtomicRecoveryHistoryRowPayload(
+            remoteID: UUID(),
+            payloadVersion: 2,
+            displayName: "ISO millisecond recovery fixture",
+            timestamp: rawTimestamp,
+            supplier: "",
+            category: "",
+            isManualEntry: false,
+            data: [["item"]],
+            sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z",
+            deletedAt: nil
+        )
+        // The checkpoint helper hashes the exact wire string, independently
+        // of the production timestamp validator and materialized Date.
+        let checkpoint = makeCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "iso-milliseconds", historyRow: row
+        )
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint],
+            historyRows: [row]
+        )
+        let summary = try await makeService(fixture: fixture, transport: transport)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertEqual(manifest.localVerification.history, checkpoint.history)
+        let ledgerURL = fixture.temporaryRoot
+            .appendingPathComponent("generation-root", isDirectory: true)
+            .appendingPathComponent(manifest.relativeStorePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("recovery-ledger-v1/history.ndjson")
+        let persistedRecord = try JSONDecoder().decode(
+            ShopSyncRecoveryLedgerRecord.self, from: Data(contentsOf: ledgerURL)
+        )
+        XCTAssertEqual(
+            persistedRecord.versionLine.components(separatedBy: ShopSyncRecoveryCanonical.separator)
+                .dropFirst(4).first,
+            rawTimestamp
+        )
+        let reopened = try reopenFixture(fixture)
+        let context = ModelContext(reopened.controller.modelContainer)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(stored.remoteID, row.remoteID)
+        // Independently computed Unix UTC epoch for the fixture, including .305.
+        XCTAssertEqual(stored.timestamp.timeIntervalSince1970, 1_783_266_011.305, accuracy: 0.000_001)
+    }
+
+    func testISOHistoryCannotActivateAgainstNormalizedSecondsCheckpoint() async throws {
+        let fixture = try makeFixture()
+        let originalContainer = fixture.controller.modelContainer
+        let row = AtomicRecoveryHistoryRowPayload(
+            remoteID: UUID(),
+            payloadVersion: 2,
+            displayName: "Wrong digest recovery fixture",
+            timestamp: "2026-07-05T15:40:11.305Z",
+            supplier: "",
+            category: "",
+            isManualEntry: false,
+            data: [["item"]],
+            sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z",
+            deletedAt: nil
+        )
+        // A checkpoint for normalized seconds must not accept the ISO wire row.
+        let checkpoint = makeCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "wrong-history-digest", historyRow: row,
+            historyTimestampOverride: "2026-07-05 15:40:11"
+        )
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint],
+            historyRows: [row]
+        )
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A different raw timestamp digest must prevent activation")
+        } catch {
+            XCTAssertEqual(error as? ShopSyncRecoveryContractError, .checkpointChanged)
+        }
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertTrue(fixture.controller.modelContainer === originalContainer)
+        XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(
+            try ModelContext(originalContainer).fetchCount(FetchDescriptor<HistoryEntry>()), 0
+        )
+    }
+
     func testMalformedActiveHistoryTimestampFailsBeforeActivation() async throws {
         let fixture = try makeFixture()
         let row = AtomicRecoveryHistoryRowPayload(
@@ -1182,7 +1283,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         fixture: AtomicRecoveryFixture,
         maxEventID: Int64,
         seed: String,
-        historyRow: AtomicRecoveryHistoryRowPayload? = nil
+        historyRow: AtomicRecoveryHistoryRowPayload? = nil,
+        historyTimestampOverride: String? = nil
     ) -> ShopSyncRecoveryCheckpoint {
         let emptyHash = ShopSyncRecoveryCanonical.checkpointChainInitialDigest
         let empty = ShopSyncRecoveryEntityDigest(
@@ -1216,7 +1318,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 suffix = [ShopSyncRecoveryCanonical.null]
             } else {
                 suffix = [
-                    historyRow.timestamp,
+                    historyTimestampOverride ?? historyRow.timestamp,
                     ShopSyncRecoveryCanonical.sha256(historyRow.supplier),
                     ShopSyncRecoveryCanonical.sha256(historyRow.category),
                     historyRow.isManualEntry ? "true" : "false",

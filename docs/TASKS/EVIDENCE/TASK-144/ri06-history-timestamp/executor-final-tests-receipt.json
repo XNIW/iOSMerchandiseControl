@@ -1,0 +1,18 @@
+{
+  "source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "source_files_verified": 326,
+  "official_counts": {
+    "Passed": 1402,
+    "Skipped": 36
+  },
+  "unique_case_identifiers": 1438,
+  "runtime_warnings": [
+    {
+      "issueType": "Runtime Warning",
+      "message": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL": "file:///Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift"
+    }
+  ],
+  "full_log_sha256": "2dd8d60a6bebb9339ae3d2fcc5790343fca7ed32a395a496eba93aa055e007f9",
+  "method": "executor direct source SHA256 check and fresh official xcresulttool summary/tests recount; parent independent verification pending"
+}

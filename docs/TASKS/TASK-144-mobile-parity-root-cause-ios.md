@@ -3,8 +3,8 @@
 ## Stato
 
 - File task: `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`
-- Stato: `REVIEW`
-- Fase: `REVIEW`
+- Stato: `FIX`
+- Fase: `FIX`
 - Responsabile: `CODEX_EXECUTOR_IOS`; orchestratore parent, reviewer indipendente separato.
 - Data: 2026-09-28
 - Baseline: `30d226d0fb9b8679a1dd034c6e82319645337f22`
@@ -35,6 +35,18 @@ StorefrontAuthoring.swift, StorefrontAuthoringTests.swift, UI harness e XCUITest
 ### Addendum planning autorizzato — R-I02 checkpoint short envelope, 2026-09-28
 
 Il collaudo Android autenticato e la verifica read-only del preflight TEST hanno dimostrato un ramo `resource_exceeded` con `compressed_legacy_history_requires_remediation` (16 history compresse). Il contratto checkpoint distribuito restituisce correttamente un envelope breve privo delle sezioni del successo; entrambe le app decodificano il DTO completo prima del discriminante. Il difetto equivalente iOS va riprodotto rosso e corretto in questo task (CA-07/CA-10), preservando journal/dati e i controlli di autorizzazione. Nessun valore di default deve trasformare il rifiuto in successo; niente remediation dati/backend o loop automatici per un rifiuto stabile. Il blocco discovery corrente del device iOS è precedente al checkpoint e rimane una diagnosi separata da provare sul runtime attuale. Review mirata e gate aggiornati richiesti; la CI97b6c812 fallita è conservata e deve essere diagnosticata senza rilanci ciechi.
+
+### Addendum planning autorizzato — R-I05 logout e refresh tardivo, 2026-09-29 UTC
+
+Il controllo circoscritto della controparte auth, richiesto da CA-06/07/10 durante R-A06 Android, riproduce con SDK Supabase 2.46.0 reale e transport controllato (nessuna rete, storage in memoria) una sessione ricreata dopo logout: refresh HTTP iniziato e sospeso, signOut(.local) terminato con 204 e currentSession nil, rilascio della risposta refresh valida, nuova sessione ed evento TOKEN_REFRESHED dopo SIGNED_OUT. Il test rosso ufficiale 1 FAIL è conservato in `/tmp/mc-task144-ios/auth-logout-probe/red.xcresult`; nessuna patch runtime applicata prima della prova. La ViewModel applicativa accetta tale evento e può tornare SignedIn. Non è una prova di logout eseguita sugli account reali.
+
+Nuovo P1 concreto nel perimetro del mandato: una correzione minima nel provider/app deve mantenere il logout intenzionale anche dopo risposta tardiva e normale riavvio, senza limitarsi a nascondere lo stato UI mentre lo SDK ripersistisce la sessione. Conservare bootstrap tardivo legittimo, refresh ordinario, nuovo login esplicito e cambio account; nessuna callback precedente deve cancellare o sostituire la nuova sessione. Nessun upgrade/fork della dipendenza, secondo motore auth, lettura di credenziali reali, reset dati o modifica backend. Executor propone il confine minimo, test rosso→verde con SDK reale controllato e guardrail, review indipendente e gate canonici finali prima di integrazione. R-I04 resta un delta distinto già approvato e verificato nel normale import/export/no-op; il full finale includerà entrambi.
+
+### Addendum planning autorizzato — R-I06 History ISO millisecondi, 2026-10-01
+
+Il preflight TEST scoped delle20:18:23Z rifiuta History con shape/storage non valida (compressione0). La diagnosi read-only del coordinatore isola3righe attive valide per storage/data/overlay con timestamp business UTC ISO8601 esattamente tre millisecondi; l'helper backend ammette soltanto il formato legacy spazio/secondi. Il ledger recovery iOS richiede anch'esso il solo formato legacy e lancia `nonCanonicalTimestamp`: il solo fix backend non basta. Ricevute sanitizzate preservate nel pacchetto parent `evidence/staging-current-history/`, senza ID o contenuti reali.
+
+È autorizzato nello stesso task CA-07/10 un test rosso sul recovery reale con fixture sintetica e ledger raw, poi helper specifico History in `ShopSyncRecoveryContract.swift`. Conservare il formato legacy esistente; aggiungere soltanto `YYYY-MM-DDTHH:mm:ss.SSSZ` esatto (3cifre, anno non0000, calendario gregoriano valido, ore0–23/secondi0–59, Z uppercase). Restituire l'esatta stringa per il digest, senza normalizzare o transitare dal Date materializzato; prezzi effective/created e updated/deleted UTC6 invariati. Validare recovery/attivazione e readback SwiftData del Date con .305; l'outbound esistente/fingerprint normalizza secondi e non viene cambiato né presentato come roundtrip wire esatto. Rifiutare precisioni alternative/offset/whitespace/date non valide, mantenere scope e mismatch digest. Nessuna riscrittura delle3righe, cambio modello/schema/queue. Contratto identico backend/Android; review e gate finali dopo R-I06. I gate R-I05 sul freeze0fa8c144 rimangono evidenze di quel codice precedente, non del futuro delta.
 
 ## Mandato e separazione dei ruoli
 
@@ -70,6 +82,56 @@ Il gate canonico baseline fallisce prima dell'esecuzione per conformances di act
 ACK perso e aggiornamento concorrente richiedono replay del contratto idempotente, non confronto ingenuo della sola versione. Scritture disco e cancellazioni possono interrompere il percorso; preservare pending, input e isolamento. Staging/device possono non disporre di sessione autorizzata; dichiarare gate non eseguibili senza estendere privilegi.
 
 ## Execution
+
+### Esecuzione — R-I06 History ISO millisecondi, 2026-10-01
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift` — helper specifico History: legacy invariato oppure UTC esatto a tre cifre frazionarie, calendario gregoriano valido, stringa originale nel ledger; unico call-site attivo History aggiornato.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — recovery reale rosso/verde con `.305Z`, ledger raw e readback SwiftData dopo riapertura; checkpoint calcolato su secondi normalizzati deve impedire attivazione e preservare il container originale.
+- `iOSMerchandiseControlTests/ShopSyncRecoveryContractTests.swift` — matrice positiva/negativa di grammatica e calendario, prezzo legacy e UTC6 invariati.
+
+**Azioni ed evidenze:** test prima della patch `1 FAIL / 0 PASS`, errore `nonCanonicalTimestamp` nel recovery reale; dopo la patch le due classi complete `57 PASS / 0 FAIL / 0 SKIP` (32 recovery, 25 contract), 57 identifier unici, nessun runtime warning. Cinque test nuovi; nessuna assertion/esclusione indebolita. Review indipendente R-I06 `APPROVED`, nessun finding, fingerprint326 `41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006`; solo tre file sorgente/test differiscono dal precedente0fa8 e i quattro hash auth sono identici. Tre scan sensitive sui file impattati PASS con config isolata esplicita; primo tentativo con variabile config non supportata conservato come NOT_COUNTED, soltanto i nuovi report propri rimossi dalla primary. Nessun source/build/device della primary toccato.
+
+**Check obbligatori finali:** mirati, coerenza planning, Release canonica, full e analyze ESEGUITI/PASS. Full ufficiale `1402 PASS / 0 FAIL / 36 SKIP`, 1438 identifier unici (1394 unit/integration e 8 UI PASS), source326 identico e riconto indipendente parent; include20 SDK auth e31 import PASS. Fresh analyze26 diagnostiche storiche/0 nuove; Release/full/signed TEST0 source warning; tool warning metadata e warning runtime QoS storico conservati. Tre source scan PASS, scan documentale finale separato. Namespace persistente `evidence/ios-ri06-history-timestamp`, separato da R-I05. [Manifest finale](EVIDENCE/TASK-144/ri06-history-timestamp/final-gate-manifest.json) con comandi/log hash/receipt. Nessuna modifica a SDK auth, prezzi, UTC6, modello/schema, fingerprint/outbound o dati reali; nessun roundtrip wire esatto dei millisecondi dichiarato.
+
+**Artifact:** Release canonica non configurata binary `f7816722…`; signed TEST separato `test-builds/ios/signed-ri06/Artifact/iOSMerchandiseControl.app`, binary `4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30`. Firma Automatic strict/deep e effective Simulator entitlements generati da Xcode verificati; primary config hash prima/dopo uguale, sola copia ignorata rimossa. Nessuna installazione o misura launch da executor. Gli artifact/gate precedenti0fa8 restano storici.
+
+**Handoff:** LOCAL_VERIFIED / SOURCE_APPROVED per questa slice; integrazione exact-SHA/CI, launch e live restano separati al parent/coordinatore. Nessun DONE.
+
+### Esecuzione — R-I04/R-I05 ripresa, 2026-10-01
+
+**File modificati:**
+- `ExcelSessionViewModel.swift` — processing namespace nei cinque reader XML esistenti, senza cambiare il contratto import.
+- `Task111ExcelImportParityTests.swift` e due fixture XLSX condivise — tre regressioni su ZIP/XML effettivi, barcode/stringhe Unicode/CLP e formati numerici.
+- `SupabaseClientProvider.swift` — gruppo SDK unico per storage key, fence generazionale sullo storage esistente, readback obbligatorio su sessione/legacy/PKCE e snapshot atomica leggibile dai consumer cross-actor.
+- `SupabaseAuthService.swift` — risultati, errori ed eventi SDK portano la generation fino al consumo; finalizzazione locale anche su errore/cancellazione logout; callback/sign-in sulla snapshot catturata.
+- `SupabaseAuthViewModel.swift` — epoch dell’operazione e generation alla completion/consumo evento; nessun ritorno SignedIn da una completion precedente.
+- `SupabaseAuthLifecycleTests.swift` — 20 casi con SDK2.46 reale, transport controllato e storage in memoria; nessuna sessione/account reale o rete.
+
+**Azioni ed evidenze:**
+1. R-I04 storico: red3 casi1PASS/2FAIL, green31 e adiacenti29; delta applicativo esattamente5righe. Import normale Files dei due workbook, export5 prodotti e reimport no-op con sette tabelle uguali conservati come evidenza dello snapshot R-I04. Dopo pausa i vecchi raw/tmp log/xcresult/bundle non sono disponibili: hash/summary/confronti persistenti restano storici, non riverificati. I quattro hash sorgente/fixture attuali e CRC dei workbook sono riverificati. Nessuna riattivazione dell’harness Excel sospeso.
+2. R-I05 ripreso: cinque regressioni realSDK1PASS/4FAIL prima del wiring Service/VM. Secondo interleaving concreto: il replacement SDK avviava bootstrap su expiredA nella nuova generation, poi sovrascriveva loginB; red1FAIL con quattro assert, fix svuota/verifica prima di creare la generation interattiva. Bootstrap ordinario e refresh normale restano validi. Delete/readback fallito è errore fail-closed in processo; il test non dichiara completato un logout durabile se l’item non è stato effettivamente cancellato.
+3. Review indipendente APPROVED su quattro file e326hash. Release ha poi esposto7warning nuovi (un weak capture e sei accessi client cross-actor) corretti nel provider, con due supplementi APPROVED. Nessun global actor override, campo unsafe, consumer refactor, SDK upgrade/fork, schema/API pubblica/business o auth-scope change. Due full intermedie1397/0/36 conservate sui propri fingerprint, non usate per provare il sorgente finale.
+4. Freeze finale326file `0fa8c144b61cc0fccc72218b0368735b0196ae75dc12f6900dc5f52fda6580eb`: mirati55 unici =54PASS/0FAIL/1SKIP (20 SDK,1scope locale,3config con live preflight skip,31 import). Release Automatic canonica senza config PASS, zero diagnostic Swift/source; strict firma ed effective Simulator entitlements uguali al profilo generato da Xcode. Full canonica finale **1397 PASS / 0 FAIL / 36 SKIP**, totale 1433 unici (1389 unit/integration + 8 UI), nessun retry/restart/esclusione. Analyze fresca PASS:26 diagnostic storici,0 nuovi. Signed TEST separato con sola config origin immagini autorizzata: strict/effective entitlements PASS, config semanticamente uguale dopo processing binary-plist Xcode, copia ignored rimossa e primary hash invariato. Il [manifest R-I05](EVIDENCE/TASK-144/ri05-auth-lifecycle/final-gate-manifest.json) lega log/hash/receipt al freeze.
+5. Precondition Files sul solo simulatore executor17: prima probe privata con titolo inglese FAIL perché Files standalone usava Recenti; tree prova Recenti già selected. Label osservata corretta nella sola probe privata e1PASS. Nessun reset dati/preferenze, modifica locale o assertion app/UItest. Nessuna installazione sul device del coordinatore.
+
+**Limiti:** CI exact-SHA e integrazione sono del parent, accettazione autenticata e misure launch della lane/coordinatore. Nessun DONE dalle sole prove locali. Il manifest finale distingue codice, full canonica, artifact configurato, storia e criteri live residui.
+
+**Check obbligatori — snapshot R-I05:**
+| Check | Stato | Evidenza |
+|---|---|---|
+| Build Release Automatic | ESEGUITO | Senza config, firma/effective entitlements PASS; TEST configurato separato. |
+| Analyze | ESEGUITO | Fresh26 diagnostic preesistenti (18 Vendor + 8 Swift test),0 nuovi. |
+| Warning nuovi | ESEGUITO | I 7 nuovi R-I05 corretti e riapprovati; toolwarning AppIntents e runtime QoS storici conservati. |
+| Coerenza planning R-I04/R-I05 | ESEGUITO | Cambi circoscritti,20 SDK reali e31 import PASS; contratti business invariati. |
+| Criteri globali / R-I06 | NON ESEGUITO integralmente | Nuovo timestamp History concreto pianificato dal parent dopo questi gate; live/CI/launch/integrazione restano separati. |
+
+**Handoff:** R-I04/R-I05 LOCAL_VERIFIED / SOURCE_APPROVED sul proprio snapshot0fa8. Il nuovo R-I06 è il batch attivo seguente: questi artifact restano storici e non sono promessi come candidato finale. Nessun DONE.
+
+
+### R-I04 — import XLSX con namespace, parent 2026-09-28
+
+CA08 attraverso il picker normale sul bundle092 ha rifiutato il workbook condiviso contrattuale (stesso SHA Android verificato) come barcode assente. La prova Foundation sullo sheet reale conferma XML valido con8righe/64celle prefissate x:, ma il parser applicativo senza shouldProcessNamespaces confronta solo i nomi non prefissati e non raccoglie righe. È autorizzata dal mandato corrente la regressione dedicata sul decode ZIP/XML reale e la correzione minima del reader esistente, senza cambiare fixture/oracolo o riattivare l'harness Excel sospeso. R-I03 resta verificato (full1374PASS, livecard/diagnostics/restartPASS); PR11 è draft durante il nuovo fix. CI d217 rimane evidenza di quel commit e non può validare il futuro delta import.
 
 ### Esecuzione — R-I03 diagnostica corrente, 2026-09-28
 
@@ -124,11 +186,11 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 | CA-04 | ESEGUITO — VERIFIED locale e contratto staging | Tutte le 5 operation, identity, ACK perso / B, TTL, no-op e ricezione C; SQL 12/12 del coordinatore distinto da perdita HTTP reale. |
 | CA-05 | ESEGUITO dal coordinatore | Master/TASK143 parent-owned, stati storici e gate fisici preservati; non inferire distribuzione da merge. |
 | CA-06 | ESEGUITO matrice fonte/test/limite | Tabella capacità nell'evidence; VERIFIED locale, EXTERNAL_DEPENDENCY live/hardware, NOT_TESTED manuale dove dichiarato. |
-| CA-07 | ESEGUITO locale; NON ESEGUITO live da executor | Test sync/outbox/paging/no-op e scope; EXTERNAL_DEPENDENCY collaudo autenticato Android↔iOS owner separato, nessuna promessa di 3 s. |
-| CA-08 | NON ESEGUITO integralmente; regressioni locali ESEGUITE | Suite esistenti import/export/images e fixture Unicode/CLP condivisa; camera/upload reale EXTERNAL_DEPENDENCY, harness Excel sospeso resta skip. |
+| CA-07 | ESEGUITO locale; NON ESEGUITO live da executor | Test sync/outbox/paging/no-op e scope; R-I06 actual recovery `.305Z` attiva con raw ledger/Date persistito, mismatch normalizzato rifiutato,57 mirati PASS. EXTERNAL_DEPENDENCY collaudo autenticato Android↔iOS owner separato, nessuna promessa di 3 s. |
+| CA-08 | NON ESEGUITO integralmente; import normale R-I04 e regressioni ESEGUITI | Due XLSX tramite Files normale, export 5 prodotti, reimport no-op sette tabelle uguali sullo snapshot R-I04; quattro hash sorgente/fixture attuali match,31 import PASS anche nella full R-I05. Camera/upload reale esterni e harness Excel sospeso resta skip. Raw/tmp R-I04 mancanti esplicitamente storici. |
 | CA-09 | NON ESEGUITO integralmente; misure core ESEGUITE | n = 30 draft + n = 1 S100-E/F, dataset/condizioni espliciti; nessuna misura di background/force-stop/convergenza live. |
-| CA-10 | ESEGUITO — VERIFIED locale; CI exact-SHA finale esterna | R-I03 full finale 1374 PASS / 0 FAIL / 36 SKIP; mirati integrati136/0/0, Release/analyze PASS. Prima full R-I03 1371/1/36 e ripristino Files normale1/1 preservati. CI97b6 crash/fix runtime26.2 e R-I02 restano storici. Nessuna esclusione/override app; benchmark core invariati. |
-| CA-11 | ESEGUITO review/fix/re-review; NON ESEGUITO PR/CI da executor | Sorgente APPROVED senza P0/P1/P2; coordinatore integra e verifica exact SHA, Snapshot non integrato finché i gate remoti del nuovo commit non sono verdi; merge già autorizzato. |
+| CA-10 | ESEGUITO gate locali finali R-I06; CI finale esterna | R-I06 full1402/0/36,1438unici (1394 unit/integration +8 UI), mirati57/0/0, Release/analyze PASS,0warning nuovi; fingerprint32641eb3ec1 e riconto ufficiale indipendente parent. R-I05 full1397/0/36 e gli snapshot precedenti sono storici. Signed TEST separato verificato. |
+| CA-11 | ESEGUITO review/fix/re-review R-I04/R-I05/R-I06; integrazione PR/CI al parent | Auth/import preservati e R-I06 History APPROVED con0finding, tre soli delta dal0fa8, auth4hash identici e gate sullo stesso41eb. Parent integra/verifica exact SHA/CI e merge autorizzato; nessun DONE per inferenza. |
 | CA-12 | ESEGUITO evidence iOS; NON ESEGUITO report coordinato da executor | Manifest e limiti espliciti; parent integra report complessivo/live/PR. Nessuna dichiarazione DONE. |
 
 ## Review
@@ -137,11 +199,19 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+R-I04: cinque reader XML elaborano namespace; fixture condivise real ZIP/XML e tre regressioni APPROVED. R-I05 (P1): sessioni/eventi/completion e storage SDK recintati per generation; cleanup verificato prima della rotazione/interazione, client foreground/background condiviso e snapshot thread-safe. Venti test SDK reali, mirati54/0/1 e full1397/0/36 sul fingerprint0fa8, tre review/supplementi APPROVED. [Evidenza e limiti](EVIDENCE/TASK-144/ri05-auth-lifecycle/README.md).
+
+R-I06: History ammette legacy esistente oppure UTC esatto a tre cifre frazionarie con calendario valido; ledger/digest conserva stringa originale, Date materializzato/readback `.305` verificato. Prezzi/UTC6/outbound/model/fingerprint e SDK auth invariati; nessun dato reale riscritto. Rosso1FAIL prima patch,57 mirati PASS, review indipendente APPROVED e full finale1402/0/36 sul fingerprint41eb; Release/analyze e signed TEST separato verificati. [Manifest e limiti](EVIDENCE/TASK-144/ri06-history-timestamp/final-gate-manifest.json). Questa approvazione locale non equivale alla chiusura globale/live.
+
 R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope visibile da owner autenticato e shop risolto, senza side effects. La scheda cloud distingue fallimenti generici da reali permessi/auth. Sei test diagnostica e due card aggiunti; red/green e due approvazioni indipendenti nel [manifest](EVIDENCE/TASK-144/ri03-current-diagnostics/manifest.json). Nessuna modifica recovery/auth/retry e nessuna assertion indebolita.
 
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**R-I06 snapshot41eb: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full1402/0/36,1438identifier unici e57mirati PASS; Release/analyze/sensitive source PASS,0warning nuovi. Parent ha ricontato official xcresulttool e tutti326hash. Artifact canonico non configurato binaryf7816722… e signed TEST finale binary4a708a47… separati; primary config invariata e copia ignorata rimossa. [Manifest finale](EVIDENCE/TASK-144/ri06-history-timestamp/final-gate-manifest.json). Integrazione exact-SHA/CI, launch benchmark e collaudo live al parent/coordinatore; nessun nuovo heavy job o operazione sul simulatore performance da executor.
+
+**R-I04/R-I05 snapshot0fa8 storico: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE e non candidato corrente.** Full1397/0/36,55 mirati54/0/1, Release/analyze/scan sorgente PASS; signed TEST binary78bac59b… e artifact canonico19e99c… separati e conservati, firma/effective entitlements verificati. Il [manifest](EVIDENCE/TASK-144/ri05-auth-lifecycle/final-gate-manifest.json) contiene fingerprint326 e receipt di quel codice precedente. R-I06 è il delta successivo: per gate e candidato correnti usare il manifest41eb sopra; gli artifact0fa8 non ne provano CI/launch/live.
 
 **R-I03: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full finale1374/0/36, mirati136/0/0, Release/analyze/scan PASS nel [manifest R-I03](EVIDENCE/TASK-144/ri03-current-diagnostics/final-gate-manifest.json). Fingerprint325file `44adf90701d3336815a071f34fdc1fc5e4a4fb0d6ef543bf1c706c3a29807c9b`; bundle signed finale e source receipt separati. Precedenti R-I02/crash CI sono snapshot storici verificati. Gate finali nuovi completati nel [manifest R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json); commit/CI exact SHA e accettazione mobile autenticata restano separati. Snapshot storico al commit97b6: [Manifest precedente](EVIDENCE/TASK-144/ios-gate-manifest.json); [precedenti casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
 
@@ -149,7 +219,7 @@ R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di 
 - Primo full fallito per shutdown del simulatore richiesto da precedente runner; prova preservata, nessun difetto applicativo attribuito senza evidenza. Full storico 97b6 senza restart sul fingerprint `3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d`.
 - Fingerprint snapshot R-I02 al commit5dbcb6e7: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`, 325 file app/test/resource verificati identici dopo i gate. I conteggi e hash precedenti sono snapshot storici, non il nuovo batch.
 - 36 skip: 29 live/esterni, 4 benchmark sintetici opt-in (due richiesti eseguiti separatamente), 2 harness Excel sospeso, 1 camera fisica. Non trasformarli in accettazione live.
-- Build TEST con configurazione publishable già autorizzata dal parent è distinta dai gate e dagli artifact Release senza config. Prosegue fuori dai file tracked, con manifest/path/hash separato in `/tmp/mc-task144-ios/`; nessuna installazione su device altrui da questo executor. Sessione/app-auth e verifica bidirezionale sono owner del coordinatore live.
+- Build TEST con configurazione publishable autorizzata dal parent distinta dagli artifact Release senza config: output persistenti `test-builds/ios/signed-ri06` e `evidence/ios-ri06-history-timestamp`, source41eb/firma/config/cleanup verificati. Artifact e raw/tmp dei batch precedenti mantengono la propria provenienza storica. Nessuna installazione su device altrui da questo executor; sessione/app-auth e verifica bidirezionale sono owner del coordinatore live.
 - Nessun XCTest esistente attiva semplicemente l'app installata senza fixture; i veri target UI esistenti usano DEBUG harness. Lo script legacy `tools/sim_ui.sh` non è un probe XCTest ed è deprecato. Nessun nuovo probe tracked/target CI introdotto. Dopo i gate, copia privata del probe coordinatore autorizzata soltanto in /tmp e sul simulatore executor per i residui CA-08, senza app fixture override.
 - Restano EXTERNAL_DEPENDENCY il collaudo autenticato Android↔iOS, gli stati background/sospensione/force-stop, permessi/upload reali e giudizio hardware/VoiceOver. Il parent mantiene separati codice, integrazione, runtime locale, live e distribuzione.
 

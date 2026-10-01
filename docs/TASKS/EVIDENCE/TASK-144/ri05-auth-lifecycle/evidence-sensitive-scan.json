@@ -1,0 +1,24 @@
+{
+  "result": "PASS",
+  "reports": {
+    "scan sensitive docs/TASKS/EVIDENCE/TASK-144/ri04-xlsx-namespace": {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T203654Z-scan-sensitive-docs-TASKS-EVIDENCE-TASK-144-ri04-xlsx-namespace-p42392.json",
+      "sha256": "56faff9554c055234ea9d99ecf5c5057eb1ed2f9fb0c698e9eac25850bf2b69f",
+      "result": "PASS",
+      "exit_code": 0
+    },
+    "scan sensitive docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md": {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T203654Z-scan-sensitive-docs-TASKS-TASK-144-mobile-parity-root-cause-iosmd-p42393.json",
+      "sha256": "66fabc290bf7273a03ee3aa064b6bc5b85652b7d8a857131d81865b6e94e4668",
+      "result": "PASS",
+      "exit_code": 0
+    },
+    "scan sensitive docs/TASKS/EVIDENCE/TASK-144/ri05-auth-lifecycle": {
+      "report": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri05-resumed/scans/agent-runs/20261001T203758Z-scan-sensitive-docs-TASKS-EVIDENCE-TASK-144-ri05-auth-lifecycle-p45507.json",
+      "sha256": "699f9bd9555598550a159cfee489d62312fef0535290cb08af994b11a60ee5f5",
+      "result": "PASS",
+      "exit_code": 0
+    }
+  },
+  "redaction_note": "Two controlled-red SDK summary copies redact synthetic IDs/emails. Raw xcresult/log unchanged. Initial FAIL retained in persistent history."
+}

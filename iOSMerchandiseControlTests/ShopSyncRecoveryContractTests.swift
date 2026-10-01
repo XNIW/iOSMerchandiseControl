@@ -779,6 +779,61 @@ final class ShopSyncRecoveryContractTests: XCTestCase {
         }
     }
 
+    func testHistoryTimestampPreservesLegacyAndExactUTCMilliseconds() async throws {
+        let valid = [
+            "2026-07-05 15:40:11",
+            "2026-07-05T15:40:11.305Z",
+            "2000-02-29T00:00:00.000Z",
+            "2024-02-29T23:59:59.999Z",
+            "0001-01-01T00:00:00.001Z",
+            "9999-12-31T23:59:59.999Z"
+        ]
+        for timestamp in valid {
+            XCTAssertEqual(try ShopSyncRecoveryCanonical.requireHistoryTimestamp(timestamp), timestamp)
+        }
+    }
+
+    func testHistoryTimestampRejectsOtherGrammarAndInvalidGregorianDates() async throws {
+        let invalid = [
+            "2026-07-05T15:40:11Z", "2026-07-05T15:40:11.3Z",
+            "2026-07-05T15:40:11.30Z", "2026-07-05T15:40:11.3050Z",
+            "2026-07-05T15:40:11.305000Z", "2026-07-05T15:40:11.305z",
+            "2026-07-05t15:40:11.305Z", "2026-07-05T15:40:11.305+00:00",
+            "2026-07-05T15:40:11.305-03:00", " 2026-07-05T15:40:11.305Z",
+            "2026-07-05T15:40:11.305Z ", "2026-07-05T15:40:11.305Z\n",
+            "２０２６-07-05T15:40:11.305Z", "2026-07-05T15:40:11,305Z",
+            "0000-07-05T15:40:11.305Z", "2026-00-05T15:40:11.305Z",
+            "2026-13-05T15:40:11.305Z", "2026-07-00T15:40:11.305Z",
+            "2026-02-30T15:40:11.305Z", "2026-02-29T15:40:11.305Z",
+            "1900-02-29T15:40:11.305Z", "2026-04-31T15:40:11.305Z",
+            "2026-07-05T24:40:11.305Z", "2026-07-05T15:60:11.305Z",
+            "2026-07-05T15:40:60.305Z"
+        ]
+        for timestamp in invalid {
+            XCTAssertThrowsError(try ShopSyncRecoveryCanonical.requireHistoryTimestamp(timestamp), timestamp) {
+                XCTAssertEqual($0 as? ShopSyncRecoveryContractError, .nonCanonicalTimestamp)
+            }
+        }
+        XCTAssertThrowsError(try ShopSyncRecoveryCanonical.requireHistoryTimestamp(nil)) {
+            XCTAssertEqual($0 as? ShopSyncRecoveryContractError, .nonCanonicalTimestamp)
+        }
+    }
+
+    func testHistoryMillisecondAdmissionDoesNotChangePriceOrUTC6Contracts() async throws {
+        let legacy = "2026-07-05 15:40:11"
+        XCTAssertEqual(try ShopSyncRecoveryCanonical.requireLegacyTimestamp(legacy), legacy)
+        XCTAssertThrowsError(
+            try ShopSyncRecoveryCanonical.requireLegacyTimestamp("2026-07-05T15:40:11.305Z")
+        ) {
+            XCTAssertEqual($0 as? ShopSyncRecoveryContractError, .nonCanonicalTimestamp)
+        }
+        let utc6 = "2026-07-05T15:40:11.305000Z"
+        XCTAssertEqual(try ShopSyncRecoveryCanonical.requireUTC6(utc6), utc6)
+        XCTAssertThrowsError(try ShopSyncRecoveryCanonical.requireUTC6("2026-07-05T15:40:11.305Z")) {
+            XCTAssertEqual($0 as? ShopSyncRecoveryContractError, .nonCanonicalTimestamp)
+        }
+    }
+
     func testHistoryContractRequiresServerPayloadDigests() throws {
         let owner = UUID(uuidString: "33333333-3434-4434-8434-343434343434")!
         let shop = UUID(uuidString: "00000000-0000-4000-8000-000000000140")!

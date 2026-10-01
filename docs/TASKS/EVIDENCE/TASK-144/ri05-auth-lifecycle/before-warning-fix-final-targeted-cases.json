@@ -1,0 +1,277 @@
+[
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testBackgroundProviderRefreshCannotRestoreForegroundLogout",
+    "result": "Passed",
+    "duration_seconds": 0.03019702434539795
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testBufferedSDKEventCannotReviveLogoutOrReplaceSameUserNewLogin",
+    "result": "Passed",
+    "duration_seconds": 0.005025982856750488
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testCancelledLogoutStillRetiresRefreshAndClearsPersistentSession",
+    "result": "Passed",
+    "duration_seconds": 0.010339975357055664
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteDifferentAccountLogin",
+    "result": "Passed",
+    "duration_seconds": 0.0025659799575805664
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotOverwriteSameAccountNewLogin",
+    "result": "Passed",
+    "duration_seconds": 0.0026810169219970703
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierRefreshCannotRestoreCompletedLogoutOrRestart",
+    "result": "Passed",
+    "duration_seconds": 0.002552032470703125
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testEarlierSDKSignInCompletionCannotReturnSuccessAfterLogoutAndNewLogin",
+    "result": "Passed",
+    "duration_seconds": 0.0029549598693847656
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testFailedSessionStoreCannotPublishSuccessfulLogin",
+    "result": "Passed",
+    "duration_seconds": 0.0033069849014282227
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testForegroundAndBackgroundUseOneClientPerProjectStorageKey",
+    "result": "Passed",
+    "duration_seconds": 0.0009360313415527344
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testInteractiveGenerationDoesNotBootstrapRetiredExpiredSession",
+    "result": "Passed",
+    "duration_seconds": 0.0023990869522094727
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testLogoutHTTPFailureStillRetiresRefreshAndClearsPersistedSession",
+    "result": "Passed",
+    "duration_seconds": 1.0748209953308105
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testLogoutStorageRemovalFailureCannotClaimSuccessOrPublishOldSession",
+    "result": "Passed",
+    "duration_seconds": 0.008129000663757324
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testNewExplicitLoginRetiresEarlierRefreshEvenWithoutLogout",
+    "result": "Passed",
+    "duration_seconds": 0.0025109052658081055
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testNoOpLegacyRemovalCannotPassEmptySessionVerification",
+    "result": "Passed",
+    "duration_seconds": 0.0028270483016967773
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testOrdinaryExpiredBootstrapRefreshRemainsValid",
+    "result": "Passed",
+    "duration_seconds": 0.002241969108581543
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testOrdinaryRefreshAndBootstrapRemainValid",
+    "result": "Passed",
+    "duration_seconds": 0.0021730661392211914
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testOrdinaryRefreshHTTPFailurePreservesCurrentStoredSession",
+    "result": "Passed",
+    "duration_seconds": 1.0094859600067139
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testRetiredSDKCannotWriteOrRemoveCurrentPKCEVerifier",
+    "result": "Passed",
+    "duration_seconds": 0.003949999809265137
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testViewModelDropsEarlierSignInFailureAfterNewLogin",
+    "result": "Passed",
+    "duration_seconds": 1.2178759574890137
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testViewModelDropsEarlierSignInSuccessAfterNewLogin",
+    "result": "Passed",
+    "duration_seconds": 0.21507692337036133
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseAuthSignOutScopeTests/testUserFacingMobileSignOutIsLocalToCurrentDevice",
+    "result": "Passed",
+    "duration_seconds": 0.003679037094116211
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testAuthSessionInfoPrivacySafeDisplayRedactsAccountIdentifiers",
+    "result": "Passed",
+    "duration_seconds": 0.00102996826171875
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testRejectsLegacyServiceRoleJWTButAllowsAnonJWTShape",
+    "result": "Passed",
+    "duration_seconds": 0.005430102348327637
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled",
+    "result": "Skipped",
+    "duration_seconds": 0.002817988395690918
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testDuplicateBarcodeUsesLastRowWithoutSummingQuantity",
+    "result": "Passed",
+    "duration_seconds": 0.005597949028015137
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testExistingProductPreviewMergesSparseUpdatesWithoutSideEffects",
+    "result": "Passed",
+    "duration_seconds": 0.014053106307983398
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testGoldenSupplierImportFixtureMatchesAndroidContract",
+    "result": "Passed",
+    "duration_seconds": 0.010811924934387207
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testHeaderlessSupplierRowsPromotePatternColumnsWithHeaderSource",
+    "result": "Passed",
+    "duration_seconds": 0.0009629726409912109
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testHtmlColspanRowspanFixtureImportsWithDuplicatePolicy",
+    "result": "Passed",
+    "duration_seconds": 0.02843296527862549
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportAnalysisSummaryUsesCaseInsensitiveRelationKeys",
+    "result": "Passed",
+    "duration_seconds": 0.0013899803161621094
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyBoundsArchiveEntryCountAndExpandedTotal",
+    "result": "Passed",
+    "duration_seconds": 0.0011969804763793945
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyExtractsSmallEntryWithinRuntimeBudget",
+    "result": "Passed",
+    "duration_seconds": 0.0020220279693603516
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyRejectsAggregateMultiFileSessionBeforeParsing",
+    "result": "Passed",
+    "duration_seconds": 0.003410935401916504
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyRejectsCumulativeRuntimeExpansionAcrossExtractions",
+    "result": "Passed",
+    "duration_seconds": 0.0017549991607666016
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyRejectsSparseOversizedSourceBeforeRead",
+    "result": "Passed",
+    "duration_seconds": 0.002322077751159668
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testImportResourcePolicyRejectsSyntheticXLSXWithOversizedEntryMetadata",
+    "result": "Passed",
+    "duration_seconds": 0.0012379884719848633
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testLegacyImportAliasesNormalizeToAndroidCanonicalKeys",
+    "result": "Passed",
+    "duration_seconds": 0.0015000104904174805
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testLocaleNumbersDiscountAndScientificBarcodeAreCanonicalized",
+    "result": "Passed",
+    "duration_seconds": 0.0008800029754638672
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testMappedRowsExposeOnlyAndroidCanonicalKeys",
+    "result": "Passed",
+    "duration_seconds": 0.0004839897155761719
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testNewProductIdentityMatchesAndroidPrimaryOrSecondNameFallback",
+    "result": "Passed",
+    "duration_seconds": 0.0004979372024536133
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testNewProductMissingRetailPriceBlocksApplyEvenWithItemNumber",
+    "result": "Passed",
+    "duration_seconds": 0.0006949901580810547
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testParseNumberMatchesAndroidSupplierCases",
+    "result": "Passed",
+    "duration_seconds": 0.0004709959030151367
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testPrefixedWorkbookRelationshipsSharedStringsAndStylesDecodeTogether",
+    "result": "Passed",
+    "duration_seconds": 0.002574920654296875
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testPreGenerateDefaultsKeepUnrecognizedColumnsOffButVisibleAndManuallyRecoverable",
+    "result": "Passed",
+    "duration_seconds": 0.020713090896606445
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testPreGenerateGenerationReusesEquivalentSupplierAndCategory",
+    "result": "Passed",
+    "duration_seconds": 0.005378007888793945
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testPreGeneratePendingCreatePersistsOnlyWhenGenerating",
+    "result": "Passed",
+    "duration_seconds": 0.005529046058654785
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testPreGenerateRelationInputStateRecognizesExistingAndPendingCreate",
+    "result": "Passed",
+    "duration_seconds": 0.0006110668182373047
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testProductPriceHistoryRecordsPreviousAndCurrentImportPricesIdempotently",
+    "result": "Passed",
+    "duration_seconds": 0.009957075119018555
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testRetailMarkupHelperFillsOnlyEmptyRetailPriceByDefault",
+    "result": "Passed",
+    "duration_seconds": 0.00039398670196533203
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testScientificBarcodeExpansionIsBoundedAndStrictlyRevalidated",
+    "result": "Passed",
+    "duration_seconds": 0.0006430149078369141
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testSharedPrefixedUnicodeCLPXLSXPreservesIdentifiersAndValues",
+    "result": "Passed",
+    "duration_seconds": 0.0029610395431518555
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testSharedPrefixedXLSXDecodesHeaderMetadataAndDuplicateLastRow",
+    "result": "Passed",
+    "duration_seconds": 0.004389047622680664
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testSupplierAndCategoryResolverIsCaseAndWhitespaceInsensitive",
+    "result": "Passed",
+    "duration_seconds": 0.0034329891204833984
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testValidationRejectsDirtyRowsWithoutBlockingValidRows",
+    "result": "Passed",
+    "duration_seconds": 0.0012180805206298828
+  },
+  {
+    "identifier": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests/testXlsxNumericBarcodeStylePreservesLeadingZeroes",
+    "result": "Passed",
+    "duration_seconds": 0.005557060241699219
+  }
+]

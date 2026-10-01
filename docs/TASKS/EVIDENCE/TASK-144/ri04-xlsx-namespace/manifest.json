@@ -1,0 +1,156 @@
+{
+  "finding": "R-I04",
+  "packaged_on_client_date": "2026-10-01",
+  "baseline_commit": "d217a751232af76c7260da3c3329f1087f7ab0bd",
+  "finding_description": "R-I04: valid prefixed XLSX silently yields no sheet rows or named sheets because XMLParser defaults to qualified element names while delegates match local names.",
+  "production_change": "Exactly five shouldProcessNamespaces=true settings: worksheet, shared strings, styles, workbook and workbook relationships. Existing attribute r:id, parser/resource policies and missing optional parts behavior preserved.",
+  "tests_added": "Three new real ZIP/XML tests: shared contract workbook SHA, unchanged Unicode/CLP workbook SHA, prefixed parts with shared strings and zero-padding custom style. Existing default-namespace/style and resource-policy assertions remain unchanged.",
+  "current_source_verification": {
+    "all_four_source_fixture_hashes_match_review": true,
+    "production_delta_verified_exactly_five_namespace_settings": true,
+    "baseline_application_sha256": "d5375fcb14b63c1d822485bcf6634361a3f2ce02782bbe2568750db62974d90d",
+    "zip_checks": {
+      "tests/fixtures/supplier-import/mobile-parity-contract.xlsx": {
+        "crc_valid": true,
+        "archive_member_count": 8
+      },
+      "tests/fixtures/supplier-import/mobile-parity-unicode-clp.xlsx": {
+        "crc_valid": true,
+        "archive_member_count": 8
+      }
+    },
+    "scope": "Only the four R-I04 source/fixture files were verified. R-I05 and full final gates are separate."
+  },
+  "review_record": {
+    "historical_verdict": "APPROVED",
+    "origin": "evidence/ios-ri04-import/manifest-draft.json",
+    "origin_sha256": "cc106fbc2d94c39987f4e55e7f7096da8097bb86d0e4e47f5e3b210457bcc68f",
+    "record": "Independent APPROVED; 4 source/fixture hashes and3log hashes verified, real ZIP CRC valid, five-line production delta exactly reconstructs d217 baseline when removed. No P0/P1/P2 remaining in reviewed delta.",
+    "boundary": "Historical reviewer record preserved; this documentation packaging does not constitute a new independent review."
+  },
+  "runs": [
+    {
+      "label": "red",
+      "official_summary": {
+        "result": "Failed",
+        "totalTestCount": 3,
+        "passedTests": 1,
+        "failedTests": 2,
+        "skippedTests": 0
+      },
+      "summary_file": "red-summary.json",
+      "historical_raw_log_sha256": "74a7e15f36149255966fae7ba6816a6751aad787354c0c885474651a775fe4f8",
+      "historical_raw_log_available_now": false,
+      "historical_raw_xcresult_available_now": false,
+      "verification_boundary": "Persisted summary copied; original temporary log and xcresult absent and not independently reverified in this packaging pass."
+    },
+    {
+      "label": "green",
+      "official_summary": {
+        "result": "Passed",
+        "totalTestCount": 31,
+        "passedTests": 31,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "summary_file": "green-summary.json",
+      "historical_raw_log_sha256": "a989355cea76d5dc2a4fada0135823e6329bc24eead041de6cd16a07358fbd19",
+      "historical_raw_log_available_now": false,
+      "historical_raw_xcresult_available_now": false,
+      "verification_boundary": "Persisted summary copied; original temporary log and xcresult absent and not independently reverified in this packaging pass."
+    },
+    {
+      "label": "adjacent",
+      "official_summary": {
+        "result": "Passed",
+        "totalTestCount": 29,
+        "passedTests": 29,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "summary_file": "adjacent-summary.json",
+      "historical_raw_log_sha256": "b8dbe7bf448cee82326d7d48f03ff9d846fc22ac93ef05bcdd809908a2c5cd38",
+      "historical_raw_log_available_now": false,
+      "historical_raw_xcresult_available_now": false,
+      "verification_boundary": "Persisted summary copied; original temporary log and xcresult absent and not independently reverified in this packaging pass."
+    }
+  ],
+  "green_command_limitation": "Green command listed two absent class names and consequently only31 real Task111 cases ran; do not count absent suites. Separate adjacent run uses observed classes ExcelAnalyzerHTMLParsingTests/CatalogTextIntegrationTests/Task141NumericInputTests and actually ran29 cases.",
+  "normal_ui": {
+    "historical_red": "Normal Files selection on signed R-I03 binary092 showed missing barcode; Foundation probe recorded 0 matched rows / 64 prefixed cells versus 8 rows / 64 cells with namespace processing.",
+    "historical_red_raw_xcresult_available_now": false,
+    "historical_signed_ri04_receipt": {
+      "source_head": "d217a751232af76c7260da3c3329f1087f7ab0bd",
+      "source_fingerprint": "12bafd6f4bfdc4f0204f1f86fef59a16fc11af32e06279d8349603bcd9d76dba",
+      "build_result": "PASS",
+      "signature_strict_deep_pass": true,
+      "target_TEST": true,
+      "bundle_id_unchanged": true,
+      "application_identifier_present_in_simulated_entitlements": true,
+      "embedded_simulated_entitlements_equal_xcode_generated": true,
+      "keychain_group_override": false,
+      "auth_source_changed": false,
+      "wechat_flags_unchanged": true,
+      "binary_sha256": "dee6058bb6228e36907e48cc7fe0336362335ed087f19ba7b8dfaebd6d1520f9",
+      "installed_on_live_device_by_executor": false,
+      "historical_source_files_count": 328,
+      "relevant_source_hashes": {
+        "iOSMerchandiseControl/ExcelSessionViewModel.swift": "a2cc836ae7b1edeae69cbaacc8260382da3f008a00df9c591388f0258dc81cdb",
+        "iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift": "3cc29b70c6e0319db8cc8a25992d5cd085438f30e25dae3d46a983b248efde8b"
+      },
+      "original_receipt_sha256": "0be7fa76a6896bcf89d48f3da7fef6e791b1084f4a44b88d1282f0ef9c213d61",
+      "persistent_source": "test-builds/ios/signed-ri04/receipt.json",
+      "historical_binary_available_now": false,
+      "verification_boundary": "Receipt subset; historical app binary and complete historical fingerprint are not reverified now. No config values, full file inventory or device identifiers copied."
+    },
+    "export_comparison": "export-semantic-comparison.json",
+    "no_op_comparison": "reimport-no-op-comparison.json",
+    "boundary": "Persistent semantic comparisons preserve the normal UI export/no-op results; no new UI run, database read, device operation or screenshot is performed in this packaging pass. Signed-out isolated fixture results do not establish authenticated cloud convergence."
+  },
+  "provenance": {
+    "red-summary.json": {
+      "persistent_source": "evidence/ios-ri04-import/red-summary.json",
+      "original_sha256": "31a69498a1a236bc07bd52dfc6ff3c6f5794a2050b91b42f9d1dc2de8660acb5",
+      "versioned_sha256": "9453fede4669b4f6c7db35071ac830c6010129a9fab1e5b91d0d23e5cae36fae",
+      "transform": "Device identifier redacted; executor-specific device name generalized. Counts/failures/times retained."
+    },
+    "green-summary.json": {
+      "persistent_source": "evidence/ios-ri04-import/green-summary.json",
+      "original_sha256": "10ad7fd8a5a5807c804324e9fa1a264b04efc2de60b0eb2ab67d806180a34173",
+      "versioned_sha256": "864a4b1b7dfce14bcd45b80428dbfb425c81aef11c39aafb9852a5282ae4e5fc",
+      "transform": "Device identifier redacted; executor-specific device name generalized. Counts/failures/times retained."
+    },
+    "adjacent-summary.json": {
+      "persistent_source": "evidence/ios-ri04-import/adjacent-summary.json",
+      "original_sha256": "504d1065f07bdf5209bbddca56698cc3929f764663c8047f7d154fcc4360a127",
+      "versioned_sha256": "6053135e2f2466ef22a3150b6818e662f951fd1f49e4a6d23c743e2be9d54084",
+      "transform": "Device identifier redacted; executor-specific device name generalized. Counts/failures/times retained."
+    },
+    "export-semantic-comparison.json": {
+      "persistent_source": "evidence/ios-ri04-import/export-semantic-comparison.json",
+      "original_sha256": "089f3fa2b8967b4d1a21e21f6a1e4554f9db28f2f4c08e76687c73a9dec82c78",
+      "versioned_sha256": "089f3fa2b8967b4d1a21e21f6a1e4554f9db28f2f4c08e76687c73a9dec82c78",
+      "transform": "Exact copy; no raw UI/session/configuration values."
+    },
+    "reimport-no-op-comparison.json": {
+      "persistent_source": "evidence/ios-ri04-import/reimport-no-op-comparison.json",
+      "original_sha256": "19bddcdce50947b4f40d7e70ef72627c8aff5ded54385ee9e69e17de8579822e",
+      "versioned_sha256": "19bddcdce50947b4f40d7e70ef72627c8aff5ded54385ee9e69e17de8579822e",
+      "transform": "Exact copy; no raw UI/session/configuration values."
+    },
+    "namespace-diagnostic.jsonl": {
+      "persistent_source": "evidence/ios-ri04-import/namespace-diagnostic.jsonl",
+      "original_sha256": "8360194dc929a47f433d00112201298bb12aca65644246d511061a71d92c0b8d",
+      "versioned_sha256": "8360194dc929a47f433d00112201298bb12aca65644246d511061a71d92c0b8d",
+      "transform": "Exact copy; no raw UI/session/configuration values."
+    }
+  },
+  "exclusions": [
+    "Raw logs/xcresult no longer available in temporary paths",
+    "Raw screenshots/private UI trees",
+    "Full 326-file signed artifact receipt",
+    "Configuration values and session/credential contents",
+    "Device identifiers",
+    "Task/master/source/build configuration changes"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "verdict": "APPROVED",
+  "scope": "provider active snapshot lock box only",
+  "provider_sha256": "482e0ed79bf37e74b3e9c67d4227963e1c20d62780ee77b0c115a826717b1ae3",
+  "reverse_delta_sha256": "136d73b82c6e77751a89dc52dc2e5a9a183cf2986c9531743a211b11a62e9782",
+  "manifest_fingerprint": "0fa8c144b61cc0fccc72218b0368735b0196ae75dc12f6900dc5f52fda6580eb",
+  "manifest_files": 326,
+  "official_targeted": {
+    "total": 55,
+    "pass": 54,
+    "fail": 0,
+    "skip": 1,
+    "expected_failures": 0
+  },
+  "canonical_gates_pending": true,
+  "source_test_runner_by_reviewer": false
+}
