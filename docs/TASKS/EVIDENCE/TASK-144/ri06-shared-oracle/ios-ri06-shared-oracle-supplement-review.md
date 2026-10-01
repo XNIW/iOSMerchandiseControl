@@ -1,0 +1,13 @@
+# R-I06 shared oracle — independent test-only supplement review
+
+**APPROVED. P0/P1/P2/P3: 0/0/0/0.**
+
+Read Master Plan and the authorized TASK-144 oracle addendum, then the new XCTest and synthetic fixture. Review is limited to test/fixture and preservation of approved source; no workflow audit, edits to source, build/test execution, device or Git mutation.
+
+All 326 live app/test/UI hashes match freeze `3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb`. Exactly `iOSMerchandiseControlTests/ShopSyncRecoveryContractTests.swift` differs from approved R-I06 `41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006`; removing only the new method restores the prior test file hash exactly. Its new hash is `9dff1bcda04f1b4f4bbfb0e5b5c861d0c0bc370e7e4223fd16152c186a0c7d62`. Every application source hash and all four approved auth hashes remain unchanged. The previous R-I06 manifest and targeted summary export hashes still match the original review receipt.
+
+Fixture `tests/fixtures/recovery/history-timestamp-compatibility-v1.json` has SHA256 `b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459`, schema `history-timestamp-compatibility-v1`, 45 unique names, 11 accepted and 34 rejected values. The XCTest locks all three identity constraints, iterates every vector and calls the actual `requireHistoryTimestamp`. Accepted values require exact raw equality; rejected values require `nonCanonicalTimestamp`, including nil. `legacyAccepted` remains a cross-platform annotation outside this History test's runtime scope. Earlier grammar/calendar, actual recovery/ledger/reopen and normalized-checkpoint refusal assertions remain byte-identical.
+
+Fresh official xcresulttool summary and tree reads confirm **58 unique PASS / 0 FAIL / 0 SKIP / 0 expected failures**: 32 recovery and 26 contract cases, including the new oracle case. Saved summary is semantically identical to the fresh export, and the runtime receipt's log SHA256 matches the actual targeted log. Runtime warnings are empty. Targeted source diagnostic inventory is empty; the existing AppIntents tool warning is retained, and this incremental result makes no claim that historical warning diagnostics were fixed.
+
+This supplement does not modify production timestamps, prices, UTC6, serializer, model or fingerprint behavior. Approval concerns the frozen source/test/fixture and targeted official evidence only. Final canonical gates, workflow destination correction, exact-SHA CI/integration and authenticated live convergence remain independently required. Receipt: `ios-ri06-shared-oracle-supplement-receipt.json`.

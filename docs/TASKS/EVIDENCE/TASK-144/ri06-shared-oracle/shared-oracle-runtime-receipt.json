@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "oracle_xctest_case": {
+    "id": "ShopSyncRecoveryContractTests/testHistoryTimestampMatchesSharedCompatibilityOracle()",
+    "result": "Passed"
+  },
+  "fixture_schema": "history-timestamp-compatibility-v1",
+  "fixture_sha256": "b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459",
+  "runtime_vectors": 45,
+  "expected_accepts_checked_raw_equality": 11,
+  "expected_rejects_checked_nonCanonicalTimestamp": 34,
+  "legacyAccepted": "Annotation preserved byte-identically; not asserted or changed outside History",
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "all_app_source_hashes_unchanged_vs_41eb": true,
+  "targeted_pass": 58,
+  "targeted_fail": 0,
+  "targeted_skip": 0,
+  "targeted_log_sha256": "de1cdc033584618aa2accfac97de3420ba9d79b039efc017add071051dad05e3"
+}

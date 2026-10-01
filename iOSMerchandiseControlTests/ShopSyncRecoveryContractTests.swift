@@ -779,6 +779,40 @@ final class ShopSyncRecoveryContractTests: XCTestCase {
         }
     }
 
+    func testHistoryTimestampMatchesSharedCompatibilityOracle() async throws {
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/recovery/history-timestamp-compatibility-v1.json")
+        let fixtureData = try Data(contentsOf: fixtureURL)
+        let fixtureText = try XCTUnwrap(String(data: fixtureData, encoding: .utf8))
+        XCTAssertEqual(
+            ShopSyncRecoveryCanonical.sha256(fixtureText),
+            "b5848df09494112d85509297c5430d8e4d64398428b3b71631a195f9caae6459"
+        )
+        let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: fixtureData) as? [String: Any])
+        XCTAssertEqual(fixture["schemaVersion"] as? String, "history-timestamp-compatibility-v1")
+        let cases = try XCTUnwrap(fixture["cases"] as? [[String: Any]])
+        XCTAssertEqual(cases.count, 45)
+        XCTAssertEqual(Set(cases.compactMap { $0["name"] as? String }).count, 45)
+        // legacyAccepted annotates the preexisting helper outside History.
+        // This oracle checks only the History-specific admission contract.
+        for vector in cases {
+            let name = try XCTUnwrap(vector["name"] as? String)
+            let accepted = try XCTUnwrap(vector["historyAccepted"] as? Bool, name)
+            XCTAssertTrue(vector["value"] is String || vector["value"] is NSNull, name)
+            let timestamp = vector["value"] as? String
+            if accepted {
+                let raw = try XCTUnwrap(timestamp, name)
+                XCTAssertEqual(try ShopSyncRecoveryCanonical.requireHistoryTimestamp(raw), raw, name)
+            } else {
+                XCTAssertThrowsError(try ShopSyncRecoveryCanonical.requireHistoryTimestamp(timestamp), name) {
+                    XCTAssertEqual($0 as? ShopSyncRecoveryContractError, .nonCanonicalTimestamp, name)
+                }
+            }
+        }
+    }
+
     func testHistoryTimestampPreservesLegacyAndExactUTCMilliseconds() async throws {
         let valid = [
             "2026-07-05 15:40:11",

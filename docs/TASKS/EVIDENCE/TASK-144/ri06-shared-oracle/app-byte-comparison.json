@@ -1,0 +1,20 @@
+{
+  "source_fingerprint": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "prior_test_source_fingerprint": "41eb3ec1d98d8091bea980690263a68b901f5a392c56f7a9b4b2b55b6ef55006",
+  "app_source_files": 207,
+  "app_source_fingerprint": "ac9fbe4233ac5bfdabf0311e3dbe066d1a25f527cc514bcd2679aae05dad4761",
+  "all_app_hashes_identical": true,
+  "canonical_release_files": 22,
+  "canonical_bundle_byte_identical": true,
+  "canonical_binary_sha256": "f78167224ff224c6bb9b7b04c00045cd0b2a957fbaead3beb760a699d439deb9",
+  "canonical_invocation_rerun": true,
+  "signed_test_files": 23,
+  "signed_test_bundle_byte_identical": true,
+  "signed_test_binary_sha256": "4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30",
+  "signed_test_invocation_rerun": true,
+  "authorized_copied_config_byte_identical_vs_prior": true,
+  "bundle_config_byte_identical_vs_prior": true,
+  "signed_config_semantic_equality_verified": true,
+  "primary_config_preserved": true,
+  "ignored_copied_config_removed": true
+}
