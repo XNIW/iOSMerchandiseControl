@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-02T15:45:13.649955+00:00",
+  "changedFiles": [
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift"
+  ],
+  "freezeSha256": "43378b17e97d6b4f8dc11128f51429e8c67cbb72f1a4718d185db8ad66862b8f",
+  "fullCanonicalOrLiveAcceptance": false,
+  "green": {
+    "fail": 0,
+    "pass": 60,
+    "skip": 0
+  },
+  "independentReviewPendingAtWrite": true,
+  "inverseProductionDiffByteIdenticalToIntegratedMain": true,
+  "patchSha256": "a5e828678fee54709ddc214cfaa8fcbc86a6f9b9ed742ea958d1b06d37b15349",
+  "red": {
+    "fail": 1,
+    "pass": 1,
+    "skip": 0
+  },
+  "sourceFileCount": 326,
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "status": "PARENT_VERIFIED_FROZEN_PATCH_AND_RED_GREEN_SOURCE_COUNTS",
+  "testBytesIdenticalBetweenRedAndGreen": true,
+  "verifiedAllLeafAndEvidenceHashes": true
+}

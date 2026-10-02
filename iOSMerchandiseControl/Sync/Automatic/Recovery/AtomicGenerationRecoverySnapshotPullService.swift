@@ -1598,7 +1598,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             SupabaseCatalogBaselineRecord.self,
             container: container,
             predicate: #Predicate { $0.baselineRunID == runID },
-            sortBy: [SortDescriptor(\SupabaseCatalogBaselineRecord.recordKey)]
+            sortBy: [SortDescriptor(\SupabaseCatalogBaselineRecord.recordKey, comparator: .lexical)]
         ) { record in
             guard let entityType = SupabaseCatalogBaselineEntityType(rawValue: record.entityType) else {
                 throw SyncStoreGenerationError.activationReadBackFailed

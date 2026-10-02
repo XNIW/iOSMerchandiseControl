@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-02T15:42:57.242599+00:00",
+  "status": "RED_REPRODUCED_THEN_TARGETED_GREEN",
+  "baselineSource326": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+  "source326Count": 326,
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "changedFiles": [
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift"
+  ],
+  "productionOnlyChange": "baseline recordKey SortDescriptor comparator .lexical",
+  "inverseProductionByteIdentical": true,
+  "UUIDSortsAndAllGuardsUnchanged": true,
+  "testCapabilityControl": "Explicit .lexical real disk enum all3catalogtypes x257; independent control, not production regression",
+  "serviceRegression": "Canonical remote257products, paged25, disk persisted verify batch256, completes journal and reopened readback257",
+  "reopenSemantics": "Fresh open while original fixture handles retained; not full deallocation/process restart",
+  "targeted": {
+    "red": {
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "serviceError": "nonMonotonicOrDuplicateID"
+    },
+    "green": {
+      "passed": 60,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "runtimeWarningCount": 0,
+  "baselineFixtureOrInputGuardsWeakened": false,
+  "noLiveCausalityClaim": true,
+  "noFullCanonicalClaim": true,
+  "artifactHashes": {
+    "root-build-go.json": "ffc3a88fa4b14cfc51d894384fff5865f14a8696e88f55f842fa9e71278508c8",
+    "pre-red-source-receipt.json": "af8df6c2d83b62c5e37fb524028929b0f35f25ede0a56d9252b81a55c02f8f7a",
+    "ri07-source.patch": "a5e828678fee54709ddc214cfaa8fcbc86a6f9b9ed742ea958d1b06d37b15349",
+    "red-targeted.log": "ef0846882a46bf23b794ea0723761875a3547bf7cd8062f85ca0188c48a2633a",
+    "red-summary.json": "23e5cbe9aecb7d1e06d63aa0aef633ae83e5ad81932ba4e284a77ad47c3fc924",
+    "green-targeted.log": "96d3dfe72803971def2a916184785a845c42bbe7605b983fc3a97a139afad15a",
+    "green-summary.json": "5e12c29b8fe98ebfa9de877004eee88f6828612f3397d2fe00ccc38aa83075fe",
+    "green-tests.json": "f1771c02acf84dbb8f6737495c32b4949c9c0ce20238e6eab5e6d5cf067448f6",
+    "staging-sqlite-id-order-safe-diagnostic.json": "f374c202919b61550dd253cb9c2b20c98de411d6c70f47c29e9fb0c5367c0436"
+  }
+}

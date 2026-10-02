@@ -1,0 +1,94 @@
+{
+  "analyze": "HISTORICAL230ddbPASS_CURRENT_FRESH_ANALYZE_NOT_RUN",
+  "at": "2026-10-02T17:30:28.890267+00:00",
+  "authenticatedRecovery": "NOT_RUN_NEW_ARTIFACT; prior154failed preserved",
+  "baselineIntegratedMain": "0bc699c5c2dec1a2bf21b4f03f9b797b4c9b4d54",
+  "fullCanonicalCI": "PR13_FABA_FAILURE_PRESERVED_NEW_EXACT_HEAD_PENDING",
+  "knownToolMetadataOccurrences": {
+    "analyze": 2,
+    "release": 1,
+    "signedTEST": 1
+  },
+  "limits": [
+    "Reopen verifies fresh context while original handles remain retained, not process restart",
+    "Explicit malformed remote-order or duplicate test not added; strict guards verified unchanged",
+    "60 targeted passes do not replace canonical full suite or real recovery",
+    "Raw logs/xcresult and source release artifacts retained in parent local evidence; public receipt copies preserve exact bytes",
+    "Current local runtime26.2 stack confirms deinit path; no raw CI stack is available and new exact-head full CI remains required",
+    "Old signed050db/f7 receipt stays bound to historical230ddb; app207 equality does not supply missing historical project/package-input attestation"
+  ],
+  "newSourceWarningCount": 0,
+  "normalMerge": "NOT_MERGED",
+  "portableEvidenceSHA256": {
+    "actual-lane-release.json": "f12068b1fe2ada511bd37720cbb2c7a5259095e5715e04e0d9813788cb9f0d5b",
+    "final-local-gate-manifest.json": "948a5a6756ab26906b61730d85b2628cad60227bbb70f7d4075fe8955293c032",
+    "green-summary.json": "5e12c29b8fe98ebfa9de877004eee88f6828612f3397d2fe00ccc38aa83075fe",
+    "independent-review-receipt.json": "73f29a40789a0d8b33991fe1e52771454972d7c1e448a04e3c3833384e86ae6c",
+    "local-gate-receipt.json": "77c3b1de8127ee80816e25acb63e9d4a3b99a1e1a3acc2ba751e72ae9609b612",
+    "parent-signed-verification.json": "b7fd0dc2600c4c73d2da45a498c8b861a3d92a592149b27ba895ebb2ebbd3924",
+    "parent-source-verification.json": "8387c7e65134560acba4d02fc5145938f3c0033de192e264e83a55085656c499",
+    "red-green-receipt.json": "99bdb912dccbe91560643d607947c4c604c11d89b8b13fae2d29273ef6a65bd5",
+    "red-summary.json": "23e5cbe9aecb7d1e06d63aa0aef633ae83e5ad81932ba4e284a77ad47c3fc924",
+    "registry154-safe-projection.json": "6e2992bde50f96a7d171345bb87b7ebc7fd6fb56247c4c565f8c10867fc40719",
+    "signed-test-artifact-receipt.json": "f7f25b1492c48f867965d29c5c5c50388ba46f9c795a275dc4480c27a53459cb",
+    "source-freeze.json": "43378b17e97d6b4f8dc11128f51429e8c67cbb72f1a4718d185db8ad66862b8f",
+    "async-continuation/actual-unit-release.json": "d610084d7e5de4273a7acae3bbb0f302f700c223988fe5195b8713101e529419",
+    "async-continuation/independent-review-receipt.json": "32a05df07c560e661ff0ca5b76e0a5020a05aa04dfa7916702dd81024724e101",
+    "async-continuation/portable-manifest.json": "457b724dafa36f8baa2f042753484fc7304ac9d9328414a01be4ae48396f2e0a",
+    "async-continuation/source-freeze.json": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "async-continuation/runtime-red-adjudication.json": "52baa127afe816d2368650057be9d9d143022d7f2170115c09a01d627ead4d35",
+    "async-continuation/runtime-red-green-proof.json": "74641e7077774c6a1c80b53d118267361554bf3daf769a02420b469b38caac88",
+    "async-continuation/artifact-strategy.json": "314b134fbad04fd327e0456422781b2561ce7024c0456f433b68fdc54526a023"
+  },
+  "productionDeployment": "NOT_DEPLOYED",
+  "release": "HISTORICAL230ddbPASS_CURRENT_FRESH_BUILD_NOT_RUN",
+  "review": "APPROVED_BOUNDED_ONE_KEYWORD_TEST_FIXTURE_LIFECYCLE",
+  "signedBinarySHA256": "050db10aabfbf0c2a663a10dc515d81fb5ad771249dd408393009435f00221fc",
+  "signedTEST": "ORIGINAL050db_F7_PRESERVED_APP207_BYTE_EQUAL_FULL_ORIGINAL_BUILD_INPUT_HISTORY_NOT_ATTESTED_FRESH_SIGNED_PENDING",
+  "sourceFileCount": 326,
+  "sourceFingerprint": "9b4275700052d579dcba8c1e06946919155814f35a2cd69a9c3b7c40bb091fee",
+  "sourceScope": "Original one baseline lexical comparator plus disk recovery tests; subsequent one async keyword in capability-control XCTest signature",
+  "status": "R_I07_ASYNC_RUNTIME_FIX_REVIEWED_60_GREEN_FULL_CI_FRESH_SIGNED_LIVE_PENDING",
+  "targeted": {
+    "greenFail": 0,
+    "greenPass": 60,
+    "greenSkip": 0,
+    "redFail": 1,
+    "redPass": 1
+  },
+  "taskState": "FIX",
+  "historicalSourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "signedArtifactSourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "asyncContinuation": {
+    "portableDirectory": "async-continuation",
+    "sourceFreezeOriginalSHA256": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "reviewOriginalSHA256": "32a05df07c560e661ff0ca5b76e0a5020a05aa04dfa7916702dd81024724e101",
+    "proofOriginalSHA256": "4d10ca619cffbf41f54a8cbbd120f2ed022677f7d4eb30f68fcb6156b73086c3",
+    "releaseOriginalSHA256": "fea12f51c4a5393fa4487608b6a4f690c2cb0a5b75950a230d7825c6440634a7",
+    "currentLocalRED": {
+      "pass": 0,
+      "crash": 1,
+      "skip": 0,
+      "cause": "Saved own current TaskLocal isolated controller deinit at control closingbrace91"
+    },
+    "currentGREENControl": {
+      "pass": 1,
+      "fail": 0,
+      "skip": 0
+    },
+    "currentGREENClasses": {
+      "pass": 60,
+      "fail": 0,
+      "skip": 0,
+      "Atomic": 34,
+      "Contract": 26
+    },
+    "sameRuntime": "26.2/23C54",
+    "oneAsyncKeywordOnly": true,
+    "production207Unchanged": true,
+    "releaseUTC": "2026-10-02T17:09:46.413408+00:00",
+    "portableManifestSHA256": "457b724dafa36f8baa2f042753484fc7304ac9d9328414a01be4ae48396f2e0a",
+    "freshSignedCardStatus": "REQUEST_NOT_GRANTED_RUNTIME_FALSE"
+  },
+  "historicalLedgerArchiveSHA256": "d5877dfb962f515980aec01b1b5db98e99b73e50812b14884d916ad6b236fc7f"
+}

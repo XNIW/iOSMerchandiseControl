@@ -1,0 +1,28 @@
+{
+  "status": "PORTABLE_PUBLIC_ASYNC_CONTINUATION_PROJECTIONS",
+  "at": "2026-10-02T17:30:28.889513+00:00",
+  "currentSource326Fingerprint": "9b4275700052d579dcba8c1e06946919155814f35a2cd69a9c3b7c40bb091fee",
+  "originalReceiptSHA256": {
+    "source-freeze.json": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "runtime-red-adjudication.json": "ed4110c7888be8ff60ea926446a2e13f8cc47e2a9bcaad96ef849b0bf488f666",
+    "runtime-red-green-proof.json": "4d10ca619cffbf41f54a8cbbd120f2ed022677f7d4eb30f68fcb6156b73086c3",
+    "actual-unit-release.json": "fea12f51c4a5393fa4487608b6a4f690c2cb0a5b75950a230d7825c6440634a7",
+    "independent-review-receipt.json": "32a05df07c560e661ff0ca5b76e0a5020a05aa04dfa7916702dd81024724e101",
+    "artifact-strategy.json": "314b134fbad04fd327e0456422781b2561ce7024c0456f433b68fdc54526a023"
+  },
+  "publicProjectionSHA256": {
+    "actual-unit-release.json": "d610084d7e5de4273a7acae3bbb0f302f700c223988fe5195b8713101e529419",
+    "independent-review-receipt.json": "32a05df07c560e661ff0ca5b76e0a5020a05aa04dfa7916702dd81024724e101",
+    "source-freeze.json": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "runtime-red-adjudication.json": "52baa127afe816d2368650057be9d9d143022d7f2170115c09a01d627ead4d35",
+    "runtime-red-green-proof.json": "74641e7077774c6a1c80b53d118267361554bf3daf769a02420b469b38caac88",
+    "artifact-strategy.json": "314b134fbad04fd327e0456422781b2561ce7024c0456f433b68fdc54526a023"
+  },
+  "sanitization": "Owned local simulator ID replaced by role label; workspace absolute prefix removed. Original saved receipts remain immutable. No raw log/IPS/config/session/business payload copied.",
+  "freshRuntimeInThisDocumentationStep": false,
+  "remaining": [
+    "newcompleteexactheadCI",
+    "freshsignedartifactfullbuildinputs",
+    "liveRecoveryAcceptance"
+  ]
+}

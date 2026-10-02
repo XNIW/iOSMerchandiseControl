@@ -1,0 +1,51 @@
+{
+  "analyze": "PASS",
+  "at": "2026-10-02T15:57:53.691016+00:00",
+  "authenticatedRecovery": "NOT_RUN_NEW_ARTIFACT; prior154failed preserved",
+  "baselineIntegratedMain": "0bc699c5c2dec1a2bf21b4f03f9b797b4c9b4d54",
+  "fullCanonicalCI": "PENDING_NOT_RUN_ON_NEW_HEAD",
+  "knownToolMetadataOccurrences": {
+    "analyze": 2,
+    "release": 1,
+    "signedTEST": 1
+  },
+  "limits": [
+    "Reopen verifies fresh context while original handles remain retained, not process restart",
+    "Explicit malformed remote-order or duplicate test not added; strict guards verified unchanged",
+    "60 targeted passes do not replace canonical full suite or real recovery",
+    "Raw logs/xcresult and source release artifacts retained in parent local evidence; public receipt copies preserve exact bytes"
+  ],
+  "newSourceWarningCount": 0,
+  "normalMerge": "NOT_MERGED",
+  "portableEvidenceSHA256": {
+    "actual-lane-release.json": "f12068b1fe2ada511bd37720cbb2c7a5259095e5715e04e0d9813788cb9f0d5b",
+    "final-local-gate-manifest.json": "948a5a6756ab26906b61730d85b2628cad60227bbb70f7d4075fe8955293c032",
+    "green-summary.json": "5e12c29b8fe98ebfa9de877004eee88f6828612f3397d2fe00ccc38aa83075fe",
+    "independent-review-receipt.json": "73f29a40789a0d8b33991fe1e52771454972d7c1e448a04e3c3833384e86ae6c",
+    "local-gate-receipt.json": "77c3b1de8127ee80816e25acb63e9d4a3b99a1e1a3acc2ba751e72ae9609b612",
+    "parent-signed-verification.json": "b7fd0dc2600c4c73d2da45a498c8b861a3d92a592149b27ba895ebb2ebbd3924",
+    "parent-source-verification.json": "8387c7e65134560acba4d02fc5145938f3c0033de192e264e83a55085656c499",
+    "red-green-receipt.json": "99bdb912dccbe91560643d607947c4c604c11d89b8b13fae2d29273ef6a65bd5",
+    "red-summary.json": "23e5cbe9aecb7d1e06d63aa0aef633ae83e5ad81932ba4e284a77ad47c3fc924",
+    "registry154-safe-projection.json": "6e2992bde50f96a7d171345bb87b7ebc7fd6fb56247c4c565f8c10867fc40719",
+    "signed-test-artifact-receipt.json": "f7f25b1492c48f867965d29c5c5c50388ba46f9c795a275dc4480c27a53459cb",
+    "source-freeze.json": "43378b17e97d6b4f8dc11128f51429e8c67cbb72f1a4718d185db8ad66862b8f"
+  },
+  "productionDeployment": "NOT_DEPLOYED",
+  "release": "PASS",
+  "review": "APPROVED_BOUNDED_SOURCE_AND_TARGETED_GATES",
+  "signedBinarySHA256": "050db10aabfbf0c2a663a10dc515d81fb5ad771249dd408393009435f00221fc",
+  "signedTEST": "PASS",
+  "sourceFileCount": 326,
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "sourceScope": "one baseline recordKey SortDescriptor comparator plus disk-backed recovery tests and wire-order-preserving test pagination",
+  "status": "R_I07_LOCAL_SOURCE_APPROVED_TARGETED_BUILD_SIGNED_PASS_FULL_CI_LIVE_PENDING",
+  "targeted": {
+    "greenFail": 0,
+    "greenPass": 60,
+    "greenSkip": 0,
+    "redFail": 1,
+    "redPass": 1
+  },
+  "taskState": "FIX"
+}

@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-02T15:53:49.345659+00:00",
+  "status": "OWNED_NATIVE_LANE_RELEASED",
+  "ownedUnit": "3DDC59C3-187B-411F-9435-5ADE0DB1A5D0",
+  "ownedUnitObservedState": "Shutdown",
+  "normalShutdownCompleted": true,
+  "redXcodebuildExit": 65,
+  "greenXcodebuildExit": 0,
+  "canonicalReleaseExit": 0,
+  "canonicalAnalyzeExit": 0,
+  "signedTESTBuildExit": 0,
+  "ownedHeavyJobsRemaining": 0,
+  "otherHostProcessesInferredQuiet": false,
+  "source326StillFrozen": true,
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "ignoredOwnProfileCopyRemoved": true,
+  "noFullUnitOrNormalUIOrAuthenticatedRetryOrPerfExecuted": true,
+  "hardDeadlineUtc": "2026-10-02T16:00:00Z",
+  "normalShutdownReceiptSHA256": "c3cbc056b3e7b16989fbcb9fdb0906b902f5453dad1b8a5416119e196d9e17a0",
+  "signedArtifactReceiptSHA256": "f7f25b1492c48f867965d29c5c5c50388ba46f9c795a275dc4480c27a53459cb",
+  "rootExtensionSHA256": "de490d9c3f57819220da2e0a7b1430024b38f2020d7981c4719ab2df38d7e0a2"
+}
