@@ -1,0 +1,49 @@
+{
+  "status": "CURRENT_RED_MATCHED_TASKLOCAL_ISOLATED_DEINIT_CONDITIONAL_ASYNC_AUTHORIZED",
+  "at": "2026-10-02T17:06:51.101654+00:00",
+  "redExit": 65,
+  "officialCounts": {
+    "pass": 0,
+    "crash": 1,
+    "skip": 0
+  },
+  "ownPID": 48599,
+  "ownUDID": "OWNED_IOS26_2_SIMULATOR",
+  "runtime": "26.2",
+  "incidentUTC": "2026-10-02T17:00:24.014400+00:00",
+  "frames": [
+    {
+      "symbol": "swift::TaskLocal::StopLookupScope::~StopLookupScope()",
+      "sourceFile": null,
+      "sourceLine": null,
+      "imageIndex": 24,
+      "imageOffset": 331032
+    },
+    {
+      "symbol": "swift_task_deinitOnExecutorImpl(void*, void (void*) swiftcall*, swift::SerialExecutorRef, unsigned long)",
+      "sourceFile": null,
+      "sourceLine": null,
+      "imageIndex": 24,
+      "imageOffset": 282916
+    },
+    {
+      "symbol": "SyncStoreGenerationController.__deallocating_deinit",
+      "sourceFile": "SyncStoreGeneration.swift",
+      "sourceLine": null,
+      "imageIndex": 5,
+      "imageOffset": 4143776
+    },
+    {
+      "symbol": "AtomicGenerationRecoverySnapshotPullServiceTests.testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches()",
+      "sourceFile": "AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+      "sourceLine": 91,
+      "imageIndex": 17,
+      "imageOffset": 1574644
+    }
+  ],
+  "rawIPSsha": "cb6068f6ed3f7fe9597f39bc7c34432efb8909f397e03a6470ac14baedb96bd5",
+  "sourceTestSHA256Before": "e00d659e7671d03a206d326576e6882fb71bceda7cbaa5325e2ae0a1ba6a6092",
+  "sourceAttribution": "Current local runtime26.2 reproduced isolated controller deinit at control closingbrace91. Current CI has no stack; its matching log signature is supported by this local reproduction, not a saved CI stack.",
+  "allowedDelta": "one async keyword only in control signature; body/assertions/helpers/production unchanged",
+  "rootGOsha": "839d0ba4de8d8181d59ed9b521a899e208aa8ed5e84d18d06347866644fdb16b"
+}

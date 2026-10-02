@@ -1,0 +1,157 @@
+{
+  "schema": "ios-ri07-fixture-lifecycle-independent-review-v1",
+  "reviewed_at_utc": "2026-10-02T17:15:50.522020+00:00",
+  "verdict": "APPROVED_BOUNDED_ONE_KEYWORD_TEST_FIXTURE_LIFECYCLE",
+  "findings": [],
+  "scope": "Read-only source and saved official test/IPS evidence; no source/docs/Git/SDK/simulator/device/DB/build execution by reviewer. Root owns Git, CI, merge, artifact and live acceptance.",
+  "source": {
+    "freezeSHA256": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "source326Fingerprint": "9b4275700052d579dcba8c1e06946919155814f35a2cd69a9c3b7c40bb091fee",
+    "changedFile": "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+    "beforeSHA256": "e00d659e7671d03a206d326576e6882fb71bceda7cbaa5325e2ae0a1ba6a6092",
+    "afterSHA256": "d3b72640f1f64ac01faf87b415174a31f556789e844cf6b12245857430a06600",
+    "line": 58,
+    "onlyDelta": "async keyword in capability-control XCTest signature",
+    "inverseRestoresWholePR13TestByteForByte": true,
+    "entryCountsBefore": {
+      "total": 34,
+      "async": 33,
+      "synchronous": 1
+    },
+    "entryCountsAfter": {
+      "total": 34,
+      "async": 34,
+      "synchronous": 0
+    },
+    "bodyHelpersAllAssertionsUnchanged": true,
+    "catalogRows": 771,
+    "verificationBatchSize": 256,
+    "strictComparatorGuardsDigestScopeAndAllProduction207Unchanged": true,
+    "other325FilesByteIdentical": true,
+    "sourceLeafHashesAll326Verified": true,
+    "sourceVerificationSHA256": "03058b443d47b56a72899cb36afb6fc65cbce53db540d94d5513c1bb377b7c1a"
+  },
+  "current_red": {
+    "officialPassed": 0,
+    "officialFailed": 1,
+    "officialSkipped": 0,
+    "failure": "Test crashed with signal abrt.",
+    "testcase": "AtomicGenerationRecoverySnapshotPullServiceTests/testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches()",
+    "sourceTestSHA256": "e00d659e7671d03a206d326576e6882fb71bceda7cbaa5325e2ae0a1ba6a6092",
+    "savedIPSsha256": "cb6068f6ed3f7fe9597f39bc7c34432efb8909f397e03a6470ac14baedb96bd5",
+    "PID": 48599,
+    "ownedDeviceMatchesSavedCommandAndIPS": true,
+    "incidentUTC": "2026-10-02T17:00:24.014400+00:00",
+    "incidentInsideCommandStartEnd": true,
+    "selectedFaultingFrames": [
+      {
+        "index": 6,
+        "symbol": "swift::TaskLocal::StopLookupScope::~StopLookupScope()",
+        "sourceFile": null,
+        "sourceLine": null
+      },
+      {
+        "index": 7,
+        "symbol": "swift_task_deinitOnExecutorImpl(void*, void (void*) swiftcall*, swift::SerialExecutorRef, unsigned long)",
+        "sourceFile": null,
+        "sourceLine": null
+      },
+      {
+        "index": 8,
+        "symbol": "SyncStoreGenerationController.__deallocating_deinit",
+        "sourceFile": "SyncStoreGeneration.swift",
+        "sourceLine": null
+      },
+      {
+        "index": 11,
+        "symbol": "outlined destroy of AtomicRecoveryFixture",
+        "sourceFile": "/<compiler-generated>",
+        "sourceLine": null
+      },
+      {
+        "index": 12,
+        "symbol": "AtomicGenerationRecoverySnapshotPullServiceTests.testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches()",
+        "sourceFile": "AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+        "sourceLine": 91
+      },
+      {
+        "index": 13,
+        "symbol": "@objc AtomicGenerationRecoverySnapshotPullServiceTests.testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches()",
+        "sourceFile": "/<compiler-generated>",
+        "sourceLine": null
+      }
+    ],
+    "interpretation": "Supports teardown of the isolated controller/AtomicRecoveryFixture at synchronous control closing brace91. The local stack supplies evidence absent from the CI log. It does not prove an exclusive compiler root cause, supply a CI stack, or show a comparator assertion failure."
+  },
+  "green": {
+    "sameRuntime": "26.2/23C54",
+    "sameOwnedDevice": true,
+    "isolatedControl": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "exit": 0
+    },
+    "classes": {
+      "PASS": 60,
+      "FAIL": 0,
+      "SKIP": 0,
+      "Atomic": 34,
+      "Contract": 26,
+      "uniqueOfficialSavedLogTerminalIDs": 60,
+      "exit": 0,
+      "runnerRestarts": 0,
+      "officialRuntimeWarnings": 0,
+      "testIdentifierSetUnchangedVsEarlierApproved60": true
+    },
+    "countsBasis": "Saved xcresulttool summaries/test tree plus independent full terminal log count, not an inferred PASS from source."
+  },
+  "historical_evidence_limits": {
+    "CI_PR13": "FAILURE preserved; current matching allocator log contains no CI stack. New complete exact-head CI pending.",
+    "old97b6": "Saved readable README/stack only; old raw /tmp artifacts not freshly read or claimed available.",
+    "upstreamSupport": {
+      "url": "https://github.com/swiftlang/swift/commit/29245e4",
+      "readOfficialPrimarySource": true,
+      "boundedInterpretation": "Swift TaskLocal MarkerItem creation was corrected to pair allocation with free in the no-task case. This supports the observed failure mechanism but does not establish affected runtime version provenance or prove this CI incident exclusively."
+    },
+    "old230ddbAnd050dbSignedArtifact": "Preserved, not relabeled as new source/gates/live proof."
+  },
+  "release": {
+    "savedReceiptSHA256": "fea12f51c4a5393fa4487608b6a4f690c2cb0a5b75950a230d7825c6440634a7",
+    "observedShutdown": true,
+    "normalExit": 0,
+    "releaseUTC": "2026-10-02T17:09:46.413408+00:00",
+    "beforeHardDeadline17_13_30": true,
+    "reviewerPerformedShutdown": false
+  },
+  "remaining": {
+    "completeExactHeadCI": "PENDING_ROOT",
+    "fullSuiteOr8UIPassOnThisNewFreeze": "NOT_RUN_IN_THIS_LOCAL_UNIT_LANE",
+    "newReleaseAnalyzeSignedArtifactProvenance": "NOT_RUN_IN_THIS_UNIT_LANE",
+    "liveRecoveryOnFinalSignedArtifact": "NOT_VERIFIED",
+    "globalTaskDONE": false
+  },
+  "evidenceSHA256": {
+    "async-source-freeze.json": "856779a764668c00c2ae210eae5a271497b711b65bf6e3c336139c197004f0e5",
+    "red-green-async-receipt.json": "4d10ca619cffbf41f54a8cbbd120f2ed022677f7d4eb30f68fcb6156b73086c3",
+    "actual-unit-release.json": "fea12f51c4a5393fa4487608b6a4f690c2cb0a5b75950a230d7825c6440634a7",
+    "boot-receipt.json": "a8af9838e20510c9be96809692c1abb3fc8fb1b77391ef92b65a97d319a0b23b",
+    "bootstatus.log": "ebaab5d7087b4e664bb469da253cdbb4314b87dbe31e44eeb75ef5ce786fdcd8",
+    "green-classes-command-receipt.json": "bac1ba8f73ed70c7e72e8f353df7dccd7795706bdb191d5b6e2d08f1fd0164f6",
+    "green-classes-summary.json": "2e05d057cf917bcd66392b3c43d7dbbe31fde023c3285e7fa278bcb6a19255fb",
+    "green-classes-tests.json": "e2c3f301a26c92abf1c22f8039dbfa3c655f86c30d8431a29e7abd66b7a61888",
+    "green-classes.log": "f3bda6364880706d81a1080ae100bfc4c796f6f8728aec83bb77d7a0e4617f0a",
+    "green-control-command-receipt.json": "9078bda661160dc37c43c0df5f137cb31e4ade62701d15b1bfcc4bcd0e9f47d0",
+    "green-control-summary.json": "5fa0e870384f5ddf36718c207b78cd66f303d10dc77aa56025d3d47af1e3805e",
+    "green-control.log": "7eb88a60266038d7d95bd819c0029d8019e0b88a227a43715e5ace83360df8bb",
+    "iOSMerchandiseControl-2026-10-02-140051.ips": "cb6068f6ed3f7fe9597f39bc7c34432efb8909f397e03a6470ac14baedb96bd5",
+    "one-keyword-async.patch": "002746065c5be59468643358a625002e0c16f1d633fe48ef33349b2b9f4ca8df",
+    "pre-async-test.swift": "e00d659e7671d03a206d326576e6882fb71bceda7cbaa5325e2ae0a1ba6a6092",
+    "red-adjudication.json": "ed4110c7888be8ff60ea926446a2e13f8cc47e2a9bcaad96ef849b0bf488f666",
+    "red-command-receipt.json": "78c745c31232364c039d3daa0521eef8b99cee257ad9666142cb79a91852d39c",
+    "red-control.log": "c0e7cb76d2703b9642d7a884e1397740c00ee4740bfb2f7f7e654fa9be05e848",
+    "red-stack-projection.json": "0704eb358b47835b8ddc8bdda543e2adf52cd56b6cb8c28f4989d4267f37039d",
+    "red-summary.json": "f07f051601b941c2a2b560da427a366c1b199e6c38a71ddbe4cf8192ee5ed95a"
+  },
+  "sourceFingerprintAfterReview": "9b4275700052d579dcba8c1e06946919155814f35a2cd69a9c3b7c40bb091fee"
+}

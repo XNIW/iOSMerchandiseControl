@@ -97,7 +97,43 @@ La recovery reale su TEST registry154 supera checkpoint A e B e scarica sei domi
 
 Il parent autorizza nello stesso CA-07/10 una diagnosi e regressione deterministica su SwiftData a disco, percorso reale persisted proof, ID sintetici sensibili a comparatori UUID/String e confini del batch256. Nessuna modifica produzione prima del rosso. Se il difetto è confermato, applicare il cambiamento minimo di ordinamento canonico mantenendo strettamente duplicati, ID mancanti, digest/contenuti, scope, tombstone, immagini, pagina/ledger, limite righe e memoria bounded. Vietati sort/dedup del wire per nascondere payload invalidi, materializzazione globale non giustificata, migration/model/schema/dependency change, reset dati e retry ciechi. Review indipendente e gate aggiornati, nuovo artifact TEST firmato e installazione data-preserving coordinata precedono il ritest reale. I precedenti source326/CI e signed4a708 rimangono evidenze storiche distinte dal delta futuro.
 
+### Addendum planning autorizzato — R-I07 regressione del runner sincrono, 2026-10-02 UTC
+
+PR13 HEAD fabae1e5, run37031063547, checkout esatto verificato: 1404 PASS /36 SKIP /1 crash del nuovo testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches; Analyze e Secret scan SKIPPED. Il test del servizio reale257 PASS e i1439 casi precedenti hanno stato invariato. Il crash allocator non dimostra un nuovo difetto produzione né un ambiente flaky. Il controllo è l'unica entry sincrona di34 nella classe MainActor; il precedente CI97b6 e la riproduzione iOS26.2 salvata mostrano la stessa firma, stack TaskLocal isolated-deinit e soluzione async. Il raw stack attuale non è ancora disponibile; i vecchi raw tmp non sono più presenti, solo stack/ricevute leggibili e log CI verificati.
+
+Il parent autorizza un solo test isolato invariato su destinazione propria iOS26.2 già disponibile, esclusivamente dopo GO host; conservare summary/log/ips eventuale e shutdown effettivo. Se il crash è riprodotto e coerente, aggiungere soltanto async alla firma del controllo, senza cambiare corpo,771 righe/batch256/assert/strict guard, production comparator o actor settings. Eseguire lo stesso test e la classe/contratto sullo stesso runtime, review indipendente e nuova CI completa exact-head. Non saltare/rimuovere il controllo o aggiungere empty deinit/fake/ retry per mascherarlo. Se il rosso non si riproduce, documentare il limite prima di scegliere la modifica minima sostenuta dalla prova esistente; nessuna attribuzione causale definitiva dal solo log allocator. Nuovo source freeze e artifact/provenance firmata devono essere distinti dal precedente230ddb/f7f25/050db; non riscrivere ricevute storiche o reinterpretare74d come nuovo runtime.
+
 ## Execution
+
+### Esecuzione R-I07 — controllo XCTest sincrono su iOS26.2, 2026-10-02 UTC
+
+**File modificati:**
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift:58` — sola parola `async` nella firma del controllo; corpo, helper,771 record, batch256 e tutte le assertion byte-identici.
+- Questo task, Execution — risultati attuali e limiti; Planning e criteri invariati.
+- `docs/TASKS/EVIDENCE/TASK-144/ri07-proof-order/async-continuation/*.json` e ledger — proiezioni pubbliche portabili; ledger precedente archiviato byte-identico. Log, IPS e configurazioni protette non copiati nella documentazione.
+
+**Azioni eseguite:**
+1. PR13 HEAD `fabae1e5`, CI37031063547:1404 PASS/36 SKIP/1 crash del controllo; il test reale257 PASS. Failure CI e prime prove rimangono storiche e immutabili.
+2. GO root isolato16:58:30–17:13:30 UTC verificato prima di runtime. Controllo invariato SHA `e00d659e…` su simulatore proprio iOS26.2/23C54:0 PASS/1 crash/0 SKIP, exit65. IPS attuale attribuito a PID/device/intervallo: `TaskLocal::StopLookupScope` → `swift_task_deinitOnExecutorImpl` → deinit di `SyncStoreGenerationController` → closing brace91. Questo è stack locale attuale; nessuno stack CI viene inferito come disponibile.
+3. Condizione del GO soddisfatta: aggiunta soltanto `async`. Sullo stesso runtime, controllo1 PASS/0 FAIL/0 SKIP; Atomic34+Contract26=60 terminali unici PASS/0 FAIL/0 SKIP, nessun crash o restart. Inversa della parola ripristina l'intero sorgente RED; altri325 file e tutti207 applicativi invariati.
+4. Nuovo source326 fingerprint `9b4275700052d579dcba8c1e06946919155814f35a2cd69a9c3b7c40bb091fee`; review indipendente `APPROVED_BOUNDED_ONE_KEYWORD_TEST_FIXTURE_LIFECYCLE`, receipt SHA `32a05df07c560e661ff0ca5b76e0a5020a05aa04dfa7916702dd81024724e101`. Shutdown normale e readback proprio verificati17:09:46.413408 UTC, prima della deadline.
+5. Il breve slot firmato ricevuto17:23:49 con termine17:25 è insufficiente: nessuna build/runtime avviata. I207 input applicativi coincidono con l'artefatto originale050db/f7; il freeze storico326 non include progetto/schema/package lockfile, quindi l'equivalenza completa degli input di build storici non è attestata. Preparata scheda canonica firmata per un futuro GO esplicito10min con nuovi input congelati. Artefatto23file e ricevute originali preservati, senza rietichettarli come nuova build.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| BUILD XCTest mirato | ESEGUITO — PASS | Controllo e60 casi sul medesimo runtime26.2; exit0 |
+| STATIC/analyze corrente | NON ESEGUITO | Fuori dalla lane unit autorizzata; PASS precedente230ddb resta distinto |
+| Warning nuovi | ESEGUITO | Zero runtime warning ufficiali; nessun nuovo warning source del delta osservato; il silenzio della cache non risolve warning storici |
+| Coerenza planning | ESEGUITO | Solo async dopo RED/stack attuali, nessun cambio produzione/guard/assert/scenario |
+| Regressioni | ESEGUITO — PASS | Atomic34+Contract26=60 unici; nessuna esclusione o retry |
+| CI completa exact-head corrente | NON ESEGUITO | Attesa dal root; CI faba fallita preservata |
+| Nuovo TEST firmato/finali | NON ESEGUITO | Slot insufficiente; scheda pronta, runtimefalse, nuovo GO necessario |
+| Recovery autentica | NON ESEGUITO | Nessun install/Retry live in questa lane |
+
+**Incertezze:** la riproduzione locale identifica il deinit isolato; non prova una causa esclusiva del compilatore né produce uno stack CI. I60 PASS non sostituiscono la CI completa e l'acceptance live. Nessuna rimozione, skip, assertion indebolita o modifica actor globale.
+
+**Handoff:** parent unicoownerGit/CI/merge e coordinamento della prossima build; taskFIX, nonDONE. [Prove portabili](EVIDENCE/TASK-144/ri07-proof-order/async-continuation/portable-manifest.json) e [ledger](EVIDENCE/TASK-144/ri07-proof-order/validation-ledger.json) distinguono i risultati attuali dal precedente signed050db/f7.
 
 ### Esecuzione R-I07 — 2026-10-02 UTC (root/executor)
 

@@ -55,7 +55,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
     // Backend capability control: exercise the real disk store and enumeration
     // with an explicit canonical comparator, independently of the service.
-    func testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches() throws {
+    func testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches() async throws {
         let fixture = try makeFixture()
         let ids = try canonicalNumericPrefixIDs()
         let runID = try XCTUnwrap(UUID(uuidString: "34343434-3434-4434-8434-343434343434"))

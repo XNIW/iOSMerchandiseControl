@@ -1,0 +1,13 @@
+{
+  "status": "OWNED_SIMULATOR_SHUTDOWN_RELEASED",
+  "startUTC": "2026-10-02T17:09:43.187867+00:00",
+  "releaseUTC": "2026-10-02T17:09:46.413408+00:00",
+  "ownedUDID": "OWNED_IOS26_2_SIMULATOR",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+  "stateReadback": "Shutdown",
+  "stateCode": 1,
+  "normalShutdownExit": 0,
+  "allThreeTestCommandsExited": true,
+  "noForeignDeviceCommands": true,
+  "rootGOsha": "839d0ba4de8d8181d59ed9b521a899e208aa8ed5e84d18d06347866644fdb16b"
+}
