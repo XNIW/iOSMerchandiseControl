@@ -4,6 +4,105 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testCanonicalNumericPrefixProductsRecoverAcrossPersistedVerificationBatch() async throws {
+        let fixture = try makeFixture()
+        let ids = try canonicalNumericPrefixIDs()
+        XCTAssertEqual(ids.count, ShopSyncRecoveryLimits.verificationBatchSize + 1)
+        let products = ids.enumerated().map { index, id in
+            RemoteInventoryProductRow(
+                id: id,
+                ownerUserID: fixture.ownerUserID,
+                shopID: fixture.shopID,
+                barcode: "TASK144-ORDER-\(index)",
+                itemNumber: "order-\(index)",
+                productName: "Order fixture \(index)",
+                secondProductName: nil,
+                purchasePrice: nil,
+                retailPrice: nil,
+                supplierID: nil,
+                categoryID: nil,
+                stockQuantity: nil,
+                updatedAt: "2026-07-21T12:00:00.000000Z",
+                deletedAt: nil
+            )
+        }
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture,
+            maxEventID: 41,
+            seed: "canonical-numeric-prefix-order",
+            products: products,
+            prices: []
+        )
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint],
+            productRows: products
+        )
+
+        let summary = try await makeService(fixture: fixture, transport: transport)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertEqual(manifest.localVerification.products, checkpoint.catalog.products)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(transport.counts().pages, 16) // Eleven product pages and five empty domains.
+        let reopened = try reopenFixture(fixture)
+        let context = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), ids.count)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>()), ids.count)
+    }
+
+    // Backend capability control: exercise the real disk store and enumeration
+    // with an explicit canonical comparator, independently of the service.
+    func testDiskBaselineLexicalComparatorPreservesAllCatalogTypesAcrossBatches() throws {
+        let fixture = try makeFixture()
+        let ids = try canonicalNumericPrefixIDs()
+        let runID = try XCTUnwrap(UUID(uuidString: "34343434-3434-4434-8434-343434343434"))
+        let context = ModelContext(fixture.controller.modelContainer)
+        context.autosaveEnabled = false
+        for entityType in SupabaseCatalogBaselineEntityType.allCases {
+            for (index, id) in ids.enumerated() {
+                context.insert(SupabaseCatalogBaselineRecord(
+                    baselineRunID: runID,
+                    ownerUserUUID: fixture.ownerUserID,
+                    entityType: entityType,
+                    remoteID: id,
+                    fingerprintCanonical: "canonical-\(index)"
+                ))
+            }
+        }
+        try context.save()
+        let reopened = try reopenFixture(fixture)
+        let readContext = ModelContext(reopened.controller.modelContainer)
+        readContext.autosaveEnabled = false
+        let descriptor = FetchDescriptor<SupabaseCatalogBaselineRecord>(
+            predicate: #Predicate { $0.baselineRunID == runID },
+            sortBy: [SortDescriptor(\SupabaseCatalogBaselineRecord.recordKey, comparator: .lexical)]
+        )
+        var actual: [String: [UUID]] = [:]
+        try readContext.enumerate(descriptor, batchSize: ShopSyncRecoveryLimits.verificationBatchSize) { record in
+            actual[record.entityType, default: []].append(record.remoteID)
+        }
+        XCTAssertEqual(actual.count, 3)
+        for entityType in SupabaseCatalogBaselineEntityType.allCases {
+            XCTAssertEqual(actual[entityType.rawValue], ids, entityType.rawValue)
+        }
+    }
+
+    private func canonicalNumericPrefixIDs() throws -> [UUID] {
+        let prefixes = (0..<255).map { String(format: "%08d", $0) }
+            + ["12000000", "1a000000"]
+        let ids = try prefixes.map {
+            try XCTUnwrap(UUID(uuidString: "\($0)-0000-4000-8000-000000000001"))
+        }
+        let strings = ids.map { $0.uuidString.lowercased() }
+        for index in 1..<strings.count {
+            XCTAssertLessThan(strings[index - 1], strings[index])
+        }
+        return ids
+    }
+
     func testShortMarkerDenialAfterBPreservesRecoveryWithoutActivationOrRetry() async throws {
         try await assertShortMarkerDenial(expectedCode: "convergence_marker_resource_exceeded")
     }
@@ -1712,6 +1811,20 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         }
         if domain == cancellationDomain { throw CancellationError() }
         if domain == .products, !productRows.isEmpty {
+            // Preserve supplied wire order. Resolve the exact cursor position;
+            // sorting/filtering by UUID here would conceal malformed input.
+            let start: Int
+            if let afterID = parameters.afterID {
+                guard let index = productRows.firstIndex(where: {
+                    $0.id.uuidString.lowercased() == afterID.lowercased()
+                }) else { throw ShopSyncRecoveryContractError.invalidCursor }
+                start = index + 1
+            } else {
+                start = 0
+            }
+            let end = min(start + parameters.limit, productRows.count)
+            let rows = Array(productRows[start..<end])
+            let hasMore = end < productRows.count
             return try encoder.encode(AtomicRecoveryRowsPage(
                 schemaVersion: "shop-sync-recovery-page-v1",
                 shopId: parameters.shopID,
@@ -1723,9 +1836,9 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
                 pageDomainEventMaxId: parameters.expectedDomainEventMaxID,
                 domainScope: domain == .history ? checkpoint.scope.historyKind : checkpoint.scope.kind,
                 pageLimit: forcedPageLimit ?? parameters.limit,
-                rows: productRows,
-                nextAfterId: nil,
-                hasMore: false
+                rows: rows,
+                nextAfterId: hasMore ? rows.last?.id.uuidString.lowercased() : nil,
+                hasMore: hasMore
             ))
         }
         if domain == .prices, !priceRows.isEmpty {

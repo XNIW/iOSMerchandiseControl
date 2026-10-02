@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-02T15:53:49.345659+00:00",
+  "status": "SOURCE_APPROVED_LOCAL_TARGETED_RELEASE_ANALYZE_SIGNED_TEST_VERIFIED",
+  "notGlobalDONE": true,
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "sourceFileCount": 326,
+  "independentReviewReceiptSHA256": "73f29a40789a0d8b33991fe1e52771454972d7c1e448a04e3c3833384e86ae6c",
+  "independentReviewPath": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri07-proof-order-review/receipt.json",
+  "artifactHashes": {
+    "ri07-source-freeze.json": "43378b17e97d6b4f8dc11128f51429e8c67cbb72f1a4718d185db8ad66862b8f",
+    "ri07-source.patch": "a5e828678fee54709ddc214cfaa8fcbc86a6f9b9ed742ea958d1b06d37b15349",
+    "pre-red-source-receipt.json": "af8df6c2d83b62c5e37fb524028929b0f35f25ede0a56d9252b81a55c02f8f7a",
+    "red-summary.json": "23e5cbe9aecb7d1e06d63aa0aef633ae83e5ad81932ba4e284a77ad47c3fc924",
+    "red-targeted.log": "ef0846882a46bf23b794ea0723761875a3547bf7cd8062f85ca0188c48a2633a",
+    "green-summary.json": "5e12c29b8fe98ebfa9de877004eee88f6828612f3397d2fe00ccc38aa83075fe",
+    "green-tests.json": "f1771c02acf84dbb8f6737495c32b4949c9c0ce20238e6eab5e6d5cf067448f6",
+    "green-targeted.log": "96d3dfe72803971def2a916184785a845c42bbe7605b983fc3a97a139afad15a",
+    "red-green-receipt.json": "99bdb912dccbe91560643d607947c4c604c11d89b8b13fae2d29273ef6a65bd5",
+    "local-gate-receipt.json": "77c3b1de8127ee80816e25acb63e9d4a3b99a1e1a3acc2ba751e72ae9609b612",
+    "canonical-release.log": "f7be184883e59b892cd7cf23bd517d4d41430aef6341f76fc3158d5d4974900e",
+    "canonical-analyze.log": "af7ab779340b22639a90a3c0c5d5ba07368e72d40ff296e5cec1b64e94859f7b",
+    "signed-test-build.log": "5f217d907bde8160bea4ffcff7b49525efb4647a4b84251373c6181f18b06ecb",
+    "signed-test-config-receipt-before.json": "63a192e69afcb83b795f9c23a64af9a5c39988a2313a55135a435ebc53253905",
+    "signed-test-artifact-receipt.json": "f7f25b1492c48f867965d29c5c5c50388ba46f9c795a275dc4480c27a53459cb",
+    "root-build-go.json": "ffc3a88fa4b14cfc51d894384fff5865f14a8696e88f55f842fa9e71278508c8",
+    "root-build-extension16.json": "de490d9c3f57819220da2e0a7b1430024b38f2020d7981c4719ab2df38d7e0a2",
+    "normal-owned-unit-shutdown-receipt.json": "c3cbc056b3e7b16989fbcb9fdb0906b902f5453dad1b8a5416119e196d9e17a0",
+    "actual-lane-release.json": "f12068b1fe2ada511bd37720cbb2c7a5259095e5715e04e0d9813788cb9f0d5b",
+    "OUTCOME.md": "e3a334cccf584e276748c8d0fea43ec942fb15ca34eff70a99ff9b2f87b82fbf"
+  },
+  "officialTargetedGreen": {
+    "pass": 60,
+    "fail": 0,
+    "skip": 0
+  },
+  "newTESTBinarySHA256": "050db10aabfbf0c2a663a10dc515d81fb5ad771249dd408393009435f00221fc",
+  "newTESTAppPath": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/test-builds/ios/signed-ri07-proof-order/Artifact/iOSMerchandiseControl.app",
+  "fullUnit": "NOT_RUN",
+  "normalUI8": "NOT_RUN",
+  "authenticatedRetry": "NOT_RUN",
+  "ownLaneReleased": true
+}

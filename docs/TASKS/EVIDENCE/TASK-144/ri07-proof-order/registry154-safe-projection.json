@@ -1,0 +1,93 @@
+{
+  "android154": "NOT_RUN",
+  "at": "2026-10-02T15:27:41.209005+00:00",
+  "backendVersion": "20261002150909",
+  "backendVersionSource": "owner-coordination-message-not-independently-queried",
+  "bindingMatchesPrior": true,
+  "canonicalBindingSHA256": "2121b1b799d02e2cb1fcc0fc3cef9345858ed98103ac5c367f0adfa96ca7d4a0",
+  "cause": "NOT_YET_IDENTIFIED",
+  "domains": [
+    {
+      "count": 135,
+      "domain": "suppliers",
+      "sha256": "e66324a6bf32aa5539ebf673eebfe467bc867c36852c372412f16cbfaa1d9d57",
+      "unique": 135,
+      "utf8LexicographicErrors": 0
+    },
+    {
+      "count": 104,
+      "domain": "categories",
+      "sha256": "807c7aa56d0793f686b5990b64d9c70ce88d6765fafb68c35c6e163a49faf531",
+      "unique": 104,
+      "utf8LexicographicErrors": 0
+    },
+    {
+      "count": 178,
+      "domain": "history",
+      "sha256": "0a118c92b8025e2f4bfef28bc108167859bb341ab619d8f8555cf76da774aa42",
+      "unique": 178,
+      "utf8LexicographicErrors": 0
+    },
+    {
+      "count": 41347,
+      "domain": "prices",
+      "sha256": "7274d1dca3ad29ffaf67ff2a8f0efe1c43e2f42db22f510c3c19cf93610627d5",
+      "unique": 41347,
+      "utf8LexicographicErrors": 0
+    },
+    {
+      "count": 1,
+      "domain": "images",
+      "sha256": "d09d79656dde6e5a598652238278c161a6b400327cdbdb977c5e5db1f22fabab",
+      "unique": 1,
+      "utf8LexicographicErrors": 0
+    },
+    {
+      "count": 19833,
+      "domain": "products",
+      "sha256": "0b00fb7762b9bb6a1e3ea23e2a5b7165720c9b0c9b2730d2b051edb39fc87624",
+      "unique": 19833,
+      "utf8LexicographicErrors": 0
+    }
+  ],
+  "fourClientConvergenceAccepted": false,
+  "fullRecoveryAccepted": false,
+  "generationFiles": {
+    "active-generation.json": {
+      "present": false,
+      "sha256": null
+    },
+    "recovery-finalization.json": {
+      "present": false,
+      "sha256": null
+    },
+    "recovery-journal.json": {
+      "present": true,
+      "sha256": "e5728f98f34e886f52b3e0760efa9edb02853c32187f1bc113df707624a6813d"
+    }
+  },
+  "inputSha256": {
+    "bounded-products-raw-ledger-order-check.json": "0ffa7f1cc7b82cf6807577ff9b8e74833e67733da5c97fd9a6eaab1ca7685dac",
+    "bounded-products-terminal.json": "e3b5fdaa2bbb26836651b868ba87d113cc126a115ec4cd8da049efd53fb32dd9"
+  },
+  "nativeArtifactBinaryPrefix": "4a708",
+  "normalAppTerminationAt": "2026-10-02T15:23:20Z",
+  "normalAppTerminationSource": "owner-coordination-message",
+  "orchestrator": {
+    "activeStartedAt": null,
+    "lastAction": "bootstrap",
+    "lastRunBlockReason": null,
+    "lastRunDidWork": false,
+    "lastRunErrorCode": "nonMonotonicOrDuplicateID",
+    "lastRunStatus": "failed",
+    "lastRunVerifiedConvergence": false,
+    "phase": "recoveryRequired"
+  },
+  "pendingReplacementPresent": true,
+  "prior153FailurePreserved": true,
+  "rawLedgerRowTotal": 61598,
+  "registry": 154,
+  "stagingAndUserdataPreserved": "owner-reported",
+  "terminalCompletedAtUtc": "2026-10-02T15:20:24.892399+00:00",
+  "terminalReadbackAt": "2026-10-02T15:23:20.574398+00:00"
+}

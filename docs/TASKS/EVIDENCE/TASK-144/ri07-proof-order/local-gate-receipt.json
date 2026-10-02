@@ -1,0 +1,65 @@
+{
+  "at": "2026-10-02T15:47:41.027006+00:00",
+  "status": "TARGETED_GREEN_RELEASE_ANALYZE_PASS_PENDING_REVIEW_UNIT_FULL_SIGNED_TEST_LIVE",
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "source326UnchangedSinceFreeze": true,
+  "productionOneLineOnly": true,
+  "release": {
+    "result": "PASS",
+    "strictDeepSignaturePass": true,
+    "configured": false,
+    "appPath": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri07-proof-order/canonical-release-artifact/iOSMerchandiseControl.app",
+    "fileCount": 22,
+    "fileHashes": {
+      "Info.plist": "30d0cc051745cf29b3223e0395d410348b5e020b640a57f4090aec3a6a1e51b1",
+      "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+      "PrivacyInfo.xcprivacy": "3e4a93cbe86acef7dd7e063a28c849992f556e7f52cadc5f37c1e8b0e1b54686",
+      "SupabaseConfig.example.plist": "4f5bfb8d54bb5b988596544e2899c67f9a8545aa837e09896fd1761ce16f9b00",
+      "ZIPFoundation_ZIPFoundation.bundle/Info.plist": "8a9b702e1aff6a11d8641d77b811fa8436a5f643b091263fd94131d72bb343aa",
+      "ZIPFoundation_ZIPFoundation.bundle/PrivacyInfo.xcprivacy": "9a2f930cedb8d58309a581b9bf9bf3673685ec02ae2197d9f1c56828b718dffd",
+      "ZIPFoundation_ZIPFoundation.bundle/_CodeSignature/CodeDirectory": "1b52138408956184b57aaa1162c64171201a3f2c2ccddac7186c681040fd73c0",
+      "ZIPFoundation_ZIPFoundation.bundle/_CodeSignature/CodeRequirements": "987920904eab650e75788c054aa0b0524e6a80bfc71aa32df8d237a61743f986",
+      "ZIPFoundation_ZIPFoundation.bundle/_CodeSignature/CodeResources": "26ca1c373aff4d27d602566d1ecc45792499a5813a95ee13a369d02de0cd61ba",
+      "ZIPFoundation_ZIPFoundation.bundle/_CodeSignature/CodeSignature": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "_CodeSignature/CodeResources": "f9cb9757546f034bee21a79dcf72de777d59a82349bece535f158adb697cda87",
+      "en.lproj/Localizable.strings": "bfaf4b9c82c33f51c47fade33f3fe6c275f0b3ab0109f179339425064fbbca88",
+      "es.lproj/Localizable.strings": "774040716792c859e7e0d541044d432a1f6f8de0195b5b9223a5827cddc2f2d8",
+      "iOSMerchandiseControl": "4e5582d0402edb42df5f30ec67d6f731b3d4c0e3a0ba3b588c3dfb877dabbb9a",
+      "it.lproj/Localizable.strings": "a43bad189836ff5c53251be945d2bfe93e089b08e7892242acc654fffe33432c",
+      "swift-crypto_Crypto.bundle/Info.plist": "d29b3ea018ee60444369666b7e1e3337a409f024a412e1a0228ecb08c415f054",
+      "swift-crypto_Crypto.bundle/PrivacyInfo.xcprivacy": "42fb8a30dd8d7ba0900e1bf17fe64ed8c12cfdb8a9c791ab6b4e1eceb0f299c0",
+      "swift-crypto_Crypto.bundle/_CodeSignature/CodeDirectory": "0d8efa77dc8f96a033b50b4a9a53f8cbbba4346a8a95a7854b8e21c70f7c475e",
+      "swift-crypto_Crypto.bundle/_CodeSignature/CodeRequirements": "987920904eab650e75788c054aa0b0524e6a80bfc71aa32df8d237a61743f986",
+      "swift-crypto_Crypto.bundle/_CodeSignature/CodeResources": "992cb9b56db418544103d3f0d9cfe363d28882ab1d8aa3cac3cd2099aa799d4d",
+      "swift-crypto_Crypto.bundle/_CodeSignature/CodeSignature": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "zh-Hans.lproj/Localizable.strings": "5d84d361ff7c4c439fcb3417d0f99dfc67bfa520eff99614ea68097bbca17b92"
+    },
+    "binarySHA256": "4e5582d0402edb42df5f30ec67d6f731b3d4c0e3a0ba3b588c3dfb877dabbb9a"
+  },
+  "analyze": {
+    "result": "PASS",
+    "newSourceWarnings": 0,
+    "historical26NotClaimedResolved": true
+  },
+  "logs": {
+    "canonical-release.log": {
+      "sha256": "f7be184883e59b892cd7cf23bd517d4d41430aef6341f76fc3158d5d4974900e",
+      "result": "PASS",
+      "source_warning_count": 0,
+      "known_tool_metadata_warning_occurrences": 1
+    },
+    "canonical-analyze.log": {
+      "sha256": "af7ab779340b22639a90a3c0c5d5ba07368e72d40ff296e5cec1b64e94859f7b",
+      "result": "PASS",
+      "source_warning_count": 0,
+      "known_tool_metadata_warning_occurrences": 2
+    }
+  },
+  "sourceSensitiveScanReceiptHashes": {
+    "scans/agent-runs/20261002T154632Z-scan-sensitive-iOSMerchandiseControl-Sync-Automatic-Recovery-AtomicGenerationRecoverySnapshotPullServiceswift-p16645.json": "a7d316bec295adc8457725e27fd001496c58b5bb8f3237d2a96610b4148e1d8a",
+    "scans/agent-runs/20261002T154646Z-scan-sensitive-iOSMerchandiseControlTests-AtomicGenerationRecoverySnapshotPullServiceTestsswift-p17163.json": "0a03f4c8424e91dccbe740e1e03cd06ba46edca4bcc4380283e0f53d73482ad5"
+  },
+  "fullUnit": "NOT_RUN_WINDOW_REMAINDER_LESS_THAN_10_MIN",
+  "signedTEST": "NOT_RUN_EXTENSION_UNCONFIRMED",
+  "authenticatedRetry": "NOT_RUN_OWNER_COORDINATED_AFTER_REVIEW_INTEGRATION_NEW_ARTIFACT"
+}

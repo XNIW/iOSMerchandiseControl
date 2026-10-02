@@ -8,7 +8,7 @@
 - Responsabile: `CODEX_EXECUTOR_IOS`; orchestratore parent, reviewer indipendente separato.
 - Data: 2026-09-28
 - Baseline: `30d226d0fb9b8679a1dd034c6e82319645337f22`
-- Branch corrente: `codex/mobile-parity-validation-ledger` (documentazione dal main integrato `2322c5e1`; branch sorgente `codex/mobile-parity-root-cause-ios` integrato con PR11)
+- Branch corrente: `codex/ios-recovery-proof-order` dal main integrato `0bc699c5`; R-I07 in verifica CI/live, PR11 e documentazione PR12 storiche preservate
 - Coordination key: `MERCHANDISECONTROL_MOBILE_PARITY_ROOT_CAUSE`
 
 ## Scopo / Obiettivo
@@ -91,7 +91,43 @@ La CI d05d163c/36932145104 è fallita nella selezione destinazione prima di buil
 
 Il mandato richiede CI sullo SHA esatto. Il checkout predefinito della PR usa il merge temporaneo: metadata headSha non prova la revisione Git testata. Modifica minima autorizzata al solo input ref di actions/checkout: head.sha per pull_request, github.sha per push/workflow_dispatch. Versioni/pin, permessi, trigger e tutti i gate invariati; app/test/fixture invariati. Verificare indipendentemente il diff, quindi la revisione effettiva nel log e CI sul nuovo head prima del merge normale; conservare run precedenti con il loro tested SHA/tree. Nessun nuovo gate locale sull'app dedotto da questa modifica.
 
+### Addendum planning autorizzato — R-I07 validazione persisted recovery, 2026-10-02 UTC
+
+La recovery reale su TEST registry154 supera checkpoint A e B e scarica sei domini/61.598 righe, poi termina il 2026-10-02 alle15:20:24.892399Z con `nonMonotonicOrDuplicateID`. Active generation e finalization assenti; binding invariato, journal/pending e staging preservati. I sei ledger raw hanno conteggi uguali agli ID unici e ordine UUID lowercase UTF8 rigoroso, senza errori. Ricevuta pubblica parent `native-checkpoint-registry154-safe-projection.json`, SHA256 `6e2992bde50f96a7d171345bb87b7ebc7fd6fb56247c4c565f8c10867fc40719`. Non è ancora identificata la causa: la enum copre anche proof shape e ordine della rilettura SwiftData.
+
+Il parent autorizza nello stesso CA-07/10 una diagnosi e regressione deterministica su SwiftData a disco, percorso reale persisted proof, ID sintetici sensibili a comparatori UUID/String e confini del batch256. Nessuna modifica produzione prima del rosso. Se il difetto è confermato, applicare il cambiamento minimo di ordinamento canonico mantenendo strettamente duplicati, ID mancanti, digest/contenuti, scope, tombstone, immagini, pagina/ledger, limite righe e memoria bounded. Vietati sort/dedup del wire per nascondere payload invalidi, materializzazione globale non giustificata, migration/model/schema/dependency change, reset dati e retry ciechi. Review indipendente e gate aggiornati, nuovo artifact TEST firmato e installazione data-preserving coordinata precedono il ritest reale. I precedenti source326/CI e signed4a708 rimangono evidenze storiche distinte dal delta futuro.
+
 ## Execution
+
+### Esecuzione R-I07 — 2026-10-02 UTC (root/executor)
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — una riga: comparatore `.lexical` nella verifica persisted delle baseline; nessun altro delta applicativo.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — recovery reale a disco257 prodotti/cross-batch256, controllo3tipi×257 e paging fake che preserva l'ordine wire.
+- Questo task — planning autorizzato, evidenze e stato FIX/handoff.
+- `docs/TASKS/EVIDENCE/TASK-144/ri07-proof-order/*.json` — copie esatte delle ricevute pubbliche e ledger portabile; niente configuration/token/dati business raw.
+
+**Azioni eseguite:**
+1. Registry154 ha scaricato tutti6domini e superato checkpointA/B, poi FAIL locale `nonMonotonicOrDuplicateID`; journal/pending/staging preservati, manifest/finalization assenti. Diagnosi separata da153timeout; non usato un altro Retry.
+2. Produzione207 invariata prima del rosso. Servizio257 con ordine canonico,11pagine prodotti+5domini vuoti: RED1PASS/1FAIL; stesso test dopo una riga di patch: GREEN60uniciPASS/0FAIL/0SKIP. Il controllo `.lexical` era già verde e resta una prova separata di compatibilità SwiftData.
+3. Source326 congelati fingerprint `230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9`; inverse production diff byte-identico al main precedente. Review indipendente APPROVED, receipt SHA73f29a40789a0d8b33991fe1e52771454972d7c1e448a04e3c3833384e86ae6c.
+4. Release/analyze/scan PASS; TESTfirmato nuovo binary050db10aabfbf0c2a663a10dc515d81fb5ad771249dd408393009435f00221fc,23filehash verificati dal parent, strict/deepPASS e profilo autorizzato invariato. Vecchio4a708 e primaryconfighash preservati; copia temporanea rimossa. Unit simulator3DDC Shutdown, lane rilasciata15:53:49Z.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| BUILD Release/TEST | ESEGUITO — PASS | Gate locali e23file/signedreceipt; configurazione primaria invariata |
+| STATIC/analyze | ESEGUITO — PASS | Zero nuovi warning source;26storici non dichiarati risolti |
+| Warning | ESEGUITO |0sourcewarning; notice AppIntents metadata Release1/Analyze2/TEST1 preservati |
+| Coerenza planning | ESEGUITO | Un solo comparatore, schema/UUID sort/strict guard/scope/digest/batch256/caps invariati |
+| Regressioni | ESEGUITO — PASS |34Atomic+26Contract=60; nessun nuovo fullcanonical o8UI attribuito |
+| CI completa/finali R-I07 | NON ESEGUITO | Sarà verificata sul nuovo HEAD esatto; i1439/1403+36precedenti restano storici |
+| Recovery autentica R-I07 | NON ESEGUITO | Solo dopo gate/artifact/review e slot coordinato; nessun install su459 effettuato da executor |
+
+**Incertezze:** il rosso→verde dimostra il difetto del persisted readback sintetico; l'esclusività della causa live richiede il ritest. Fresh-open conserva vecchi handle, non prova chiusura/processrestart. Nessun test esplicito di wire malordinato/duplicato aggiunto in queste due classi; guard identici verificati dal reviewer.
+
+**Handoff:** parent unicoownerGit/PR/CI/merge; coordinatorowner459/5556 e installazione data-preserving. TaskFIX, nonDONE; per-record/sweep/importAndroid/immagini/performance aperti. [LedgerR-I07](EVIDENCE/TASK-144/ri07-proof-order/validation-ledger.json); CI/head/main futuri hanno ricevute proprie e non sovrascrivono queste osservazioni.
+
 
 ### Esecuzione — integrazione e CI finali, 2026-10-02 UTC (root)
 

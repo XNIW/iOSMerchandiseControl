@@ -1,0 +1,15 @@
+{
+  "actualReleaseSHA256": "f12068b1fe2ada511bd37720cbb2c7a5259095e5715e04e0d9813788cb9f0d5b",
+  "allActualFileHashesVerified": true,
+  "at": "2026-10-02T15:55:06.701298+00:00",
+  "binarySHA256": "050db10aabfbf0c2a663a10dc515d81fb5ad771249dd408393009435f00221fc",
+  "fileCount": 23,
+  "liveInstallOrRecovery": false,
+  "primaryConfigHashEqual": true,
+  "rawConfigReadOrPrintedByParent": false,
+  "sameProfileClaimBoundToAuthorReceipt": true,
+  "signedReceiptSHA256": "f7f25b1492c48f867965d29c5c5c50388ba46f9c795a275dc4480c27a53459cb",
+  "sourceFingerprint": "230ddb78907a4e9f70dfad39f92af3791994b2816b85335d3ba921d51b5c7db9",
+  "status": "PARENT_VERIFIED_SIGNED_TEST_ARTIFACT_23_FILES",
+  "strictDeepCodesignCommandExit": 0
+}
