@@ -1,0 +1,283 @@
+{
+  "verdict": "PASS_EXACT_MERGED_MAIN_CHECKOUT_VERIFIED",
+  "verified_utc": "2026-10-02T00:29:52.839229+00:00",
+  "run_id": 36942886476,
+  "run_url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36942886476",
+  "requested_merged_main_sha": "2322c5e19e22252a7e54f8434a8820fb51459722",
+  "metadata_head_sha": "2322c5e19e22252a7e54f8434a8820fb51459722",
+  "actual_checkout_sha": "2322c5e19e22252a7e54f8434a8820fb51459722",
+  "checkout_evidence": "full-job.log actual git log -1 --format=%H output",
+  "event": "push",
+  "branch": "main",
+  "conclusion": "success",
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "conclusion": "success"
+    },
+    {
+      "name": "Verify shared contract hashes",
+      "conclusion": "success"
+    },
+    {
+      "name": "Select an available iPhone Simulator",
+      "conclusion": "success"
+    },
+    {
+      "name": "Build Debug",
+      "conclusion": "success"
+    },
+    {
+      "name": "XCTest full suite",
+      "conclusion": "success"
+    },
+    {
+      "name": "Analyze",
+      "conclusion": "success"
+    },
+    {
+      "name": "Secret scan",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "conclusion": "success"
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success"
+    }
+  ],
+  "success_markers": [
+    "product-images\tBuild Debug\t2026-10-02T00:03:15.0783180Z ** BUILD SUCCEEDED **",
+    "product-images\tXCTest full suite\t2026-10-02T00:21:53.7850900Z ** TEST SUCCEEDED **",
+    "product-images\tAnalyze\t2026-10-02T00:26:20.2366800Z ** ANALYZE SUCCEEDED **"
+  ],
+  "unique_completed_case_events": 1439,
+  "duplicate_case_events": 0,
+  "test_counts": {
+    "PASSED": 1403,
+    "SKIPPED": 36
+  },
+  "case_identifiers_and_statuses_identical_to_PR_head095": true,
+  "unit_module_cases": 1431,
+  "unit_module_passed": 1395,
+  "unit_module_skipped": 36,
+  "actual_ui_module_cases": [
+    {
+      "id": "-[iOSMerchandiseControlUITests.CatalogTextImportUITests testDatabaseCSVImportPresentsSystemFilePicker]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.CatalogTextImportUITests testImportAnalysisShowsBlockingRowErrorAndDisablesApply]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.CatalogTextImportUITests testInvalidSaveDoesNotInsertAndChileQuantityPersistsExactValue]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.CatalogTextImportUITests testProductEditorBlocksInvalidNumericInputAndRetainsDraftDuringCorrection]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.StorefrontEditorUITests testFieldsCannotBeEditedWhileMutationAckIsPending]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.StorefrontEditorUITests testFiltersAndUnifiedEditorRemainAccessibleAtLargeDynamicType]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.StorefrontEditorUITests testPreviewAndConflictActionsUseRealSavedProduct]",
+      "status": "PASSED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlUITests.StorefrontEditorUITests testRapidFilterSwitchStartsNewRequestAndAllClearsLoading]",
+      "status": "PASSED"
+    }
+  ],
+  "skipped_cases": [
+    {
+      "id": "-[iOSMerchandiseControlTests.ProductImageAPIClientTests testOptInLocalParityMutationRemovesProductImage]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.ProductImageAPIClientTests testOptInLocalParityMutationReplacesProductImage]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.ProductImageAPIClientTests testOptInLocalParityNoImageAndProgressiveProductImage]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.SyncEventIncrementalDomainApplyServiceTests testWECHAT004RealLocalSupabaseFixtureConvergesThroughProductionIncrementalApply]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DExportSessionForAndroidImport]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DIOSCreateUpdateTombstoneHistoryHarness]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task097RuntimeSmokeTests testTask097RuntimeSandboxReadBackEvidence]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task098CrossPlatformSmokeTests test01PreflightAndCollisionScanReadOnly]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task098CrossPlatformSmokeTests test02PullApplyAndroidProductAAndLocalReadBack]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task098CrossPlatformSmokeTests test03IOSWriteProductBUsingReleaseServices]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task098CrossPlatformSmokeTests test04RemoteReadBackB]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100BDatasetManifestLargeWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100CImportExcelLargeDatasetLargeCoreBenchmarkWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100ESyncPreviewLargeSyntheticPagingBenchmarkWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100FProductPriceCurrentPreviousLargeBenchmarkWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100ILiveSupabaseLargeWritePreviewAndCleanupWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100JLiveSupabaseCleanupPrefixWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testS100KLiveSupabaseReadOnlyVerificationForExistingPrefixWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testTask108RealExcelCleanSeedImportCountsWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task100LargeDatasetAcceptanceTests testTask108RealExcelProductPricePagedFullPullNoopWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test01PreflightAndCollisionScanReadOnly]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test02IOSWriteSmokeAndRemoteReadBack]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test03IOSPullApplyAndroidSmokeAndNoOp]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test04MediumImportExportPushAndReadBack]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test05ConflictStaleRecoveryAndProductPriceFailClosed]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test06OfflineRetryCatalogPendingNoDuplicate]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test072CIOSCreateUpdateTombstoneHistoryHarness]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test07Task104Pass2ResidueScanReadOnly]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test08Task112ScopedCleanupWhenEnabled]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSOfflineReconnectProductPriceHistoryMatrix]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSPullAndroidProductHistoryMatrix]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSWriteProductHistoryMatrix]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]",
+      "status": "SKIPPED"
+    },
+    {
+      "id": "-[iOSMerchandiseControlTests.Task105RealOpsClosureTests testPhysicalCameraBarcodeCaptureCapabilityWhenAvailable]",
+      "status": "SKIPPED"
+    }
+  ],
+  "source_diagnostics": {
+    "unique": 24,
+    "vendor": 18,
+    "historical_tests": 6,
+    "all_messages_paths_lines_columns_identical_to_PR_head095": true,
+    "new": 0
+  },
+  "runtime_warning_lines": [
+    "product-images\tXCTest full suite\t2026-10-02T00:15:54.4623350Z Thread Performance Checker: Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions"
+  ],
+  "runtime_warning_message_identical_to_PR_head095": true,
+  "simulator": {
+    "selected_uuid": "A3615395-EDA9-4A60-982A-D428BCC5719B",
+    "execution_line": "product-images\tSelect an available iPhone Simulator\t2026-10-01T23:51:58.4559520Z Selected compatible simulator: A3615395-EDA9-4A60-982A-D428BCC5719B",
+    "init_and_compatible_selection": "PASS",
+    "bootstatus_finished_observed": true,
+    "fallback_creation_uuid_output": [],
+    "creation_claimed": false
+  },
+  "published_artifact_count": 0,
+  "limitations": [
+    "XCTest recount from official complete job log; workflow publishes no xcresult artifact.",
+    "36 explicit gated skips identical to final PR head.",
+    "One known Thread Performance Checker priority-inversion runtime diagnostic retained; no integration-induced source warning.",
+    "CI does not establish optional live pilot or performance results."
+  ],
+  "evidence_sha256": {
+    "run.json": "703115c5c73ec5b33432ac5c16cc7577e5961bbc8e73423a9576f8a6bc271853",
+    "artifacts.json": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+    "full-job.log": "cbba5102c2a34e7b1ecca65c3c4c6152930a399791239aca9edfc20ebaa86794",
+    "cases.json": "c307a816b17198da880a81e7df854092c3d5580f3861bb14f6485ad3994e095b",
+    "warning-inventory.json": "f721f50ba4b8c3db729310a27eff3735430330eea150d8663747e6e0fdc9e91d"
+  }
+}

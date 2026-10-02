@@ -8,7 +8,7 @@
 - Responsabile: `CODEX_EXECUTOR_IOS`; orchestratore parent, reviewer indipendente separato.
 - Data: 2026-09-28
 - Baseline: `30d226d0fb9b8679a1dd034c6e82319645337f22`
-- Branch: `codex/mobile-parity-root-cause-ios`
+- Branch corrente: `codex/mobile-parity-validation-ledger` (documentazione dal main integrato `2322c5e1`; branch sorgente `codex/mobile-parity-root-cause-ios` integrato con PR11)
 - Coordination key: `MERCHANDISECONTROL_MOBILE_PARITY_ROOT_CAUSE`
 
 ## Scopo / Obiettivo
@@ -92,6 +92,35 @@ La CI d05d163c/36932145104 è fallita nella selezione destinazione prima di buil
 Il mandato richiede CI sullo SHA esatto. Il checkout predefinito della PR usa il merge temporaneo: metadata headSha non prova la revisione Git testata. Modifica minima autorizzata al solo input ref di actions/checkout: head.sha per pull_request, github.sha per push/workflow_dispatch. Versioni/pin, permessi, trigger e tutti i gate invariati; app/test/fixture invariati. Verificare indipendentemente il diff, quindi la revisione effettiva nel log e CI sul nuovo head prima del merge normale; conservare run precedenti con il loro tested SHA/tree. Nessun nuovo gate locale sull'app dedotto da questa modifica.
 
 ## Execution
+
+### Esecuzione — integrazione e CI finali, 2026-10-02 UTC (root)
+
+**File modificati:**
+- `docs/MASTER-PLAN.md` — integrazione corrente e verifiche residue.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — nuova evidenza parent, snapshot storici conservati.
+- `docs/TASKS/EVIDENCE/TASK-144/integration-final/*.json` — ricevute pubbliche CI/merge/live e ledger con riferimenti portabili/12statiCA; checkout CI, conteggi e snapshot live sanitizzato.
+
+**Azioni eseguite:**
+1. PR [#11](https://github.com/XNIW/iOSMerchandiseControl/pull/11) integrata normalmente il 2026-10-01 alle 23:50:01Z: head `095e2110b254507106aa656d283c6966f0483afa`, main `2322c5e19e22252a7e54f8434a8820fb51459722`. Origin/main e ancestry verificati; nessun bypass o modifica delle protezioni.
+2. CI [head36940178787](https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36940178787) e [main36942886476](https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36942886476) SUCCESS. Checkout Git effettivo provato dai log, rispettivamente `095e2110` e `2322c5e1`. Ogni log ufficiale completo contiene **1.403 PASS / 36 SKIP / 0 FAIL**, 1.439 ID unici senza duplicati: 1.395 unit/integration PASS e otto XCUITest effettivi PASS, stessi casi/stati/skip. Il workflow non pubblica xcresult: questi conteggi provengono dal log completo. Contract hashes, simulator provisioning, Debug, full XCTest, Analyze e secret scan PASS.
+3. Ventiquattro warning source storici (18 Vendor e sei test) e un QoS runtime noto identici a PR-head; nessuno nuovo. Le due diagnostiche della baseline locale26 non emesse in CI non sono dichiarate risolte. Source326 `3c1ff005…`, oracle58 PASS e gate locali full1403/36, Release/analyze/TEST firmato conservati. Tutti22 file Release e23 TEST byte-identici ai rispettivi artifact41eb; firma/config verificati. Questo addendum modifica solo documentazione.
+4. Snapshot live del coordinatore alle 00:42:29Z: build TEST `4a708a47…` autenticata, shop corretto, pending prima0. Un solo Retry ordinario alle 00:11:49Z termina alle 00:11:58.782635Z con recovery failed/verifiedConvergence=false, HTTP500/SQL57014 nel digest prezzi del checkpoint. Nessun nuovo manifest/finalization. Ricevuta sanitizzata SHA `b8bb4f7d…` nel [ledger](EVIDENCE/TASK-144/integration-final/validation-ledger.json). Il ritest dopo correzione backend e le misure restano separati.
+
+5. Cronologia successiva separata dal receipt00:42: registry150/AdminPR123 preserva dati/permessi ma iOS00:55 e Android00:59 falliscono nella verifica finale v_integrity/57014. Registry151/AdminPR124/main2e236586, CI/postcheckPASS e dati/permessi invariati; unicoRetry iOS01:39:43→01:39:52.012612 ancora500/57014, no nuovo manifest/finalization, binding invariato. Android151 non ripetuto per la stessa failure backend. Ricevuta safe consolidata SHA a291f9c6… nel ledger; authPASS resta distinta. ReadbackAndroid01:15 a appferma: quick_checkok, journalrequired1/attempt16, binding1, manifest/baseline/watermark/business/outbox0 (proiezione c97bea0d…). Profilare l’interaRPC prima di un altrodelta/Retry.
+
+**Check obbligatori dell'aggiornamento solo documentale:**
+
+| Check | Stato | Note |
+|---|---|---|
+| Build | N/A | Solo documentazione; gate del codice finale verificati sopra. |
+| Lint/static compiler | N/A | Nessuna modifica compilabile o di build. |
+| Warning nuovi | N/A | Nessuna nuova compilazione; diagnostiche CI classificate. |
+| Coerenza con planning | ESEGUITO | Mandato coordinato e CA-10/11; backlog e task storici invariati. |
+| Criteri di accettazione | ESEGUITO per tracciamento | CA-10/11 gate e integrazione ESEGUITI. CA-07/09/12 ancora NON ESEGUITI integralmente per recovery, convergenza e misure residue. |
+
+**Incertezze:** dati terminali e convergenza non sono provati da auth/pending0. Stato FIX, non DONE; nessun deploy produzione. Rosso, skip e snapshot precedenti conservati.
+
+**Handoff notes:** parent responsabile di integrazione/rapporto, coordinatore owner dei simulatori autenticati. Retry dopo diagnosi e gate backend; nessuna attività concorrente sui suoi dispositivi.
 
 ### Esecuzione — CI checkout del candidato, 2026-10-01 (root)
 
@@ -252,6 +281,8 @@ R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di 
 
 ## Handoff
 
+**CURRENT — INTEGRATED / CI_VERIFIED, task FIX, non DONE.** PR11/main `2322c5e1` e CI esatte head/main PASS; Android PR11/main `0613339f` con CI1.033 PASS/7 SKIP verificata separatamente. Auth nativa PASS nel relativo snapshot; recovery business ancora HTTP500/SQL57014 nella verifica finale anche dopo registry151, convergenza e misure ancora aperte. Il ledger e la nuova Execution prevalgono sui riferimenti futuri degli snapshot sotto. Nessuna distribuzione produzione o chiusura globale inferita.
+
 **R-I06 supplemento oracle3c1ff005: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full1403/0/36,1439identifier unici,58mirati PASS e45vettori iOS dentro1XCTest. Review indipendente APPROVED; parent ha ricontato official xcresulttool/tutti326hash. App207hash invariati e fixture b5848df0… exact; Release/analyze/TEST PASS,0nuove diagnostiche. Analyze actual incrementale0source distinto dalla baseline storica26; QoS/36skip preservati. Tutti22Release/23TEST artifact hash byte-identici ai precedenti41eb, firma/config/cleanup verificati dopo nuove invocazioni. [Manifest finale corrente](EVIDENCE/TASK-144/ri06-shared-oracle/final-gate-manifest.json), receipt/bundle `test-builds/ios/signed-ri06-oracle`. CI/workflow, integrazione exact-SHA, launch e live al parent/coordinatore. Nessun altro heavy job in corso da executor.
 
 **R-I06 snapshot41eb precedente al supplemento test-only: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full1402/0/36,1438identifier unici e57mirati PASS; Release/analyze/sensitive source PASS,0warning nuovi. Parent ha ricontato official xcresulttool e tutti326hash. Artifact canonico non configurato binaryf7816722… e signed TEST finale binary4a708a47… separati; primary config invariata e copia ignorata rimossa. [Manifest finale](EVIDENCE/TASK-144/ri06-history-timestamp/final-gate-manifest.json). Integrazione exact-SHA/CI, launch benchmark e collaudo live al parent/coordinatore; nessun nuovo heavy job o operazione sul simulatore performance da executor.
@@ -260,7 +291,7 @@ R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di 
 
 **R-I03: LOCAL_VERIFIED / SOURCE_APPROVED — non DONE.** Full finale1374/0/36, mirati136/0/0, Release/analyze/scan PASS nel [manifest R-I03](EVIDENCE/TASK-144/ri03-current-diagnostics/final-gate-manifest.json). Fingerprint325file `44adf90701d3336815a071f34fdc1fc5e4a4fb0d6ef543bf1c706c3a29807c9b`; bundle signed finale e source receipt separati. Precedenti R-I02/crash CI sono snapshot storici verificati. Gate finali nuovi completati nel [manifest R-I02](EVIDENCE/TASK-144/ri02-checkpoint-denial/final-gate-manifest.json); commit/CI exact SHA e accettazione mobile autenticata restano separati. Snapshot storico al commit97b6: [Manifest precedente](EVIDENCE/TASK-144/ios-gate-manifest.json); [precedenti casi unici](EVIDENCE/TASK-144/full-final-test-cases.json); [skip e motivi](EVIDENCE/TASK-144/full-skips.json).
 
-- Parent integra commit/PR iOS e CI sull'exact SHA; commit compatibilità già separato `4575eefb`. Nessun commit/push dell'executor.
+- Parent ha integrato PR11 e verificato CI sugli esatti head e main; commit compatibilità `4575eefb` resta storico separato. Nessun commit/push dell'executor.
 - Primo full fallito per shutdown del simulatore richiesto da precedente runner; prova preservata, nessun difetto applicativo attribuito senza evidenza. Full storico 97b6 senza restart sul fingerprint `3d33a15ce689a1aeb7b64082c249ef3a921a1816c520a228f9b475f8ea905d7d`.
 - Fingerprint snapshot R-I02 al commit5dbcb6e7: `9f1d274203133bdef7baac3af73aae95955fedd10ce280e5cbd81b5f3cf10a2d`, 325 file app/test/resource verificati identici dopo i gate. I conteggi e hash precedenti sono snapshot storici, non il nuovo batch.
 - 36 skip: 29 live/esterni, 4 benchmark sintetici opt-in (due richiesti eseguiti separatamente), 2 harness Excel sospeso, 1 camera fisica. Non trasformarli in accettazione live.

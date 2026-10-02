@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "snapshot_utc": "2026-10-02T02:01:40.467467+00:00",
+  "platform": "iOS",
+  "task_status": "FIX",
+  "source_status": "INTEGRATED_AND_CI_VERIFIED",
+  "normal_merge_receipt_sha256": "1b36287d4fe2420e61c3b1e0c968b7e1d0bb031826c5b272215ae99dc89fc6eb",
+  "ci": [
+    {
+      "verdict": "PASS_EXACT_CHECKOUT_VERIFIED",
+      "verified_utc": "2026-10-01T23:49:24.945096+00:00",
+      "run_id": 36940178787,
+      "run_url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36940178787",
+      "actual_checkout_sha": "095e2110b254507106aa656d283c6966f0483afa",
+      "checkout_evidence": "full-job.log actual git log -1 --format=%H output",
+      "conclusion": "success",
+      "unique_completed_case_events": 1439,
+      "duplicate_case_events": 0,
+      "test_counts": {
+        "PASSED": 1403,
+        "SKIPPED": 36
+      },
+      "source_diagnostics": {
+        "unique": 24,
+        "vendor": 18,
+        "tests": 6,
+        "new_vs_canonical_historical_inventory": 0
+      },
+      "phase": "PR_head",
+      "parent_receipt_sha256": "9aef2d59c4590893b08f7c5211f74b6b0098c77576433fa98b50296893822a44",
+      "gates": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify shared contract hashes",
+          "conclusion": "success"
+        },
+        {
+          "name": "Select an available iPhone Simulator",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build Debug",
+          "conclusion": "success"
+        },
+        {
+          "name": "XCTest full suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Analyze",
+          "conclusion": "success"
+        },
+        {
+          "name": "Secret scan",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "parent_receipt_path": "pr-head-ci-summary.json",
+      "official_checkout_source": {
+        "public_run_url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36940178787",
+        "retained_root_evidence_path": "evidence/ios-ci-095e2110/full-job.log",
+        "retained_root_log_sha256": "ac9c7bb9aba2c5f41b6e52bae73bb39eb7e35f7ede43a051680f35be060277eb"
+      }
+    },
+    {
+      "verdict": "PASS_EXACT_MERGED_MAIN_CHECKOUT_VERIFIED",
+      "verified_utc": "2026-10-02T00:29:52.839229+00:00",
+      "run_id": 36942886476,
+      "run_url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36942886476",
+      "actual_checkout_sha": "2322c5e19e22252a7e54f8434a8820fb51459722",
+      "checkout_evidence": "full-job.log actual git log -1 --format=%H output",
+      "conclusion": "success",
+      "unique_completed_case_events": 1439,
+      "duplicate_case_events": 0,
+      "test_counts": {
+        "PASSED": 1403,
+        "SKIPPED": 36
+      },
+      "source_diagnostics": {
+        "unique": 24,
+        "vendor": 18,
+        "historical_tests": 6,
+        "all_messages_paths_lines_columns_identical_to_PR_head095": true,
+        "new": 0
+      },
+      "published_artifact_count": 0,
+      "phase": "merged_main",
+      "parent_receipt_sha256": "e00a880c6a736d36253a82225a52cf083239905697888246678aff04e4096a92",
+      "gates": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify shared contract hashes",
+          "conclusion": "success"
+        },
+        {
+          "name": "Select an available iPhone Simulator",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build Debug",
+          "conclusion": "success"
+        },
+        {
+          "name": "XCTest full suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Analyze",
+          "conclusion": "success"
+        },
+        {
+          "name": "Secret scan",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "parent_receipt_path": "merged-main-ci-summary.json",
+      "official_checkout_source": {
+        "public_run_url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/36942886476",
+        "retained_root_evidence_path": "evidence/ios-ci-2322c5e/full-job.log",
+        "retained_root_log_sha256": "cbba5102c2a34e7b1ecca65c3c4c6152930a399791239aca9edfc20ebaa86794"
+      }
+    }
+  ],
+  "local_source_freeze": {
+    "files": 326,
+    "fingerprint_sha256": "3c1ff0057f0fb69a98ca1ead1e21e005d0b3d7ccb95bdba6faa80ba2d6197beb",
+    "scope": "Source fingerprint; documentation-only ledger is excluded.",
+    "manifest_path": "../ri06-shared-oracle/frozen-source-manifest.json",
+    "manifest_sha256": "2e368cd39b6905d9650bf5bf842121f7f82813ed5fd382bb7ee006561c71ec8c"
+  },
+  "live_owner_receipt": {
+    "snapshot_utc": "2026-10-02T00:42:29.575790+00:00",
+    "sha256": "b8bb4f7d6ae2db9b548a925857c938e4e90462fb39400ab9fd5345bb5977cd46",
+    "auth_and_recovery": {
+      "artifactSHA256": "4a708a4776cada737685542f0e94f4ad89eb15548b7ab473f38ab882c96d9c30",
+      "authenticatedUI": true,
+      "canonicalShopVisible": true,
+      "pendingBefore": 0,
+      "normalRetryTaps": 1,
+      "actionAt": "2026-10-02T00:11:49Z",
+      "completedAt": "2026-10-02T00:11:58.782635Z",
+      "orchestratorPhase": "recoveryRequired",
+      "orchestratorStatus": "failed",
+      "verifiedConvergence": false,
+      "newManifestPresent": false,
+      "newFinalizationPresent": false,
+      "httpStatus": 500,
+      "sqlState": "57014",
+      "originMs": 8227,
+      "upstreamMs": 8099,
+      "stage": "prices versionDigest aggregate"
+    },
+    "path": "auth-recovery-snapshot-0042.json",
+    "role": "HISTORICAL_AUTH_RECOVERY_SNAPSHOT_0042_NOT_CURRENT_TERMINAL_GATE"
+  },
+  "remaining_acceptance": [
+    "Terminal native recovery blocked by full checkpoint budget: registry151 iOS ordinary Retry still HTTP500/SQL57014 final integrity; complete RPC profiling pending, no repeated identical Retry",
+    "Bidirectional per-record convergence, lost HTTP ACK and target approximately 3s",
+    "Final comparable UI performance, memory and real request counts",
+    "Remaining hardware/accessibility and authenticated import/export scenarios as individually documented"
+  ],
+  "no_production_deployment": true,
+  "no_global_done_claim": true,
+  "normal_merge_receipt_reference": {
+    "path": "normal-merge-snapshot.json",
+    "snapshot_note": "Verified at merge; its postMergeCi=PENDING is historical, current result is separate merged-main-ci-summary.json"
+  },
+  "subsequent_android_failure_readback": {
+    "path": "android-recovery-failure-readback-0115.json",
+    "sha256": "c97bea0dce4d5384a78d18aa1caeaed746da83113faa9fb31390b70923dfd8f8",
+    "snapshot_utc": "2026-10-02T01:15:10.844264+00:00",
+    "state": "recovery journal required; seven business/baseline/outbox counts zero; not terminal convergence"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "CA-01",
+      "status": "ESEGUITO",
+      "evidence": "Baseline and normal source integration/CI verified; primary work preserved",
+      "evidence_reference": "normal-merge-snapshot.json"
+    },
+    {
+      "id": "CA-02",
+      "status": "ESEGUITO",
+      "evidence": "F01 durable immutable drafts, storage errors/restart/scope local red-green and adjacent regression verified",
+      "evidence_reference": "task Execution source gates"
+    },
+    {
+      "id": "CA-03",
+      "status": "ESEGUITO",
+      "evidence": "F02 filter generation fencing and actual UI rapid-switch verification",
+      "evidence_reference": "task Execution source gates"
+    },
+    {
+      "id": "CA-04",
+      "status": "NON ESEGUITO",
+      "evidence": "Local mutation intent/replay and real SQL contract PASS; lost HTTP ACK post-COMMIT on two authenticated apps remains pending",
+      "evidence_reference": "task Execution F03"
+    },
+    {
+      "id": "CA-05",
+      "status": "ESEGUITO",
+      "evidence": "F04 historical iOS task reconciled with actual PR/mainCI; physical/distribution limits preserved",
+      "evidence_reference": "task Execution F04"
+    },
+    {
+      "id": "CA-06",
+      "status": "NON ESEGUITO",
+      "evidence": "Functional matrix and language checks performed; full sweep incomplete; physical devices unavailable, accessibility limitations recorded",
+      "evidence_reference": "task Execution acceptance states"
+    },
+    {
+      "id": "CA-07",
+      "status": "NON ESEGUITO",
+      "evidence": "Local data/scope/recovery guards PASS and auth real PASS; terminal TEST recovery and bidirectional per-record target timing pending",
+      "evidence_reference": "auth-recovery-snapshot-0042.json"
+    },
+    {
+      "id": "CA-08",
+      "status": "NON ESEGUITO",
+      "evidence": "Shared workbook regression and iOS populated import/export exact seven-table no-op PASS; Android populated UI apply and remote image live acceptance pending",
+      "evidence_reference": "task Execution CA08"
+    },
+    {
+      "id": "CA-09",
+      "status": "NON ESEGUITO",
+      "evidence": "20k/300k core and earlier Android UI samples available; final comparable UI/memory and real request counts incomplete",
+      "evidence_reference": "task Execution performance"
+    },
+    {
+      "id": "CA-10",
+      "status": "ESEGUITO",
+      "evidence": "Final local build/tests/static/device gates and exact PR/main CI PASS; skips and known warnings classified",
+      "evidence_reference": "merged-main-ci-summary.json"
+    },
+    {
+      "id": "CA-11",
+      "status": "ESEGUITO",
+      "evidence": "Independent native/source reviews approved; both sourcePR11 normalmerged, exact checkout and mainCI verified",
+      "evidence_reference": "normal-merge-snapshot.json"
+    },
+    {
+      "id": "CA-12",
+      "status": "NON ESEGUITO",
+      "evidence": "Eight-section root report draft exists; final evidence reconciliation/delivery still in progress",
+      "evidence_reference": "task Execution final handoff"
+    }
+  ],
+  "acceptance_state_scope": "Current whole-criterion status; local verified parts do not close remaining integrated requirements. Physical-specific checks are NON ESEGUIBILE due unavailable hardware, not implied PASS.",
+  "task_reference": "../../../TASK-144-mobile-parity-root-cause-ios.md",
+  "current_backend_recovery_receipt": {
+    "path": "native-checkpoint-registry150-151-safe-projection.json",
+    "sha256": "a291f9c655ee3bfb5c7f2622c77f6d699f9ee3692c3cd219711e3c69bfa9dcf3",
+    "snapshot_utc": "2026-10-02T01:45:47.290069+00:00",
+    "gate": "FAIL_REPRODUCED_BACKEND_CHECKPOINT_TIMEOUT",
+    "registry150_android_and_ios": "FAIL_HTTP500_SQL57014_FINAL_INTEGRITY",
+    "registry151_ios": "FAIL_HTTP500_SQL57014_FINAL_INTEGRITY",
+    "registry151_android": "NOT_RUN_SHARED_BACKEND_FAILURE",
+    "terminal_convergence": false
+  },
+  "initial_creation_utc": "2026-10-02T00:56:59.999016+00:00",
+  "snapshot_time_scope": "Current document assembly revision; immutable source receipt timestamps preserved separately."
+}

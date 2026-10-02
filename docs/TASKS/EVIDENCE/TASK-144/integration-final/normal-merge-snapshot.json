@@ -1,0 +1,19 @@
+{
+  "verifiedUtc": "2026-10-01T23:50:50.439907+00:00",
+  "pr": {
+    "headRefOid": "095e2110b254507106aa656d283c6966f0483afa",
+    "mergeCommit": {
+      "oid": "2322c5e19e22252a7e54f8434a8820fb51459722"
+    },
+    "mergedAt": "2026-10-01T23:50:01Z",
+    "state": "MERGED",
+    "url": "https://github.com/XNIW/iOSMerchandiseControl/pull/11"
+  },
+  "originMain": "2322c5e19e22252a7e54f8434a8820fb51459722",
+  "headIsAncestor": true,
+  "normalMerge": true,
+  "adminOverride": false,
+  "checkoutClean": true,
+  "exactHeadCi": 36940178787,
+  "postMergeCi": "PENDING"
+}
