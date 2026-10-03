@@ -1,0 +1,449 @@
+{
+  "analyze": {
+    "actual": {
+      "appIntentsWarningOccurrences": 3,
+      "cleanupSignals": [],
+      "commandMatchesApprovedCard": true,
+      "commandReceiptSHA256": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+      "elapsedCommandSeconds": 47.387659,
+      "endUTC": "2026-10-02T23:49:36.340096+00:00",
+      "errorDiagnostics": 0,
+      "exitCode": 0,
+      "goSHA256": "491c0e1ab972cc801ff3145eebd9971e3c6bfae802191c0e4a73887974ece154",
+      "groupAbsentRecorded": true,
+      "hardDeadlineUTC": "2026-10-03T00:18:48.950895+00:00",
+      "issuedUTC": "2026-10-02T23:48:48.950895+00:00",
+      "ownedProcessGroup": 5983,
+      "releaseUTC": "2026-10-02T23:49:36.371917+00:00",
+      "stage": "analyze",
+      "startUTC": "2026-10-02T23:48:48.952437+00:00",
+      "status": "PASS_CANONICAL_ANALYZE_V6"
+    },
+    "completeLogSHA256": "1f4fbf263ce120cc2c1c80e1f96c884270d8cbfbe44f218b28f9530754194bcd",
+    "currentSource326Build3Cache13HEADPostEqual": true,
+    "historicalWarningsResolved": false,
+    "rawLocalEvidenceDirectory": "evidence/ios-ri08-ordinary-sync-state/final-analyze-v6-attempt01",
+    "receiptSHA256": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+    "status": "PASS_WITH_RETAINED_LEGACY_DIAGNOSTICS",
+    "warningComparison": {
+      "analyzePrimaryOccurrences": 34,
+      "analyzeToolWarningMultisetMatchesRI06": true,
+      "analyzeUniqueSourceDiagnostics": 26,
+      "architectureOccurrences": {
+        "arm64": 8,
+        "x86_64": 26
+      },
+      "exactCurrentVsRI06PathLineColumnMessageArchitectureMultisetEqual": true,
+      "historicalWarningsResolved": false,
+      "newSourceDiagnostics": [],
+      "normalization": "Only checkout prefix ios versus ios-incremental-sync removed for RI06 raw comparison. Path, line, column, message, architecture context and occurrence counts are otherwise exact. No Task097 message normalization needed versus RI06. The documented Task097 initializer argument-list-only normalization reproduces initial TASK14426 provenance.",
+      "removedSourceDiagnostics": [],
+      "retainedSourceDiagnostics": [
+        {
+          "column": 7,
+          "line": 667,
+          "message": "Although the value stored to 'seeked' is used in the enclosing expression, the value is never actually read from 'seeked' [deadcode.DeadStores]",
+          "path": "Vendor 2/libxls/src/ole.c"
+        },
+        {
+          "column": 9,
+          "line": 414,
+          "message": "Access to field 'index' results in a dereference of a null pointer (loaded from variable 'row') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 28,
+          "line": 481,
+          "message": "Array access (via field 'value') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 36,
+          "line": 527,
+          "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 17,
+          "line": 770,
+          "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 11,
+          "line": 1050,
+          "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 7,
+          "line": 1116,
+          "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 17,
+          "line": 1128,
+          "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 47,
+          "line": 1172,
+          "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 47,
+          "line": 1182,
+          "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 47,
+          "line": 1200,
+          "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 7,
+          "line": 1289,
+          "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 17,
+          "line": 1301,
+          "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 57,
+          "line": 1337,
+          "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 63,
+          "line": 1344,
+          "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 48,
+          "line": 1352,
+          "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 56,
+          "line": 1363,
+          "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 81,
+          "line": 1406,
+          "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]",
+          "path": "Vendor 2/libxls/src/xls.c"
+        },
+        {
+          "column": 9,
+          "line": 14,
+          "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+          "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift"
+        },
+        {
+          "column": 9,
+          "line": 26,
+          "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+          "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift"
+        },
+        {
+          "column": 9,
+          "line": 42,
+          "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+          "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift"
+        },
+        {
+          "column": 9,
+          "line": 54,
+          "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]",
+          "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift"
+        },
+        {
+          "column": 29,
+          "line": 16,
+          "message": "main actor-isolated initializer 'init(config:redirectURL:authStorage:session:autoRefreshToken:authRegistry:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+          "path": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift"
+        },
+        {
+          "column": 13,
+          "line": 612,
+          "message": "call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]",
+          "path": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift"
+        },
+        {
+          "column": 24,
+          "line": 189,
+          "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+          "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift"
+        },
+        {
+          "column": 35,
+          "line": 382,
+          "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+          "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift"
+        }
+      ],
+      "signedReleaseCacheSilenceIsNotResolution": true,
+      "testSwiftUnique": 8,
+      "toolOccurrencesByStage": {
+        "analyze": 3,
+        "release": 1,
+        "signed": 1
+      },
+      "toolWarning": "Metadata extraction skipped, no AppIntents.framework dependency found",
+      "vendorUnique": 18
+    }
+  },
+  "artifactHostReleaseHandoffSHA256": "3d232810b3bba3d36bc48342176759e93864cf7aaebe8f2864f3624b242de2c5",
+  "artifactIndependentReviewSHA256": "16011f3e2fde86181a9a00af345e63043ebfde91e2c96f18102798698a5aca98",
+  "artifactsOrNativeActionsByDocsProducer": false,
+  "freshHostSourceBuildArtifactReadback": true,
+  "full": {
+    "actualCommandSeconds": 408.710255,
+    "all57AtomicAnd23NewPassed": true,
+    "allHistorical1441And36SkipIDsAndReasonsPreserved": true,
+    "completeLogSHA256": "c40c99dd1530019f04bbeeb7e5e875de0863596b1833a264138469d8644cc048",
+    "endUTC": "2026-10-02T23:39:09.343733+00:00",
+    "fail": 0,
+    "independentReceiptSHA256": "e374a5821b718d8e7ef49843fa50bb799df2df155ba3ec4375bf8905885db049",
+    "methodStatusesSHA256": "eeb096cff21a3016afe92f573342d08c877f66f193bc6e78f29663bfe167147e",
+    "officialTreeSHA256": "2d44608a2508a0a94104718a78b9c0f4d9b350ed6f7ff9e558c9fe72e9121b00",
+    "pass": 1428,
+    "rawLocalEvidenceDirectory": "evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01",
+    "releaseUTC": "2026-10-02T23:39:10.217542+00:00",
+    "savedOwnedRelease": {
+      "beforeDeadline": true,
+      "ownedPG": {
+        "ownedGroupExistsAfter": false,
+        "ownedGroupID": 97804,
+        "signals": []
+      },
+      "shutdownExit": 149,
+      "shutdownReadback": {
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+        "state": "Shutdown",
+        "udid": "6B049C77-E70E-4A75-8FF2-CE3EC756EE11"
+      }
+    },
+    "skip": 36,
+    "startUTC": "2026-10-02T23:32:20.633478+00:00",
+    "summarySHA256": "131abaaa265f7d1fbd0747a0ef806a110d7f96d89e45f4fdbaa3a4438bbae6ae",
+    "ui": {
+      "failed": 0,
+      "passed": 8,
+      "skipped": 0,
+      "unique": 8
+    },
+    "unique": 1464,
+    "unit": {
+      "failed": 0,
+      "passed": 1420,
+      "skipped": 36,
+      "unique": 1456
+    },
+    "warnings": {
+      "errorDiagnosticHeaders": 0,
+      "historicalSummarySHA256": "888c2766af96cdbc2a4d963fef12508d35b7b4b1488f7a47dfec31779643db9d",
+      "logWarningLine": 3336,
+      "newWarningSignatureDetected": false,
+      "qualification": "Observed saved invocation only; no claim that all source was freshly rebuilt or that QoS is causally irrelevant.",
+      "runtimeMessageExactEqualsHistoricalSummary": true,
+      "runtimeQoSWarnings": 1,
+      "runtimeWarningMessage": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceWarningDiagnosticHeaders": 0,
+      "test": "SyncEventIncrementalDomainApplyServiceTests/testFileBackedMultiDomainCommitHoldsLeaseAcrossCatalogPriceHistory"
+    }
+  },
+  "historicalFailedAttemptMetadata": {
+    "classificationsRemainBoundToHistoricalSources": true,
+    "path": "historical-failed-attempts.json",
+    "rawFailureReceiptsNotRewritten": true,
+    "sha256": "85a4639fc9569be711ed8a3015ac8600b90a397f377368e0de6b610059317b67"
+  },
+  "localFinalLedgerComplete": true,
+  "localGateValidationScope": "Saved full/targeted and three artifact receipts only; no new source/runtime/cache/binary/protected inspection by docs producer.",
+  "pendingIntegrationAndAcceptance": [
+    "root exact committed-source equivalence",
+    "exact head CI",
+    "normal merge and exact main CI",
+    "native authenticated/business/live acceptance and measured performance where still open"
+  ],
+  "planningRawSHA256": "666282867e0deb4d40711c8199ff690bbe93bcacbc65e6bc63a9ce8b8fd25cf9",
+  "portableEvidenceSHA256": {
+    "analyze-command-receipt.json": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+    "artifact-gates-independent-review.json": "16011f3e2fde86181a9a00af345e63043ebfde91e2c96f18102798698a5aca98",
+    "artifact-host-release-handoff.json": "3d232810b3bba3d36bc48342176759e93864cf7aaebe8f2864f3624b242de2c5",
+    "full-independent-review.json": "e374a5821b718d8e7ef49843fa50bb799df2df155ba3ec4375bf8905885db049",
+    "full-method-statuses.json": "eeb096cff21a3016afe92f573342d08c877f66f193bc6e78f29663bfe167147e",
+    "full-official-summary.json": "131abaaa265f7d1fbd0747a0ef806a110d7f96d89e45f4fdbaa3a4438bbae6ae",
+    "historical-failed-attempts.json": "85a4639fc9569be711ed8a3015ac8600b90a397f377368e0de6b610059317b67",
+    "release-command-receipt.json": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+    "signed-build-command-receipt.json": "ebe558a8548f361024a6f3655ee64a6968cc8c50a54643757e325157da0fbf00",
+    "signed-own-release.json": "43189d82e83736f716d0fac471f8120a4211586a6aaebe1266c2b7139cfe6b01",
+    "signed-test-artifact-receipt.json": "22a12c64e690ce9675f842d0b020658036043a7ded3e55ae06ad45fe723c844e",
+    "source-build-cache-pins.json": "37103ff72878d9f8fc02dcf12948b3e1509fedc48b54369b40a22119051d991f",
+    "source-freeze-v6.json": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "source-independent-review.json": "a6068678877bb4822fa53931d150a5d82936621a291ede4155b1473c190df33f",
+    "targeted5-independent-review.json": "fcba2f43129f2019a6c571525006bfc40f29a5d31460a96f5e931fc5af9c238c",
+    "targeted5-official-summary.json": "de734341ab4a734787ac4c648c39fbfdf7717b8021ac8604a9d26f3ec9cf1560"
+  },
+  "protectedValuesRetained": false,
+  "rawFailedAttemptsRemainPreservedOutsideGit": true,
+  "release": {
+    "actual": {
+      "appIntentsWarningOccurrences": 1,
+      "cleanupSignals": [],
+      "commandMatchesApprovedCard": true,
+      "commandReceiptSHA256": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+      "elapsedCommandSeconds": 112.900531,
+      "endUTC": "2026-10-02T23:48:48.756092+00:00",
+      "errorDiagnostics": 0,
+      "exitCode": 0,
+      "goSHA256": "783c8e6e7f37d7496f364f62f8b774694a6c75d3bdf920edae80611151a8717b",
+      "groupAbsentRecorded": true,
+      "hardDeadlineUTC": "2026-10-03T00:16:55.854612+00:00",
+      "issuedUTC": "2026-10-02T23:46:55.854612+00:00",
+      "ownedProcessGroup": 4671,
+      "releaseUTC": "2026-10-02T23:48:48.878953+00:00",
+      "stage": "release",
+      "startUTC": "2026-10-02T23:46:55.855561+00:00",
+      "status": "PASS_CANONICAL_RELEASE_V6"
+    },
+    "binarySHA256": "c798c79e9a08f5ff4ee88a9dd906f1436be8f0182bd3a68a44980db0fb7eadbb",
+    "completeLogSHA256": "5150b23b0888df0e88577042376603febb67888720dc12df50b1792f81923c7c",
+    "configured": false,
+    "currentSource326Build3Cache13HEADPostEqual": true,
+    "effectiveEntitlementKeys": [
+      "application-identifier",
+      "com.apple.developer.associated-domains"
+    ],
+    "embeddedEntitlementsEqualGenerated": true,
+    "fileCount": 22,
+    "ignoredConfigurationAbsent": true,
+    "rawLocalEvidenceDirectory": "evidence/ios-ri08-ordinary-sync-state/final-release-v6-attempt01",
+    "receiptSHA256": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+    "status": "PASS",
+    "strictDeepSignature": true
+  },
+  "resourceAndLifecycle": {
+    "actualIntervalsDoNotOverlap": true,
+    "allOwnedGroupsAbsentAsRecorded": true,
+    "buildCapSeconds": 1200,
+    "cleanupReserveSeconds": 90,
+    "ignoredConfigurationAbsentAfterEachAsRecorded": true,
+    "maximumGoWindowSeconds": 1800,
+    "minimumSpawnRoomSeconds": 1500,
+    "noCleanupSignals": true,
+    "oneAttemptEachNoRetry": true,
+    "postproofReserveSeconds": 210,
+    "primaryConfigurationBeforeAfterHashEqualAsRecorded": true,
+    "releaseAnalyzeBudgetQualification": "GO records caps; saved successful terminal status and measured intervals are below 1200s. Release/Analyze command receipts do not separately expose an effective cutoff timestamp.",
+    "signedCompletedAndExitZero": true,
+    "signedExplicitCutoffUTC": "2026-10-03T00:02:36.276575+00:00",
+    "signedOwnedProfileRemovedAsRecorded": true,
+    "threeSeparateFreshGoWindows": true
+  },
+  "rootFutureGitSourceEquivalenceNotYetAttested": true,
+  "runtimeBaseHEAD": "414c4a341aebbf43d94d2477b1eb36f792ab04ed",
+  "schema": "ri08-v6-portable-validation-ledger",
+  "signedTEST": {
+    "actual": {
+      "appIntentsWarningOccurrences": 1,
+      "cleanupSignals": [],
+      "commandMatchesApprovedCard": true,
+      "commandReceiptSHA256": "ebe558a8548f361024a6f3655ee64a6968cc8c50a54643757e325157da0fbf00",
+      "elapsedCommandSeconds": 114.287514,
+      "endUTC": "2026-10-02T23:44:30.564091+00:00",
+      "errorDiagnostics": 0,
+      "exitCode": 0,
+      "goSHA256": "4f1ffa7efaf46472ba51bebeb76a3e734514791032f061cb1facbc99c79859dc",
+      "groupAbsentRecorded": true,
+      "hardDeadlineUTC": "2026-10-03T00:12:36.222875+00:00",
+      "issuedUTC": "2026-10-02T23:42:36.222875+00:00",
+      "ownedProcessGroup": 1653,
+      "releaseUTC": "2026-10-02T23:44:30.669332+00:00",
+      "stage": "signed",
+      "startUTC": "2026-10-02T23:42:36.276577+00:00",
+      "status": "COMPLETED"
+    },
+    "binarySHA256": "2783283d728eb5ea8c5bddafa52b231c971514055d260d99194e67189173525a",
+    "completeLogSHA256": "e03167ab84e1545d3b6d5b2e630cbd4a3aaf48bf36a551f6e50a9a07a20eae70",
+    "currentSource326AfterBuildAndCleanup": true,
+    "effectiveEntitlementKeys": [
+      "application-identifier",
+      "com.apple.developer.associated-domains"
+    ],
+    "embeddedEntitlementsEqualGenerated": true,
+    "fileCount": 23,
+    "ownReleaseSHA256": "43189d82e83736f716d0fac471f8120a4211586a6aaebe1266c2b7139cfe6b01",
+    "ownedConfigurationRemoved": true,
+    "primaryConfigBeforeAfterSHA256": "86a67fe9f5da4638d81d373a4da30a59d0cf325bba437b9184fcc853ece12049",
+    "profileByteEqualBlindlyVerified": true,
+    "rawLocalEvidenceDirectory": "evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01",
+    "receiptSHA256": "22a12c64e690ce9675f842d0b020658036043a7ded3e55ae06ad45fe723c844e",
+    "status": "PASS",
+    "strictDeepSignature": true
+  },
+  "sourceFingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+  "status": "ALL_LOCAL_FINAL_GATES_VERIFIED_EXACT_INTEGRATION_AND_LIVE_PENDING",
+  "targeted5": {
+    "actualStages": 19,
+    "artifactHashes": {
+      "launcher-receipt.json": "dd62a6afc288fbe3b5c742aacbb56fa92f9d55f383e9d94b49f96dd161c9e835",
+      "xcodebuild.log": "11a67025d67a606ea1cd946e7a5231543144750e5cd45ec595e2bbe664dabc32",
+      "xcresult-summary.json": "de734341ab4a734787ac4c648c39fbfdf7717b8021ac8604a9d26f3ec9cf1560",
+      "xcresult-tests.json": "8a9c9059cae8e954ba4d5c30e0c451c85f74f05d3dc3e01754f0cf62e02b02df"
+    },
+    "fail": 0,
+    "independentReceiptSHA256": "fcba2f43129f2019a6c571525006bfc40f29a5d31460a96f5e931fc5af9c238c",
+    "methodStatuses": {
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedDiskRecoveryAllowsOrdinaryAutomaticUpdateAfterFreshOpen": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsFirstCanonicalDeltaAndNoEventsAfterFreshOpen": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsOrdinaryNoEventsAfterFreshOpen": "PASS"
+    },
+    "ownerExecution": {
+      "beforeDeadline": true,
+      "hardDeadlineUTC": "2026-10-02T23:14:50.226716+00:00",
+      "normalShutdownCommandExit": 149,
+      "normalShutdownReadback": true,
+      "observedDeviceAfter": "Shutdown",
+      "ownGroupCleanup": {
+        "ownedGroupExistsAfter": false,
+        "ownedGroupID": 88580,
+        "signals": []
+      },
+      "proofScope": "Saved owner proof only; reviewer made no live runtime/process/device calls.",
+      "releaseUTC": "2026-10-02T22:50:18.185250+00:00",
+      "testEndUTC": "2026-10-02T22:50:17.729983+00:00",
+      "testExitCode": 0,
+      "testStartUTC": "2026-10-02T22:49:50.406497+00:00"
+    },
+    "pass": 5,
+    "skip": 0,
+    "unique": 5,
+    "warningInventory": {
+      "primarySwiftWarningHeaders": 0,
+      "runtimeWarnings": [],
+      "scope": "This saved targeted invocation only; not a whole-project/canonical warning absence proof.",
+      "toolKnownAppIntentsMetadataHeaders": 2
+    }
+  },
+  "taskDONE": false,
+  "taskState": "FIX"
+}

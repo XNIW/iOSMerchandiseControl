@@ -1,0 +1,32 @@
+{
+  "atomicMethodIDs": 57,
+  "baseHEAD": "414c4a341aebbf43d94d2477b1eb36f792ab04ed",
+  "buildInputHashes": {
+    "iOSMerchandiseControl.xcodeproj/project.pbxproj": "a6b1edfa8c227aff0bcbb5d69695bcb2b0d7a1e63b58f82c681eddd342b287bd",
+    "iOSMerchandiseControl.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved": "545d4d0aba273cc38b3e41a5833e56b77513077e4d24ac939d194e5de864a4ec",
+    "iOSMerchandiseControl.xcodeproj/xcshareddata/xcschemes/iOSMerchandiseControl.xcscheme": "3a62e66f6342fe2916acebf564f9e1341c5387345628a571086320cdc84613a9"
+  },
+  "cacheMetadataOriginalSHA256": "e2aff8e7bcfd8b1d9531a702e3e6824640f87115ae3f42834e027b45debfce30",
+  "cacheWorkspaceStateSHA256": "707ea4e5ddeb4dcfe52be0aba6c5670f90efa71113ec657cc0ce43616b5a1412",
+  "cachedCheckoutDirectories": [
+    "LRUCache",
+    "SwiftSoup",
+    "ZIPFoundation",
+    "libxlsxwriter",
+    "supabase-swift",
+    "swift-asn1",
+    "swift-atomics",
+    "swift-clocks",
+    "swift-concurrency-extras",
+    "swift-crypto",
+    "swift-http-types",
+    "xctest-dynamic-overlay",
+    "xlsxwriter.swift"
+  ],
+  "newCommitCIOrMergeNotAttestedByThisSlice": true,
+  "prior55BodiesAndAssertionsPreserved": true,
+  "sourceCount": 326,
+  "sourceFingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+  "testSHA256": "98fd65deceb983c53530cd9b4ec5d25f8ef9fc92f3a5a21f06d22ed5d7d4fcb2"
+}

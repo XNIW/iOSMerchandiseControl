@@ -63,6 +63,8 @@ actor AutomaticSyncEngine {
         recordAttempt(source: source)
         var didRun = false
         var verifiedConvergence = false
+        var continuationReceipt: SyncIncrementalContinuationReceipt?
+        var compatibleDrains = true
         do {
             // Validate only after acquiring the process-wide flight. If an
             // atomic activation happened between runtime construction and
@@ -81,6 +83,9 @@ actor AutomaticSyncEngine {
                     return await complete(.blocked(reason))
                 case .pushPending:
                     didRun = try await pushPending(ownerUserID: ownerUserID, cancellationToken: cancellationToken) || didRun
+                    // A push after a domain receipt changes the final aggregate.
+                    // Only a later complete domain pipeline may authorize it.
+                    continuationReceipt = nil
                 case .drainEvents:
                     let drain = try await drainRemoteEvents(
                         ownerUserID: ownerUserID,
@@ -90,6 +95,13 @@ actor AutomaticSyncEngine {
                         allowsExplicitRecovery: false
                     )
                     didRun = drain.didWork || didRun
+                    if let receipt = drain.continuationReceipt,
+                       continuationReceipt.map({ receipt.canFollow($0) }) ?? true {
+                        continuationReceipt = receipt
+                    } else {
+                        continuationReceipt = nil
+                        compatibleDrains = false
+                    }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = true
                         break syncPlan
@@ -103,6 +115,13 @@ actor AutomaticSyncEngine {
                         allowsExplicitRecovery: false
                     )
                     didRun = drain.didWork || didRun
+                    if let receipt = drain.continuationReceipt,
+                       continuationReceipt.map({ receipt.canFollow($0) }) ?? true {
+                        continuationReceipt = receipt
+                    } else {
+                        continuationReceipt = nil
+                        compatibleDrains = false
+                    }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = true
                         break syncPlan
@@ -120,6 +139,13 @@ actor AutomaticSyncEngine {
                         allowsExplicitRecovery: true
                     )
                     didRun = drain.didWork || didRun
+                    if let receipt = drain.continuationReceipt,
+                       continuationReceipt.map({ receipt.canFollow($0) }) ?? true {
+                        continuationReceipt = receipt
+                    } else {
+                        continuationReceipt = nil
+                        compatibleDrains = false
+                    }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = true
                         break syncPlan
@@ -154,13 +180,13 @@ actor AutomaticSyncEngine {
                 "lastOutcome",
                 verifiedConvergence ? "verified" : (didRun ? "completed_unverified" : "no_work")
             )
-            if didRun || verifiedConvergence {
-                return await complete(.success(
-                    didWork: didRun,
-                    verifiedConvergence: verifiedConvergence
-                ))
+            var result = didRun || verifiedConvergence
+                ? SyncAutomaticRunResult.success(didWork: didRun, verifiedConvergence: verifiedConvergence)
+                : SyncAutomaticRunResult.noWork()
+            if !verifiedConvergence, compatibleDrains, let continuationReceipt {
+                result.continuationReceipt = continuationReceipt
             }
-            return await complete(.noWork())
+            return await complete(result, cancellationToken: cancellationToken)
         } catch AutomaticIncrementalRecoveryError.recoveryRequired(let recoveryDidWork) {
             recordDiagnostic("lastOutcome", "recovery_required")
             return await complete(.recoveryRequired(didWork: didRun || recoveryDidWork))
@@ -190,10 +216,22 @@ actor AutomaticSyncEngine {
         await singleFlight.resumeAfterStoreReplacement()
     }
 
-    private func complete(_ result: SyncAutomaticRunResult) async -> SyncAutomaticRunResult {
+    private func complete(
+        _ result: SyncAutomaticRunResult, cancellationToken: Int? = nil
+    ) async -> SyncAutomaticRunResult {
         await singleFlight.finish()
         recordDiagnostic("lastCompletedAt", Date().timeIntervalSince1970)
-        return result
+        var finalResult = result
+        if let receipt = result.continuationReceipt {
+            guard let cancellationToken else {
+                finalResult.continuationReceipt = nil
+                return finalResult
+            }
+            do { try await cancellationPolicy.checkCancellation(token: cancellationToken) }
+            catch { return .cancelled() }
+            finalResult.continuationReceipt = receipt.guardedForRun(policy: cancellationPolicy, token: cancellationToken)
+        }
+        return finalResult
     }
 
     private func pushPending(ownerUserID: UUID, cancellationToken: Int) async throws -> Bool {
@@ -243,7 +281,7 @@ actor AutomaticSyncEngine {
         cancellationToken: Int,
         forceLightReconcile: Bool,
         allowsExplicitRecovery: Bool
-    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool) {
+    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?) {
         guard let incrementalPullProvider else {
             recordDiagnostic("incremental.lastOutcome", "blocked_missing_provider")
             throw ReplacementRecoveryJournalError.incrementalProviderMissing
@@ -282,7 +320,8 @@ actor AutomaticSyncEngine {
             )
             return (
                 recoveryDidWork || incrementalDidWork,
-                true
+                true,
+                nil
             )
         }
         if allowsExplicitRecovery, !summary.verifiedConvergence {
@@ -300,13 +339,15 @@ actor AutomaticSyncEngine {
             )
             return (
                 recoveryDidWork || summary.eventsFetched > 0 || summary.totalApplied > 0,
-                true
+                true,
+                nil
             )
         }
         if allowsExplicitRecovery {
             recordVerifiedRecoveryDiagnostics(outcome: "verified_not_required")
         }
-        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false)
+        let receipt = summary.continuationReceipt.flatMap { $0.matches(summary) ? $0 : nil }
+        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false, receipt)
     }
 
     private func recoverRemoteSnapshot(

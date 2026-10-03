@@ -82,6 +82,19 @@ nonisolated struct WatermarkStore {
         defaults.set(Int(watermark), forKey: key(for: scope))
     }
 
+    /// Read-only authority check. A legacy scalar, corrupt record or another
+    /// generation at the same cursor cannot authorize ordinary continuation.
+    func matchesRecoveryGeneration(
+        _ generationID: UUID,
+        watermark: Int64,
+        scope: Scope
+    ) -> Bool {
+        guard let record = validatedGenerationRecord(for: scope) else { return false }
+        return record.generationID == generationID
+            && record.value == watermark
+            && int64(forKey: key(for: scope)) == watermark
+    }
+
     /// Replacement starts a new local snapshot for this exact account/shop.
     /// Unlike normal checkpoints, it must be able to move a stale watermark
     /// backwards so that an older (but complete) remote stream is not skipped.

@@ -517,16 +517,32 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
                 storeIdentity: storeIdentity,
                 boundAt: boundAt
             ) else { return false }
-            guard WatermarkStore(defaults: defaults)
-                .restoreAuthoritativeRecoveryCheckpoint(
+            let watermarkStore = WatermarkStore(defaults: defaults)
+            let watermarkScope = WatermarkStore.Scope(
+                accountHash: accountHash, storeIdentity: storeIdentity
+            )
+            guard watermarkStore.restoreAuthoritativeRecoveryCheckpoint(
                     watermark,
                     generationID: generationID,
-                    for: WatermarkStore.Scope(
-                        accountHash: accountHash,
-                        storeIdentity: storeIdentity
-                    )
+                    for: watermarkScope
                 ) else { return false }
-            return ShopSyncRecoveryFenceStore(defaults: defaults).saveAuthoritative(
+            let restoredWatermark = watermarkStore.watermark(for: watermarkScope)
+            let fenceStore = ShopSyncRecoveryFenceStore(defaults: defaults)
+            guard restoredWatermark >= watermark,
+                  watermarkStore.matchesRecoveryGeneration(
+                    generationID, watermark: restoredWatermark, scope: watermarkScope
+                  ),
+                  recoveryScope.accountKey == accountHash,
+                  recoveryScope.deviceKey == deviceIdentityHash else { return false }
+            if restoredWatermark > watermark {
+                // A typed cursor alone cannot recreate an advanced fence.
+                // Keep only the exact fence committed by that continuation.
+                return fenceStore.scopeKey(
+                    accountHash: accountHash, storeIdentity: storeIdentity,
+                    deviceIdentityHash: deviceIdentityHash, watermark: restoredWatermark
+                ) == recoveryScope.key
+            }
+            return fenceStore.saveAuthoritative(
                 scope: recoveryScope,
                 watermark: watermark,
                 accountHash: accountHash,

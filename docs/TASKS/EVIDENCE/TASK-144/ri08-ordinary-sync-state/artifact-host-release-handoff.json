@@ -1,0 +1,60 @@
+{
+  "schema": "root-consolidated-ios-v6-final-gates-artifact-host-release",
+  "issuedUTC": "2026-10-03T00:05:52.222048+00:00",
+  "status": "ALL_LOCAL_FINAL_GATES_PASS_HOST_RELEASED",
+  "source326Fingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+  "runtimeHEAD": "414c4a341aebbf43d94d2477b1eb36f792ab04ed",
+  "full1464": {
+    "passed": 1428,
+    "failed": 0,
+    "skipped": 36,
+    "unit": 1456,
+    "UI": 8,
+    "all57AtomicAnd23NewPass": true,
+    "historicalSkipIDsAndReasonsUnchanged": true
+  },
+  "artifact": {
+    "signedTESTApp": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/test-builds/ios/signed-ri08-v6-attempt01/Artifact/iOSMerchandiseControl.app",
+    "signedBinarySHA256": "2783283d728eb5ea8c5bddafa52b231c971514055d260d99194e67189173525a",
+    "fileCount": 23,
+    "strictDeepSignaturePass": true,
+    "effectiveEntitlementsEqualGeneratedExact2": true,
+    "authorizedProfileByteEqualBlindlyVerified": true,
+    "ownIgnoredCopyRemoved": true
+  },
+  "release": {
+    "status": "PASS_CANONICAL_RELEASE_V6",
+    "fileCount": 22,
+    "strictDeepSignaturePass": true,
+    "configured": false,
+    "releaseUTC": "2026-10-02T23:48:48.878953+00:00"
+  },
+  "analyze": {
+    "status": "PASS_CANONICAL_ANALYZE_V6",
+    "retainedUniqueDiagnostics": 26,
+    "newSourceDiagnostics": 0,
+    "legacyWarningsNotDeclaredResolved": true,
+    "releaseUTC": "2026-10-02T23:49:36.371917+00:00"
+  },
+  "source326Build3CurrentFreshByteEqual": true,
+  "signed23FreshBlindHashesEqual": true,
+  "heavyOwnerRelease": {
+    "allCapturedBuildGroupsReleasedWithoutSignals": true,
+    "freshHeavyCount": 0,
+    "lastBuildReleaseUTC": "2026-10-02T23:49:36.371917+00:00",
+    "nextExecutionRequiresItsOwnFreshScopeAndBoundedGuard": true
+  },
+  "inputPins": {
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-full1464-v6-root-functional-adjudication-20261002.json": "9173b426b9d40d40df2d6c547ff843bb3f619e05530d8b937c73a1e7aa139c2c",
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-full1464-v6-bounded-independent-adjudication.json": "f52e4bf9fc5e854d6d5591f4c65170660aa60298fd514ec42c20e6f06c7e957b",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/signed-test-artifact-receipt.json": "22a12c64e690ce9675f842d0b020658036043a7ded3e55ae06ad45fe723c844e",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-release-v6-attempt01/command-receipt.json": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-analyze-v6-attempt01/command-receipt.json": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-three-artifact-gates-independent-review-40d8ef89-1b56-40ea-954c-54e7399d6b8a.json": "16011f3e2fde86181a9a00af345e63043ebfde91e2c96f18102798698a5aca98"
+  },
+  "integrationNext": "Sole native writer may now commit/PR/CI/merge exact326 source ac3b; verify Git source equivalence without claiming APK rebuilt after bookkeeping-only commit.",
+  "installAuthRecoveryRPCFourClientPhysicalPilotDONEAccepted": false,
+  "repeatFullOrMixed239NeededWithoutSourceDelta": false,
+  "protectedPayloadParsedByHandoff": false
+}

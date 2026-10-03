@@ -156,6 +156,29 @@ nonisolated struct ShopSyncRecoveryFenceStore {
         return record.scopeKey
     }
 
+    /// The caller must already hold the managed scope lease and validate its
+    /// registered container and actual finalized controller generation.
+    /// This read also requires that generation's checksummed cursor + mirror.
+    func continuationScopeKey(
+        accountHash: String,
+        storeIdentity: LocalStoreIdentity,
+        deviceIdentityHash: String,
+        watermark: Int64,
+        generationID: UUID
+    ) -> String? {
+        guard watermark >= 0,
+              WatermarkStore(defaults: defaults).matchesRecoveryGeneration(
+                generationID, watermark: watermark,
+                scope: .init(accountHash: accountHash, storeIdentity: storeIdentity)
+              ),
+              let record = validatedRecord(
+                accountHash: accountHash, storeIdentity: storeIdentity,
+                deviceIdentityHash: deviceIdentityHash
+              ),
+              record.watermark == String(watermark) else { return nil }
+        return record.scopeKey
+    }
+
     @discardableResult
     func saveAuthoritative(
         scope: ShopSyncRecoveryScope,

@@ -1,0 +1,201 @@
+{
+  "atUTC": "2026-10-03T00:03:15.416925+00:00",
+  "claimsAuthenticatedE2EOrGlobalDONE": false,
+  "claimsCurrentReleaseAnalyzeSignedPASS": false,
+  "classificationsCopiedFromSavedFormalEvidence": true,
+  "currentDeliverySource326Fingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "currentReleaseAnalyzeSignedFormalStatus": "PENDING_ROOT_FORMAL_HANDOFF; not assessed by this helper",
+  "entries": [
+    {
+      "counts": {
+        "fail": 2,
+        "pass": 0,
+        "skip": 0,
+        "uniqueMethods": 2
+      },
+      "failureType": "FIXTURE_CONTRACT_FAILURE_NOT_FUNCTIONAL_RED",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt01/official-adjudication-v2.json",
+        "sha256": "a5d216b0f84a7f4e074ec57bcdd168b854b512f60bc40cd6296710898e6a03be"
+      },
+      "id": "original-v2-fixture-red-attempt01",
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt01/launcher-receipt.json",
+        "sha256": "6e1b9add5ba761fb76d9509676de099917ee442c2472ca5bbd919c8f849e7506"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt01/xcresult-summary.json",
+        "sha256": "adc9cb3ed33717f3714b099db420ad4049532404b0fb01699f0111d1f1e875f2"
+      },
+      "qualification": "Both cases fail invalidPage(products) before mutation/fence advance. Desired ordinary continuation was not reached; this fixture failure supplied no production-fix authority.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt01/xcodebuild.log",
+        "sha256": "535fe8cf9e40d872808c4a01de916bf4f703aab054cb1e9cd3194d1186392389"
+      },
+      "source326Fingerprint": "fbd1cc01f04cc90e45e749448608d316963b37703863b780c5330f10c27da2b8"
+    },
+    {
+      "counts": {
+        "assertionFailures": 22,
+        "fail": 3,
+        "pass": 0,
+        "skip": 0,
+        "uniqueMethods": 3
+      },
+      "failureType": "CONFIRMED_FUNCTIONAL_RED_EVENT_AND_NO_WORK_CONTINUATION_LATCH",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt03/official-functional-red-adjudication-v4.json",
+        "sha256": "0849bc43876e61f7c39d00d7e130d1de1fe9ccfd74d9112d8e691f904c57fa65"
+      },
+      "id": "original-v4-functional-red-attempt03-qualified-legacy-wire",
+      "independentQualifiedFormal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-red-preparation-review/v4-functional-red-independent-adjudication-v2.json",
+        "sha256": "a4fa61fd27c15b78d9ab05c8a207f4a2466d0e66dc6eb4e306c389d7d6af4130"
+      },
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt03/launcher-receipt.json",
+        "sha256": "aa9d4d131a5c300d4d99576100c118e13ebd91accf0d9ad9274161b05777edd5"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt03/xcresult-summary.json",
+        "sha256": "0e015a0647b2c83934705f70b97b5ab7978d112d9a84306f1897cf7cbcc6e221"
+      },
+      "qualification": "Actual event42 success/unverified with stock1, cursor42 and durable fence advancement reaches recoveryRequired and suppresses event43; independent noWork41 reaches recoveryRequired and suppresses event42. Original event literal catalog_updated was accepted by DTO/classifier and real apply: this does not claim the canonical backend catalog_changed writer contract. Wire qualification is later source inference, not a historical rerun. Initial noEvents evidence is unaffected; later empty43/44 stages were not reached.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt03/xcodebuild.log",
+        "sha256": "1d5e1a2c5d03eb0374c316635c12aa91514577e22902412b6c3ba2414e6a517b"
+      },
+      "rootActualVerification": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/red-attempt03/root-actual-red-verification.json",
+        "sha256": "b795e3266a73eaba71651383f95bf587909f5eab3f2307b6ed13272c90604cb2"
+      },
+      "source326Fingerprint": "f1a19d16c1b394f4971fcdd139f0e2d5f0cc2d4f22f2fb0fb65f4032eb417159",
+      "wireQualification": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/implementation-static-v1/v4-wire-fixture-qualification.json",
+        "sha256": "07deefa3b700e3db7b49cdb2d027a06b1ef50a9a87ab255a398241eb6553d573"
+      }
+    },
+    {
+      "counts": {
+        "fail": 0,
+        "officialResult": "unknown",
+        "pass": 0,
+        "skip": 0,
+        "uniqueMethods": 0
+      },
+      "failureType": "OFFICIAL_ZERO_TESTS_COMPILE_FAILURE_NOT_FUNCTIONAL_RED",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-mixed237-attempt01-compile-review/independent-compile-adjudication.json",
+        "sha256": "26455bf2cabd75d467517217d1dee81d3bf1c40fc67406c5535d687b575bea68"
+      },
+      "id": "mixed237-attempt01",
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt01/launcher-receipt.json",
+        "sha256": "02d1e9819010c7c10bf0851bc58f84372df759a0e68a1d812709944d8c7b7149"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt01/xcresult-summary.json",
+        "sha256": "dc71f82532cc896b4cafa7647b7888228a366a27e20bd2256d79bbaa23070721"
+      },
+      "qualification": "Complex outbox Predicate exceeded type-check budget; dependent generic-T diagnostic and four actual self-capture warnings preserved. Official zero tests/result unknown, not 237 failed tests or a functional ZERO RED; recovery/continuation stages not reached.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt01/xcodebuild.log",
+        "sha256": "872b2fcc1eac8a75c6eb359320b86bf5d3e58014b6cd12c40e58b6e1e1199c6b"
+      },
+      "source326Fingerprint": "cb29a93e52afef65f05bd94defc8c03b8f9e03f12ce4edb24da7a74bfa17ec6a"
+    },
+    {
+      "counts": {
+        "fail": 0,
+        "officialResult": "unknown",
+        "pass": 0,
+        "skip": 0,
+        "uniqueMethods": 0
+      },
+      "failureType": "OFFICIAL_ZERO_TESTS_COMPILE_FAILURE_NOT_FUNCTIONAL_RED",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-mixed237-attempt02-compile-review/independent-compile-adjudication.json",
+        "sha256": "56d5c30a991a3c284ea23d48b48e6aab43e541b231e4fde4f2d88e6ab9812118"
+      },
+      "id": "mixed237-attempt02",
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt02/launcher-receipt.json",
+        "sha256": "621f9f3a098797468cf3c4debf1e1eafa91653406821d87ba8cd8b205f405e7e"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt02/xcresult-summary.json",
+        "sha256": "1fda81150cf158ceffee1d2c11d6c626b1e335985d2a7bdd9ca44744b82a26c8"
+      },
+      "qualification": "Nonexistent recoverSnapshot test call caused test compilation failure. Official zero tests/result unknown, not nominal237 failures or a functional ZERO RED. Previous predicate/self-capture diagnostics absent in this log; other warnings remained. Recovery/continuation stages not reached.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt02/xcodebuild.log",
+        "sha256": "be3a06b1203d6a7e2002fd44faab51257e7a01febec9c7bb0c4d9fb011f3dc21"
+      },
+      "source326Fingerprint": "f71a3f45971616a70acdf8893208d3db18e0d2e6d95a9a5a9edcac1f035cd982"
+    },
+    {
+      "counts": {
+        "fail": 3,
+        "officialResult": "Failed",
+        "pass": 234,
+        "skip": 0,
+        "uniqueMethods": 237
+      },
+      "failureType": "FUNCTIONAL_EMPTY0_RECOVERY_RED_CONFIRMED_WITH_THIRD_UNRESOLVED_FAILURE",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-mixed237-attempt03-functional-review/independent-functional-adjudication.json",
+        "sha256": "5de5606e95f93d24c3e6d7e70558be7763a3336b56b2e202f51ef42665de42a6"
+      },
+      "id": "mixed237-attempt03",
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt03/launcher-receipt.json",
+        "sha256": "284a49916364d594e248626e650dbdf6a2853bb1868f469ffd697dbf4613127d"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt03/xcresult-summary.json",
+        "sha256": "f79b78cb5e7894f7088ed9a7dd8ec8b5aecdf4f61ee1f3c748e724f053603fd4"
+      },
+      "qualification": "Two cases are genuine EMPTY0_RECOVERY_RED: canonical A0/(0,nil) and six empty domain pages precede local scopeFenceMissing before checkpointB transport; no activation/finalization, recovery journal retained, ordinary-zero continuation not reached. No backend rejection was observed. Third freshopen case had strict Date mismatch plus deviceNotActive/stock1/cursor42; cause remained NOT_IDENTIFIED_IN_THIS_REVIEW. Other two original cases passed controlled real-pipeline stages; no authenticated businessE2E inferred.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/mixed237-attempt03/xcodebuild.log",
+        "sha256": "2adc9caac460a274b92af27cca2f04614b058942c0a203df98747d58bfef594c"
+      },
+      "source326Fingerprint": "b48b98ca781564ed87ca65fdafa09a33fbb05ae27b5224c3b631340d06b21f65"
+    },
+    {
+      "counts": {
+        "fail": 3,
+        "officialResult": "Failed",
+        "pass": 0,
+        "skip": 0,
+        "uniqueMethods": 3
+      },
+      "failureType": "ACTUAL_THREE_FAILED_WITH_ZERO_RECOVERY_SUCCESS_TWO_PRODUCTION_REDS_AND_ONE_FIXTURE_LIMITATION",
+      "formal": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-targeted3-v5-actual-review/independent-actual-adjudication.json",
+        "sha256": "289ec3dbf9fb66588a287c949ec4108517ead6dda404724a8baceea20f0bc72b"
+      },
+      "id": "targeted3-v5-attempt01",
+      "launcher": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/targeted3-v5-attempt01/launcher-receipt.json",
+        "sha256": "800403b4824f86540f2ee05f581ce4098e03b1e2895b572707fdad31d3afcf90"
+      },
+      "officialSummary": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/targeted3-v5-attempt01/xcresult-summary.json",
+        "sha256": "c10afe2cbde66df3234d5a19cd18294584079658dd1cf2b9d96d1e9429c63234"
+      },
+      "qualification": "Both real empty0 recovery setups activate/finalize/reopen with two checkpoint transports and six empty domain pages. First canonical0\u21921 delta commits success/cursor1 without receipt, leaves recoveryRequired and suppresses next poll: genuine ordinary-zero production RED. Freshopen directly preserves typed/scalar42 but valid fence42 becomes41: genuine fence restoration RED, then local facade block before provider; no real device deactivation observed. Standalone empty0 instead busy/checking with zero event/count/tail reads: CONTINUATION_NOT_REACHED, source-supported shared-gate fixture lifecycle limitation. Suspension Boolean was not directly instrumented; do not label that case a production noEvents0 >0 RED.",
+      "rawLog": {
+        "path": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/targeted3-v5-attempt01/xcodebuild.log",
+        "sha256": "3ee819469d5a32e17c086850a356a2b6ad36632231060cc7f42590181abcf437"
+      },
+      "source326Fingerprint": "e192e2a75b76f8db6cccd7fd9004f1dd73ff48709e7c6072594dd357158396af"
+    }
+  ],
+  "historicalAttemptCount": 6,
+  "newAuditOrReinterpretation": false,
+  "onlyOutput": "single external draft JSON",
+  "schema": "ri08-historical-failure-metadata-external-draft",
+  "sourceSdkNativeGitProtectedReadsOrTaskWrites": false,
+  "status": "DRAFT_FOR_ROOT_DOCS_DELIVERY_NOT_FINAL_LEDGER"
+}

@@ -1,0 +1,141 @@
+{
+  "artifactsOrNativeActionsByDocsProducer": false,
+  "full": {
+    "actualCommandSeconds": 408.710255,
+    "all57AtomicAnd23NewPassed": true,
+    "allHistorical1441And36SkipIDsAndReasonsPreserved": true,
+    "completeLogSHA256": "c40c99dd1530019f04bbeeb7e5e875de0863596b1833a264138469d8644cc048",
+    "endUTC": "2026-10-02T23:39:09.343733+00:00",
+    "fail": 0,
+    "independentReceiptSHA256": "e374a5821b718d8e7ef49843fa50bb799df2df155ba3ec4375bf8905885db049",
+    "methodStatusesSHA256": "eeb096cff21a3016afe92f573342d08c877f66f193bc6e78f29663bfe167147e",
+    "officialTreeSHA256": "2d44608a2508a0a94104718a78b9c0f4d9b350ed6f7ff9e558c9fe72e9121b00",
+    "pass": 1428,
+    "rawLocalEvidenceDirectory": "evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01",
+    "releaseUTC": "2026-10-02T23:39:10.217542+00:00",
+    "savedOwnedRelease": {
+      "beforeDeadline": true,
+      "ownedPG": {
+        "ownedGroupExistsAfter": false,
+        "ownedGroupID": 97804,
+        "signals": []
+      },
+      "shutdownExit": 149,
+      "shutdownReadback": {
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+        "state": "Shutdown",
+        "udid": "6B049C77-E70E-4A75-8FF2-CE3EC756EE11"
+      }
+    },
+    "skip": 36,
+    "startUTC": "2026-10-02T23:32:20.633478+00:00",
+    "summarySHA256": "131abaaa265f7d1fbd0747a0ef806a110d7f96d89e45f4fdbaa3a4438bbae6ae",
+    "ui": {
+      "failed": 0,
+      "passed": 8,
+      "skipped": 0,
+      "unique": 8
+    },
+    "unique": 1464,
+    "unit": {
+      "failed": 0,
+      "passed": 1420,
+      "skipped": 36,
+      "unique": 1456
+    },
+    "warnings": {
+      "errorDiagnosticHeaders": 0,
+      "historicalSummarySHA256": "888c2766af96cdbc2a4d963fef12508d35b7b4b1488f7a47dfec31779643db9d",
+      "logWarningLine": 3336,
+      "newWarningSignatureDetected": false,
+      "qualification": "Observed saved invocation only; no claim that all source was freshly rebuilt or that QoS is causally irrelevant.",
+      "runtimeMessageExactEqualsHistoricalSummary": true,
+      "runtimeQoSWarnings": 1,
+      "runtimeWarningMessage": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceWarningDiagnosticHeaders": 0,
+      "test": "SyncEventIncrementalDomainApplyServiceTests/testFileBackedMultiDomainCommitHoldsLeaseAcrossCatalogPriceHistory"
+    }
+  },
+  "historicalFailedAttemptMetadata": {
+    "classificationsRemainBoundToHistoricalSources": true,
+    "path": "historical-failed-attempts.json",
+    "rawFailureReceiptsNotRewritten": true,
+    "sha256": "85a4639fc9569be711ed8a3015ac8600b90a397f377368e0de6b610059317b67"
+  },
+  "pendingFormalArtifactGates": [
+    "Release",
+    "Analyze",
+    "signedTEST"
+  ],
+  "pendingIntegrationAndAcceptance": [
+    "root exact committed-source equivalence",
+    "exact head CI",
+    "normal merge and exact main CI",
+    "native authenticated/business/live acceptance and measured performance where still open"
+  ],
+  "planningRawSHA256": "666282867e0deb4d40711c8199ff690bbe93bcacbc65e6bc63a9ce8b8fd25cf9",
+  "portableEvidenceSHA256": {
+    "full-independent-review.json": "e374a5821b718d8e7ef49843fa50bb799df2df155ba3ec4375bf8905885db049",
+    "full-method-statuses.json": "eeb096cff21a3016afe92f573342d08c877f66f193bc6e78f29663bfe167147e",
+    "full-official-summary.json": "131abaaa265f7d1fbd0747a0ef806a110d7f96d89e45f4fdbaa3a4438bbae6ae",
+    "historical-failed-attempts.json": "85a4639fc9569be711ed8a3015ac8600b90a397f377368e0de6b610059317b67",
+    "source-build-cache-pins.json": "37103ff72878d9f8fc02dcf12948b3e1509fedc48b54369b40a22119051d991f",
+    "source-freeze-v6.json": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "source-independent-review.json": "a6068678877bb4822fa53931d150a5d82936621a291ede4155b1473c190df33f",
+    "targeted5-independent-review.json": "fcba2f43129f2019a6c571525006bfc40f29a5d31460a96f5e931fc5af9c238c",
+    "targeted5-official-summary.json": "de734341ab4a734787ac4c648c39fbfdf7717b8021ac8604a9d26f3ec9cf1560"
+  },
+  "protectedValuesRetained": false,
+  "rawFailedAttemptsRemainPreservedOutsideGit": true,
+  "schema": "ri08-v6-portable-validation-ledger",
+  "sourceFingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+  "status": "FULL_AND_TARGETED_VERIFIED_ARTIFACT_FORMAL_RECEIPTS_PENDING",
+  "targeted5": {
+    "actualStages": 19,
+    "artifactHashes": {
+      "launcher-receipt.json": "dd62a6afc288fbe3b5c742aacbb56fa92f9d55f383e9d94b49f96dd161c9e835",
+      "xcodebuild.log": "11a67025d67a606ea1cd946e7a5231543144750e5cd45ec595e2bbe664dabc32",
+      "xcresult-summary.json": "de734341ab4a734787ac4c648c39fbfdf7717b8021ac8604a9d26f3ec9cf1560",
+      "xcresult-tests.json": "8a9c9059cae8e954ba4d5c30e0c451c85f74f05d3dc3e01754f0cf62e02b02df"
+    },
+    "fail": 0,
+    "independentReceiptSHA256": "fcba2f43129f2019a6c571525006bfc40f29a5d31460a96f5e931fc5af9c238c",
+    "methodStatuses": {
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedDiskRecoveryAllowsOrdinaryAutomaticUpdateAfterFreshOpen": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsFirstCanonicalDeltaAndNoEventsAfterFreshOpen": "PASS",
+      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsOrdinaryNoEventsAfterFreshOpen": "PASS"
+    },
+    "ownerExecution": {
+      "beforeDeadline": true,
+      "hardDeadlineUTC": "2026-10-02T23:14:50.226716+00:00",
+      "normalShutdownCommandExit": 149,
+      "normalShutdownReadback": true,
+      "observedDeviceAfter": "Shutdown",
+      "ownGroupCleanup": {
+        "ownedGroupExistsAfter": false,
+        "ownedGroupID": 88580,
+        "signals": []
+      },
+      "proofScope": "Saved owner proof only; reviewer made no live runtime/process/device calls.",
+      "releaseUTC": "2026-10-02T22:50:18.185250+00:00",
+      "testEndUTC": "2026-10-02T22:50:17.729983+00:00",
+      "testExitCode": 0,
+      "testStartUTC": "2026-10-02T22:49:50.406497+00:00"
+    },
+    "pass": 5,
+    "skip": 0,
+    "unique": 5,
+    "warningInventory": {
+      "primarySwiftWarningHeaders": 0,
+      "runtimeWarnings": [],
+      "scope": "This saved targeted invocation only; not a whole-project/canonical warning absence proof.",
+      "toolKnownAppIntentsMetadataHeaders": 2
+    }
+  },
+  "taskDONE": false,
+  "taskState": "FIX",
+  "thisDraftIsNotFinalLedger": true
+}

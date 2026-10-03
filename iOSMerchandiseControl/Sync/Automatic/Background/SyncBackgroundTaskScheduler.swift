@@ -138,7 +138,7 @@ nonisolated enum SyncBackgroundTaskRunner {
                 return false
             }
 
-            let (modelContainer, generationLease) = try await MainActor.run {
+            let (modelContainer, generationLease, generationController) = try await MainActor.run {
                 let controller = SyncStoreGenerationController.shared
                 guard controller.loadFailureCode == nil else {
                     throw SyncStoreGenerationError.unavailable
@@ -147,7 +147,7 @@ nonisolated enum SyncBackgroundTaskRunner {
                 guard let lease = controller.captureLease(for: container) else {
                     throw SyncStoreGenerationError.staleGenerationLease
                 }
-                return (container, lease)
+                return (container, lease, controller)
             }
             let transport = await MainActor.run {
                 SupabaseTransportClient(clientProvider: provider)
@@ -175,12 +175,11 @@ nonisolated enum SyncBackgroundTaskRunner {
                 ),
                 incrementalPullProvider: SyncEventIncrementalPullService(
                     modelContainer: modelContainer,
-                    remote: SyncEventRemoteSupabaseAdapter(remote: transport)
+                    remote: SyncEventRemoteSupabaseAdapter(remote: transport),
+                    storeGenerationController: generationController
                 ),
                 recoverySnapshotPullProvider: AtomicGenerationRecoverySnapshotPullService(
-                    storeGenerationController: await MainActor.run {
-                        SyncStoreGenerationController.shared
-                    },
+                    storeGenerationController: generationController,
                     recoveryRemote: ShopSyncRecoveryRemoteAdapter(
                         transport: SupabaseShopSyncRecoveryRPCTransport(remote: transport)
                     )
@@ -193,7 +192,7 @@ nonisolated enum SyncBackgroundTaskRunner {
                 cancellationPolicy: .processShared,
                 runAdmissionValidator: {
                     try await MainActor.run {
-                        try SyncStoreGenerationController.shared.validateLease(generationLease)
+                        try generationController.validateLease(generationLease)
                     }
                 }
             )

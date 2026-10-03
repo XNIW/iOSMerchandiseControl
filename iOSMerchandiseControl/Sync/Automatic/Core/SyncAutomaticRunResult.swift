@@ -18,6 +18,7 @@ nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
     var errorCode: String?
     var scheduledRetryAfter: TimeInterval?
     var verifiedConvergence: Bool
+    var continuationReceipt: SyncIncrementalContinuationReceipt?
 
     init(
         status: SyncAutomaticRunStatus,
@@ -33,6 +34,8 @@ nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
         self.errorCode = errorCode
         self.scheduledRetryAfter = scheduledRetryAfter
         self.verifiedConvergence = verifiedConvergence
+        // Generic results never manufacture ordinary continuation authority.
+        self.continuationReceipt = nil
     }
 
     static func success(
