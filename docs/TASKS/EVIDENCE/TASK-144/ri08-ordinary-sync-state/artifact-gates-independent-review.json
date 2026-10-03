@@ -1,0 +1,323 @@
+{
+  "schema": "independent-saved-ios-three-artifact-gates-v1",
+  "reviewedAtUTC": "2026-10-03T00:03:28.255916+00:00",
+  "reviewer": "review_contracts",
+  "verdict": "VERIFIED_THREE_ACTUAL_ARTIFACT_GATES_NO_NEW_SOURCE_WARNINGS",
+  "scope": "Three saved artifact gates only. Public receipts, GO/card metadata, logs and explicitly supplied historical warning evidence. No source audit, compiler, simulator, SDK, configuration payload, binary artifact, package cache or live process inspection.",
+  "evidenceSHA256": {
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/build-command-receipt.json": "ebe558a8548f361024a6f3655ee64a6968cc8c50a54643757e325157da0fbf00",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/signed-test-artifact-receipt.json": "22a12c64e690ce9675f842d0b020658036043a7ded3e55ae06ad45fe723c844e",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/signed-artifact-receipt-before-cleanup.json": "9e68d20452251e4a3710ada926568bdf4b12336729561bc53cd0a69ff2424924",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/actual-signed-lane-release.json": "43189d82e83736f716d0fac471f8120a4211586a6aaebe1266c2b7139cfe6b01",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/preflight-profile-copy.json": "6a5fbfb3b688c4c5ac1ffcf7bc8afce5b85ed1b6da1f688c9cb6705bba3d52dc",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/signed-build.log": "e03167ab84e1545d3b6d5b2e630cbd4a3aaf48bf36a551f6e50a9a07a20eae70",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/codesign.log": "7663cae51f151b93595f0b538315e858367100f355553906c18536a09c548f27",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-release-v6-attempt01/command-receipt.json": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-release-v6-attempt01/release.log": "5150b23b0888df0e88577042376603febb67888720dc12df50b1792f81923c7c",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-release-v6-attempt01/codesign.log": "947138e9f55a0d85aee8ed90860159df2d122fcde4db5e51a143df4b8f86b081",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-analyze-v6-attempt01/command-receipt.json": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-analyze-v6-attempt01/analyze.log": "1f4fbf263ce120cc2c1c80e1f96c884270d8cbfbe44f218b28f9530754194bcd",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-history-timestamp/final-analyze.log": "1bdc47b3b21811a61161c02ef418a754217f430684915d1feea8bc011057adca",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/docs/TASKS/evidence/TASK-144/ri06-history-timestamp/final-analyze-warnings.json": "6019fc79ad426dbb47758b4fbeb0997120d2e86ac22944c647c4b64fca861def",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/docs/TASKS/evidence/TASK-144/analyze-warnings.json": "09c2315c09290c6f435073f99a5e6956c441b68cf92aaaa9b50c112f40ef5e2d",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/ios/docs/TASKS/evidence/TASK-144/warning-provenance.json": "a43c28bc94c786730c4b6fb144a75a2c8f15d83aca3c8ec503d60e4c86f28def",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/artifacts/signed-test-card.json": "c4f83534f6590913701c8b7b96a28ef549a92aa873a0b7e014952d2dc2aba0e8",
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-signed-test-v6-root-go-20261002T234236Z.json": "4f1ffa7efaf46472ba51bebeb76a3e734514791032f061cb1facbc99c79859dc",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/artifacts/release-card.json": "838e93c6787ed323c9dc96294e61428a19eda18a144d7859770a1bbe069a61b0",
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-release-v6-root-go-20261002T234655Z.json": "783c8e6e7f37d7496f364f62f8b774694a6c75d3bdf920edae80611151a8717b",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/artifacts/analyze-card.json": "0cc13df7f6226e242c74050987d6f496adb2c9467106de8bc0f07360ee016686",
+    "/Users/minxiang/Projects/_codex-private/wechat-010-admin-audit/native-completion-20260928/ios-ri08-analyze-v6-root-go-20261002T234848Z.json": "491c0e1ab972cc801ff3145eebd9971e3c6bfae802191c0e4a73887974ece154",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-final-artifact-v6-preparation-review/receipt.json": "82d07742a68e23592b7b715be82e5fd3dbdcf8154ca08a5f2d0d057bd7ebdd79"
+  },
+  "stages": [
+    {
+      "stage": "signed",
+      "commandReceiptSHA256": "ebe558a8548f361024a6f3655ee64a6968cc8c50a54643757e325157da0fbf00",
+      "status": "COMPLETED",
+      "exitCode": 0,
+      "commandMatchesApprovedCard": true,
+      "goSHA256": "4f1ffa7efaf46472ba51bebeb76a3e734514791032f061cb1facbc99c79859dc",
+      "issuedUTC": "2026-10-02T23:42:36.222875+00:00",
+      "hardDeadlineUTC": "2026-10-03T00:12:36.222875+00:00",
+      "startUTC": "2026-10-02T23:42:36.276577+00:00",
+      "endUTC": "2026-10-02T23:44:30.564091+00:00",
+      "releaseUTC": "2026-10-02T23:44:30.669332+00:00",
+      "elapsedCommandSeconds": 114.287514,
+      "ownedProcessGroup": 1653,
+      "groupAbsentRecorded": true,
+      "cleanupSignals": [],
+      "errorDiagnostics": 0,
+      "appIntentsWarningOccurrences": 1
+    },
+    {
+      "stage": "release",
+      "commandReceiptSHA256": "4e0d97987120e9d1c571f56af19376f5afc0c0a9d08d404c28c7380807704062",
+      "status": "PASS_CANONICAL_RELEASE_V6",
+      "exitCode": 0,
+      "commandMatchesApprovedCard": true,
+      "goSHA256": "783c8e6e7f37d7496f364f62f8b774694a6c75d3bdf920edae80611151a8717b",
+      "issuedUTC": "2026-10-02T23:46:55.854612+00:00",
+      "hardDeadlineUTC": "2026-10-03T00:16:55.854612+00:00",
+      "startUTC": "2026-10-02T23:46:55.855561+00:00",
+      "endUTC": "2026-10-02T23:48:48.756092+00:00",
+      "releaseUTC": "2026-10-02T23:48:48.878953+00:00",
+      "elapsedCommandSeconds": 112.900531,
+      "ownedProcessGroup": 4671,
+      "groupAbsentRecorded": true,
+      "cleanupSignals": [],
+      "errorDiagnostics": 0,
+      "appIntentsWarningOccurrences": 1
+    },
+    {
+      "stage": "analyze",
+      "commandReceiptSHA256": "8557dece23abca0af2ef3376a68b1d840b6a89710ccad2cb37832aa1d1fd877c",
+      "status": "PASS_CANONICAL_ANALYZE_V6",
+      "exitCode": 0,
+      "commandMatchesApprovedCard": true,
+      "goSHA256": "491c0e1ab972cc801ff3145eebd9971e3c6bfae802191c0e4a73887974ece154",
+      "issuedUTC": "2026-10-02T23:48:48.950895+00:00",
+      "hardDeadlineUTC": "2026-10-03T00:18:48.950895+00:00",
+      "startUTC": "2026-10-02T23:48:48.952437+00:00",
+      "endUTC": "2026-10-02T23:49:36.340096+00:00",
+      "releaseUTC": "2026-10-02T23:49:36.371917+00:00",
+      "elapsedCommandSeconds": 47.387659,
+      "ownedProcessGroup": 5983,
+      "groupAbsentRecorded": true,
+      "cleanupSignals": [],
+      "errorDiagnostics": 0,
+      "appIntentsWarningOccurrences": 3
+    }
+  ],
+  "resourceAndLifecycle": {
+    "threeSeparateFreshGoWindows": true,
+    "actualIntervalsDoNotOverlap": true,
+    "buildCapSeconds": 1200,
+    "minimumSpawnRoomSeconds": 1500,
+    "maximumGoWindowSeconds": 1800,
+    "postproofReserveSeconds": 210,
+    "cleanupReserveSeconds": 90,
+    "signedExplicitCutoffUTC": "2026-10-03T00:02:36.276575+00:00",
+    "signedCompletedAndExitZero": true,
+    "releaseAnalyzeBudgetQualification": "GO records caps; saved successful terminal status and measured intervals are below 1200s. Release/Analyze command receipts do not separately expose an effective cutoff timestamp.",
+    "allOwnedGroupsAbsentAsRecorded": true,
+    "noCleanupSignals": true,
+    "oneAttemptEachNoRetry": true,
+    "signedOwnedProfileRemovedAsRecorded": true,
+    "ignoredConfigurationAbsentAfterEachAsRecorded": true,
+    "primaryConfigurationBeforeAfterHashEqualAsRecorded": true
+  },
+  "bindingAndArtifactProof": {
+    "head": "414c4a341aebbf43d94d2477b1eb36f792ab04ed",
+    "source326Fingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+    "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "source326Build3Cache13PrePostEqualAsRecorded": true,
+    "signedFileCount": 23,
+    "releaseFileCount": 22,
+    "manifestNameDifferenceOnlyConfigurationFile": true,
+    "signedBinarySHA256Recorded": "2783283d728eb5ea8c5bddafa52b231c971514055d260d99194e67189173525a",
+    "releaseBinarySHA256Recorded": "c798c79e9a08f5ff4ee88a9dd906f1436be8f0182bd3a68a44980db0fb7eadbb",
+    "strictDeepSignatureBothPassedAsRecordedAndPublicLogsCoherent": true,
+    "embeddedEntitlementsEqualGeneratedBothAsRecorded": true,
+    "effectiveEntitlementKeys": [
+      "application-identifier",
+      "com.apple.developer.associated-domains"
+    ],
+    "protectedPayloadsOrEntitlementValuesReadByReviewer": false,
+    "independentBinaryManifestRehashPerformed": false,
+    "qualification": "Reconciled saved proof metadata against cards and codesign logs; did not inspect protected files, produced binaries or moving source/cache state."
+  },
+  "warnings": {
+    "analyzePrimaryOccurrences": 34,
+    "analyzeUniqueSourceDiagnostics": 26,
+    "vendorUnique": 18,
+    "testSwiftUnique": 8,
+    "architectureOccurrences": {
+      "x86_64": 26,
+      "arm64": 8
+    },
+    "exactCurrentVsRI06PathLineColumnMessageArchitectureMultisetEqual": true,
+    "newSourceDiagnostics": [],
+    "removedSourceDiagnostics": [],
+    "retainedSourceDiagnostics": [
+      {
+        "path": "Vendor 2/libxls/src/ole.c",
+        "line": 667,
+        "column": 7,
+        "message": "Although the value stored to 'seeked' is used in the enclosing expression, the value is never actually read from 'seeked' [deadcode.DeadStores]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 414,
+        "column": 9,
+        "message": "Access to field 'index' results in a dereference of a null pointer (loaded from variable 'row') [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 481,
+        "column": 28,
+        "message": "Array access (via field 'value') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 527,
+        "column": 36,
+        "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 770,
+        "column": 17,
+        "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1050,
+        "column": 11,
+        "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1116,
+        "column": 7,
+        "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1128,
+        "column": 17,
+        "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1172,
+        "column": 47,
+        "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1182,
+        "column": 47,
+        "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1200,
+        "column": 47,
+        "message": "Access to field 'col' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1289,
+        "column": 7,
+        "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1301,
+        "column": 17,
+        "message": "Although the value stored to 'read' is used in the enclosing expression, the value is never actually read from 'read' [deadcode.DeadStores]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1337,
+        "column": 57,
+        "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1344,
+        "column": 63,
+        "message": "Array access (from variable 'buf') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1352,
+        "column": 48,
+        "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1363,
+        "column": 56,
+        "message": "Array access (from variable 'foo') results in a null pointer dereference [core.NullDereference]"
+      },
+      {
+        "path": "Vendor 2/libxls/src/xls.c",
+        "line": 1406,
+        "column": 81,
+        "message": "Access to field 'row' results in a dereference of a null pointer (loaded from variable 'buf') [core.NullDereference]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "line": 14,
+        "column": 9,
+        "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "line": 26,
+        "column": 9,
+        "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "line": 42,
+        "column": 9,
+        "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "line": 54,
+        "column": 9,
+        "message": "main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode [#IsolatedConformances]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+        "line": 16,
+        "column": 29,
+        "message": "main actor-isolated initializer 'init(config:redirectURL:authStorage:session:autoRefreshToken:authRegistry:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+        "line": 612,
+        "column": 13,
+        "message": "call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context [#ActorIsolatedCall]"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+        "line": 189,
+        "column": 24,
+        "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+      },
+      {
+        "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+        "line": 382,
+        "column": 35,
+        "message": "main actor-isolated initializer 'init()' cannot be called from outside of the actor; this is an error in the Swift 6 language mode"
+      }
+    ],
+    "toolWarning": "Metadata extraction skipped, no AppIntents.framework dependency found",
+    "toolOccurrencesByStage": {
+      "signed": 1,
+      "release": 1,
+      "analyze": 3
+    },
+    "analyzeToolWarningMultisetMatchesRI06": true,
+    "normalization": "Only checkout prefix ios versus ios-incremental-sync removed for RI06 raw comparison. Path, line, column, message, architecture context and occurrence counts are otherwise exact. No Task097 message normalization needed versus RI06. The documented Task097 initializer argument-list-only normalization reproduces initial TASK14426 provenance.",
+    "historicalWarningsResolved": false,
+    "signedReleaseCacheSilenceIsNotResolution": true
+  },
+  "findings": [],
+  "acceptanceLimits": {
+    "authenticatedInstallRecoveryAccepted": false,
+    "deviceTestsRunByTheseGates": false,
+    "fourClientConvergenceAccepted": false,
+    "taskDone": false,
+    "newRuntimeGoGranted": false
+  },
+  "reviewerActions": {
+    "singleOExcl0600Receipt": true,
+    "originalArtifactsModified": false,
+    "runtimeTestsBuildDeviceSdkSqlGitNetwork": false
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "6B049C77-E70E-4A75-8FF2-CE3EC756EE11",
+        "deviceName" : "TASK144 filesystem crash 26.2",
+        "modelName" : "iPhone 16e",
+        "osBuildNumber" : "23C54",
+        "osVersion" : "26.2",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 0,
+      "passedTests" : 1428,
+      "skippedTests" : 36,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "iOSMerchandiseControl · Built with macOS 27.0.1",
+  "expectedFailures" : 0,
+  "failedTests" : 0,
+  "finishTime" : 1790984345.124,
+  "passedTests" : 1428,
+  "result" : "Passed",
+  "runtimeWarnings" : [
+    {
+      "issueType" : "Runtime Warning",
+      "message" : "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions"
+    }
+  ],
+  "skippedTests" : 36,
+  "startTime" : 1790983944.678,
+  "statistics" : [
+    {
+      "subtitle" : "1 test run",
+      "title" : "1 test collected performance metrics"
+    }
+  ],
+  "testFailures" : [
+
+  ],
+  "title" : "Test - iOSMerchandiseControl",
+  "topInsights" : [
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "72% of duration",
+      "text" : "3 longest test runs with outlier durations exceeding 11.63s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 1464
+}

@@ -1,0 +1,63 @@
+{
+  "actualDeltaPaths": [
+    "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+    "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+    "iOSMerchandiseControl/Sync/Remote/ShopScopedIncrementalRPC.swift",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift"
+  ],
+  "artifactHashes": {
+    "execution-card-targeted5-v6.json": "9d0b4f8a7d31d5992c41fc15d17c40fc24e47f084aafe0d7ff25c5a6c1c225dc",
+    "implementation.patch": "26193ffc4b7e19ecd75065f813703e9148126fe3dfb845681a84d99126324ed9",
+    "negative-tests-and-lifecycle-delta.patch": "4df3007b6393a92cf9fe5e867dbef79bf4ec30123b3e56ea3684b5bcd576aaa4",
+    "production-only-delta.patch": "2bfb399a90cbf24ea7ea3ad0845d0180549501f1014986b5a0e35db8cec524e3",
+    "run-approved-targeted5-v6.py": "d2893cca3c0851a3a5589465247307abe4ea731e698c9700a89d3d800b85d018",
+    "source-api-audit.json": "b4941f46383fa8905d72ce0f625d99569c66586fa6b721291ec47fd3d6d3dcd0",
+    "source-freeze.json": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "static-review-request.json": "e4c1ca570735bb71447116a28b6e022de54589e5df0dc14a161db0104012c877",
+    "v6-delta.patch": "d5f36563439d01486e8e966a6477a7041b2021c7a05a6859e972e557faa91376",
+    "v6-invariance.json": "6d19331fff26a3713f8e5a2de307bb48d51a5a120f9388081e321a1e6abc91bb"
+  },
+  "assessment": [
+    "Restore rechecks actual generation record and scalar mirror after existing authoritative cursor reconciliation. When cursor is ahead of finalization it requires the existing checksummed fence at that exact cursor/account/shop/device and the same recoveryScope key; it reads without minting/replacing the advanced fence. Missing/corrupt/foreign-key cases return false. Equal cursor retains the existing finalization repair branch.",
+    "The new continuation-only accessor requires a nonnegative watermark, mandatory generation UUID and existing checksummed generation record/scalar mirror plus existing validated fence decoder and exact watermark. Generic scopeKey still requires positive watermark; no allowZero flag, adapter or backend contract change is introduced.",
+    "Issuer and consumer call that accessor only within existing managed lease, registered ACTIVE container, actual controller/finalization/generation authority. Journal, bounded local-work/counts, scope/device, cancellation lock and receipt/run guards remain. The consumer retains current generation/watermark and finalization checks before committing or exposing idle.",
+    "ZERO helper now pairs resumeAfterStoreReplacement after owned cancelAndWait on success and catch only. No initial reset, retry or assertion relaxation.",
+    "Two meaningful negative methods use real full recovery and delta42/reopen to reject missing/corrupt/foreign advanced fences, and real finalized/reopened0 plus actual provider empty read to reject absent/corrupt typed generation while keeping no receipt/recoveryRequired. They are test preparation, not runtime results."
+  ],
+  "atUTC": "2026-10-02T22:46:12.167220+00:00",
+  "baseV5SourceFingerprint": "e192e2a75b76f8db6cccd7fd9004f1dd73ff48709e7c6072594dd357158396af",
+  "checks": {
+    "AtomicMethodCount": 57,
+    "allCurrent326MatchFreeze": true,
+    "fourBeforeV5AndAll16AfterCopiesMatchFrozenHashes": true,
+    "genericPositiveGetterAndExistingAdapterRPCWireUnchanged": true,
+    "newMethods": [
+      "testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence",
+      "testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration"
+    ],
+    "old37AndV4CasesPreservedThroughOld55": true,
+    "old55MethodBodiesAndAssertionsByteExact": true,
+    "other322ByteEqualToV5": true,
+    "publisherCancellationLocksAggregationAndAllOtherBoundaryCodeByteEqual": true,
+    "regeneratedFourLeafDeltaByteExact": true
+  },
+  "compilerExecutedByReviewer": false,
+  "findings": [],
+  "globalDone": false,
+  "limits": [
+    "No compilation/test/warning absence, targeted-five GREEN, full-suite, signed artifact, CI or live/native acceptance claim.",
+    "Generic V6 request/response and real backend zero RPC semantics remain unchanged; the zero provider fixture still carries its explicit controlled-transport qualification.",
+    "Equal-cursor repair trusts only the existing fsynced finalization path, not an advanced cursor scalar alone.",
+    "All V5 failed runtime and older historical evidence remain immutable; runtime source approval and final gates must be adjudicated separately."
+  ],
+  "mode": "bounded immutable delta and saved-card review, static source read-only",
+  "newGOGranted": false,
+  "planningHashMethod": "SHA256(raw bytes before first ## Execution)",
+  "planningRawSHA256": "666282867e0deb4d40711c8199ff690bbe93bcacbc65e6bc63a9ce8b8fd25cf9",
+  "reviewer": "/root/final_independent_review",
+  "runtimeExecutedByReviewer": false,
+  "schema": "ri08-v6-independent-source-delta-review-v1",
+  "sourceFileCount": 326,
+  "sourceFingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "verdict": "APPROVED_STATIC_V6_ADVANCED_FENCE_AND_QUALIFIED_ZERO_DELTA"
+}

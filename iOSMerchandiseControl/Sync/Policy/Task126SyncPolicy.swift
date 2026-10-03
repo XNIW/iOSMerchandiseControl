@@ -461,6 +461,16 @@ nonisolated enum Task126OwnerStoreGate {
         try leaseStore.validateLocalMutationContainerWithLeaseHeld(container)
     }
 
+    /// Continuation authority requires a registered application generation;
+    /// the preview-compatible writer validation above intentionally does not.
+    static func validateRegisteredActiveContainerWithLeaseHeld(
+        _ container: ModelContainer
+    ) throws {
+        guard leaseStore.localMutationContainerStateWithLeaseHeld(container) == .active else {
+            throw Task126OwnerStoreGateError.retiredStoreGeneration
+        }
+    }
+
     /// Resolves an identity captured as a value before the lease inside the
     /// newly-created writer context. Persistent model instances themselves
     /// must never cross into the fenced closure.

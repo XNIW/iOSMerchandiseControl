@@ -1,0 +1,125 @@
+{
+  "CIClaim": false,
+  "TESTArtifactClaim": false,
+  "actualInputSHA256": {
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-full1464-v6-preparation-review/receipt.json": "33ef6f7a7e1f5e48971d55cd610d882ad10b50ad3b00af218cb972e75b8df12b",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-shared-oracle/final-full-summary.json": "888c2766af96cdbc2a4d963fef12508d35b7b4b1488f7a47dfec31779643db9d",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri06-shared-oracle/full-skips.json": "a851a2f012444c2848f2fd827b2fd1afa01ecf288908f622d6d46ca45418e527",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri07-proof-order/ci-pr13-async414c/terminal-cases.json": "a6c1237b614e4d8084be4d26847898d2cac758b9f713fc5bf429d1bb94e20e5d",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/full-test/execution-card-full1464-v6.json": "4bd178a1ac320ddf329ae72437f2d100e5dbbe461f3c383d991ce204d51e7d22",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/full-test/run-approved-full1464-v6.py": "0d207067ca21cc6fb1214bd48423bd08b5ee81c97b3b53bf74bebb4d9aa26ddb",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-gate-preparation/full-test/source-declared-1464-identifiers.json": "2c38e25cad934eef9714ffe0ab48c0396b815e3f1e14d1ea4131f6749ae7e3bc",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/exact-test-identifiers-and-skips-adjudication.json": "f6b41b9257f0c41f3c31cf28fef09f428286cb50bb964587ce20e5ef2f0b2698",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/launcher-receipt.json": "f45157fcd877f36fb42dddf5371204df4a61489287311e7500602cbd5a9386ec",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/official-tests-export-receipt.json": "50c1641a1a757d68708dca4f4174f75c7b5ef3c60ab156783a6b35e43b8a648b",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/official-tests.json": "2d44608a2508a0a94104718a78b9c0f4d9b350ed6f7ff9e558c9fe72e9121b00",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/xcodebuild.log": "c40c99dd1530019f04bbeeb7e5e875de0863596b1833a264138469d8644cc048",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/xcresult-summary.json": "131abaaa265f7d1fbd0747a0ef806a110d7f96d89e45f4fdbaa3a4438bbae6ae"
+  },
+  "authLiveBusinessPerformanceClaim": false,
+  "blockingFindings": [],
+  "diagnosticsThisInvocation": {
+    "errorDiagnosticHeaders": 0,
+    "historicalSummarySHA256": "888c2766af96cdbc2a4d963fef12508d35b7b4b1488f7a47dfec31779643db9d",
+    "logWarningLine": 3336,
+    "newWarningSignatureDetected": false,
+    "qualification": "Observed saved invocation only; no claim that all source was freshly rebuilt or that QoS is causally irrelevant.",
+    "runtimeMessageExactEqualsHistoricalSummary": true,
+    "runtimeQoSWarnings": 1,
+    "runtimeWarningMessage": "Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+    "sourceWarningDiagnosticHeaders": 0,
+    "test": "SyncEventIncrementalDomainApplyServiceTests/testFileBackedMultiDomainCommitHoldsLeaseAcrossCatalogPriceHistory"
+  },
+  "execution": {
+    "attempts": 1,
+    "commandDurationSeconds": 408.710255,
+    "commandExitCode": 0,
+    "exactApprovedCardArgv": true,
+    "hardDeadlineUTC": "2026-10-02T23:57:20.456739+00:00",
+    "independentCurrentProcessOrDeviceCheckPerformed": false,
+    "noRetry": true,
+    "ownShutdownExit149PreservedWithoutRelabelingAs0": true,
+    "releaseUTC": "2026-10-02T23:39:10.217542+00:00",
+    "savedActualOwnShutdownReadback": {
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+      "state": "Shutdown",
+      "udid": "6B049C77-E70E-4A75-8FF2-CE3EC756EE11"
+    },
+    "savedOwnShutdownExitCode": 149,
+    "savedOwnedPG": {
+      "ownedGroupExistsAfter": false,
+      "ownedGroupID": 97804,
+      "signals": []
+    },
+    "savedOwnerReleaseBeforeHardDeadline": true,
+    "testEndUTC": "2026-10-02T23:39:09.343733+00:00",
+    "testStartUTC": "2026-10-02T23:32:20.633478+00:00"
+  },
+  "globalDONEClaim": false,
+  "limits": [
+    "36 existing conditional/live skips are preserved; full local PASS is not execution of those gated live criteria.",
+    "This receipt validates this ONE local full test invocation only.",
+    "Current signed TEST artifact, Release, Analyze, CI, native authenticated recovery, business convergence and performance need separate actual evidence.",
+    "No global task DONE or runtime authority is granted."
+  ],
+  "nativeActionsByReviewer": 0,
+  "notePath": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/independent-review-resumed/ios-ri08-full1464-v6-actual-review/ADJUDICATION.md",
+  "noteSHA256": "9748342dc84c50ef75d1dde8f6af313d104f320ddf53e7111749f3868b63918d",
+  "officialCases": {
+    "all23NewAtomicPassed": true,
+    "all57AtomicPassed": true,
+    "allClassCountsExact": true,
+    "childIndependentLeafVerdict": "NO_FINDINGS",
+    "duplicateIDs": [],
+    "failed": 0,
+    "historical1441AllRetained": true,
+    "historical36SkipReasonsExactSavedValues": "Independently checked by integration_ledger_json_review against official tree SkipMessage strings and prior reason ledger a851a2f0; no changed/missing/new reason IDs.",
+    "historicalSkipIDsAll36Exact": true,
+    "leafCount": 1464,
+    "missingExpectedIDs": [],
+    "passed": 1428,
+    "skipped": 36,
+    "targets": {
+      "ui": {
+        "failed": 0,
+        "passed": 8,
+        "skipped": 0,
+        "unique": 8
+      },
+      "unit": {
+        "failed": 0,
+        "passed": 1420,
+        "skipped": 36,
+        "unique": 1456
+      }
+    },
+    "unexpectedIDs": [],
+    "uniqueIdentifiers": 1464
+  },
+  "protectedInputsRead": false,
+  "reviewedUTC": "2026-10-02T23:49:10.140279+00:00",
+  "reviewer": "final_independent_review",
+  "runtimeGOGranted": false,
+  "schemaVersion": 1,
+  "scope": "Saved official full test tree, complete exact unique identifiers/statuses, historical skips/reasons, official summary/log diagnostics and saved owner execution/release evidence. No new application-source or environment audit.",
+  "sourceProvenance": {
+    "approvedFullCardSHA256": "4bd178a1ac320ddf329ae72437f2d100e5dbbe461f3c383d991ce204d51e7d22",
+    "approvedLauncherSHA256": "0d207067ca21cc6fb1214bd48423bd08b5ee81c97b3b53bf74bebb4d9aa26ddb",
+    "newSourceOrCacheEnvironmentAuditPerformed": false,
+    "savedProducerCache13AfterByteEqual": true,
+    "savedProducerSource326AfterByteEqual": true,
+    "source326Fingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+    "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "staticReviewSHA256": "33ef6f7a7e1f5e48971d55cd610d882ad10b50ad3b00af218cb972e75b8df12b"
+  },
+  "sourceTaskGitMutations": false,
+  "summaryAndExports": {
+    "officialTreeExportExit0EmptyStderrNoRetry": true,
+    "officialXcresultAvailable": "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/full1464-v6-attempt01/full1464.xcresult",
+    "summaryCountAndResultMatchFullTree": true,
+    "summaryParserExit0AndHashMatches": true,
+    "summarySeconds": 400.446,
+    "xcresulttoolInvokedByReviewer": false
+  },
+  "verdict": "APPROVED_ACTUAL_LOCAL_FULL1464_V6_PASS_WITH36_UNCHANGED_CONDITIONAL_SKIPS"
+}

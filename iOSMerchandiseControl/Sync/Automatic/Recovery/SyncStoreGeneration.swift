@@ -1446,6 +1446,34 @@ nonisolated struct SameScopeRecoveryActiveWorkSnapshot: Sendable, Equatable {
 }
 
 nonisolated enum SameScopeRecoveryActiveWorkInspector {
+    /// Bounded materialization for synchronous continuation admission/readback.
+    /// Unknown or foreign active work is deliberately rejected as well. SQL
+    /// may still scan retained rows; this does not claim constant query cost.
+    static func isContinuationDrained(container: ModelContainer) throws -> Bool {
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+        var pending = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
+            $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
+        })
+        pending.fetchLimit = 1
+        guard try context.fetch(pending).isEmpty else { return false }
+        let terminalOutboxStatuses: [String] = [
+            "sent", "blockedContract", "blockedAuth", "blockedSchema", "dead", "localOnly"
+        ]
+        var outbox = FetchDescriptor<SyncEventOutboxEntry>(
+            predicate: #Predicate<SyncEventOutboxEntry> { entry in
+                !terminalOutboxStatuses.contains(entry.statusRaw)
+            }
+        )
+        outbox.fetchLimit = 1
+        guard try context.fetch(outbox).isEmpty else { return false }
+        var history = FetchDescriptor<HistoryEntry>(predicate: #Predicate {
+            $0.remotePayloadFingerprint == nil || $0.localChangeRevision > $0.lastSyncedLocalRevision
+        })
+        history.fetchLimit = 1
+        return try context.fetch(history).isEmpty
+    }
+
     static func snapshot(
         container: ModelContainer,
         scope: Task126VerifiedOwnerStoreScope

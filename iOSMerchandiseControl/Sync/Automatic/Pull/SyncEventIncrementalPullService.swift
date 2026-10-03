@@ -5,6 +5,7 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
     private let modelContainer: ModelContainer
     private let remote: any SyncAutomaticIncrementalRemote
     private let defaults: UserDefaults
+    private let storeGenerationController: SyncStoreGenerationController?
     private let domainApplyServiceFactory: (
         _ remote: any SyncAutomaticIncrementalRemote,
         _ defaults: UserDefaults
@@ -14,6 +15,7 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
         modelContainer: ModelContainer,
         remote: any SyncAutomaticIncrementalRemote,
         defaults: UserDefaults = .standard,
+        storeGenerationController: SyncStoreGenerationController? = nil,
         domainApplyServiceFactory: @escaping (
             _ remote: any SyncAutomaticIncrementalRemote,
             _ defaults: UserDefaults
@@ -28,6 +30,7 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
         self.modelContainer = modelContainer
         self.remote = remote
         self.defaults = defaults
+        self.storeGenerationController = storeGenerationController
         self.domainApplyServiceFactory = domainApplyServiceFactory
     }
 
@@ -46,7 +49,8 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
             ownerUserID: ownerUserID,
             modelContainer: modelContainer,
             isAuthenticated: true,
-            forceLightReconcile: forceLightReconcile
+            forceLightReconcile: forceLightReconcile,
+            continuationController: storeGenerationController
         )
     }
 }

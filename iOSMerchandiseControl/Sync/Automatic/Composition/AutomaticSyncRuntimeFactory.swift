@@ -34,7 +34,8 @@ enum SyncAutomaticRuntimeFactory {
         let incrementalPullProvider: (any SyncIncrementalPullProviding)? = supabaseTransportClient.map {
             SyncEventIncrementalPullService(
                 modelContainer: modelContainer,
-                remote: SyncEventRemoteSupabaseAdapter(remote: $0)
+                remote: SyncEventRemoteSupabaseAdapter(remote: $0),
+                storeGenerationController: storeGenerationController
             )
         }
         let recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = supabaseTransportClient.map {

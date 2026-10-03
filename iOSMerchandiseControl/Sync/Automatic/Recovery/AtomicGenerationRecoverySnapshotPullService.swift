@@ -263,7 +263,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     ownerUserID: ownerUserID,
                     scope: scope,
                     verifiedBaselineID: checkpointA.syncEvents.maxId,
-                    expectedBaselineScopeKey: checkpointA.scope.key
+                    expectedBaselineScopeKey: checkpointA.syncEvents.maxId == "0" ? nil : checkpointA.scope.key
                 )
                 guard Self.isMonotonicRecoveryFence(checkpointB, from: checkpointA),
                       receipt.matches(checkpointB) else {

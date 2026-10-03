@@ -8,6 +8,180 @@ nonisolated enum SyncEventAtomicMutationProbePhase: Sendable {
     case afterMutationsBeforeCommit
 }
 
+/// This capability only continues an already finalized generation. It never
+/// asserts a new canonical digest proof or advances lastVerifiedAt. Only this
+/// domain pipeline can construct its scope/cursor authority.
+nonisolated final class SyncIncrementalContinuationReceipt: @unchecked Sendable, Equatable {
+    private let identity: UUID
+    private let scope: Task126VerifiedOwnerStoreScope
+    private let controller: SyncStoreGenerationController
+    private let container: ModelContainer
+    private let defaults: UserDefaults
+    private let generationLease: SyncStoreGenerationLease
+    private let generationID: UUID
+    private let fenceKey: String
+    private let localCounts: SyncInventoryCountSnapshot
+    private let syncType: RuntimeSyncExecutionType
+    private let eventsFetched: Int
+    private let eventsProcessed: Int
+    private let totalApplied: Int
+    private let watermarkBefore: Int64
+    private let watermarkAfter: Int64
+    private let cancellationPolicy: AutomaticSyncCancellationPolicy?
+    private let cancellationToken: Int?
+
+    fileprivate init(
+        scope: Task126VerifiedOwnerStoreScope,
+        controller: SyncStoreGenerationController,
+        container: ModelContainer,
+        defaults: UserDefaults,
+        generationLease: SyncStoreGenerationLease,
+        generationID: UUID,
+        fenceKey: String,
+        localCounts: SyncInventoryCountSnapshot,
+        summary: SyncIncrementalPullSummary,
+        identity: UUID = UUID(),
+        cancellationPolicy: AutomaticSyncCancellationPolicy? = nil,
+        cancellationToken: Int? = nil
+    ) {
+        self.identity = identity
+        self.scope = scope
+        self.controller = controller
+        self.container = container
+        self.defaults = defaults
+        self.generationLease = generationLease
+        self.generationID = generationID
+        self.fenceKey = fenceKey
+        self.localCounts = localCounts
+        syncType = summary.syncType
+        eventsFetched = summary.eventsFetched
+        eventsProcessed = summary.eventsProcessed
+        totalApplied = summary.totalApplied
+        watermarkBefore = summary.watermarkBefore
+        watermarkAfter = summary.watermarkAfter
+        self.cancellationPolicy = cancellationPolicy
+        self.cancellationToken = cancellationToken
+    }
+
+    static func == (lhs: SyncIncrementalContinuationReceipt, rhs: SyncIncrementalContinuationReceipt) -> Bool {
+        lhs.identity == rhs.identity
+            && lhs.cancellationToken == rhs.cancellationToken
+            && lhs.cancellationPolicy === rhs.cancellationPolicy
+    }
+
+    func matches(_ summary: SyncIncrementalPullSummary) -> Bool {
+        !summary.verifiedConvergence && !summary.requiresFullRecovery
+            && summary.syncType == syncType
+            && summary.eventsFetched == eventsFetched
+            && summary.eventsProcessed == eventsProcessed
+            && summary.totalApplied == totalApplied
+            && summary.watermarkBefore == watermarkBefore
+            && summary.watermarkAfter == watermarkAfter
+    }
+
+    func canFollow(_ prior: SyncIncrementalContinuationReceipt) -> Bool {
+        scope == prior.scope && controller === prior.controller
+            && container === prior.container && defaults === prior.defaults
+            && generationLease == prior.generationLease && generationID == prior.generationID
+            && fenceKey == prior.fenceKey && watermarkBefore == prior.watermarkAfter
+    }
+
+    /// Adds only the originating engine's cancellation guard to existing
+    /// sealed authority; it cannot create a scope, cursor or domain proof.
+    func guardedForRun(
+        policy: AutomaticSyncCancellationPolicy,
+        token: Int
+    ) -> SyncIncrementalContinuationReceipt {
+        SyncIncrementalContinuationReceipt(copying: self, policy: policy, token: token)
+    }
+
+    private init(
+        copying receipt: SyncIncrementalContinuationReceipt,
+        policy: AutomaticSyncCancellationPolicy, token: Int
+    ) {
+        identity = receipt.identity
+        scope = receipt.scope
+        controller = receipt.controller
+        container = receipt.container
+        defaults = receipt.defaults
+        generationLease = receipt.generationLease
+        generationID = receipt.generationID
+        fenceKey = receipt.fenceKey
+        localCounts = receipt.localCounts
+        syncType = receipt.syncType
+        eventsFetched = receipt.eventsFetched
+        eventsProcessed = receipt.eventsProcessed
+        totalApplied = receipt.totalApplied
+        watermarkBefore = receipt.watermarkBefore
+        watermarkAfter = receipt.watermarkAfter
+        cancellationPolicy = policy
+        cancellationToken = token
+    }
+
+    @MainActor
+    func withValidatedAuthority<Result>(
+        defaults consumerDefaults: UserDefaults,
+        checkLocalCounts: Bool = true,
+        operation: () throws -> Result
+    ) throws -> Result {
+        guard defaults === consumerDefaults,
+              let cancellationPolicy, let cancellationToken,
+              cancellationPolicy.isCurrent(token: cancellationToken) else {
+            throw CancellationError()
+        }
+        return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            try validateAuthorityWithLeaseHeld(checkLocalCounts: checkLocalCounts)
+            return try cancellationPolicy.withCurrentToken(cancellationToken, operation: operation)
+        }
+    }
+
+    @MainActor
+    fileprivate func validateAuthorityWithLeaseHeld(checkLocalCounts: Bool = true) throws {
+        try Task.checkCancellation()
+        try Task126OwnerStoreGate.validateRegisteredActiveContainerWithLeaseHeld(container)
+        try controller.validateLease(generationLease)
+        guard controller.modelContainer === container,
+              controller.activeManifest?.generationID == generationID,
+              try controller.isActiveRecoveryFinalized(scope: scope),
+              !AccountBindingStore(defaults: defaults).hasPendingReplacementJournal,
+              WatermarkStore(defaults: defaults).matchesRecoveryGeneration(
+                generationID, watermark: watermarkAfter,
+                scope: .init(ownerUserID: scope.ownerUserID, storeIdentity: scope.storeIdentity)
+              ),
+              ShopSyncRecoveryFenceStore(defaults: defaults).continuationScopeKey(
+                accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+                deviceIdentityHash: scope.deviceIdentityHash, watermark: watermarkAfter,
+                generationID: generationID
+              ) == fenceKey,
+              try SameScopeRecoveryActiveWorkInspector.isContinuationDrained(container: container) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        if checkLocalCounts,
+           try LocalDatabasePublicSummary.makeReconciliationAware(context: ModelContext(container)) != localCounts {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+    }
+}
+
+/// Only immutable defaults-backed read dependencies cross the actor hop.
+/// UserDefaults is thread-safe; copying WatermarkStore preserves its exact
+/// injected defaults reference without marking the domain service Sendable.
+private nonisolated final class SyncIncrementalContinuationReadDependencies: @unchecked Sendable {
+    let defaults: UserDefaults
+    let watermarkStore: WatermarkStore
+
+    init(defaults: UserDefaults, watermarkStore: WatermarkStore) {
+        self.defaults = defaults
+        self.watermarkStore = watermarkStore
+    }
+}
+
+private nonisolated struct SyncIncrementalContinuationGeneration: Sendable {
+    let lease: SyncStoreGenerationLease
+    let generationID: UUID
+    let fenceKey: String
+}
+
 nonisolated struct SyncEventIncrementalDomainApplyService {
     private let eventFetcher: any SupabaseSyncEventIncrementalFetching
     private let remote: any SyncAutomaticIncrementalRemote
@@ -54,7 +228,8 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         ownerUserID: UUID,
         modelContainer: ModelContainer,
         isAuthenticated: Bool,
-        forceLightReconcile: Bool = false
+        forceLightReconcile: Bool = false,
+        continuationController: SyncStoreGenerationController? = nil
     ) async throws -> SyncIncrementalPullSummary {
         let totalStarted = mcNowMillis()
         guard isAuthenticated else {
@@ -78,6 +253,11 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             storeIdentity: scope.storeIdentity
         )
         let watermarkBefore = watermarkStore.watermark(for: watermarkScope)
+        let controller = continuationController
+        let continuationGeneration = try await captureContinuationGeneration(
+            controller: controller, container: modelContainer, scope: scope,
+            watermark: watermarkBefore
+        )
         let eventFetchStarted = mcNowMillis()
         var scopedEvents: [RemoteSyncEventRow] = []
         var eventCursor = watermarkBefore
@@ -168,6 +348,14 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         }
         guard !scopedEvents.isEmpty else {
             let scannedWatermark = watermarkBefore
+            if let controller, let continuationGeneration {
+                return try await verifyStableContinuation(
+                    ownerUserID: ownerUserID, modelContainer: modelContainer, scope: scope,
+                    watermark: watermarkBefore, controller: controller,
+                    generation: continuationGeneration, eventFetchMs: eventFetchMs,
+                    totalStarted: totalStarted
+                )
+            }
             if scannedWatermark > watermarkBefore {
                 // This owner page was fully examined for the selected shop. Advance
                 // the shop-scoped checkpoint even when every row belongs elsewhere,
@@ -325,6 +513,17 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                     summary.requiresFullRecoveryReason = reason
                     summary.watermarkAfter = watermarkBefore
                 }
+            }
+            if !summary.requiresFullRecovery,
+               sortedEvents.allSatisfy(isKnownContinuationEvent),
+               summary.watermarkAfter == sortedEvents.last?.id,
+               let controller, let continuationGeneration {
+                return try await verifyStableContinuation(
+                    ownerUserID: ownerUserID, modelContainer: modelContainer, scope: scope,
+                    watermark: summary.watermarkAfter, controller: controller,
+                    generation: continuationGeneration, eventFetchMs: eventFetchMs,
+                    totalStarted: totalStarted, classifiedSummary: summary
+                )
             }
             summary.totalElapsedMs = mcNowMillis() - totalStarted
             return summary
@@ -578,8 +777,144 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                 summary.watermarkAfter = watermarkBefore
             }
         }
+        if !summary.requiresFullRecovery,
+           sortedEvents.allSatisfy(isKnownContinuationEvent),
+           summary.watermarkAfter == sortedEvents.last?.id,
+           summary.eventsProcessed == sortedEvents.count,
+           let controller, let continuationGeneration {
+            summary.continuationReceipt = try await issueContinuationReceipt(
+                summary: summary, controller: controller, container: modelContainer,
+                scope: scope, generation: continuationGeneration
+            )
+        }
         summary.totalElapsedMs = mcNowMillis() - totalStarted
         return summary
+    }
+
+    private func captureContinuationGeneration(
+        controller: SyncStoreGenerationController?, container: ModelContainer,
+        scope: Task126VerifiedOwnerStoreScope, watermark: Int64
+    ) async throws -> SyncIncrementalContinuationGeneration? {
+        guard let controller, watermark >= 0 else { return nil }
+        let dependencies = SyncIncrementalContinuationReadDependencies(
+            defaults: defaults, watermarkStore: watermarkStore
+        )
+        return try await MainActor.run {
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: dependencies.defaults) {
+                try Task126OwnerStoreGate.validateRegisteredActiveContainerWithLeaseHeld(container)
+                guard let lease = controller.captureLease(for: container),
+                      let manifest = controller.activeManifest,
+                      try controller.isActiveRecoveryFinalized(scope: scope),
+                      dependencies.watermarkStore.matchesRecoveryGeneration(
+                        manifest.generationID, watermark: watermark,
+                        scope: .init(ownerUserID: scope.ownerUserID, storeIdentity: scope.storeIdentity)
+                      ),
+                      let fenceKey = ShopSyncRecoveryFenceStore(defaults: dependencies.defaults).continuationScopeKey(
+                        accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+                        deviceIdentityHash: scope.deviceIdentityHash, watermark: watermark,
+                        generationID: manifest.generationID
+                      ) else { return nil }
+                return SyncIncrementalContinuationGeneration(
+                    lease: lease, generationID: manifest.generationID, fenceKey: fenceKey
+                )
+            }
+        }
+    }
+
+    private func issueContinuationReceipt(
+        summary: SyncIncrementalPullSummary, controller: SyncStoreGenerationController,
+        container: ModelContainer, scope: Task126VerifiedOwnerStoreScope,
+        generation: SyncIncrementalContinuationGeneration,
+        expectedCounts: SyncInventoryCountSnapshot? = nil
+    ) async throws -> SyncIncrementalContinuationReceipt? {
+        try Task.checkCancellation()
+        guard !summary.requiresFullRecovery, !summary.verifiedConvergence else { return nil }
+        let dependencies = SyncIncrementalContinuationReadDependencies(
+            defaults: defaults, watermarkStore: watermarkStore
+        )
+        return try await MainActor.run {
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: dependencies.defaults) {
+                let counts = try LocalDatabasePublicSummary.makeReconciliationAware(context: ModelContext(container))
+                guard expectedCounts == nil || expectedCounts == counts else { return nil }
+                let receipt = SyncIncrementalContinuationReceipt(
+                    scope: scope, controller: controller, container: container, defaults: dependencies.defaults,
+                    generationLease: generation.lease, generationID: generation.generationID,
+                    fenceKey: generation.fenceKey, localCounts: counts, summary: summary
+                )
+                // Local work arriving during remote reads cannot authorize a
+                // continuation, even if the atomic event commit succeeded.
+                do { try receipt.validateAuthorityWithLeaseHeld() }
+                catch is CancellationError { throw CancellationError() }
+                catch { return nil }
+                return receipt
+            }
+        }
+    }
+
+    private func verifyStableContinuation(
+        ownerUserID: UUID, modelContainer: ModelContainer, scope: Task126VerifiedOwnerStoreScope,
+        watermark: Int64, controller: SyncStoreGenerationController,
+        generation: SyncIncrementalContinuationGeneration, eventFetchMs: Int, totalStarted: Int,
+        classifiedSummary: SyncIncrementalPullSummary? = nil
+    ) async throws -> SyncIncrementalPullSummary {
+        // This path never uses the 15-second count cache. Count parity is only
+        // an eligibility guard, alongside finalized generation + scope fence,
+        // drained local work and a bounded tail after the fresh count response.
+        let protectedIDs = try await protectedRemoteIDs(
+            ownerUserID: ownerUserID, modelContainer: modelContainer, storeIdentity: scope.storeIdentity
+        )
+        guard protectedIDs.suppliers.isEmpty, protectedIDs.categories.isEmpty,
+              protectedIDs.products.isEmpty, protectedIDs.prices.isEmpty,
+              protectedIDs.history.isEmpty, protectedIDs.logicalKeys.isEmpty,
+              !protectedIDs.hasCappedImportMarker else {
+            var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
+            summary.requiresFullRecoveryReason = "ordinary_continuation_local_work_pending"
+            return summary
+        }
+        let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope)
+        var summary = classifiedSummary ?? SyncIncrementalPullSummary(
+            syncType: .lightReconcile, watermarkBefore: watermark, watermarkAfter: watermark
+        )
+        if !drift.isAligned {
+            summary.requiresFullRecoveryReason = "canonical_drift_detected"
+        }
+        if !summary.requiresFullRecovery {
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            let tail = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await eventFetcher.fetchSyncEventsAfter(ownerUserID: ownerUserID, afterID: watermark, limit: 1)
+            }
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            guard tail.count <= 1 else { throw ShopSyncRecoveryContractError.invalidPage(domain: .products) }
+            for event in tail {
+                try validateIncrementalReadIdentity(ownerUserID: event.ownerUserID, shopID: event.shopID,
+                                                    scope: scope, remote: eventFetcher)
+                guard event.id > watermark else { throw ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID }
+            }
+            if !tail.isEmpty {
+                summary.requiresFullRecoveryReason = "sync_event_page_changed_during_light_reconcile"
+            } else {
+                summary.continuationReceipt = try await issueContinuationReceipt(
+                    summary: summary, controller: controller, container: modelContainer,
+                    scope: scope, generation: generation, expectedCounts: drift.local
+                )
+            }
+        }
+        try recordLightReconcileCompleted(ownerUserID: ownerUserID,
+            storeIdentity: scope.storeIdentity, scope: scope)
+        summary.eventPageFetchMs = eventFetchMs
+        summary.totalElapsedMs = mcNowMillis() - totalStarted
+        return summary
+    }
+
+    private func isKnownContinuationEvent(_ event: RemoteSyncEventRow) -> Bool {
+        switch (event.domain, event.eventType) {
+        case ("catalog", "catalog_changed"), ("catalog", "catalog_tombstone"),
+             ("prices", "prices_changed"),
+             ("history", "history_changed"), ("history", "history_tombstone"):
+            return true
+        default:
+            return false
+        }
     }
 
     /// Commits the durable V6 opaque scope fence before exposing a newer
@@ -1223,18 +1558,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         watermark: Int64,
         scope: Task126VerifiedOwnerStoreScope
     ) async throws -> SyncIncrementalPullSummary {
-        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
-        let remoteCounts = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
-            try await remote.fetchReconciliationRemoteCounts()
-        }
-        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
-        let localCounts = try await Task.detached(priority: .utility) {
-            let context = ModelContext(modelContainer)
-            return try LocalDatabasePublicSummary.makeReconciliationAware(context: context)
-        }.value
-        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
-        let drift = SyncCountDriftReport.compare(local: localCounts, remote: remoteCounts)
-        recordCanonicalDriftDiagnostics(drift)
+        let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope)
         guard !drift.isAligned else {
             return SyncIncrementalPullSummary(
                 syncType: .lightReconcile,
@@ -1250,6 +1574,24 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         )
         summary.requiresFullRecoveryReason = "canonical_drift_detected"
         return summary
+    }
+
+    private func fetchCanonicalDrift(
+        modelContainer: ModelContainer, scope: Task126VerifiedOwnerStoreScope
+    ) async throws -> SyncCountDriftReport {
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let remoteCounts = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            try await remote.fetchReconciliationRemoteCounts()
+        }
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let localCounts = try await Task.detached(priority: .utility) {
+            let context = ModelContext(modelContainer)
+            return try LocalDatabasePublicSummary.makeReconciliationAware(context: context)
+        }.value
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+        let drift = SyncCountDriftReport.compare(local: localCounts, remote: remoteCounts)
+        recordCanonicalDriftDiagnostics(drift)
+        return drift
     }
 
     private func recordCanonicalDriftDiagnostics(_ drift: SyncCountDriftReport) {

@@ -1,0 +1,12 @@
+{
+  "rootGOsha": "4f1ffa7efaf46472ba51bebeb76a3e734514791032f061cb1facbc99c79859dc",
+  "startUTC": "2026-10-02T23:42:36.260513+00:00",
+  "runtimeBootedOrInstalled": false,
+  "status": "BUILD_AND_POSTPROOF_PASS",
+  "signedBinarySHA256": "2783283d728eb5ea8c5bddafa52b231c971514055d260d99194e67189173525a",
+  "ownIgnoredCopyRemoved": true,
+  "releaseUTC": "2026-10-02T23:44:30.669332+00:00",
+  "ignoredCopyAbsentActual": true,
+  "beforeHardDeadline": true,
+  "noSimulatorOrDeviceCommands": true
+}

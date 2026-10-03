@@ -1,0 +1,33 @@
+{
+  "status": "COMPLETED",
+  "startUTC": "2026-10-02T23:42:36.276577+00:00",
+  "command": [
+    "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild",
+    "build",
+    "-project",
+    "iOSMerchandiseControl.xcodeproj",
+    "-scheme",
+    "iOSMerchandiseControl",
+    "-configuration",
+    "Release",
+    "-destination",
+    "platform=iOS Simulator,id=6B049C77-E70E-4A75-8FF2-CE3EC756EE11",
+    "-derivedDataPath",
+    "/Users/minxiang/.codex/worktrees/mobile-parity-root-cause/evidence/ios-ri08-ordinary-sync-state/final-signed-test-v6-attempt01/DerivedData",
+    "-clonedSourcePackagesDirPath",
+    "/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bhraasckuuoixncemgxinrmaqbqp/SourcePackages"
+  ],
+  "buildCutoffUTC": "2026-10-03T00:02:36.276575+00:00",
+  "HEAD": "414c4a341aebbf43d94d2477b1eb36f792ab04ed",
+  "source326Fingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+  "ownCommandGroupID": 1653,
+  "exitCode": 0,
+  "ownGroupSignals": [],
+  "ownGroupCleanup": {
+    "ownedGroupID": 1653,
+    "signals": [],
+    "ownedGroupExistsAfter": false
+  },
+  "endUTC": "2026-10-02T23:44:30.564091+00:00",
+  "logSHA256": "e03167ab84e1545d3b6d5b2e630cbd4a3aaf48bf36a551f6e50a9a07a20eae70"
+}

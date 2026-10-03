@@ -1,0 +1,244 @@
+{
+  "artifactHashes": {
+    "launcher-receipt.json": "dd62a6afc288fbe3b5c742aacbb56fa92f9d55f383e9d94b49f96dd161c9e835",
+    "xcodebuild.log": "11a67025d67a606ea1cd946e7a5231543144750e5cd45ec595e2bbe664dabc32",
+    "xcresult-summary.json": "de734341ab4a734787ac4c648c39fbfdf7717b8021ac8604a9d26f3ec9cf1560",
+    "xcresult-tests.json": "8a9c9059cae8e954ba4d5c30e0c451c85f74f05d3dc3e01754f0cf62e02b02df"
+  },
+  "atUTC": "2026-10-02T22:55:50.321944+00:00",
+  "countProof": {
+    "actualStageCount": 19,
+    "failureMessages": 0,
+    "summary": {
+      "fail": 0,
+      "pass": 5,
+      "skip": 0,
+      "total": 5
+    },
+    "uniqueLogStarts": [
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedDiskRecoveryAllowsOrdinaryAutomaticUpdateAfterFreshOpen",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsFirstCanonicalDeltaAndNoEventsAfterFreshOpen",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsOrdinaryNoEventsAfterFreshOpen"
+    ],
+    "uniqueLogTerminals": [
+      {
+        "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence",
+        "status": "passed"
+      },
+      {
+        "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration",
+        "status": "passed"
+      },
+      {
+        "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedDiskRecoveryAllowsOrdinaryAutomaticUpdateAfterFreshOpen",
+        "status": "passed"
+      },
+      {
+        "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsFirstCanonicalDeltaAndNoEventsAfterFreshOpen",
+        "status": "passed"
+      },
+      {
+        "id": "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsOrdinaryNoEventsAfterFreshOpen",
+        "status": "passed"
+      }
+    ],
+    "uniqueOfficialIdentifiers": [
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedReopenRejectsAdvancedCursorWithoutMatchingFence",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testFinalizedZeroContinuationRejectsMissingOrCorruptTypedGeneration",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedDiskRecoveryAllowsOrdinaryAutomaticUpdateAfterFreshOpen",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsFirstCanonicalDeltaAndNoEventsAfterFreshOpen",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testVerifiedEmptyZeroDiskRecoveryAllowsOrdinaryNoEventsAfterFreshOpen"
+    ]
+  },
+  "globalDone": false,
+  "limits": [
+    "This proves exactly five targeted XCTest cases on V6, not all57 Atomic methods or the full suite.",
+    "Any anticipated full1464 count remains declaration only until actual full results are adjudicated.",
+    "Controlled ZERO remote validates actual recovery-written fence but remains explicitly not actual V6 RPC/backend/native authenticated E2E.",
+    "No Release/Analyze/signed-artifact/CI/live acceptance or performance/global DONE claim.",
+    "No reviewer runtime/compiler/device/SQL/Git/source mutation or new GO.",
+    "Historical V5 and all earlier failures remain immutable."
+  ],
+  "mode": "saved official result/log and source read-only",
+  "ownerExecution": {
+    "beforeDeadline": true,
+    "hardDeadlineUTC": "2026-10-02T23:14:50.226716+00:00",
+    "normalShutdownCommandExit": 149,
+    "normalShutdownReadback": true,
+    "observedDeviceAfter": "Shutdown",
+    "ownGroupCleanup": {
+      "ownedGroupExistsAfter": false,
+      "ownedGroupID": 88580,
+      "signals": []
+    },
+    "proofScope": "Saved owner proof only; reviewer made no live runtime/process/device calls.",
+    "releaseUTC": "2026-10-02T22:50:18.185250+00:00",
+    "testEndUTC": "2026-10-02T22:50:17.729983+00:00",
+    "testExitCode": 0,
+    "testStartUTC": "2026-10-02T22:49:50.406497+00:00"
+  },
+  "reviewer": "/root/final_independent_review",
+  "runtimeExecutedByReviewer": false,
+  "schema": "ri08-v6-targeted5-independent-actual-adjudication-v1",
+  "sourceBinding": {
+    "allIndependentCurrent326MatchFrozenMap": true,
+    "cardSHA256": "9d0b4f8a7d31d5992c41fc15d17c40fc24e47f084aafe0d7ff25c5a6c1c225dc",
+    "launcherSHA256": "d2893cca3c0851a3a5589465247307abe4ea731e698c9700a89d3d800b85d018",
+    "planningRawPrefixSHA256": "666282867e0deb4d40711c8199ff690bbe93bcacbc65e6bc63a9ce8b8fd25cf9",
+    "priorStaticOld55BodyAssertionPreservation": true,
+    "rootGOsha256": "c031f15678d98f30a83116cb2270b29e39c70971d9d33c57e54f0a6181feb424",
+    "savedOwnerCache13AfterEqual": true,
+    "savedOwnerSourceAfterEqual": true,
+    "sourceAtomicDeclarationCount": 57,
+    "sourceFingerprint": "ac3ba92dc6af989b8a538b7ac43698f8a17d6f741f0b2588a04a5c310b9e2cf3",
+    "sourceFreezeSHA256": "82085193b0cad0f45eaaa674338cf0e7a152bfbe21d22def092cb40d70c4d1a8",
+    "testSHA256": "98fd65deceb983c53530cd9b4ec5d25f8ef9fc92f3a5a21f06d22ed5d7d4fcb2"
+  },
+  "strictDateAssertions": {
+    "allPreservedAndPassed": true,
+    "fixtureClockOnly": true,
+    "productionCodecFixClaimed": false
+  },
+  "verdict": "APPROVED_ACTUAL_TARGETED_FIVE_PASS_ON_V6",
+  "verifiedBehaviors": {
+    "freshOpen": {
+      "after": {
+        "accountMatches": true,
+        "activeRecoveryFinalized": true,
+        "currentScopeKeyMatchesManifest": true,
+        "currentScopeKeyPresent": true,
+        "deviceMatches": true,
+        "fenceMatchesCurrentWatermark": true,
+        "fenceRecordValidated": true,
+        "fenceStoredWatermark": 42,
+        "finalizationExactlyMatchesManifest": true,
+        "finalizationRecoveryWatermark": 41,
+        "generationAndWatermarkMirrorMatch": true,
+        "generationMatchesFinalization": true,
+        "manifestRecoveryWatermark": 41,
+        "pendingRecoveryJournal": false,
+        "scalarWatermark": 42,
+        "shopMatches": true,
+        "stage": "after-fresh-open",
+        "storeMatches": true,
+        "typedGenerationRecordPresent": true,
+        "typedWatermark": 42
+      },
+      "before": {
+        "accountMatches": true,
+        "activeRecoveryFinalized": true,
+        "currentScopeKeyMatchesManifest": true,
+        "currentScopeKeyPresent": true,
+        "deviceMatches": true,
+        "fenceMatchesCurrentWatermark": true,
+        "fenceRecordValidated": true,
+        "fenceStoredWatermark": 42,
+        "finalizationExactlyMatchesManifest": true,
+        "finalizationRecoveryWatermark": 41,
+        "generationAndWatermarkMirrorMatch": true,
+        "generationMatchesFinalization": true,
+        "manifestRecoveryWatermark": 41,
+        "pendingRecoveryJournal": false,
+        "scalarWatermark": 42,
+        "shopMatches": true,
+        "stage": "before-fresh-open",
+        "storeMatches": true,
+        "typedGenerationRecordPresent": true,
+        "typedWatermark": 42
+      },
+      "observed": "Exact typed/scalar cursor42 and validated fence42 retained across reopen; same finalized generation41; second43 succeeds idle, stock2, targetedcalls4, no journal, unchanged lastVerifiedAt.",
+      "secondDelta": {
+        "catalogTargetedFetchCalls": 4,
+        "lastVerifiedAt": 1790981413,
+        "latestRuntimeErrorCode": "none",
+        "latestRuntimeStatus": "success",
+        "latestRuntimeVerifiedConvergence": false,
+        "pendingRecoveryJournal": false,
+        "runtimeResultCount": 1,
+        "stage": "second-delta-43",
+        "statePhase": "idle",
+        "stock": 2,
+        "watermark": 43
+      }
+    },
+    "negativeAdvancedFence": {
+      "coverageProof": "Actual passing method with frozen fixed three-iteration loop, real recovery+delta42 proof each iteration, expected reopen defaultsConfigurationMismatch throw asserted, cursor42/generation/finalization/journal assertions at end of every iteration. No skip or early-return path in the loop.",
+      "mutations": [
+        "missing",
+        "corrupt",
+        "foreignScope"
+      ],
+      "qualifier": "Mutations are assertions inside one XCTest method, not three separate official test IDs or separate trace records."
+    },
+    "negativeTypedZero": {
+      "coverageProof": "Actual passing method with frozen fixed two-iteration loop; two full0 recovery/activation/reopen stage sets in saved log, then typed record missing/corrupt, qualified accessor rejection, actual eventReads>0, provider noWork, receipt nil, unverified, recoveryRequired, same lastVerifiedAt and no journal asserted per iteration.",
+      "mutations": [
+        "missing",
+        "corrupt"
+      ],
+      "qualifier": "Per-negative provider fields are enforced by passing source assertions rather than separate saved stage records."
+    },
+    "zeroFirstDeltaAndEmptyAfter": {
+      "emptyAfter": {
+        "actualContinuationReceipt": true,
+        "catalogTargetedFetchCalls": 2,
+        "eventReads": 4,
+        "freshReconciliationCalls": 1,
+        "lastVerifiedAt": 1790981413,
+        "latestRuntimeErrorCode": "none",
+        "latestRuntimeStatus": "noWork",
+        "latestRuntimeVerifiedConvergence": false,
+        "pendingRecoveryJournal": false,
+        "products": 1,
+        "runtimeResultCount": 2,
+        "stage": "empty-after-first-1",
+        "statePhase": "idle",
+        "watermark": 1
+      },
+      "first": {
+        "actualContinuationReceipt": true,
+        "catalogTargetedFetchCalls": 2,
+        "eventReads": 2,
+        "freshReconciliationCalls": 0,
+        "lastVerifiedAt": 1790981413,
+        "latestRuntimeErrorCode": "none",
+        "latestRuntimeStatus": "success",
+        "latestRuntimeVerifiedConvergence": false,
+        "pendingRecoveryJournal": false,
+        "products": 1,
+        "runtimeResultCount": 1,
+        "stage": "first-canonical-delta-1",
+        "statePhase": "idle",
+        "watermark": 1
+      },
+      "observed": "Genuine full0 activation/finalization and fresh-open precede real canonical delta1; actual continuation receipt, idle, unverified ordinary result; next empty1 enters runtime and reads fresh count/stability tail without full recovery."
+    },
+    "zeroInitialEmpty": {
+      "actual": {
+        "actualContinuationReceipt": true,
+        "catalogTargetedFetchCalls": 0,
+        "eventReads": 2,
+        "freshReconciliationCalls": 1,
+        "lastVerifiedAt": 1790981413,
+        "latestRuntimeErrorCode": "none",
+        "latestRuntimeStatus": "noWork",
+        "latestRuntimeVerifiedConvergence": false,
+        "pendingRecoveryJournal": false,
+        "products": 0,
+        "runtimeResultCount": 1,
+        "stage": "initial-empty-0",
+        "statePhase": "idle",
+        "watermark": 0
+      },
+      "observed": "Provider reached: two empty event reads, one fresh count, no targeted catalog lookup, actual continuation receipt, noWork/idle at0. The historical V5 busy is preserved and no initial gate reset was introduced."
+    }
+  },
+  "warningInventory": {
+    "primarySwiftWarningHeaders": 0,
+    "runtimeWarnings": [],
+    "scope": "This saved targeted invocation only; not a whole-project/canonical warning absence proof.",
+    "toolKnownAppIntentsMetadataHeaders": 2
+  }
+}

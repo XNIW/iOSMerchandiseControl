@@ -31,6 +31,7 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     /// generation digest/count proof were compared successfully in this run.
     /// Event-page emptiness and count parity alone must leave this false.
     var verifiedConvergence = false
+    var continuationReceipt: SyncIncrementalContinuationReceipt? = nil
     var eventPageFetchMs: Int = 0
     var catalogFetchMs: Int = 0
     var catalogApplyMs: Int = 0

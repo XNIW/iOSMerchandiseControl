@@ -19,7 +19,29 @@ private nonisolated struct SyncAutomaticRecoveryAttemptRecord: Codable, Sendable
 @MainActor
 final class SyncStateStore: ObservableObject {
     private static let convergenceProofVersion = 1
-    @Published private(set) var state = SyncState()
+    let objectWillChange = ObservableObjectPublisher()
+    private var storedState = SyncState()
+    private var continuedGeneration: SyncIncrementalContinuationReceipt?
+
+    private(set) var state: SyncState {
+        get {
+            guard storedState.phase == .idle, let receipt = continuedGeneration else { return storedState }
+            do {
+                return try receipt.withValidatedAuthority(defaults: defaults, checkLocalCounts: false) { storedState }
+            } catch {
+                var invalidated = storedState
+                invalidated.phase = .recoveryRequired
+                return invalidated
+            }
+        }
+        set {
+            // Notify outside Task126's non-recursive lease. A synchronous
+            // observer may read state or invalidate identity safely here.
+            objectWillChange.send()
+            continuedGeneration = nil
+            storedState = newValue
+        }
+    }
     private let defaults: UserDefaults
     private let keyPrefix: String
 
@@ -103,10 +125,42 @@ final class SyncStateStore: ObservableObject {
         preserveRecoveryRequired: Bool = false,
         now: Date = Date()
     ) {
-        if state.phase == .recoveryRequired,
-           result.status == .noWork {
-            return
+        let isOrdinaryCompletion = !result.verifiedConvergence
+            && (result.status == .success || result.status == .noWork)
+            && result.blockReason == nil && result.errorCode == nil
+        if isOrdinaryCompletion, !preserveRecoveryRequired,
+           let receipt = result.continuationReceipt {
+            // Subscribers run before the guard and cannot observe an idle
+            // candidate computed from authority they have just invalidated.
+            objectWillChange.send()
+            do {
+                try receipt.withValidatedAuthority(defaults: defaults) {
+                    guard storedState.phase != .recoveryRequired else {
+                        throw SyncStoreGenerationError.activationReadBackFailed
+                    }
+                    applyRunResult(result, preserveRecoveryRequired: false, continued: true, now: now)
+                    continuedGeneration = receipt
+                }
+                return
+            } catch {
+                // The sealed proof is stale, cancelled or locally dirty.
+                // Apply exactly the generic fail-closed result policy below.
+            }
         }
+        objectWillChange.send()
+        applyRunResult(result, preserveRecoveryRequired: preserveRecoveryRequired, continued: false, now: now)
+        continuedGeneration = nil
+    }
+
+    private func applyRunResult(
+        _ result: SyncAutomaticRunResult,
+        preserveRecoveryRequired: Bool,
+        continued: Bool,
+        now: Date
+    ) {
+        // This helper is also called with the lease held. It uses plain
+        // storage only: no publisher, computed getter or nested scope capture.
+        if storedState.phase == .recoveryRequired, result.status == .noWork { return }
 
         var phase: SyncPhase
         let outcome: SyncOutcome
@@ -115,12 +169,12 @@ final class SyncStateStore: ObservableObject {
         switch result.status {
         case .success:
             outcome = .succeeded
-            if result.verifiedConvergence {
+            if result.verifiedConvergence || continued {
                 phase = .idle
-                verifiedAt = now
+                verifiedAt = result.verifiedConvergence ? now : storedState.lastVerifiedAt
             } else {
                 phase = .recoveryRequired
-                verifiedAt = state.lastVerifiedAt
+                verifiedAt = storedState.lastVerifiedAt
             }
         case .noWork:
             if let reason = result.blockReason {
@@ -129,39 +183,39 @@ final class SyncStateStore: ObservableObject {
             } else if result.errorCode != nil {
                 phase = .failed
                 outcome = .failed
-            } else if result.verifiedConvergence {
+            } else if result.verifiedConvergence || continued {
                 phase = .idle
                 outcome = .noWork
             } else {
                 phase = .recoveryRequired
                 outcome = .noWork
             }
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .recoveryRequired:
             phase = .recoveryRequired
             outcome = .noWork
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .blocked:
             let reason = result.blockReason ?? .accountDecisionRequired
             phase = .blocked(reason)
             outcome = .blocked(reason)
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .busy:
             phase = .checking
             outcome = .busy
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .failed:
             phase = .failed
             outcome = .failed
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .cancelled:
             phase = .idle
             outcome = .cancelled
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         case .scheduledRetry:
             phase = .checking
             outcome = .scheduledRetry
-            verifiedAt = state.lastVerifiedAt
+            verifiedAt = storedState.lastVerifiedAt
         }
 
         if recoveryJournalIsPending {
@@ -173,7 +227,7 @@ final class SyncStateStore: ObservableObject {
             phase = .recoveryRequired
         }
 
-        state = SyncState(
+        storedState = SyncState(
             phase: phase,
             progress: nil,
             lastVerifiedAt: verifiedAt,
