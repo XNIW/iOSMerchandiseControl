@@ -6,6 +6,249 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testRecoveryReportsPersistedPagesAndActualPublicationStagesWithoutProvingConvergence() async throws {
+        let fixture = try makeFixture()
+        let products = try canonicalNumericPrefixIDs().prefix(26).enumerated().map { index, id in
+            RemoteInventoryProductRow(
+                id: id, ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                barcode: "TASK144-PROGRESS-\(index)", itemNumber: "progress-\(index)",
+                productName: "Progress fixture \(index)", secondProductName: nil,
+                purchasePrice: nil, retailPrice: nil, supplierID: nil, categoryID: nil,
+                stockQuantity: nil, updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil
+            )
+        }
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "progress", products: products, prices: []
+        )
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint, checkpoint],
+            productRows: products
+        )
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.updatePhase(.reconciling)
+        let invocationID = store.beginRecoveryProgressReporting()
+        let observation = AtomicRecoveryProgressObservation()
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            observation.events.append(event)
+            store.recordRecoveryProgress(event)
+            XCTAssertEqual(store.state.recoveryProgress, event.progress)
+            XCTAssertNil(store.state.lastVerifiedAt, "Progress must not become a convergence proof")
+            XCTAssertNotEqual(store.state.lastOutcome, .succeeded)
+        })
+        let summary = try await SyncRecoveryProgressContext.$invocationID.withValue(invocationID) {
+            try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        let progress = observation.events.map(\.progress)
+        XCTAssertEqual(progress.first?.stage, .preparing)
+        XCTAssertEqual(progress.last?.stage, .finalizing)
+        XCTAssertEqual(progress.filter { $0.domain == .products }.map(\.pages), [0, 1, 2])
+        XCTAssertEqual(progress.filter { $0.domain == .products }.map(\.persistedRows), [0, 25, 26])
+        XCTAssertEqual(Set(progress.compactMap(\.domain)), Set(ShopSyncRecoveryDomain.allCases))
+        let verificationIndex = try XCTUnwrap(progress.firstIndex { $0.stage == .verifying })
+        let activationIndex = try XCTUnwrap(progress.firstIndex { $0.stage == .activating })
+        XCTAssertLessThan(verificationIndex, activationIndex)
+        XCTAssertTrue(observation.events.allSatisfy { $0.invocationID == invocationID })
+        XCTAssertNotNil(fixture.controller.activeManifest)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        store.recordRunResult(.success(didWork: true, verifiedConvergence: true))
+        XCTAssertNil(store.state.recoveryProgress)
+        let completedState = store.state
+        store.recordRecoveryProgress(try XCTUnwrap(observation.events.last))
+        XCTAssertEqual(store.state, completedState, "A late callback cannot resurrect completed progress")
+    }
+
+    func testRecoveryProgressRejectsPreviousInvocationAndCurrentAccountChange() async throws {
+        let fixture = try makeFixture()
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let accountHash = AccountBindingStore.accountHash(for: fixture.ownerUserID)
+        let identity = try XCTUnwrap(bindingStore.currentBinding?.storeIdentity)
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(
+            accountHash: accountHash, storeIdentity: identity, reason: "progress-test",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
+            allowsPendingSameScopeRecovery: true
+        )
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.updatePhase(.reconciling)
+        let previousID = store.beginRecoveryProgressReporting()
+        let currentID = store.beginRecoveryProgressReporting()
+        let progress = SyncRecoveryProgress(stage: .downloading, domain: .history, pages: 2, persistedRows: 5)
+        store.recordRecoveryProgress(SyncRecoveryProgressEvent(
+            invocationID: previousID, scope: scope, progress: progress
+        ))
+        XCTAssertNil(store.state.recoveryProgress)
+        let event = SyncRecoveryProgressEvent(invocationID: currentID, scope: scope, progress: progress)
+        store.recordRecoveryProgress(event)
+        XCTAssertEqual(store.state.recoveryProgress, progress)
+        fixture.defaults.set(AccountBindingStore.accountHash(for: UUID()),
+            forKey: "mobile.shopContext.activeAccountHash.v1")
+        let fencedPhase = store.state.phase
+        store.recordRecoveryProgress(SyncRecoveryProgressEvent(
+            invocationID: currentID, scope: scope,
+            progress: SyncRecoveryProgress(stage: .activating, domain: nil, pages: 0, persistedRows: 0)
+        ))
+        XCTAssertEqual(store.state.phase, fencedPhase)
+        XCTAssertNil(store.state.recoveryProgress, "An identity change must clear the old displayed counts")
+        store.recordRunResult(.failed(errorCode: "nonCanonicalTimestamp"))
+        XCTAssertNil(store.state.recoveryProgress)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(SyncRecoveryGatePresentation.statusKey(state: store.state, isBusy: false),
+            "options.supabase.automaticSync.recovery.failed")
+        XCTAssertTrue(bindingStore.hasPendingReplacementJournal)
+    }
+
+    func testRecoveryRevalidatesScopeAfterProgressCallbackBeforeRemoteOrStaging() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "progress-fence")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint])
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { _ in
+            fixture.defaults.set(AccountBindingStore.accountHash(for: UUID()),
+                forKey: "mobile.shopContext.activeAccountHash.v1")
+        })
+        do {
+            _ = try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A presentation callback must not bypass the scope fence")
+        } catch {
+            XCTAssertTrue(error is Task126OwnerStoreGateError)
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 0)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).hasPendingReplacementJournal)
+    }
+
+    func testRecoveryGateBusyStatusSuppressesHistoricalErrorAndTerminalStatusDoesNotClaimProgress() {
+        let progress = SyncRecoveryProgress(stage: .downloading, domain: .prices, pages: 2, persistedRows: 240)
+        let state = SyncState(phase: .reconciling, lastOutcome: .failed, recoveryProgress: progress)
+        XCTAssertEqual(SyncRecoveryGatePresentation.statusKey(state: state, isBusy: true),
+            "options.supabase.automaticSync.recovery.downloading")
+        XCTAssertEqual(SyncRecoveryGatePresentation.statusKey(state: state, isBusy: false),
+            "options.supabase.automaticSync.recovery.failed")
+    }
+
+    func testRecoveryProgressCannotResurrectTerminalRunFromSynchronousObserver() async throws {
+        let fixture = try makeFixture()
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(
+            accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID),
+            storeIdentity: try XCTUnwrap(bindingStore.currentBinding?.storeIdentity),
+            reason: "progress-observer-test",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
+            allowsPendingSameScopeRecovery: true
+        )
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.updatePhase(.reconciling)
+        let invocationID = store.beginRecoveryProgressReporting()
+        let event = SyncRecoveryProgressEvent(
+            invocationID: invocationID, scope: scope,
+            progress: SyncRecoveryProgress(stage: .downloading, domain: .history, pages: 2, persistedRows: 5)
+        )
+        var terminalPublicationObserved = false
+        let observation = store.objectWillChange.sink { _ in
+            guard !terminalPublicationObserved else { return }
+            terminalPublicationObserved = true
+            store.recordRunResult(.failed(errorCode: "progress-observer-terminal"))
+        }
+        defer { observation.cancel() }
+        store.recordRecoveryProgress(event)
+        XCTAssertTrue(terminalPublicationObserved)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(store.state.lastOutcome, .failed)
+        XCTAssertNil(store.state.recoveryProgress)
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertTrue(bindingStore.hasPendingReplacementJournal)
+        let terminalState = store.state
+        store.recordRecoveryProgress(event)
+        XCTAssertEqual(store.state, terminalState, "The retired invocation callback must remain inert")
+    }
+
+    func testBeginningRecoveryProgressCannotResurrectTerminalRunFromSynchronousObserver() async throws {
+        let fixture = try makeFixture()
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(
+            accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID),
+            storeIdentity: try XCTUnwrap(bindingStore.currentBinding?.storeIdentity),
+            reason: "progress-begin-observer-test",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
+            allowsPendingSameScopeRecovery: true
+        )
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.updatePhase(.reconciling)
+        let previousID = store.beginRecoveryProgressReporting()
+        var terminalPublicationObserved = false
+        let observation = store.objectWillChange.sink { _ in
+            guard !terminalPublicationObserved else { return }
+            terminalPublicationObserved = true
+            store.recordRunResult(.failed(errorCode: "progress-begin-observer-terminal"))
+        }
+        defer { observation.cancel() }
+        let attemptedID = store.beginRecoveryProgressReporting()
+        XCTAssertTrue(terminalPublicationObserved)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(store.state.lastOutcome, .failed)
+        XCTAssertNil(store.state.recoveryProgress)
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertTrue(bindingStore.hasPendingReplacementJournal)
+        let terminalState = store.state
+        for invocationID in [previousID, attemptedID] {
+            store.recordRecoveryProgress(SyncRecoveryProgressEvent(
+                invocationID: invocationID, scope: scope,
+                progress: SyncRecoveryProgress(stage: .downloading, domain: .history, pages: 2, persistedRows: 5)
+            ))
+            XCTAssertEqual(store.state, terminalState, "An invocation invalidated during publication must remain inert")
+        }
+    }
+
+    func testRecoveryProgressRejectsAccountChangeFromSynchronousObserver() async throws {
+        let fixture = try makeFixture()
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(
+            accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID),
+            storeIdentity: try XCTUnwrap(bindingStore.currentBinding?.storeIdentity),
+            reason: "progress-account-observer-test",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
+            allowsPendingSameScopeRecovery: true
+        )
+        let store = SyncStateStore(defaults: fixture.defaults)
+        store.updatePhase(.reconciling)
+        let invocationID = store.beginRecoveryProgressReporting()
+        let event = SyncRecoveryProgressEvent(
+            invocationID: invocationID, scope: scope,
+            progress: SyncRecoveryProgress(stage: .downloading, domain: .history, pages: 2, persistedRows: 5)
+        )
+        let originalPhase = store.state.phase
+        var accountChanged = false
+        let observation = store.objectWillChange.sink { _ in
+            guard !accountChanged else { return }
+            accountChanged = true
+            fixture.defaults.set(AccountBindingStore.accountHash(for: UUID()),
+                forKey: "mobile.shopContext.activeAccountHash.v1")
+        }
+        defer { observation.cancel() }
+        store.recordRecoveryProgress(event)
+        XCTAssertTrue(accountChanged)
+        XCTAssertEqual(store.state.phase, originalPhase, "A display callback must not rewrite the business phase")
+        XCTAssertNil(store.state.lastOutcome)
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertNil(store.state.recoveryProgress, "Counts from the previous account must not be displayed")
+        XCTAssertTrue(bindingStore.hasPendingReplacementJournal)
+        let fencedState = store.state
+        store.recordRecoveryProgress(event)
+        XCTAssertEqual(store.state, fencedState, "The old account callback must remain inert")
+    }
+
     func testVerifiedDiskRecoveryAllowsTwoOrdinaryAutomaticCatalogUpdates() async throws {
         try await assertOrdinaryAutomaticContinuation(reopenBeforeSecondEvent: false)
     }
@@ -2554,7 +2797,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
     private func makeService(
         fixture: AtomicRecoveryFixture,
         transport: AtomicRecoveryTestTransport,
-        maximumAttempts: Int = 2
+        maximumAttempts: Int = 2,
+        progressReporter: SyncRecoveryProgressReporter? = nil
     ) -> AtomicGenerationRecoverySnapshotPullService {
         AtomicGenerationRecoverySnapshotPullService(
             storeGenerationController: fixture.controller,
@@ -2564,7 +2808,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ),
             defaults: fixture.defaults,
             pageLimit: 25,
-            maximumAttempts: maximumAttempts
+            maximumAttempts: maximumAttempts,
+            progressReporter: progressReporter
         )
     }
 
@@ -2982,6 +3227,11 @@ private nonisolated enum AtomicRecoveryTailBehavior: Sendable {
 private nonisolated struct AtomicRecoveryCheckpointCall: Sendable {
     let verifiedBaselineID: String
     let expectedBaselineScopeKey: String?
+}
+
+@MainActor
+private final class AtomicRecoveryProgressObservation {
+    var events: [SyncRecoveryProgressEvent] = []
 }
 
 @MainActor

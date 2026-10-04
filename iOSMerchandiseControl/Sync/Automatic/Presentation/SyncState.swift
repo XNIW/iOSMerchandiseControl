@@ -27,6 +27,7 @@ struct SyncState: Equatable {
     var lastOutcome: SyncOutcome?
     var startedAt: Date?
     var lastProgressAt: Date?
+    var recoveryProgress: SyncRecoveryProgress?
 
     init(
         phase: SyncPhase = .idle,
@@ -34,7 +35,8 @@ struct SyncState: Equatable {
         lastVerifiedAt: Date? = nil,
         lastOutcome: SyncOutcome? = nil,
         startedAt: Date? = nil,
-        lastProgressAt: Date? = nil
+        lastProgressAt: Date? = nil,
+        recoveryProgress: SyncRecoveryProgress? = nil
     ) {
         self.phase = phase
         self.progress = progress
@@ -42,6 +44,7 @@ struct SyncState: Equatable {
         self.lastOutcome = lastOutcome
         self.startedAt = startedAt
         self.lastProgressAt = lastProgressAt
+        self.recoveryProgress = recoveryProgress
     }
 
     var isProgressVisible: Bool {

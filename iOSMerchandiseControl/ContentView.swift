@@ -209,6 +209,7 @@ struct ContentView: View {
         ) { syncOrchestrator in
             if hidesBusinessDataForPendingRecovery {
                 SyncReplacementPrivacyGate(
+                    state: syncStateStore.state,
                     isSignedIn: supabaseAuthViewModel.isSignedIn,
                     canSignIn: supabaseAuthViewModel.canSignIn,
                     isBusy: supabaseAuthViewModel.isTransitioning
@@ -447,6 +448,7 @@ struct ContentView: View {
 }
 
 private struct SyncReplacementPrivacyGate: View {
+    let state: SyncState
     let isSignedIn: Bool
     let canSignIn: Bool
     let isBusy: Bool
@@ -457,10 +459,30 @@ private struct SyncReplacementPrivacyGate: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            ProgressView()
+            if isBusy { ProgressView() }
             Text(L("options.supabase.automaticSync.phase.recoveryRequired"))
                 .font(.headline)
                 .multilineTextAlignment(.center)
+            Text(L(SyncRecoveryGatePresentation.statusKey(state: state, isBusy: isBusy)))
+                .multilineTextAlignment(.center)
+                .accessibilityIdentifier("sync-recovery-phase")
+            if isBusy, let progress = state.recoveryProgress, let domain = progress.domain {
+                Text(String(format: L("options.supabase.automaticSync.recovery.counts"),
+                    L(SyncRecoveryGatePresentation.domainKey(domain)),
+                    progress.pages, progress.persistedRows))
+                    .font(.subheadline.monospacedDigit())
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("sync-recovery-counts")
+            }
+            if isBusy, let startedAt = state.startedAt {
+                HStack {
+                    Text(L("options.supabase.automaticSync.recovery.elapsed"))
+                    Text(startedAt, style: .timer).monospacedDigit()
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("sync-recovery-elapsed")
+            }
             if !isBusy, isSignedIn {
                 Button(
                     L(requiresManualReview
@@ -517,6 +539,7 @@ private struct AppSyncRootHost<Content: View>: View {
                     supabaseTransportClient: supabaseTransportClient,
                     activityRecorder: activityRecorder,
                     storeGenerationController: syncStoreGenerationController,
+                    stateStore: syncStateStore,
                     deviceAuthorization: shopDeviceRegistrationService
                 ),
                 authViewModel: authViewModel,
