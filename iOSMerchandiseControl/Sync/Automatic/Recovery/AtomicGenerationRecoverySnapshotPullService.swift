@@ -105,19 +105,22 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
     private let defaultsBox: AtomicRecoveryDefaultsBox
     private let pageLimit: Int
     private let maximumAttempts: Int
+    private let progressReporter: SyncRecoveryProgressReporter?
 
     init(
         storeGenerationController: SyncStoreGenerationController,
         recoveryRemote: ShopSyncRecoveryRemoteAdapter,
         defaults: UserDefaults = .standard,
         pageLimit: Int = 250,
-        maximumAttempts: Int = 2
+        maximumAttempts: Int = 2,
+        progressReporter: SyncRecoveryProgressReporter? = nil
     ) {
         self.storeGenerationController = storeGenerationController
         self.recoveryRemote = recoveryRemote
         self.defaultsBox = AtomicRecoveryDefaultsBox(defaults)
         self.pageLimit = max(1, min(pageLimit, 250))
         self.maximumAttempts = max(1, min(maximumAttempts, 2))
+        self.progressReporter = progressReporter
     }
 
     func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
@@ -126,6 +129,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         // cannot multiply the allowed network/memory footprint.
         await recoveryRemote.resetResourceBudget()
         var scope = try ensureRecoveryJournal(ownerUserID: ownerUserID)
+        try await reportProgress(.preparing, scope: scope)
         if let resumed = try await completeActivatedGenerationIfPossible(
             ownerUserID: ownerUserID,
             scope: scope
@@ -147,6 +151,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             do {
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try validateJournal(scope: scope)
+                try await reportProgress(.checkpoint, scope: scope)
                 let checkpointA = try await recoveryRemote.checkpoint(
                     ownerUserID: ownerUserID,
                     scope: scope
@@ -241,6 +246,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 // version. Keep the bounded tombstone identity set until
                 // image rows have consumed that explicit tombstone semantic.
                 state.tombstonedProductIDs.removeAll(keepingCapacity: false)
+                try await reportProgress(.verifying, scope: scope)
                 try persistedLedger.closeWrites()
                 let receipt = try persistedLedger.receipt(
                     relationshipViolationCount: 0,
@@ -324,6 +330,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 guard let journal = bindingStore.pendingRecoveryJournal else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
+                try await reportProgress(.activating, scope: scope)
                 _ = try await storeGenerationController.activate(
                     prepared,
                     mutationFence: mutationFence,
@@ -338,6 +345,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
 
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try revalidate(scope, ownerUserID: ownerUserID)
+                try await reportProgress(.finalizing, scope: scope)
                 _ = try await storeGenerationController.markRecoveryFinalized(scope: scope)
                 guard try bindingStore.completePendingReplacementRecovery(
                     accountHash: scope.accountHash,
@@ -376,6 +384,26 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             }
         }
         throw lastCheckpointError ?? ShopSyncRecoveryContractError.checkpointChanged
+    }
+
+    private func reportProgress(
+        _ stage: SyncRecoveryProgress.Stage,
+        scope: Task126VerifiedOwnerStoreScope,
+        domain: ShopSyncRecoveryDomain? = nil,
+        pages: Int = 0,
+        persistedRows: Int = 0
+    ) async throws {
+        guard let progressReporter else { return }
+        await progressReporter(SyncRecoveryProgressEvent(
+            invocationID: SyncRecoveryProgressContext.invocationID,
+            scope: scope,
+            progress: SyncRecoveryProgress(
+                stage: stage, domain: domain, pages: pages, persistedRows: persistedRows
+            )
+        ))
+        // Presentation is an async boundary. Never carry authorization across
+        // it into a write or publication without the existing scope fence.
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
     }
 
     private func quarantineIfUnpublished(
@@ -436,6 +464,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             .isActiveRecoveryFinalized(scope: scope)
         _ = try await storeGenerationController.restoreActivatedMetadataIfAuthorized(scope: scope)
         let refreshedScope = try captureRecoveryScope(ownerUserID: ownerUserID)
+        try await reportProgress(.finalizing, scope: refreshedScope)
         if isAlreadyFinalized {
             guard try bindingStore.completePendingReplacementRecovery(
                 accountHash: refreshedScope.accountHash,
@@ -740,6 +769,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         var processed = 0
         var pages = 0
         var effectivePageLimit: Int?
+        try await reportProgress(.downloading, scope: scope, domain: domain)
         while true {
             pages += 1
             try Task.checkCancellation()
@@ -807,8 +837,12 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 guard page.nextAfterId == nil else {
                     throw ShopSyncRecoveryContractError.countMismatch(domain: domain)
                 }
-                return
             }
+            try await reportProgress(
+                .downloading, scope: scope, domain: domain,
+                pages: pages, persistedRows: processed
+            )
+            if !page.hasMore { return }
         }
     }
 

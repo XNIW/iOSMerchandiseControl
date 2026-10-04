@@ -71,8 +71,22 @@ nonisolated enum LocalHistorySessionCounting {
     }
 
     static func fetchUserVisibleCount(context: ModelContext) throws -> Int {
-        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
-        return countUserVisible(in: entries)
+        // Batched SwiftData enumeration omits unsaved inserts/deletions. Keep
+        // the existing visibility semantics when this context has local edits.
+        if context.hasChanges {
+            return countUserVisible(in: try context.fetch(FetchDescriptor<HistoryEntry>()))
+        }
+        var descriptor = FetchDescriptor<HistoryEntry>()
+        descriptor.includePendingChanges = false
+        descriptor.propertiesToFetch = [
+            \HistoryEntry.id, \HistoryEntry.title, \HistoryEntry.remoteDeletedAt,
+            \HistoryEntry.localChangeRevision, \HistoryEntry.lastSyncedLocalRevision
+        ]
+        var count = 0
+        try context.enumerate(descriptor, batchSize: 256) { entry in
+            if isShownInHistoryList(entry) { count += 1 }
+        }
+        return count
     }
 }
 

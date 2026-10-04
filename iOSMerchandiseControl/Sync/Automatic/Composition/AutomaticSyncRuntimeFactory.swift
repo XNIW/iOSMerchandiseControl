@@ -9,6 +9,7 @@ enum SyncAutomaticRuntimeFactory {
         supabaseTransportClient: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?,
         storeGenerationController: SyncStoreGenerationController,
+        stateStore: SyncStateStore? = nil,
         deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil
     ) -> any SyncAutomaticRuntimeProviding {
         let generationLease = storeGenerationController.captureLease(for: modelContainer)
@@ -43,7 +44,12 @@ enum SyncAutomaticRuntimeFactory {
                 storeGenerationController: storeGenerationController,
                 recoveryRemote: ShopSyncRecoveryRemoteAdapter(
                     transport: SupabaseShopSyncRecoveryRPCTransport(remote: $0)
-                )
+                ),
+                progressReporter: { [weak stateStore, weak authViewModel] event in
+                    guard authViewModel?.isSignedIn == true,
+                          authViewModel?.sessionInfo?.userID == event.scope.ownerUserID else { return }
+                    stateStore?.recordRecoveryProgress(event)
+                }
             )
         }
         let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = SyncActivityRegistrationService(

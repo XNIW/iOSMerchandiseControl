@@ -424,7 +424,10 @@ final class SyncOrchestrator: ObservableObject {
                 stateStore.updatePhase(action.runningPhase)
             }
             recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
-            let result = await automaticRuntime.run(action: action, source: source)
+            let progressInvocationID = stateStore.beginRecoveryProgressReporting()
+            let result = await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
+                await automaticRuntime.run(action: action, source: source)
+            }
             guard !Task.isCancelled || result.verifiedConvergence else {
                 completeForegroundTask()
                 return

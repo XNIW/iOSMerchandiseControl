@@ -1844,3 +1844,21 @@
 "storefront.import.verify" = "Review differences";
 
 "storefront.error.local_persistence" = "Could not save on this device. Your input is still here; free some space and try again.";
+
+// Recovery gate: observations from persisted live pages, without estimated totals.
+"options.supabase.automaticSync.recovery.preparing" = "Preparing recovery…";
+"options.supabase.automaticSync.recovery.checkpoint" = "Checking cloud data…";
+"options.supabase.automaticSync.recovery.downloading" = "Downloading recovery data…";
+"options.supabase.automaticSync.recovery.verifying" = "Verifying downloaded data…";
+"options.supabase.automaticSync.recovery.activating" = "Activating verified data…";
+"options.supabase.automaticSync.recovery.finalizing" = "Completing recovery…";
+"options.supabase.automaticSync.recovery.required" = "Data will be available after recovery is verified.";
+"options.supabase.automaticSync.recovery.failed" = "Recovery stopped. Your data remains protected. You can retry.";
+"options.supabase.automaticSync.recovery.counts" = "%1$@: %2$d pages · %3$d rows";
+"options.supabase.automaticSync.recovery.elapsed" = "Elapsed";
+"options.supabase.automaticSync.recovery.domain.suppliers" = "Suppliers";
+"options.supabase.automaticSync.recovery.domain.categories" = "Categories";
+"options.supabase.automaticSync.recovery.domain.products" = "Products";
+"options.supabase.automaticSync.recovery.domain.prices" = "Prices";
+"options.supabase.automaticSync.recovery.domain.history" = "History";
+"options.supabase.automaticSync.recovery.domain.images" = "Images";

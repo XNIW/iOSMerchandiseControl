@@ -652,6 +652,101 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 
 **Handoff notes:** primary/root possiedono nuove lane e Git/CI/merge normale; nessun DONE da executor e nessun nuovo native job avviato da questa lane.
 
+### Esecuzione STEP2 — integrazione finale efficiency e recovery UX — 2026-10-03 (UTC 2026-10-04)
+
+**Autorizzazione e ruolo:** C/parent autorizzano l'integrazione sorgente STEP2 in worktree isolato. L'agente di questa voce è l'esecutore del batch; la review indipendente appartiene a un agente diverso. Nessuna modifica a Planning, MASTER, stato task, checkout Desktop o manifest. Branch `codex/ios-native-final-integration`, base/HEAD `8dfbf9a033c1e9be05c941e1cb49712137c893bc`; nessun commit/push/PR eseguito.
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift` — assenza bounded con short-circuit e fallback per pending edits.
+- `iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift` — conteggio History in batch256, stessa visibility policy e fallback per pending edits.
+- `iOSMerchandiseControlTests/SyncIdleWorkEfficiencyTests.swift` — sette test nuovi, inclusa misura sintetica interna; test non ancora eseguiti sul candidato.
+- `iOSMerchandiseControl/ContentView.swift` — UI/UX: fase, timer e osservazioni di pagine/righe persistite nel gate recovery, per rendere leggibile il lavoro in corso.
+- `iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift` — collega il reporter di presentazione alla state store corrente.
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncRecoveryProgress.swift` — nuovi valori osservativi e mapping delle fasi; nessuna percentuale o prova di convergenza.
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift` — campo opzionale di progress recovery.
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift` — reporting per invocation e scope corrente, mantenendo getter/setter e receipt R-I08.
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — riporta fasi e pagine dopo persistenza e rivalida lo scope dopo callback async.
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` — lega il reporting alla singola invocation del runtime.
+- `iOSMerchandiseControl/en.lproj/Localizable.strings`, `es.lproj/Localizable.strings`, `it.lproj/Localizable.strings`, `zh-Hans.lproj/Localizable.strings` — copy UI/UX delle fasi e conteggi osservati nelle quattro lingue.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — quattro nuovi test progress/scope/late-callback/status e reporter opzionale nel helper.
+- Questo file TASK144 — sola append alla sezione Execution.
+
+**Azioni eseguite:**
+1. Importati soltanto i tip SHA richiesti dai due clone locali: efficiency `3adeaaf9091bed81f80b392d85a77e89a36d0148` da `Documents/Codex/2026-10-02/task-2/ios`; UX `8ba09b1c6cb9f43e1835f3ad88bf5d68f5799983` da `Projects/MerchandiseControl-Ecosistema/workspaces/ios-recovery-presentation` (delta combinato dal base `414c4a341aebbf43d94d2477b1eb36f792ab04ed`, include il parent iOS `df66716efc3e3a0a39db5fb1bce5a4c811e28036`). Nessun blind cherry-pick o overwrite dei file latest main.
+2. Efficiency: due preimage produttivi uguali alla base current main e test nuovo assente; applicazione esatta dei tre percorsi e verifica byte-identica al commit sorgente.
+3. UX: dieci percorsi applicati tramite hunks diretti; `SyncStateStore.swift` e il test Atomic adattati solo ai contesti latest R-I08. Il computed state validante, plain storage, lease/receipt/result policy e tutti i corpi/assert dei57 test Atomic già presenti rimangono invariati; reset invocation usa il setter esistente. Helper `makeService` esteso con reporter opzionale senza cambiare i chiamanti precedenti. Inverse testuali dei due adattamenti ripristinano i file current-main interi. Checkpoint/query/auth/business guard preesistenti preservati.
+4. Identificati sette nuovi selector efficiency e quattro progress (61 metodi Atomic sul candidato, non61 eseguiti). Il target unit è incluso dal gruppo filesystem synchronized già esistente; nessuna modifica al progetto/scheme.
+5. Comando mirato preparato, non lanciato: XCTest unit target soltanto11 nuovi metodi, sul dispositivo test-only storico `6B049C77-E70E-4A75-8FF2-CE3EC756EE11` / `TASK144 filesystem crash 26.2` / iOS26.2. Metadata device.plist esiste con state1; receipt canonica precedente registra Shutdown. Compatibilità/availability corrente da verificare dall'owner prima del nuovo GO; nessuna chiamata SDK, boot/install o accesso al simulatore autenticato/CSV03 in questa integrazione.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/XCTest11 mirati | NON ESEGUITO | Preparazione soltanto; nuovo slot owner/GO necessario. |
+| Analyze/static compiler e warning nuovi | NON ESEGUITO | Nessun compiler invocato e nessuna assenza warning inferita. |
+| Coerenza scope autorizzato | ESEGUITO STATIC | Due delta autorizzati e adattamento puntuale documentato; Planning/MASTER immutati. |
+| Criteri di accettazione | NON ESEGUITO integralmente | Review indipendente, test11, full finale, artifact/CI/live/CA09 rimangono distinti. |
+| Integrità patch / whitespace | ESEGUITO STATIC | Preimage/inverse e `git diff --check` PASS; non equivale a build o runtime. |
+
+**Incertezze e handoff:** stato UI/runtime, prestazioni e regressioni non verificati sul candidato. Pagine/righe sono osservazioni della persistenza, mai percentuale, consenso cloud, verifiedConvergence o garanzia3s. La misura interna al test efficiency non sostituisce un confronto prestazionale controllato. Root/C possiedono il prossimo slot test-only, la review di altro agente, gate finali e Git/CI. Nessun DONE o autorizzazione install/live derivata da questa append.
+
+### Esecuzione STEP2 — preparazione RED reentrancy progress, produzione congelata — 2026-10-03 (UTC 2026-10-04)
+
+**Nuovo finding e autorizzazione:** il reviewer indipendente ha identificato un P2 concreto di compatibilità tra i due nuovi metodi progress e il setter computed R-I08: un subscriber sincrono può terminalizzare il run o cambiare account durante `objectWillChange`, poi il writeback della copia precedente può ripubblicare fase/progress obsoleti. C/parent autorizzano solo test desiderati prima del RED ufficiale; nessuna patch produttiva o asserzione indebolita.
+
+**File modificati:** `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — tre nuovi metodi async con fixture reale, journal/scope effettivi e subscriber Combine one-shot. Tutti i61 metodi già presenti e i loro corpi/assert restano invariati. Questo file TASK144: sola append Execution.
+
+**Test preparati, NON ESEGUITI:**
+- `testRecoveryProgressCannotResurrectTerminalRunFromSynchronousObserver` — durante la pubblicazione termina con risultato failed; recoveryRequired, lastOutcome failed, progress nil e callback della vecchia invocation inerte.
+- `testBeginningRecoveryProgressCannotResurrectTerminalRunFromSynchronousObserver` — durante begin la notifica terminalizza il run; nessuna resurrezione e callback di entrambe le invocation inerte.
+- `testRecoveryProgressRejectsAccountChangeFromSynchronousObserver` — cambia account durante la notifica, senza riscrivere la fase business o mostrare conteggi del vecchio account; callback tardiva inerte.
+
+**Check / stato:** aggiunta solo test-source, `git diff --check` STATIC; nessun compiler, runner, device o backend eseguito. Produzione del candidato STEP2 congelata prima dei tre test; i due metodi progress conservano gli stessi bytes pre-fix. Command scope aggiornato a **14 selector esatti =7 efficiency+4 progress precedenti+3 nuove guardie**, tutti nel target unit `iOSMerchandiseControlTests` sul simulatore test-only6B049 previa disponibilità/nuovo GO owner.64 metodi Atomic è un conteggio sorgente, non un risultato.
+
+**Handoff:** root/owner eseguono ONE batch14 dopo il rilascio della lane Android. Compile/setup failure non dimostra il RED desiderato. Il fix produttivo e la re-review del medesimo reviewer restano subordinati all'XML/tree ufficiale RED; nessun global DONE, CI, performance, auth o acceptance live deriva dalla preparazione.
+
+### Esecuzione STEP2 — fix P2 progress dopo RED ufficiale, GREEN pending — 2026-10-03 (UTC 2026-10-04)
+
+**RED actual del root:** ONE job71718 / ownPG88830, START01:44:31.838Z→END01:45:13.016Z, exit65,41.388s.14 metodi ufficiali:11PASS (7efficiency+4progress precedenti),3FAIL delle nuove guardie,7 assertion failure attese. XCResult conservato in `Projects/MerchandiseControl-Ecosistema/evidence/operational-completion-20261003/resumed-executor/native-final-integration-targeted-ios-red-attempt01/target14-red.xcresult`; receipt root SHA256`076586085bec5f136c46106fe6efeafb3830a15d62b8d5d850771db7b9e8aa05`. Produzione al run immutata con StateStore`24370693…`, test`e401de3d…`. Conteggi ed esecuzione sono del root/owner; questo executor non ha invocato il runner né una nuova review indipendente.
+
+**File modificati / fix autorizzato:** solo `SyncStateStore.swift`, nei due nuovi metodi `beginRecoveryProgressReporting` e `recordRecoveryProgress`. Notifica fuori dalle lease e prima della pubblicazione; ricontrollo invocation/fase dopo subscriber sincroni, quindi journal e scope attuali per i conteggi. Scrittura diretta dei soli campi progress/lastProgressAt su plain storage, senza writeback della copia tramite computed setter. Begin conserva il nuovo UUID solo se non invalidato dall'observer e non modifica una fase terminale. Il clear del solo campo display non autorizza scope o receipt. Nessuna modifica a getter/setter R-I08, continuazione/lease/result policy, fase business, lastOutcome, checkpoint, query o auth.
+
+**Preservazione verificata STATIC:** sostituendo soltanto i due metodi con le versioni pre-RED si ripristina l'intero StateStore SHA256`24370693c877cb554e87750afa9f065651de4c07cdf03dd80f919a4a99ee7967`. Nuovo StateStore SHA256`8fc3913f43af7159f887f6f3ec23cc1cbde440b1fd27727abe4ad3a49e2e6563`. Tutti64 metodi Atomic/corpi/assert immutati, test SHA256`e401de3d8e911ba784bbe68559a31788431a1d6119b40cbee2c4d2850d68b9a1`; altri sorgenti STEP2 invariati. Planning/MASTER invariati e `git diff --check` PASS. Solo questa append Execution documentale oltre ai due metodi.
+
+**Check / handoff:** GREEN3 delle guardie: NON ESEGUITO da questa lane; il root possiede la prossima ONE invocazione sugli stessi tre ID/test immutati, poi suite finale del candidato una volta e gate canonici. Re-review del fix del reviewer indipendente pendente; nessuna approvazione da questo executor. Compiler/warning/full/CI/artifact/performance/autenticato restano non verificati sul nuovo source. Nessun commit/push/PR/install, manifest nuovo o global DONE.
+
+### Esecuzione STEP2 — GREEN3 actual e P2 chiuso dalla re-review indipendente — 2026-10-03 (UTC 2026-10-04)
+
+**Nessuna modifica a codice/test:** StateStore `8fc3913f43af7159f887f6f3ec23cc1cbde440b1fd27727abe4ad3a49e2e6563`, Atomic64 `e401de3d8e911ba784bbe68559a31788431a1d6119b40cbee2c4d2850d68b9a1`; altri sorgenti STEP2 congelati. Questo aggiornamento riguarda soltanto Execution.
+
+**GREEN actual del root:** ONE esecuzione dei medesimi tre test RED immutati, START01:53:00.923877Z→END01:53:25.438193Z, duration24.7436s registrata dall'owner, exit0, **3PASS/0FAIL/0SKIP**. Session98455 chiusa e ownPG91078 assente. Receipt `Projects/MerchandiseControl-Ecosistema/evidence/operational-completion-20261003/resumed-executor/native-final-integration-targeted-ios-green-attempt01/receipt.json` SHA256`71f40a9ed1e6cc03a259c2033f0e2dceafeeec2eb8000f937610aea065181131` (SHA riletto da questo executor); summary `5e193…`, method-status `0ce885…`. Source15 invariato nel run; nessuna nuova esecuzione da questa lane.
+
+**Re-review indipendente:** il parent comunica `P2_CLOSED_APPROVED_VERIFIED`, nessun nuovo blocker. Il reviewer distinto da questo executor ha letto saved result/hash/source e verificato l'inversa dei soli due metodi; test RED→GREEN e tutti64 corpi/assert preservati. La chiusura riguarda soltanto il P2 di reentrancy progress, non l'acceptance globale o la suite finale.
+
+**Check / handoff:** GREEN3 ESEGUITO dall'owner e re-review P2 ESEGUITA dal reviewer indipendente. La suite finale iOS/root53311 è ancora IN CORSO: nessun conteggio parziale o build intermedia costituisce full PASS. Attendere la receipt finale prima dell'ultimo aggiornamento Execution. Task resta FIX; acceptance autentica/live/per-record, performance e CI/nuova integrazione Git rimangono aperte. Nessun codice/test, Planning, MASTER, manifest, rerun, commit o push modificato/invocato da questa append.
+
+### Esecuzione STEP2 — gate locali finali actual, writer fermato per commit locale — 2026-10-03 (UTC 2026-10-04)
+
+**Nessuna modifica a codice/test:** candidato finale StateStore `8fc3913f43af7159f887f6f3ec23cc1cbde440b1fd27727abe4ad3a49e2e6563`, Atomic64 `e401de3d8e911ba784bbe68559a31788431a1d6119b40cbee2c4d2850d68b9a1`; tutti15 sorgenti STEP2 immutati durante i gate. Solo ultima append Execution; Planning/MASTER e stato FIX conservati.
+
+**Gate actual del root:** ONE job53311 completato naturalmente02:04:08.403336Z, durata totale461.512774292s. Build4.30240025s/exit0, test416.83606175s/exit0, Analyze40.166600084s/exit0. Receipt finale `Projects/MerchandiseControl-Ecosistema/evidence/operational-completion-20261003/resumed-executor/native-final-integration-final-ios-attempt01/receipt.json` SHA256`d379ca7e66684e0b4e537996f20a5a6c775855ea287c97beb6b8db581027d2f5` (classificazione warning finale; sostituisce il solo snapshot receipt9d929, source/gate/count/argv invariati). SHA/summary scalare e sourceUnchanged/ownedGroupsGone riletti da questo executor; nessun runner qui. Summary SHA256`1f67b07756bb98787b0a6b5276bdbbbf5ffee337285f8b228247e7542eb2f76a`, test-tree SHA256`f43a5d27e146c8e258f42900f8abffa700996c8af6a8aa1bc5df5f38509373bc`.
+
+**Suite completa attuale:** **1478 identifier =1442PASS+36SKIP,0FAIL/0expectedFailures**. Il saved test-tree distingue1470 unit/integration (1434PASS+36SKIP) e8 UI PASS: CatalogTextImportUITests4 e StorefrontEditorUITests4. Gli otto UI eseguiti non sono gli opt-in fisici/live saltati. Tutti e tre i test P2 passano nuovamente nella suite finale. I36skip mantengono i limiti opt-in/device/live e non costituiscono acceptance fisica/autenticata. OwnPG91983/92000/93892 assenti nel readback fresh del root; nessuna azione sul simulatore autenticato da questa lane.
+
+**Check obbligatori finali locali:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build canonico corrente | ESEGUITO PASS dal root | exit0; nessun Release PASS inferito da questo build. |
+| Suite unit/integration+UI corrente | ESEGUITO PASS dal root |1478 attuali,1442PASS/36SKIP/0FAIL; source finale invariato. |
+| Analyze corrente | ESEGUITO PASS_WITH_NOTES dal root | exit0;53 righe warning grezze,34 warning primari sui sei file immutati: Vendor2/libxls18 e quattro test precedenti16. Rigature caret duplicate/metadata non sono nuovi warning di sorgente. Nessun totale Analyze storico riutilizzato come risultato attuale. |
+| Warning sui file modificati | ESEGUITO,0 emessi | Receipt finale elenca zero warning nei15 file cambiati; i sei file con diagnostiche sono byte-identici a main8df secondo il confronto Git del root. Build0warning; test2notices metadata e notice Analyze già presenti nei log RED/GREEN. Nessuna soppressione o risoluzione delle vecchie diagnostiche dichiarata. |
+| Coerenza scope/preservazione | ESEGUITO STATIC | import/hunks contestuali e fix P2 circoscritti;64 test immutati, getter/receipt/result R-I08 preservati, Planning/MASTER invariati. |
+| Review indipendente P2 | ESEGUITO APPROVED_VERIFIED | chiusura circoscritta già registrata con RED→GREEN3 e re-review di altro agente. |
+| Criteri di accettazione globali | NON ESEGUITO integralmente | gate locali non sostituiscono auth/live/per-record, performance/CA09, artifact/Release/CI e nuova integrazione pubblicata. |
+
+**Gate statici CI eseguiti dal root:** `shasum -a 256 -c contracts/product-image-v1.sha256` verifica tutte le quattro fixture/contratti; scansione sensibile con il helper esistente PASS/exit0, `MC_AGENT_CONFIG=/dev/null`, checkout ed evidence espliciti. Report `/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/operational-completion-20261003/resumed-executor/native-final-integration-final-ios-attempt01/agent-runs/20261004T021803Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p97744.json`, SHA256 `847bf99b97ffd221bcad946f239abbab53a8375ce1b487b87d5cc55547e65461`. Nessuna lettura di configurazione privata o output nella primaria.
+
+**Handoff / STOP writer:** ultimo aggiornamento documentale di questo executor completato. Root/C possiedono il commit locale autorizzato sul candidato; nessun push/PR/merge o nuova CI eseguiti da questa lane. Nessun nuovo manifest/framework/rerun, codice o test modificato. Task resta FIX, nessun DONE globale; tutte le acceptance residue rimangono aperte. Writer fermato dopo questa append.
+
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.

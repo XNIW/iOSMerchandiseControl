@@ -44,6 +44,7 @@ final class SyncStateStore: ObservableObject {
     }
     private let defaults: UserDefaults
     private let keyPrefix: String
+    private var recoveryProgressInvocationID: UUID?
 
     var recoveryJournalIsPending: Bool {
         // Do not retain a second journal-store object in this presentation
@@ -80,6 +81,49 @@ final class SyncStateStore: ObservableObject {
     // otherwise empty actor-isolated deinit during XCTest/app teardown.
     nonisolated deinit {}
 
+    func beginRecoveryProgressReporting() -> UUID {
+        let invocationID = UUID()
+        recoveryProgressInvocationID = invocationID
+        objectWillChange.send()
+        // A synchronous observer may finish the run or replace this invocation.
+        guard invocationID == recoveryProgressInvocationID,
+              storedState.phase.isAutomaticWorkActive else { return invocationID }
+        storedState.recoveryProgress = nil
+        return invocationID
+    }
+
+    func recordRecoveryProgress(_ event: SyncRecoveryProgressEvent, now: Date = Date()) {
+        guard let invocationID = event.invocationID,
+              invocationID == recoveryProgressInvocationID,
+              storedState.phase.isAutomaticWorkActive else { return }
+        objectWillChange.send()
+        // Recheck after notifying observers, before reading authority or publishing.
+        guard invocationID == recoveryProgressInvocationID,
+              storedState.phase.isAutomaticWorkActive else { return }
+        guard let journal = pendingRecoveryJournal,
+              journal.replacement.accountHash == event.scope.accountHash,
+              journal.replacement.storeIdentity == event.scope.storeIdentity,
+              journal.deviceIdentityHash == event.scope.deviceIdentityHash,
+              let currentScope = try? Task126OwnerStoreGate.captureAutomaticScope(
+                ownerUserID: event.scope.ownerUserID,
+                defaults: defaults,
+                allowsPendingReplacement: true,
+                allowsPendingSameScopeRecovery: true
+              ),
+              currentScope.shopID == event.scope.shopID,
+              currentScope.accountHash == event.scope.accountHash,
+              currentScope.storeIdentity == event.scope.storeIdentity,
+              currentScope.deviceIdentityHash == event.scope.deviceIdentityHash else {
+            recoveryProgressInvocationID = nil
+            storedState.recoveryProgress = nil
+            return
+        }
+        // Journal phase transitions legitimately rotate the scope lease;
+        // invocation + current identity fences reject stale display callbacks.
+        storedState.recoveryProgress = event.progress
+        storedState.lastProgressAt = now
+    }
+
     func recordDecision(trigger: SyncTrigger, action: SyncAction, now: Date = Date()) {
         defaults.set(trigger.diagnosticsName, forKey: "\(keyPrefix).lastTrigger")
         defaults.set(action.diagnosticsName, forKey: "\(keyPrefix).lastAction")
@@ -100,6 +144,7 @@ final class SyncStateStore: ObservableObject {
             ? .recoveryRequired
             : phase
         let isActive = resolvedPhase.isAutomaticWorkActive
+        if !isActive { recoveryProgressInvocationID = nil }
         let startedAt = isActive ? (state.startedAt ?? now) : nil
         let lastProgressAt = isActive ? now : state.lastProgressAt
         state = SyncState(
@@ -125,6 +170,7 @@ final class SyncStateStore: ObservableObject {
         preserveRecoveryRequired: Bool = false,
         now: Date = Date()
     ) {
+        recoveryProgressInvocationID = nil
         let isOrdinaryCompletion = !result.verifiedConvergence
             && (result.status == .success || result.status == .noWork)
             && result.blockReason == nil && result.errorCode == nil

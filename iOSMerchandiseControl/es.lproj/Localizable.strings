@@ -1844,3 +1844,21 @@
 "storefront.import.verify" = "Verificar";
 
 "storefront.error.local_persistence" = "No se pudo guardar en este dispositivo. Tus datos siguen aquí; libera espacio e inténtalo de nuevo.";
+
+// Recovery gate: observations from persisted live pages, without estimated totals.
+"options.supabase.automaticSync.recovery.preparing" = "Preparando la recuperación…";
+"options.supabase.automaticSync.recovery.checkpoint" = "Comprobando los datos de la nube…";
+"options.supabase.automaticSync.recovery.downloading" = "Descargando los datos de recuperación…";
+"options.supabase.automaticSync.recovery.verifying" = "Verificando los datos descargados…";
+"options.supabase.automaticSync.recovery.activating" = "Activando los datos verificados…";
+"options.supabase.automaticSync.recovery.finalizing" = "Completando la recuperación…";
+"options.supabase.automaticSync.recovery.required" = "Los datos estarán disponibles después de verificar la recuperación.";
+"options.supabase.automaticSync.recovery.failed" = "La recuperación se detuvo. Tus datos siguen protegidos. Puedes reintentar.";
+"options.supabase.automaticSync.recovery.counts" = "%1$@: %2$d páginas · %3$d filas";
+"options.supabase.automaticSync.recovery.elapsed" = "Tiempo transcurrido";
+"options.supabase.automaticSync.recovery.domain.suppliers" = "Proveedores";
+"options.supabase.automaticSync.recovery.domain.categories" = "Categorías";
+"options.supabase.automaticSync.recovery.domain.products" = "Productos";
+"options.supabase.automaticSync.recovery.domain.prices" = "Precios";
+"options.supabase.automaticSync.recovery.domain.history" = "Historial";
+"options.supabase.automaticSync.recovery.domain.images" = "Imágenes";

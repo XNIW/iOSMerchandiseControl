@@ -247,26 +247,7 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
 
     private func loadLocalStoreIsCompletelyEmpty(context: ModelContext) -> ReadResult<Bool> {
         do {
-            let productCount = try context.fetchCount(FetchDescriptor<Product>())
-            let supplierCount = try context.fetchCount(FetchDescriptor<Supplier>())
-            let categoryCount = try context.fetchCount(FetchDescriptor<ProductCategory>())
-            let productPriceCount = try context.fetchCount(FetchDescriptor<ProductPrice>())
-            let historyCount = try context.fetchCount(FetchDescriptor<HistoryEntry>())
-            let pendingChangeCount = try context.fetchCount(FetchDescriptor<LocalPendingChange>())
-            let outboxCount = try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>())
-            let baselineRunCount = try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRun>())
-            let baselineRecordCount = try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>())
-            return .success(
-                productCount == 0
-                    && supplierCount == 0
-                    && categoryCount == 0
-                    && productPriceCount == 0
-                    && historyCount == 0
-                    && pendingChangeCount == 0
-                    && outboxCount == 0
-                    && baselineRunCount == 0
-                    && baselineRecordCount == 0
-            )
+            return .success(try SyncLocalStoreEmptiness.isCompletelyEmpty(context: context))
         } catch {
             return .failure(false)
         }
@@ -385,5 +366,38 @@ extension SyncAutomaticTriggerSource {
         case .foregroundPoll, .localMutation, .remoteSyncEvent, .backgroundRefresh:
             return false
         }
+    }
+}
+
+
+/// The unbound-store gate requires absence from every persisted sync domain.
+nonisolated enum SyncLocalStoreEmptiness {
+    static func isCompletelyEmpty(
+        context: ModelContext,
+        onFetch: ((String) -> Void)? = nil
+    ) throws -> Bool {
+        func hasRows<Model: PersistentModel>(_ type: Model.Type) throws -> Bool {
+            onFetch?(String(describing: type))
+            // With pending deletions, LIMIT 1 can select a deleted first row
+            // and miss a remaining persisted row. Counts retain pending edits.
+            if context.hasChanges {
+                return try context.fetchCount(FetchDescriptor<Model>()) > 0
+            }
+            var descriptor = FetchDescriptor<Model>()
+            descriptor.fetchLimit = 1
+            return try !context.fetchIdentifiers(descriptor).isEmpty
+        }
+        // Once one domain contains a row, the store cannot be empty. Further
+        // reads cannot change that answer; reached read errors still propagate.
+        if try hasRows(Product.self) { return false }
+        if try hasRows(Supplier.self) { return false }
+        if try hasRows(ProductCategory.self) { return false }
+        if try hasRows(ProductPrice.self) { return false }
+        if try hasRows(HistoryEntry.self) { return false }
+        if try hasRows(LocalPendingChange.self) { return false }
+        if try hasRows(SyncEventOutboxEntry.self) { return false }
+        if try hasRows(SupabaseCatalogBaselineRun.self) { return false }
+        if try hasRows(SupabaseCatalogBaselineRecord.self) { return false }
+        return true
     }
 }
