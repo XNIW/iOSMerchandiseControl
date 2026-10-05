@@ -9,6 +9,7 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var productImageStore: ProductImageStore
     @StateObject private var storefrontAuthoringStore: StorefrontAuthoringStore
     @StateObject private var syncStoreGenerationController: SyncStoreGenerationController
+    @StateObject private var localRootPresentationState: LocalRootPresentationState
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
@@ -17,6 +18,7 @@ struct iOSMerchandiseControlApp: App {
 
     init() {
         #if DEBUG
+        let controlledRoot = Task144LocalAvailabilityRootFixture.current
         if Self.task141ResetUIStateRequested {
             Self.resetTask141UIState()
         }
@@ -30,26 +32,38 @@ struct iOSMerchandiseControlApp: App {
         let isTask139PreboundHarness = false
         let isTask140UITest = false
         #endif
-        let dependencies = Self.isRunningHostedXCTest
-            || isTask138VisualHarness
-            || isTask139AtomicCrashHarness
-            || isTask139PreboundHarness
-            || isTask140UITest
-            ? Self.makeHostedXCTestDependencies()
-            : Self.makeSupabaseDependencies()
-        let generationController = Self.isRunningHostedXCTest
-            || isTask138VisualHarness
-            || isTask139AtomicCrashHarness
-            || isTask139PreboundHarness
-            || isTask140UITest
-            ? SyncStoreGenerationController.ephemeral()
-            : SyncStoreGenerationController.shared
+        let dependencies: SupabaseAppDependencies
+        let generationController: SyncStoreGenerationController
+        let normalDependencies = { () -> (SupabaseAppDependencies, SyncStoreGenerationController) in
+            let hosted = Self.isRunningHostedXCTest || isTask138VisualHarness
+                || isTask139AtomicCrashHarness || isTask139PreboundHarness || isTask140UITest
+            return (hosted ? Self.makeHostedXCTestDependencies() : Self.makeSupabaseDependencies(),
+                    hosted ? SyncStoreGenerationController.ephemeral() : SyncStoreGenerationController.shared)
+        }
+        #if DEBUG
+        if let controlledRoot {
+            dependencies = SupabaseAppDependencies(authViewModel: controlledRoot.authViewModel,
+                supabaseTransportClient: nil, pullPreviewService: nil, syncEventOutboxDrainRecorder: nil,
+                syncEventSignalWatcher: nil, shopDeviceRegistrationService: nil,
+                productImageStore: ProductImageStore(service: nil),
+                storefrontAuthoringStore: StorefrontAuthoringStore(service: nil))
+            generationController = controlledRoot.controller
+        } else {
+            (dependencies, generationController) = normalDependencies()
+        }
+        #else
+        (dependencies, generationController) = normalDependencies()
+        #endif
         let productImageStore = dependencies.productImageStore
+        let localPresentation = LocalRootPresentationState()
+        localPresentation.advanceStoreGeneration(presentationID: generationController.presentationID)
+        _localRootPresentationState = StateObject(wrappedValue: localPresentation)
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         _productImageStore = StateObject(wrappedValue: productImageStore)
         _storefrontAuthoringStore = StateObject(wrappedValue: dependencies.storefrontAuthoringStore)
         _syncStoreGenerationController = StateObject(wrappedValue: generationController)
-        generationController.setPresentationBoundaryObserver { [weak productImageStore] presentationID in
+        generationController.setPresentationBoundaryObserver { [weak productImageStore, weak localPresentation] presentationID in
+            localPresentation?.advanceStoreGeneration(presentationID: presentationID)
             productImageStore?.advanceStoreGeneration(presentationID: presentationID)
         }
         supabaseTransportClient = dependencies.supabaseTransportClient
@@ -57,6 +71,9 @@ struct iOSMerchandiseControlApp: App {
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
+        #if DEBUG
+        if controlledRoot != nil { return }
+        #endif
         if !Self.isRunningHostedXCTest,
            !isTask138VisualHarness,
            !isTask139AtomicCrashHarness,
@@ -72,7 +89,11 @@ struct iOSMerchandiseControlApp: App {
         WindowGroup {
             Group {
                 #if DEBUG
-                if let task138VisualState = Self.task138ProductImageVisualState {
+                if let controlledRoot = Task144LocalAvailabilityRootFixture.current {
+                    Task144ControlledRootAdmission(fixture: controlledRoot) {
+                        standardRootView
+                    }
+                } else if let task138VisualState = Self.task138ProductImageVisualState {
                     Task138ProductImageVisualHarness(state: task138VisualState)
                 } else if Self.task139AtomicCrashHarnessRequested
                             || Self.task139PreboundHarnessRequested {
@@ -87,6 +108,10 @@ struct iOSMerchandiseControlApp: App {
             .environmentObject(syncStoreGenerationController)
             .modelContainer(syncStoreGenerationController.modelContainer)
             .id(syncStoreGenerationController.presentationID)
+            #if DEBUG
+            .task144ControlledRootControls()
+            .task { Task144LocalAvailabilityRootFixture.current?.prepareIfNeeded() }
+            #endif
         }
     }
 
@@ -127,8 +152,12 @@ struct iOSMerchandiseControlApp: App {
                 supabasePullPreviewService: supabasePullPreviewService,
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
                 syncEventSignalWatcher: syncEventSignalWatcher,
-                shopDeviceRegistrationService: shopDeviceRegistrationService
+                shopDeviceRegistrationService: shopDeviceRegistrationService,
+                shopContextOverride: controlledShopContext,
+                syncStateOverride: controlledSyncState
             )
+            .environment(\.localRootPresentationState, localRootPresentationState)
+            .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence)
             .environmentObject(supabaseAuthViewModel)
             .environmentObject(productImageStore)
             .environmentObject(storefrontAuthoringStore)
@@ -139,6 +168,29 @@ struct iOSMerchandiseControlApp: App {
                 _ = supabaseAuthViewModel.handleUniversalLink(userActivity)
             }
         }
+    }
+
+    private var currentRootGenerationFence: () -> Bool {
+        let displayedContainer = syncStoreGenerationController.modelContainer
+        return { [weak controller = syncStoreGenerationController, weak displayedContainer] in
+            guard let controller, let displayedContainer else { return false }
+            return controller.modelContainer === displayedContainer
+        }
+    }
+
+    private var controlledShopContext: ShopContextStore? {
+        #if DEBUG
+        Task144LocalAvailabilityRootFixture.current?.shopContextStore
+        #else
+        nil
+        #endif
+    }
+    private var controlledSyncState: SyncStateStore? {
+        #if DEBUG
+        Task144LocalAvailabilityRootFixture.current?.stateStore
+        #else
+        nil
+        #endif
     }
 
     private static var isRunningHostedXCTest: Bool {

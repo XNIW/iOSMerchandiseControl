@@ -7,6 +7,8 @@ struct EditProductView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.localRootPresentationState) private var localPresentation
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var productImageStore: ProductImageStore
@@ -14,7 +16,9 @@ struct EditProductView: View {
     let existingProduct: Product?
     let pendingOwnerUserID: UUID?
     let isCameraAvailable: Bool
-    private let initialDraft: ProductDraft?
+    @State private var initialDraft: ProductDraft?
+    private let logicalRemoteID: UUID?
+    private let originalBarcode: String
 
     @Query(sort: \Supplier.name, order: .forward)
     private var suppliers: [Supplier]
@@ -47,6 +51,13 @@ struct EditProductView: View {
     @State private var imageOperationTask: Task<Void, Never>?
     @State private var currentImageVersionID: UUID?
     @State private var currentImageUpdatedAt: Date?
+    @State private var mountedPresentationID: String?
+    @State private var retainsLocalDraft = true
+    @FocusState private var focusedField: DraftField?
+
+    private enum DraftField: String {
+        case barcode, name, secondName, itemNumber, purchasePrice, retailPrice, stockQuantity, supplierName, categoryName
+    }
 
     init(
         product: Product? = nil,
@@ -57,7 +68,9 @@ struct EditProductView: View {
         self.existingProduct = product
         self.pendingOwnerUserID = pendingOwnerUserID
         self.isCameraAvailable = isCameraAvailable
-        self.initialDraft = product.map(Self.makeDraft)
+        _initialDraft = State(initialValue: product.map(Self.makeDraft))
+        self.logicalRemoteID = product?.remoteID
+        self.originalBarcode = product?.barcode ?? initialBarcode ?? ""
 
         let initialCode = product?.barcode ?? initialBarcode ?? ""
 
@@ -95,6 +108,14 @@ struct EditProductView: View {
     }
 
     var body: some View {
+        Group {
+            if isCurrentModelGeneration {
+                activeEditor
+            }
+        }
+    }
+
+    private var activeEditor: some View {
         Form {
             if let validationMessage {
                 Section {
@@ -108,6 +129,7 @@ struct EditProductView: View {
 
             Section(L("product.section.main")) {
                 TextField(L("product.field.barcode"), text: $barcode)
+                    .focused($focusedField, equals: .barcode)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.numbersAndPunctuation)
@@ -116,17 +138,21 @@ struct EditProductView: View {
                     .accessibilityIdentifier("task141.product.barcode")
 
                 TextField(L("product.field.item_number"), text: $itemNumber)
+                    .focused($focusedField, equals: .itemNumber)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.item_number")))
 
                 TextField(L("product.field.name"), text: $name)
+                    .focused($focusedField, equals: .name)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.name")))
+                    .accessibilityIdentifier("task144.product.name")
 
                 TextField(L("product.field.second_name"), text: $secondName)
+                    .focused($focusedField, equals: .secondName)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.second_name")))
@@ -134,6 +160,7 @@ struct EditProductView: View {
 
             Section(L("product.section.warehouse")) {
                 TextField(L("product.field.stock_quantity"), text: $stockQuantity)
+                    .focused($focusedField, equals: .stockQuantity)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.stock_quantity")))
@@ -155,6 +182,7 @@ struct EditProductView: View {
 
             Section(L("product.section.prices")) {
                 TextField(L("product.field.purchase_price"), text: $purchasePrice)
+                    .focused($focusedField, equals: .purchasePrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.purchase_price")))
@@ -174,6 +202,7 @@ struct EditProductView: View {
                 )
 
                 TextField(L("product.field.retail_price"), text: $retailPrice)
+                    .focused($focusedField, equals: .retailPrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
                     .accessibilityLabel(Text(L("product.field.retail_price")))
@@ -203,6 +232,7 @@ struct EditProductView: View {
 
             Section(L("product.section.supplier")) {
                 TextField(L("product.field.supplier_name"), text: $supplierName)
+                    .focused($focusedField, equals: .supplierName)
                     .textInputAutocapitalization(.words)
                     .accessibilityLabel(Text(L("product.field.supplier_name")))
 
@@ -221,6 +251,7 @@ struct EditProductView: View {
 
             Section(L("product.section.category")) {
                 TextField(L("product.field.category_name"), text: $categoryName)
+                    .focused($focusedField, equals: .categoryName)
                     .textInputAutocapitalization(.words)
                     .accessibilityLabel(Text(L("product.field.category_name")))
 
@@ -242,14 +273,18 @@ struct EditProductView: View {
                     product: existingProduct,
                     operationalName: name,
                     operationalRetailPrice: parseOperationalRetailPrice,
-                    operationalCategoryRemoteID: existingProduct?.category?.remoteID
+                    operationalCategoryRemoteID: existingProduct?.category?.remoteID,
+                    presentationID: mountedPresentationID ?? localPresentation?.currentPresentationID
                 )
             }
         }
         .navigationTitle(existingProduct == nil ? L("product.title.new") : L("product.title.edit"))
+        #if DEBUG
+        .task144ControlledRootControls(inEditor: true)
+        #endif
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button(L("common.cancel")) { dismiss() }
+                Button(L("common.cancel")) { clearRetainedDraft(); dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(L("common.save")) { save() }
@@ -301,7 +336,14 @@ struct EditProductView: View {
         .task(id: imageScope) {
             productImageStore.activate(scope: imageScope)
         }
-        .onAppear { isViewActive = true }
+        .onAppear {
+            isViewActive = true
+            restoreRetainedDraft()
+        }
+        .onChange(of: retainedDraft) { _, draft in
+            guard isViewActive, retainsLocalDraft, isCurrentModelGeneration else { return }
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = draft }
+        }
         .onDisappear {
             isViewActive = false
             _ = cancelImageOperation()
@@ -351,10 +393,50 @@ struct EditProductView: View {
         }
     }
 
+    private var isCurrentModelGeneration: Bool {
+        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+    }
+
+    private var retainedDraft: LocalRootPresentationState.EditorDraft {
+        .init(remoteID: logicalRemoteID, originalBarcode: originalBarcode, baseline: initialDraft,
+            barcode: barcode, name: name, secondName: secondName, itemNumber: itemNumber,
+            purchasePrice: purchasePrice, retailPrice: retailPrice, stockQuantity: stockQuantity,
+            supplierName: supplierName, categoryName: categoryName, focusedField: focusedField?.rawValue)
+    }
+
+    private func restoreRetainedDraft() {
+        guard isCurrentModelGeneration else { return }
+        retainsLocalDraft = true
+        mountedPresentationID = localPresentation?.currentPresentationID
+        if let draft = localPresentation?.editor(presentationID: mountedPresentationID,
+            remoteID: logicalRemoteID, barcode: originalBarcode) {
+            initialDraft = draft.baseline
+            barcode = draft.barcode
+            name = draft.name
+            secondName = draft.secondName
+            itemNumber = draft.itemNumber
+            purchasePrice = draft.purchasePrice
+            retailPrice = draft.retailPrice
+            stockQuantity = draft.stockQuantity
+            supplierName = draft.supplierName
+            categoryName = draft.categoryName
+            focusedField = draft.focusedField.flatMap(DraftField.init(rawValue:))
+        }
+        localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = retainedDraft }
+    }
+
+    private func clearRetainedDraft() {
+        guard isCurrentModelGeneration else { return }
+        retainsLocalDraft = false
+        localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = nil }
+    }
+
+    private var currentProduct: Product? { isCurrentModelGeneration ? existingProduct : nil }
+
     @ViewBuilder
     private var productImageSection: some View {
         Section(L("product.image.section")) {
-            if let product = existingProduct,
+            if let product = currentProduct,
                let productID = product.remoteID {
                 ZStack {
                     ProductImageRemoteView(
@@ -488,7 +570,7 @@ struct EditProductView: View {
     }
 
     private var imageScope: ProductImageScope? {
-        guard supabaseAuthViewModel.isSignedIn,
+        guard isCurrentModelGeneration, supabaseAuthViewModel.isSignedIn,
               let accountID = supabaseAuthViewModel.sessionInfo?.userID,
               shopContextStore.context.accountHash == AccountBindingStore.accountHash(for: accountID),
               let selectedShop = shopContextStore.context.selectedShop else {
@@ -512,7 +594,7 @@ struct EditProductView: View {
 
     private var canWriteProductImage: Bool {
         guard productImageStore.isAvailable,
-              existingProduct?.remoteID != nil,
+              currentProduct?.remoteID != nil,
               imageScope != nil,
               shopContextStore.context.syncAllowed,
               let selectedShop = shopContextStore.context.selectedShop else {
@@ -523,7 +605,7 @@ struct EditProductView: View {
 
     private var isImageBusy: Bool {
         if isImportingSelectedImage { return true }
-        guard let productID = existingProduct?.remoteID else { return false }
+        guard let productID = currentProduct?.remoteID else { return false }
         switch productImageStore.operationStage(productID: productID) {
         case .processing, .uploadingMain, .uploadingThumb, .finalizing, .removing:
             return true
@@ -534,13 +616,13 @@ struct EditProductView: View {
 
     private var isImageOperationCancellable: Bool {
         if isImportingSelectedImage { return true }
-        guard let productID = existingProduct?.remoteID else { return false }
+        guard let productID = currentProduct?.remoteID else { return false }
         return productImageStore.operationStage(productID: productID).allowsCancellation
     }
 
     private var imageProgressLabel: String {
         if isImportingSelectedImage { return L("product.image.importing") }
-        guard let productID = existingProduct?.remoteID else { return L("product.image.processing") }
+        guard let productID = currentProduct?.remoteID else { return L("product.image.processing") }
         switch productImageStore.operationStage(productID: productID) {
         case .processing: return L("product.image.processing")
         case .uploadingMain: return L("product.image.uploading_main")
@@ -554,7 +636,7 @@ struct EditProductView: View {
     private var pendingPreviewImage: UIImage? {
         productImageStore.pendingPreview(
             scope: imageScope,
-            productID: existingProduct?.remoteID
+            productID: currentProduct?.remoteID
         )
     }
 
@@ -563,7 +645,7 @@ struct EditProductView: View {
               canWriteProductImage,
               let fileURL = pendingImageURL,
               let scope = imageScope,
-              let product = existingProduct,
+              let product = currentProduct,
               let productID = product.remoteID else {
             imageMessage = L("product.image.error.context")
             return
@@ -584,7 +666,7 @@ struct EditProductView: View {
             guard imageOperationID == operationID,
                   imageScope == scope,
                   canWriteProductImage,
-                  existingProduct?.remoteID == productID else { return }
+                  currentProduct?.remoteID == productID else { return }
             do {
                 let productPersistentID = product.persistentModelID
                 try Task126OwnerStoreGate.withLocalMutationFence(
@@ -637,7 +719,7 @@ struct EditProductView: View {
         guard imageOperationID == operationID,
               canWriteProductImage,
               let scope = imageScope,
-              let product = existingProduct,
+              let product = currentProduct,
               let productID = product.remoteID,
               let versionID = currentImageVersionID else {
             return
@@ -656,7 +738,7 @@ struct EditProductView: View {
             guard imageOperationID == operationID,
                   imageScope == scope,
                   canWriteProductImage,
-                  existingProduct?.remoteID == productID else { return }
+                  currentProduct?.remoteID == productID else { return }
             do {
                 let productPersistentID = product.persistentModelID
                 try Task126OwnerStoreGate.withLocalMutationFence(
@@ -712,7 +794,7 @@ struct EditProductView: View {
         scope: ProductImageScope? = nil,
         cancelStoreOperation: Bool = true
     ) -> Bool {
-        if let productID = existingProduct?.remoteID {
+        if let productID = currentProduct?.remoteID {
             let stage = productImageStore.operationStage(productID: productID)
             guard stage != .finalizing, stage != .removing else { return false }
         }
@@ -725,7 +807,7 @@ struct EditProductView: View {
         isImportingSelectedImage = false
         selectedImageItem = nil
         if hadOperation, cancelStoreOperation,
-           let productID = existingProduct?.remoteID {
+           let productID = currentProduct?.remoteID {
             productImageStore.cancelOperation(
                 productID: productID,
                 scope: scope ?? imageScope
@@ -750,6 +832,10 @@ struct EditProductView: View {
     }
 
     private func save() {
+        guard isCurrentModelGeneration else {
+            validationMessage = L("product.validation.save_failed")
+            return
+        }
         guard !barcode.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = L("product.validation.barcode_required")
             return
@@ -793,8 +879,9 @@ struct EditProductView: View {
             validationMessage = L("catalog.text.error.invalid_input")
             return
         }
-        let existingID = existingProduct?.persistentModelID
+        let existingID = currentProduct?.persistentModelID
 
+        var savedProductReceipt: LocalProductSaveReceipt?
         do {
             try Task126OwnerStoreGate.withLocalMutationFence(
                 modelContainer: context.container,
@@ -945,34 +1032,44 @@ struct EditProductView: View {
                     context: freshContext,
                     ownerUserID: pendingOwnerUserID
                 )
+                var savedIntents: [LocalPendingChangeCASToken] = []
                 if let createdSupplier {
-                    try accumulator.recordSupplierChange(
+                    if let change = try accumulator.recordSupplierChange(
                         supplier: createdSupplier,
                         operation: .create,
                         origin: .manualCatalogSave
-                    )
+                    ) { savedIntents.append(LocalPendingChangeCASToken(change)) }
                 }
                 if let createdCategory {
-                    try accumulator.recordCategoryChange(
+                    if let change = try accumulator.recordCategoryChange(
                         category: createdCategory,
                         operation: .create,
                         origin: .manualCatalogSave
-                    )
+                    ) { savedIntents.append(LocalPendingChangeCASToken(change)) }
                 }
                 if operation == .create || !userChangedFields.isEmpty {
-                    try accumulator.recordProductChange(
+                    if let change = try accumulator.recordProductChange(
                         product: target,
                         operation: operation,
                         origin: .manualCatalogSave,
                         changedFields: userChangedFields,
                         baselineFingerprintHash: baselineFingerprintHash
-                    )
+                    ) { savedIntents.append(LocalPendingChangeCASToken(change)) }
                 }
                 try priceChanges.forEach {
-                    try accumulator.recordProductPriceChange(price: $0, origin: .productPriceSave)
+                    if let change = try accumulator.recordProductPriceChange(price: $0, origin: .productPriceSave) {
+                        savedIntents.append(LocalPendingChangeCASToken(change))
+                    }
                 }
                 try freshContext.save()
+                if !savedIntents.isEmpty, let manifest = Task126OwnerStoreGate.activeManifestWithLeaseHeld(freshContext.container) {
+                    savedProductReceipt = LocalProductSaveReceipt(product: target, manifest: manifest, intents: savedIntents)
+                }
             }
+            if let savedProductReceipt {
+                localPresentation?.recordSavedProduct(savedProductReceipt, presentationID: mountedPresentationID)
+            }
+            clearRetainedDraft()
             dismiss()
         } catch {
             validationMessage = L("product.validation.save_failed")

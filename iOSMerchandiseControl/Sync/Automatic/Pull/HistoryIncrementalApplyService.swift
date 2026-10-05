@@ -82,7 +82,7 @@ nonisolated struct HistoryIncrementalApplyService {
                     context: context,
                     scope: scope
                 )
-                if result.insertedCount + result.updatedCount > 0 {
+                if context.hasChanges {
                     try context.save()
                 }
                 return result
@@ -222,6 +222,7 @@ nonisolated struct HistoryIncrementalApplyService {
                             remoteUpdatedAt: remoteUpdatedAt,
                             remoteDeletedAt: remoteDeletedAt!
                         )
+                        try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                         result.updatedCount += 1
                     }
                     continue
@@ -244,11 +245,19 @@ nonisolated struct HistoryIncrementalApplyService {
                     byRemoteID[row.remoteID] = existing
                     byUID[existing.uid] = existing
                     byLogicalFingerprint[logicalFingerprint] = existing
+                    try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                     result.updatedCount += 1
                     continue
                 }
 
                 if existing.remotePayloadFingerprint == remoteFingerprint {
+                    // A validated newer fence can describe the same semantic
+                    // body. Keep its physical metadata and current-body proof
+                    // in this writer transaction without rolling either back.
+                    if existing.remoteUpdatedAt.map({ $0 <= remoteUpdatedAt }) ?? true {
+                        existing.remoteUpdatedAt = remoteUpdatedAt
+                        try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                    }
                     result.skippedCleanCount += 1
                     continue
                 }
@@ -267,9 +276,11 @@ nonisolated struct HistoryIncrementalApplyService {
                     timestamp: timestamp!,
                     remoteUpdatedAt: remoteUpdatedAt
                 )
+                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                 result.updatedCount += 1
             } else {
                 if remoteDeletedAt != nil {
+                    try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                     result.skippedCleanCount += 1
                     continue
                 }
@@ -285,6 +296,7 @@ nonisolated struct HistoryIncrementalApplyService {
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted
                 byLogicalFingerprint[logicalFingerprint] = inserted
+                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                 result.insertedCount += 1
             }
         }

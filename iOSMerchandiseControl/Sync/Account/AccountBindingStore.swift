@@ -99,11 +99,21 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
         durableJournalURL: URL? = nil
     ) {
         self.defaults = defaults
-        self.key = key
-        self.replacementKey = "\(key).pendingReplacement"
-        self.presentedDecisionIdentitiesKey = "\(key).presentedDecisionIdentities"
+        let scopedKey: String
+        #if DEBUG
+        if defaults === UserDefaults.standard, key == "sync.accountBinding.v1",
+           let raw = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"],
+           let runID = UUID(uuidString: raw) {
+            scopedKey = "task144.controlled.\(runID.uuidString.lowercased()).binding"
+        } else { scopedKey = key }
+        #else
+        scopedKey = key
+        #endif
+        self.key = scopedKey
+        self.replacementKey = "\(scopedKey).pendingReplacement"
+        self.presentedDecisionIdentitiesKey = "\(scopedKey).presentedDecisionIdentities"
         self.presentedDecisionIdentitiesOverflowKey =
-            "\(key).presentedDecisionIdentities.autoShowDisabled"
+            "\(scopedKey).presentedDecisionIdentities.autoShowDisabled"
         self.durableJournalURL = durableJournalURL?.standardizedFileURL
             ?? (defaults === UserDefaults.standard ? Self.defaultDurableJournalURL() : nil)
             ?? AccountRecoveryJournalURLRegistry.shared.url(for: defaults)
@@ -176,6 +186,32 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
             return true
         }
         return defaults.object(forKey: replacementKey) != nil
+    }
+
+    /// Restoring the selected shop is presentation of an already authorized
+    /// local scope, not authority for online calls or a proof of store data.
+    /// The generation controller/mutation fence performs the stronger data
+    /// checks before a business read or Save during recovery.
+    func permitsLocalShopSelection(ownerUserID: UUID, selectedShop: SelectedShop) -> Bool {
+        let accountHash = Self.accountHash(for: ownerUserID)
+        guard defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == accountHash,
+              let binding = currentBinding,
+              binding.accountHash == accountHash,
+              binding.storeIdentity == selectedShop.localStoreIdentity,
+              selectedShop.selectable,
+              selectedShop.isValidProductImageSelection,
+              let deviceID = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                accountHash: accountHash, shopID: selectedShop.shopID,
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceID)) else { return false }
+        guard hasPendingReplacementJournal else { return true }
+        guard let journal = pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery,
+              journal.replacement.accountHash == accountHash,
+              journal.replacement.storeIdentity == selectedShop.localStoreIdentity,
+              let deviceID = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+              journal.deviceIdentityHash == DeviceInstallIDStore.identityHash(for: deviceID) else { return false }
+        return true
     }
 
     @discardableResult
@@ -856,10 +892,20 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
     }
 
     private static func defaultDurableJournalURL() -> URL? {
-        FileManager.default.urls(
+        let support = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
-        ).first?
+        ).first
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"],
+           let runID = UUID(uuidString: raw) {
+            return support?.appendingPathComponent("task144-root-fixtures", isDirectory: true)
+                .appendingPathComponent(runID.uuidString.lowercased(), isDirectory: true)
+                .appendingPathComponent("generation-root", isDirectory: true)
+                .appendingPathComponent("recovery-journal.json", isDirectory: false)
+        }
+        #endif
+        return support?
             .appendingPathComponent("SyncStoreGenerations", isDirectory: true)
             .appendingPathComponent("v1", isDirectory: true)
             .appendingPathComponent("recovery-journal.json", isDirectory: false)

@@ -198,7 +198,9 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             )
             let context = ModelContext(modelContainer)
             context.autosaveEnabled = false
-            return try body(context)
+            let result = try body(context)
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+            return result
         }
     }
 
@@ -343,6 +345,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             let pendingTokenStillMatches = prepared.pending.matches(change)
             price.remoteID = row.id
             change.entityRemoteID = row.id
+            try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
             if pendingTokenStillMatches,
                productPricePayloadFingerprint(currentPayload) == prepared.payloadFingerprint {
                 change.status = .acknowledged

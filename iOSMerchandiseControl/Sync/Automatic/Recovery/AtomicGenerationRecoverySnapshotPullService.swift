@@ -1,6 +1,9 @@
 import CryptoKit
 import Foundation
 import SwiftData
+#if canImport(Darwin)
+import Darwin
+#endif
 
 private nonisolated final class AtomicRecoveryDefaultsBox: @unchecked Sendable {
     let value: UserDefaults
@@ -11,7 +14,9 @@ private nonisolated final class AtomicRecoveryDefaultsBox: @unchecked Sendable {
 }
 
 private nonisolated final class AtomicRecoveryStagingState: @unchecked Sendable {
-    let baselineRunID = UUID()
+    let baselineRunID: UUID
+    var pageProgress: AtomicRecoveryPageProgress?
+    init(baselineRunID: UUID = UUID()) { self.baselineRunID = baselineRunID }
     var supplierModelIDs: [UUID: PersistentIdentifier] = [:]
     var categoryModelIDs: [UUID: PersistentIdentifier] = [:]
     var productModelIDs: [UUID: PersistentIdentifier] = [:]
@@ -37,8 +42,8 @@ private nonisolated struct AtomicRecoveryProofReceipt: Equatable, Sendable {
     let digest: String
 }
 
-private nonisolated struct AtomicRecoveryProofAccumulator: Sendable {
-    private var hasher = SHA256()
+private nonisolated struct AtomicRecoveryProofAccumulator: Codable, Sendable {
+    private var digest = ShopSyncRecoveryCanonical.sha256("")
     private var count = 0
     private var previousOrderingID: String?
 
@@ -49,10 +54,9 @@ private nonisolated struct AtomicRecoveryProofAccumulator: Sendable {
               proof.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
             throw ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID
         }
-        if count > 0 { hasher.update(data: Data("\n".utf8)) }
-        hasher.update(data: Data(
-            ShopSyncRecoveryCanonical.joined(id, proof).utf8
-        ))
+        // Private physical materialization proof, independent of the public
+        // checkpoint digest. Its bounded value state can survive page commits.
+        digest = ShopSyncRecoveryCanonical.sha256(digest + "\n" + ShopSyncRecoveryCanonical.joined(id, proof))
         count += 1
         previousOrderingID = id
     }
@@ -60,9 +64,151 @@ private nonisolated struct AtomicRecoveryProofAccumulator: Sendable {
     mutating func finalize() -> AtomicRecoveryProofReceipt {
         AtomicRecoveryProofReceipt(
             count: count,
-            digest: hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            digest: digest
         )
     }
+
+    func validate() throws {
+        guard count >= 0, count <= ShopSyncRecoveryLimits.maximumTotalRows,
+              digest.count == 64, digest.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              (count == 0 ? (previousOrderingID == nil && digest == ShopSyncRecoveryCanonical.sha256(""))
+                : previousOrderingID.flatMap(UUID.init(uuidString:)) != nil) else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+    }
+}
+
+private nonisolated struct AtomicRecoveryProofState: Codable {
+    let supplier: AtomicRecoveryProofAccumulator
+    let category: AtomicRecoveryProofAccumulator
+    let product: AtomicRecoveryProofAccumulator
+    let price: AtomicRecoveryProofAccumulator
+    let history: AtomicRecoveryProofAccumulator
+    let supplierBaseline: AtomicRecoveryProofAccumulator
+    let categoryBaseline: AtomicRecoveryProofAccumulator
+    let productBaseline: AtomicRecoveryProofAccumulator
+
+    init(_ state: AtomicRecoveryStagingState) {
+        supplier = state.supplierMaterializationProof; category = state.categoryMaterializationProof
+        product = state.productMaterializationProof; price = state.priceMaterializationProof
+        history = state.historyMaterializationProof; supplierBaseline = state.supplierBaselineProof
+        categoryBaseline = state.categoryBaselineProof; productBaseline = state.productBaselineProof
+    }
+    func restore(_ state: AtomicRecoveryStagingState) throws {
+        for proof in [supplier, category, product, price, history, supplierBaseline, categoryBaseline, productBaseline] {
+            try proof.validate()
+        }
+        state.supplierMaterializationProof = supplier; state.categoryMaterializationProof = category
+        state.productMaterializationProof = product; state.priceMaterializationProof = price
+        state.historyMaterializationProof = history; state.supplierBaselineProof = supplierBaseline
+        state.categoryBaselineProof = categoryBaseline; state.productBaselineProof = productBaseline
+    }
+}
+
+private nonisolated struct AtomicRecoveryPageProgress: Codable {
+    static let fileName = "recovery-page-progress-v1.json"
+    static let preparedFileName = "recovery-page-prepared-v1.json"
+    struct Domain: Codable {
+        var afterID: String?
+        var processed = 0
+        var pages = 0
+        var complete = false
+        var ledgerBytes = 0
+        var effectiveLimit: Int?
+        var lastPageSHA256: String?
+    }
+    let schemaVersion: String
+    let generationID: UUID
+    let accountHash: String
+    let shopID: UUID
+    let storeIdentity: LocalStoreIdentity
+    let deviceIdentityHash: String
+    let checkpointA: ShopSyncRecoveryCheckpoint
+    let pageLimit: Int
+    let baselineRunID: UUID
+    var domains: [String: Domain]
+    var proofs: AtomicRecoveryProofState
+
+    init(staging: SyncStoreGenerationHandle, checkpoint: ShopSyncRecoveryCheckpoint,
+         pageLimit: Int, state: AtomicRecoveryStagingState) {
+        schemaVersion = "recovery-page-progress-v1"
+        generationID = staging.generationID; accountHash = staging.accountHash; shopID = staging.shopID
+        storeIdentity = staging.storeIdentity; deviceIdentityHash = staging.deviceIdentityHash
+        checkpointA = checkpoint; self.pageLimit = pageLimit; baselineRunID = state.baselineRunID
+        domains = [:]; proofs = AtomicRecoveryProofState(state)
+    }
+    static func read(staging: SyncStoreGenerationHandle) throws -> Self? {
+        let url = staging.storeURL.deletingLastPathComponent().appendingPathComponent(fileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try JSONDecoder().decode(Self.self, from: boundedRead(url, limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes))
+    }
+    func validate(staging: SyncStoreGenerationHandle, scope: Task126VerifiedOwnerStoreScope, pageLimit: Int) throws {
+        guard schemaVersion == "recovery-page-progress-v1", generationID == staging.generationID,
+              accountHash == scope.accountHash, shopID == scope.shopID, storeIdentity == scope.storeIdentity,
+              deviceIdentityHash == scope.deviceIdentityHash, self.pageLimit == pageLimit,
+              checkpointA.scope.accountKey == scope.accountHash,
+              checkpointA.scope.deviceKey == scope.deviceIdentityHash,
+              checkpointA.shopId == scope.shopID, checkpointA.status == "ready",
+              domains.count <= ShopSyncRecoveryDomain.allCases.count else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+        var unfinishedSeen = false
+        for domain in ShopSyncRecoveryDomain.allCases {
+            if let cursor = domains[domain.rawValue] {
+                guard !unfinishedSeen else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+                if !cursor.complete { unfinishedSeen = true }
+            } else { unfinishedSeen = true }
+        }
+        var total = 0
+        for (key, cursor) in domains {
+            guard let domain = ShopSyncRecoveryDomain(rawValue: key), cursor.processed >= 0,
+                  cursor.processed <= ShopSyncRecoveryLimits.maximumRows(for: domain), cursor.pages >= 0,
+                  cursor.pages <= ShopSyncRecoveryLimits.maximumRows(for: domain) + 1,
+                  cursor.ledgerBytes >= 0, cursor.ledgerBytes <= ShopSyncRecoveryLimits.maximumLedgerBytesPerDomain,
+                  cursor.afterID == nil || cursor.afterID.flatMap(UUID.init(uuidString:)) != nil,
+                  cursor.pages == 0 || cursor.effectiveLimit == min(pageLimit, ShopSyncRecoveryLimits.maximumPageRows(for: domain)),
+                  cursor.complete || cursor.processed == 0 || cursor.afterID != nil,
+                  cursor.processed == 0 || cursor.ledgerBytes > 0,
+                  cursor.pages == 0 || cursor.lastPageSHA256?.count == 64 else {
+                throw ShopSyncRecoveryContractError.invalidPage(domain: .products)
+            }
+            total += cursor.ledgerBytes
+        }
+        guard total <= ShopSyncRecoveryLimits.maximumLedgerBytesTotal else { throw ShopSyncRecoveryContractError.totalResourceBudgetExceeded }
+    }
+    func save(staging: SyncStoreGenerationHandle) throws {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        try Self.write(try encoder.encode(self), to: staging.storeURL.deletingLastPathComponent().appendingPathComponent(Self.fileName),
+                       limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes)
+    }
+    static func boundedRead(_ url: URL, limit: Int) throws -> Data {
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true,
+              let bytes = values.fileSize, bytes >= 0, bytes <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }
+        let data = try handle.read(upToCount: limit + 1) ?? Data()
+        guard data.count <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        return data
+    }
+    static func write(_ data: Data, to url: URL, limit: Int) throws {
+        guard data.count <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        if FileManager.default.fileExists(atPath: url.path) {
+            _ = try boundedRead(url, limit: limit)
+        }
+        try data.write(to: url, options: .atomic)
+        let file = try FileHandle(forWritingTo: url); defer { try? file.close() }; try file.synchronize()
+    }
+}
+
+private nonisolated struct AtomicRecoveryPreparedPageHeader: Decodable {
+    let domain: ShopSyncRecoveryDomain
+}
+
+private nonisolated struct AtomicRecoveryPreparedPage<Row: Codable>: Codable {
+    let domain: ShopSyncRecoveryDomain
+    let afterID: String?
+    let rows: [Row]
+    let pageLimit: Int
+    let nextAfterID: String?
+    let hasMore: Bool
 }
 
 private nonisolated enum AtomicRecoveryMaterializationProof {
@@ -106,6 +252,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
     private let pageLimit: Int
     private let maximumAttempts: Int
     private let progressReporter: SyncRecoveryProgressReporter?
+    private let pageCommitProbe: @Sendable (ShopSyncRecoveryDomain) throws -> Void
 
     init(
         storeGenerationController: SyncStoreGenerationController,
@@ -113,7 +260,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         defaults: UserDefaults = .standard,
         pageLimit: Int = 250,
         maximumAttempts: Int = 2,
-        progressReporter: SyncRecoveryProgressReporter? = nil
+        progressReporter: SyncRecoveryProgressReporter? = nil,
+        pageCommitProbe: @escaping @Sendable (ShopSyncRecoveryDomain) throws -> Void = { _ in }
     ) {
         self.storeGenerationController = storeGenerationController
         self.recoveryRemote = recoveryRemote
@@ -121,6 +269,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         self.pageLimit = max(1, min(pageLimit, 250))
         self.maximumAttempts = max(1, min(maximumAttempts, 2))
         self.progressReporter = progressReporter
+        self.pageCommitProbe = pageCommitProbe
     }
 
     func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
@@ -128,7 +277,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         // Reset only for a new top-level invocation so a changing checkpoint
         // cannot multiply the allowed network/memory footprint.
         await recoveryRemote.resetResourceBudget()
-        var scope = try ensureRecoveryJournal(ownerUserID: ownerUserID)
+        var scope = try await ensureRecoveryJournal(ownerUserID: ownerUserID)
         try await reportProgress(.preparing, scope: scope)
         if let resumed = try await completeActivatedGenerationIfPossible(
             ownerUserID: ownerUserID,
@@ -148,46 +297,61 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             var staging: SyncStoreGenerationHandle?
             var ledger: ShopSyncRecoveryLedger?
             var manifestActivated = false
+            var activatedManifest: SyncStoreGenerationManifest?
+            var activatedJournal: AccountRecoveryJournalSnapshot?
             do {
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try validateJournal(scope: scope)
                 try await reportProgress(.checkpoint, scope: scope)
-                let checkpointA = try await recoveryRemote.checkpoint(
+                let freshAdmission = try await recoveryRemote.checkpoint(
                     ownerUserID: ownerUserID,
                     scope: scope
                 )
                 try revalidate(scope, ownerUserID: ownerUserID)
-
+                let resumeID = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal?.generationID
                 let prepared = try await storeGenerationController.prepareStaging(
                     accountHash: scope.accountHash,
                     shopID: scope.shopID,
                     storeIdentity: scope.storeIdentity,
-                    deviceIdentityHash: scope.deviceIdentityHash
+                    deviceIdentityHash: scope.deviceIdentityHash,
+                    resumeGenerationID: resumeID
                 )
                 staging = prepared
                 let bindingStore = AccountBindingStore(defaults: defaultsBox.value)
-                guard bindingStore.recordPendingRecoveryStaging(
-                    accountHash: scope.accountHash,
-                    storeIdentity: scope.storeIdentity,
-                    deviceIdentityHash: scope.deviceIdentityHash,
-                    generationID: prepared.generationID,
-                    scope: scope
-                ) else {
+                guard await recordStagingJournal(scope: scope, generationID: prepared.generationID) else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
-                try await storeGenerationController.resetStaging(prepared)
-                let persistedLedger = try ShopSyncRecoveryLedger(
-                    generationStoreURL: prepared.storeURL
-                )
+                let progress = try AtomicRecoveryPageProgress.read(staging: prepared)
+                let checkpointA: ShopSyncRecoveryCheckpoint
+                let state: AtomicRecoveryStagingState
+                let persistedLedger: ShopSyncRecoveryLedger
+                if let progress {
+                    try progress.validate(staging: prepared, scope: scope, pageLimit: pageLimit)
+                    guard Self.isMonotonicRecoveryFence(freshAdmission, from: progress.checkpointA) else {
+                        throw ShopSyncRecoveryContractError.checkpointChanged
+                    }
+                    checkpointA = progress.checkpointA
+                    state = AtomicRecoveryStagingState(baselineRunID: progress.baselineRunID)
+                    state.pageProgress = progress
+                    try progress.proofs.restore(state)
+                    let offsets = Dictionary(uniqueKeysWithValues: progress.domains.compactMap { key, value in
+                        ShopSyncRecoveryDomain(rawValue: key).map { ($0, value.ledgerBytes) }
+                    })
+                    persistedLedger = try ShopSyncRecoveryLedger(generationStoreURL: prepared.storeURL,
+                        mode: .resumeAccepted(byteOffsets: offsets))
+                    try restoreAcceptedRelationships(state: state, staging: prepared, ledger: persistedLedger)
+                } else {
+                    checkpointA = freshAdmission
+                    try await storeGenerationController.resetStaging(prepared)
+                    state = AtomicRecoveryStagingState()
+                    persistedLedger = try ShopSyncRecoveryLedger(generationStoreURL: prepared.storeURL)
+                    try createBaselineRun(state: state, container: prepared.container, ownerUserID: ownerUserID, scope: scope)
+                    state.pageProgress = AtomicRecoveryPageProgress(staging: prepared, checkpoint: checkpointA,
+                                                                  pageLimit: pageLimit, state: state)
+                    try state.pageProgress!.save(staging: prepared)
+                }
                 ledger = persistedLedger
-                let state = AtomicRecoveryStagingState()
-                try createBaselineRun(
-                    state: state,
-                    container: prepared.container,
-                    ownerUserID: ownerUserID,
-                    scope: scope
-                )
 
                 try await stageSuppliers(
                     checkpoint: checkpointA,
@@ -314,16 +478,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     localVerification: receipt
                 )
                 try revalidate(scope, ownerUserID: ownerUserID)
-                guard bindingStore.recordPendingRecoveryVerified(
-                    accountHash: scope.accountHash,
-                    storeIdentity: scope.storeIdentity,
-                    deviceIdentityHash: scope.deviceIdentityHash,
-                    generationID: prepared.generationID,
-                    checkpointDigest: checkpointB.checkpointDigest,
-                    watermark: checkpointB.maxEventID!,
-                    baselineRunID: state.baselineRunID,
-                    scope: scope
-                ) else {
+                guard await recordVerifiedJournal(scope: scope, generationID: prepared.generationID,
+                    checkpointDigest: checkpointB.checkpointDigest, watermark: checkpointB.maxEventID!,
+                    baselineRunID: state.baselineRunID) else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
@@ -331,7 +488,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
                 try await reportProgress(.activating, scope: scope)
-                _ = try await storeGenerationController.activate(
+                let publishedManifest = try await storeGenerationController.activate(
                     prepared,
                     mutationFence: mutationFence,
                     checkpointBeforeDownload: checkpointA,
@@ -342,26 +499,25 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     scope: scope
                 )
                 manifestActivated = true
+                activatedManifest = publishedManifest
+                activatedJournal = journal
 
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try revalidate(scope, ownerUserID: ownerUserID)
                 try await reportProgress(.finalizing, scope: scope)
                 _ = try await storeGenerationController.markRecoveryFinalized(scope: scope)
-                guard try bindingStore.completePendingReplacementRecovery(
-                    accountHash: scope.accountHash,
-                    storeIdentity: scope.storeIdentity,
-                    expectedLeaseGeneration: scope.leaseGeneration
-                ) else {
+                guard try await completeRecoveryJournal(scope: scope) else {
                     throw AtomicGenerationRecoveryError.journalCompletionRejected
                 }
 
-                return makeSummary(
+                return try await makeSummary(
                     checkpoint: checkpointB,
                     generationID: prepared.generationID
                 )
             } catch is CancellationError {
                 if let ledger { try? ledger.closeWrites() }
-                await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
+                // Accepted pages belong only to this scoped staging generation.
+                // Their durable cursor can be reused after cancellation/reopen.
                 throw CancellationError()
             } catch ShopSyncRecoveryContractError.checkpointChanged {
                 if let ledger { try? ledger.closeWrites() }
@@ -377,13 +533,74 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 lastCheckpointError = ShopSyncRecoveryContractError.checkpointChanged
                 guard attempt < maximumAttempts else { break }
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000)
+            } catch let error as Task126OwnerStoreGateError where error == .scopeChanged && manifestActivated {
+                if let ledger { try? ledger.closeWrites() }
+                guard let activatedManifest, let activatedJournal,
+                      let completed = try await completePublishedSameScopeGenerationAfterLeaseRefresh(
+                        originalScope: scope, manifest: activatedManifest, journal: activatedJournal
+                      ) else { throw error }
+                return completed
             } catch {
                 if let ledger { try? ledger.closeWrites() }
-                await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
+                if !Self.isResumableTransportFailure(error) {
+                    await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
+                }
                 throw error
             }
         }
         throw lastCheckpointError ?? ShopSyncRecoveryContractError.checkpointChanged
+    }
+
+    /// A generation remount can refresh the same resolved shop and invalidate
+    /// the old lease after durable publication. Only the original published
+    /// generation/journal may resume, under newly captured exact authority.
+    /// The existing completion path reacquires its marker and durable proof;
+    /// no obsolete response or pre-publication scope is accepted here.
+    private func completePublishedSameScopeGenerationAfterLeaseRefresh(
+        originalScope: Task126VerifiedOwnerStoreScope,
+        manifest: SyncStoreGenerationManifest,
+        journal: AccountRecoveryJournalSnapshot
+    ) async throws -> SyncRecoverySnapshotPullSummary? {
+        for admissionAttempt in 1...maximumAttempts {
+            try Task.checkCancellation()
+            guard journal.mode == .sameScopeRecovery,
+                  journal.generationID == manifest.generationID,
+                  journal.checkpointDigest == manifest.checkpoint.checkpointDigest,
+                  journal.watermark == manifest.checkpoint.maxEventID,
+                  journal.baselineRunID == manifest.baselineRunID else { return nil }
+            do {
+                let current = try captureRecoveryScope(ownerUserID: originalScope.ownerUserID)
+                guard current.ownerUserID == originalScope.ownerUserID,
+                      current.accountHash == originalScope.accountHash,
+                      current.shopID == originalScope.shopID,
+                      current.storeIdentity == originalScope.storeIdentity,
+                      current.deviceInstallID == originalScope.deviceInstallID,
+                      current.deviceIdentityHash == originalScope.deviceIdentityHash,
+                      current.pendingReplacement == originalScope.pendingReplacement,
+                      !SelectedShopStore(defaults: defaultsBox.value).hasConfirmedDeviceDenial(
+                        accountHash: current.accountHash, shopID: current.shopID,
+                        deviceIdentityHash: current.deviceIdentityHash),
+                      await storeGenerationController.activeManifest == manifest,
+                      let persistedJournal = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal,
+                      persistedJournal.mode == journal.mode,
+                      persistedJournal.phase == .activated,
+                      persistedJournal.replacement == journal.replacement,
+                      persistedJournal.deviceIdentityHash == journal.deviceIdentityHash,
+                      persistedJournal.generationID == journal.generationID,
+                      persistedJournal.checkpointDigest == journal.checkpointDigest,
+                      persistedJournal.watermark == journal.watermark,
+                      persistedJournal.baselineRunID == journal.baselineRunID else { return nil }
+                try revalidate(current, ownerUserID: originalScope.ownerUserID)
+                return try await completeActivatedGenerationIfPossible(
+                        ownerUserID: originalScope.ownerUserID, scope: current
+                    )
+            } catch let error as Task126OwnerStoreGateError where error == .scopeChanged {
+                // Each lifecycle refresh requires a fresh complete admission and
+                // marker. Never carry a stale response into journal completion.
+                guard admissionAttempt < maximumAttempts else { throw error }
+            }
+        }
+        return nil
     }
 
     private func reportProgress(
@@ -422,9 +639,14 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         await storeGenerationController.quarantine(staging)
     }
 
+    // UserDefaults synchronously calls SwiftUI's AppStorage observer. Taking
+    // the scope lease on a worker while that callback waits for SwiftUI's
+    // update lock deadlocks a root render waiting for the same scope lease.
+    // Only these small journal/metadata transitions move to MainActor; page
+    // materialization, full proofs and filesystem mutation fences stay off it.
     private func ensureRecoveryJournal(
         ownerUserID: UUID
-    ) throws -> Task126VerifiedOwnerStoreScope {
+    ) async throws -> Task126VerifiedOwnerStoreScope {
         let bindingStore = AccountBindingStore(defaults: defaultsBox.value)
         if bindingStore.hasPendingReplacementJournal {
             let scope = try captureRecoveryScope(ownerUserID: ownerUserID)
@@ -435,15 +657,41 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             ownerUserID: ownerUserID,
             defaults: defaultsBox.value
         )
-        guard bindingStore.beginSameScopeRecovery(
-            accountHash: current.accountHash,
-            storeIdentity: current.storeIdentity,
-            reason: "automatic_full_recovery",
-            deviceIdentityHash: current.deviceIdentityHash
-        ) else {
+        guard await beginRecoveryJournal(scope: current) else {
             throw AtomicGenerationRecoveryError.journalTransitionRejected
         }
         return try captureRecoveryScope(ownerUserID: ownerUserID)
+    }
+
+    @MainActor
+    private func beginRecoveryJournal(scope: Task126VerifiedOwnerStoreScope) -> Bool {
+        AccountBindingStore(defaults: defaultsBox.value).beginSameScopeRecovery(
+            accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            reason: "automatic_full_recovery", deviceIdentityHash: scope.deviceIdentityHash)
+    }
+
+    @MainActor
+    private func recordStagingJournal(scope: Task126VerifiedOwnerStoreScope, generationID: UUID) -> Bool {
+        AccountBindingStore(defaults: defaultsBox.value).recordPendingRecoveryStaging(
+            accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            deviceIdentityHash: scope.deviceIdentityHash, generationID: generationID, scope: scope)
+    }
+
+    @MainActor
+    private func recordVerifiedJournal(scope: Task126VerifiedOwnerStoreScope, generationID: UUID,
+        checkpointDigest: String, watermark: Int64, baselineRunID: UUID) -> Bool {
+        AccountBindingStore(defaults: defaultsBox.value).recordPendingRecoveryVerified(
+            accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            deviceIdentityHash: scope.deviceIdentityHash, generationID: generationID,
+            checkpointDigest: checkpointDigest, watermark: watermark,
+            baselineRunID: baselineRunID, scope: scope)
+    }
+
+    @MainActor
+    private func completeRecoveryJournal(scope: Task126VerifiedOwnerStoreScope) throws -> Bool {
+        try AccountBindingStore(defaults: defaultsBox.value).completePendingReplacementRecovery(
+            accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            expectedLeaseGeneration: scope.leaseGeneration)
     }
 
     private func completeActivatedGenerationIfPossible(
@@ -466,14 +714,10 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         let refreshedScope = try captureRecoveryScope(ownerUserID: ownerUserID)
         try await reportProgress(.finalizing, scope: refreshedScope)
         if isAlreadyFinalized {
-            guard try bindingStore.completePendingReplacementRecovery(
-                accountHash: refreshedScope.accountHash,
-                storeIdentity: refreshedScope.storeIdentity,
-                expectedLeaseGeneration: refreshedScope.leaseGeneration
-            ) else {
+            guard try await completeRecoveryJournal(scope: refreshedScope) else {
                 throw AtomicGenerationRecoveryError.journalCompletionRejected
             }
-            return makeSummary(
+            return try await makeSummary(
                 checkpoint: manifest.checkpoint,
                 generationID: manifest.generationID
             )
@@ -486,14 +730,10 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         )
         try revalidate(refreshedScope, ownerUserID: ownerUserID)
         _ = try await storeGenerationController.markRecoveryFinalized(scope: refreshedScope)
-        guard try bindingStore.completePendingReplacementRecovery(
-            accountHash: refreshedScope.accountHash,
-            storeIdentity: refreshedScope.storeIdentity,
-            expectedLeaseGeneration: refreshedScope.leaseGeneration
-        ) else {
+        guard try await completeRecoveryJournal(scope: refreshedScope) else {
             throw AtomicGenerationRecoveryError.journalCompletionRejected
         }
-        return makeSummary(checkpoint: manifest.checkpoint, generationID: manifest.generationID)
+        return try await makeSummary(checkpoint: manifest.checkpoint, generationID: manifest.generationID)
     }
 
     private nonisolated static func isMonotonicAdvance(
@@ -559,12 +799,10 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 scope,
                 defaults: defaults
             ) {
-                guard try SameScopeRecoveryActiveWorkInspector.snapshot(
+                _ = try SameScopeRecoveryActiveWorkInspector.snapshot(
                     container: activeContainer,
                     scope: scope
-                ).isDrained else {
-                    throw AtomicGenerationRecoveryError.pendingLocalWorkRequiresDrain
-                }
+                )
             }
         }.value
     }
@@ -586,6 +824,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.id,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.supplier
         ) { rows in
             try self.persistSuppliers(
@@ -615,6 +854,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.id,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.category
         ) { rows in
             try self.persistCategories(
@@ -644,6 +884,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.id,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.product
         ) { rows in
             try self.persistProducts(
@@ -673,6 +914,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.id,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.price
         ) { rows in
             try self.persistPrices(rows, state: state, container: staging.container, scope: scope)
@@ -696,6 +938,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.remoteID,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.history
         ) { rows in
             try self.persistHistory(rows, state: state, container: staging.container, scope: scope)
@@ -719,6 +962,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             checkpoint: checkpoint,
             orderingID: \.productID,
             ledger: ledger,
+            state: state,
             makeRecord: ShopSyncRecoveryRowContract.image
         ) { rows in
             for row in rows {
@@ -752,7 +996,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         }
     }
 
-    private func streamPages<Row: Decodable & Sendable>(
+    private func streamPages<Row: Codable & Sendable>(
         _ rowType: Row.Type,
         domain: ShopSyncRecoveryDomain,
         staging: SyncStoreGenerationHandle,
@@ -761,89 +1005,198 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         checkpoint: ShopSyncRecoveryCheckpoint,
         orderingID: KeyPath<Row, UUID>,
         ledger: ShopSyncRecoveryLedger,
+        state: AtomicRecoveryStagingState,
         makeRecord: (Row, ShopSyncRecoveryCheckpoint) throws -> ShopSyncRecoveryLedgerRecord,
         consume: ([Row]) throws -> Void
     ) async throws {
-        var afterID: String?
-        var previousID: String?
-        var processed = 0
-        var pages = 0
-        var effectivePageLimit: Int?
-        try await reportProgress(.downloading, scope: scope, domain: domain)
+        guard var progress = state.pageProgress else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+        var cursor = progress.domains[domain.rawValue] ?? .init()
+        let cacheURL = staging.storeURL.deletingLastPathComponent()
+            .appendingPathComponent(AtomicRecoveryPageProgress.preparedFileName)
+        if FileManager.default.fileExists(atPath: cacheURL.path) {
+            let data = try AtomicRecoveryPageProgress.boundedRead(cacheURL, limit: ShopSyncRecoveryLimits.maximumPageResponseBytes)
+            let header = try JSONDecoder().decode(AtomicRecoveryPreparedPageHeader.self, from: data)
+            if header.domain == domain, let lastHash = cursor.lastPageSHA256,
+               ShopSyncRecoveryCanonical.sha256(String(decoding: data, as: UTF8.self)) == lastHash {
+                try FileManager.default.removeItem(at: cacheURL)
+            }
+        }
+        if cursor.complete { return }
+        try await reportProgress(.downloading, scope: scope, domain: domain,
+                                 pages: cursor.pages, persistedRows: cursor.processed)
         while true {
-            pages += 1
             try Task.checkCancellation()
             try revalidate(scope, ownerUserID: ownerUserID)
-            let page = try await recoveryRemote.page(
-                rowType,
-                domain: domain,
-                afterID: afterID,
-                limit: pageLimit,
-                ownerUserID: ownerUserID,
-                scope: scope,
-                checkpoint: checkpoint
-            )
-            try revalidate(scope, ownerUserID: ownerUserID)
-            if let effectivePageLimit {
-                guard page.pageLimit == effectivePageLimit else {
-                    throw ShopSyncRecoveryContractError.invalidPage(domain: domain)
-                }
+            let page: AtomicRecoveryPreparedPage<Row>
+            var replayPrepared = false
+            if FileManager.default.fileExists(atPath: cacheURL.path) {
+                let data = try AtomicRecoveryPageProgress.boundedRead(cacheURL,
+                    limit: ShopSyncRecoveryLimits.maximumPageResponseBytes)
+                page = try JSONDecoder().decode(AtomicRecoveryPreparedPage<Row>.self, from: data)
+                guard page.domain == domain else { throw ShopSyncRecoveryContractError.invalidPage(domain: domain) }
+                guard page.afterID == cursor.afterID else { throw ShopSyncRecoveryContractError.invalidPage(domain: domain) }
+                replayPrepared = true
             } else {
-                effectivePageLimit = page.pageLimit
+                let remotePage = try await recoveryRemote.page(rowType, domain: domain,
+                    afterID: cursor.afterID, limit: pageLimit, ownerUserID: ownerUserID,
+                    scope: scope, checkpoint: checkpoint)
+                try revalidate(scope, ownerUserID: ownerUserID)
+                page = AtomicRecoveryPreparedPage(domain: domain, afterID: cursor.afterID,
+                    rows: remotePage.rows, pageLimit: remotePage.pageLimit,
+                    nextAfterID: remotePage.nextAfterId, hasMore: remotePage.hasMore)
             }
-            // The V6 server intentionally serves live keyset pages while
-            // enforcing A's monotonic event/domain fences.  Use only the
-            // documented hard resource ceiling here; B plus the persisted
-            // receipt is the sole count/digest publication proof.
+            guard page.pageLimit == min(pageLimit, ShopSyncRecoveryLimits.maximumPageRows(for: domain)),
+                  cursor.effectiveLimit == nil || cursor.effectiveLimit == page.pageLimit,
+                  page.rows.count <= page.pageLimit, page.hasMore == (page.nextAfterID != nil) else {
+                throw ShopSyncRecoveryContractError.invalidPage(domain: domain)
+            }
+            let pages = cursor.pages + 1
             let maximumRows = ShopSyncRecoveryLimits.maximumRows(for: domain)
-            let maximumPages = ((maximumRows - 1) / page.pageLimit) + 1
-            guard pages <= maximumPages else {
+            guard pages <= ((maximumRows - 1) / page.pageLimit) + 1 else {
                 throw ShopSyncRecoveryContractError.pageBudgetExceeded(domain: domain)
             }
-
-            var pageLastID: String?
+            var previousID = cursor.afterID
+            var records: [ShopSyncRecoveryLedgerRecord] = []
+            records.reserveCapacity(page.rows.count)
             for row in page.rows {
                 let id = row[keyPath: orderingID].uuidString.lowercased()
-                guard previousID.map({ $0 < id }) ?? true else {
-                    throw ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID
-                }
+                guard previousID.map({ $0 < id }) ?? true else { throw ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID }
                 let record = try makeRecord(row, checkpoint)
-                guard record.orderingID == id else {
-                    throw ShopSyncRecoveryContractError.invalidPage(domain: domain)
-                }
-                try ledger.append(record, domain: domain)
-                previousID = id
-                pageLastID = id
-                processed += 1
-                guard processed <= maximumRows else {
-                    throw ShopSyncRecoveryContractError.resourceBudgetExceeded(domain: domain)
-                }
+                guard record.orderingID == id else { throw ShopSyncRecoveryContractError.invalidPage(domain: domain) }
+                records.append(record); previousID = id
             }
-            try consume(page.rows)
-            try await storeGenerationController.validateResourceBudget(staging)
-
+            guard cursor.processed + records.count <= maximumRows else {
+                throw ShopSyncRecoveryContractError.resourceBudgetExceeded(domain: domain)
+            }
             if page.hasMore {
-                // A non-terminal backend page is contractually full. Reject a
-                // one-row/hasMore stream immediately instead of permitting an
-                // attacker to consume the row budget as hundreds of thousands
-                // of RPCs and SQLite saves.
-                guard page.rows.count == page.pageLimit,
-                      let pageLastID,
-                      page.nextAfterId?.lowercased() == pageLastID else {
-                    throw ShopSyncRecoveryContractError.invalidPage(domain: domain)
-                }
-                afterID = pageLastID
+                guard page.rows.count == page.pageLimit, let last = records.last?.orderingID,
+                      page.nextAfterID?.lowercased() == last else { throw ShopSyncRecoveryContractError.invalidPage(domain: domain) }
+            } else if page.nextAfterID != nil { throw ShopSyncRecoveryContractError.invalidPage(domain: domain) }
+            if replayPrepared {
+                try removeUnacceptedMaterialization(domain: domain, ids: Set(records.compactMap { UUID(uuidString: $0.orderingID) }),
+                                                    state: state, staging: staging, scope: scope)
             } else {
-                guard page.nextAfterId == nil else {
-                    throw ShopSyncRecoveryContractError.countMismatch(domain: domain)
-                }
+                let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+                try AtomicRecoveryPageProgress.write(try encoder.encode(page), to: cacheURL,
+                    limit: ShopSyncRecoveryLimits.maximumPageResponseBytes)
             }
-            try await reportProgress(
-                .downloading, scope: scope, domain: domain,
-                pages: pages, persistedRows: processed
-            )
-            if !page.hasMore { return }
+            // The one bounded raw page counts against the unchanged staging
+            // directory budget, including the duplicate before commit.
+            try await storeGenerationController.validateResourceBudget(staging)
+            for record in records { try ledger.append(record, domain: domain) }
+            try consume(page.rows)
+            try pageCommitProbe(domain)
+            try ledger.closeWrites()
+            cursor.pages = pages; cursor.processed += records.count; cursor.complete = !page.hasMore
+            cursor.effectiveLimit = page.pageLimit
+            let preparedData = try AtomicRecoveryPageProgress.boundedRead(cacheURL, limit: ShopSyncRecoveryLimits.maximumPageResponseBytes)
+            cursor.lastPageSHA256 = ShopSyncRecoveryCanonical.sha256(String(decoding: preparedData, as: UTF8.self))
+            cursor.afterID = page.hasMore ? records.last?.orderingID : nil
+            cursor.ledgerBytes = try ledger.acceptedByteOffsets()[domain, default: 0]
+            progress.domains[domain.rawValue] = cursor
+            progress.proofs = AtomicRecoveryProofState(state)
+            try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaultsBox.value) {
+                try progress.save(staging: staging)
+            }
+            state.pageProgress = progress
+            try FileManager.default.removeItem(at: cacheURL)
+            try await storeGenerationController.validateResourceBudget(staging)
+            try await reportProgress(.downloading, scope: scope, domain: domain,
+                                     pages: cursor.pages, persistedRows: cursor.processed)
+            if cursor.complete { return }
         }
+    }
+
+    private nonisolated static func isResumableTransportFailure(_ error: Error) -> Bool {
+        if error is URLError { return true }
+        if case SupabaseTransportClientError.networkError = error { return true }
+        return false
+    }
+
+    private func restoreAcceptedRelationships(
+        state: AtomicRecoveryStagingState, staging: SyncStoreGenerationHandle, ledger: ShopSyncRecoveryLedger
+    ) throws {
+        guard let progress = state.pageProgress else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+        // One bounded traversal on reopen. Never derive the expected body proof
+        // from these rows: the saved proof still drives the final full readback.
+        _ = try forEachPersistedBatch(Supplier.self, container: staging.container) { row in
+            guard let id = row.remoteID, state.supplierModelIDs.updateValue(row.persistentModelID, forKey: id) == nil else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+        }
+        _ = try forEachPersistedBatch(ProductCategory.self, container: staging.container) { row in
+            guard let id = row.remoteID, state.categoryModelIDs.updateValue(row.persistentModelID, forKey: id) == nil else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+        }
+        _ = try forEachPersistedBatch(Product.self, container: staging.container) { row in
+            guard let id = row.remoteID, state.productModelIDs.updateValue(row.persistentModelID, forKey: id) == nil else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            if let version = row.primaryImageVersionID {
+                state.expectedImageRelationships[id] = .init(versionID: version, isTombstone: row.remoteDeletedAt != nil)
+            }
+        }
+        for domain in ShopSyncRecoveryDomain.allCases {
+            var rows = 0
+            try ledger.forEachRecord(for: domain) { record in
+                rows += 1
+                guard let id = UUID(uuidString: record.orderingID) else {
+                    throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+                }
+                if domain == .products, record.isTombstone { state.tombstonedProductIDs.insert(id) }
+                if domain == .images { state.expectedImageRelationships.removeValue(forKey: id) }
+            }
+            guard rows == (progress.domains[domain.rawValue]?.processed ?? 0) else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+            }
+        }
+    }
+
+    private func removeUnacceptedMaterialization(
+        domain: ShopSyncRecoveryDomain, ids: Set<UUID>, state: AtomicRecoveryStagingState,
+        staging: SyncStoreGenerationHandle, scope: Task126VerifiedOwnerStoreScope
+    ) throws {
+        let context = ModelContext(staging.container); context.autosaveEnabled = false
+        switch domain {
+        case .suppliers:
+            try removePreparedModels(Supplier.self, context: context) { $0.remoteID.map(ids.contains) ?? false }
+            for id in ids { state.supplierModelIDs.removeValue(forKey: id) }
+        case .categories:
+            try removePreparedModels(ProductCategory.self, context: context) { $0.remoteID.map(ids.contains) ?? false }
+            for id in ids { state.categoryModelIDs.removeValue(forKey: id) }
+        case .products:
+            try removePreparedModels(Product.self, context: context) { $0.remoteID.map(ids.contains) ?? false }
+            for id in ids {
+                state.productModelIDs.removeValue(forKey: id)
+                state.tombstonedProductIDs.remove(id); state.expectedImageRelationships.removeValue(forKey: id)
+            }
+        case .prices:
+            try removePreparedModels(ProductPrice.self, context: context) { $0.remoteID.map(ids.contains) ?? false }
+        case .history:
+            try removePreparedModels(HistoryEntry.self, context: context) { $0.remoteID.map(ids.contains) ?? false }
+        case .images: break // Image verification owns no business model row.
+        }
+        if domain == .suppliers || domain == .categories || domain == .products {
+            let type: SupabaseCatalogBaselineEntityType = domain == .suppliers ? .supplier : (domain == .categories ? .productCategory : .product)
+            try removePreparedModels(SupabaseCatalogBaselineRecord.self, context: context) {
+                $0.baselineRunID == state.baselineRunID && $0.entityType == type.rawValue && ids.contains($0.remoteID)
+            }
+        }
+        try save(context, scope: scope)
+    }
+
+    private func removePreparedModels<Model: PersistentModel>(
+        _ type: Model.Type, context: ModelContext, matching: (Model) -> Bool
+    ) throws {
+        var selected: [Model] = []
+        try context.enumerate(FetchDescriptor<Model>(), batchSize: ShopSyncRecoveryLimits.verificationBatchSize) { row in
+            if matching(row) {
+                guard selected.count < pageLimit else { throw SyncStoreGenerationError.activationReadBackFailed }
+                selected.append(row)
+            }
+        }
+        for row in selected { context.delete(row) }
     }
 
     private func createBaselineRun(
@@ -1801,7 +2154,11 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
     private func makeSummary(
         checkpoint: ShopSyncRecoveryCheckpoint,
         generationID: UUID
-    ) -> SyncRecoverySnapshotPullSummary {
+    ) async throws -> SyncRecoverySnapshotPullSummary {
+        let container = await storeGenerationController.modelContainer
+        let hasPendingLocalWork = try await Task.detached(priority: .utility) {
+            try !SameScopeRecoveryActiveWorkInspector.isContinuationDrained(container: container)
+        }.value
         var history = HistorySessionPullResult()
         history.insertedCount = checkpoint.history.activeCount
         history.prunedMissingRemoteCount = checkpoint.history.tombstoneCount
@@ -1821,7 +2178,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             ),
             watermarkAfter: checkpoint.maxEventID ?? 0,
             activatedGenerationID: generationID,
-            completedRecoveryJournal: true
+            completedRecoveryJournal: true,
+            hasPendingLocalWork: hasPendingLocalWork
         )
     }
 }

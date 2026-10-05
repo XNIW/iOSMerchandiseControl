@@ -27,6 +27,28 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         self.defaults = defaults
     }
 
+    /// Recovery may explain C with our original attempted body, but it must
+    /// leave that immutable attempt pending until its actual response is ACKed.
+    nonisolated static func sealedAttemptExplainsHistoryFingerprint(
+        _ fingerprint: String, entry: SyncEventOutboxEntry, change: LocalPendingChange,
+        localHistory: HistoryEntry, scope: Task126VerifiedOwnerStoreScope
+    ) throws -> Bool {
+        let data = try LocalPendingBusinessAttemptStore.validate(entry, kind: "history", scope: scope)
+        let envelope = try JSONDecoder().decode(LocalPendingBusinessAttemptStore.Envelope<StoredHistoryUpload>.self, from: data)
+        let upload = envelope.payload
+        guard envelope.pending.matches(change), change.entityKind == .historySession,
+              upload.localUID == localHistory.uid,
+              upload.row.remoteID == change.entityRemoteID,
+              upload.row.remoteID == localHistory.remoteID,
+              upload.row.ownerUserID == scope.ownerUserID, upload.row.shopID == scope.shopID,
+              upload.revision > localHistory.lastSyncedLocalRevision,
+              upload.revision <= localHistory.localChangeRevision,
+              HistorySessionPayloadCodec.fingerprintHash(for: upload.row) == upload.payloadFingerprint else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        return upload.payloadFingerprint == fingerprint
+    }
+
     func syncHistorySessions(
         ownerUserID: UUID,
         mode: SyncHistorySessionMode
@@ -52,11 +74,13 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                     try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
                         modelContainer
                     )
-                    return try Self.preparePendingHistorySessions(
+                    let result = try Self.preparePendingHistorySessions(
                         modelContainer: modelContainer,
                         ownerUserID: ownerUserID,
                         scope: scope
                     )
+                    Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+                    return result
                 }
                 total.skippedClean += prepared.skippedCleanCount
                 total.skippedOversized += prepared.skippedOversizedCount
@@ -93,13 +117,15 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                     try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
                         modelContainer
                     )
-                    return try Self.applyReadBacksIfCurrent(
+                    let result = try Self.applyReadBacksIfCurrent(
                         prepared: prepared,
                         readBackByRemoteID: readBackByRemoteID,
                         modelContainer: modelContainer,
                         ownerUserID: ownerUserID,
                         scope: scope
                     )
+                    Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+                    return result
                 }
                 total.uploaded += push.uploadedCount
             }
@@ -137,12 +163,33 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
 
         prepared.uploads.reserveCapacity(min(maximumRowsPerRequest, pendingChanges.count))
         var requestBytes = 2 // JSON array delimiters.
+        var selectedRemoteIDs = Set<UUID>()
 
         for change in pendingChanges {
             guard prepared.uploads.count < maximumRowsPerRequest else { break }
             guard let remoteID = change.entityRemoteID else {
                 change.status = .blocked
                 change.updatedAt = Date()
+                continue
+            }
+            // A predecessor and its later local revision must be acknowledged
+            // in order, never submitted twice for one UID in the same batch.
+            guard !selectedRemoteIDs.contains(remoteID) else { continue }
+            if let stored = try LocalPendingBusinessAttemptStore.load(StoredHistoryUpload.self,
+                change: change, kind: "history", context: context, scope: scope) {
+                let bytes = try JSONEncoder().encode(stored.row).count
+                guard bytes <= maximumHistoryRowBytes,
+                      requestBytes + (prepared.uploads.isEmpty ? 0 : 1) + bytes <= maximumHistoryRequestBytes,
+                      stored.row.ownerUserID == ownerUserID, stored.row.shopID == scope.shopID,
+                      stored.row.remoteID == remoteID,
+                      HistorySessionPayloadCodec.fingerprintHash(for: stored.row) == stored.payloadFingerprint else {
+                    throw HistorySessionSyncError.readBackMismatch
+                }
+                prepared.uploads.append(HistorySessionAutomaticPreparedUpload(localUID: stored.localUID,
+                    row: stored.row, revision: stored.revision, payloadFingerprint: stored.payloadFingerprint,
+                    pending: LocalPendingChangeCASToken(change)))
+                requestBytes += bytes + (prepared.uploads.count == 1 ? 0 : 1)
+                selectedRemoteIDs.insert(remoteID)
                 continue
             }
             var entryDescriptor = FetchDescriptor<HistoryEntry>(
@@ -178,14 +225,21 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 guard requestBytes + separatorBytes + rowBytes <= maximumHistoryRequestBytes else {
                     break
                 }
+                change.lastAttemptAt = Date()
+                let token = LocalPendingChangeCASToken(change)
+                let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
+                try LocalPendingBusinessAttemptStore.seal(StoredHistoryUpload(localUID: entry.uid,
+                    row: row, revision: entry.localChangeRevision, payloadFingerprint: fingerprint),
+                    pending: token, kind: "history", context: context, scope: scope)
                 prepared.uploads.append(HistorySessionAutomaticPreparedUpload(
                     localUID: entry.uid,
                     row: row,
                     revision: entry.localChangeRevision,
-                    payloadFingerprint: HistorySessionPayloadCodec.fingerprintHash(for: row),
-                    pending: LocalPendingChangeCASToken(change)
+                    payloadFingerprint: fingerprint,
+                    pending: token
                 ))
                 requestBytes += separatorBytes + rowBytes
+                selectedRemoteIDs.insert(remoteID)
             } catch HistorySessionSyncError.overlayTooLarge,
                     HistorySessionSyncError.payloadTooLarge {
                 prepared.skippedOversizedCount += 1
@@ -229,6 +283,10 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
             guard remoteDeletedAt == uploadedDeletedAt else {
                 throw HistorySessionSyncError.readBackMismatch
             }
+            let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
+            guard fingerprint == upload.payloadFingerprint else {
+                throw HistorySessionSyncError.readBackMismatch
+            }
             result.uploadedCount += 1
             result.pushedRemoteIDs.insert(readBack.remoteID)
             if uploadedDeletedAt != nil {
@@ -241,7 +299,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
             )
             guard let entry = try context.fetch(descriptor).first,
                   entry.remoteID == upload.row.remoteID,
-                  entry.localChangeRevision == upload.revision,
+                  entry.localChangeRevision >= upload.revision,
                   entry.isCompatibleWithHistoryScope(
                     ownerUserID: ownerUserID,
                     selectedShopID: scope.shopID,
@@ -264,14 +322,31 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 ownerUserID: ownerUserID,
                 shopID: scope.shopID
             )
-            guard HistorySessionPayloadCodec.fingerprintHash(for: currentRow)
-                    == upload.payloadFingerprint else {
-                continue
-            }
-            let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
-            guard fingerprint == upload.payloadFingerprint else {
+            let changeID = upload.pending.changeID
+            var pendingDescriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate { $0.changeID == changeID })
+            pendingDescriptor.fetchLimit = 1
+            guard let pending = try context.fetch(pendingDescriptor).first,
+                  upload.pending.matches(pending) else { continue }
+            let logicalKey = upload.pending.logicalKey
+            let owner = ownerUserID.uuidString.lowercased()
+            let store = scope.storeIdentity.storeId
+            var dependentDescriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate<LocalPendingChange> {
+                $0.logicalKey == logicalKey && $0.entityKindRaw == "historySession" && $0.statusRaw == "pending"
+            })
+            dependentDescriptor.fetchLimit = LocalPendingChangeAccumulator.defaultMaxActiveChanges + 1
+            let candidates = try context.fetch(dependentDescriptor)
+            guard candidates.count <= LocalPendingChangeAccumulator.defaultMaxActiveChanges else {
                 throw HistorySessionSyncError.readBackMismatch
             }
+            let dependents = candidates.filter {
+                $0.changeID != changeID && $0.ownerUserID == owner && $0.storeId == store
+                    && $0.lastAttemptAt == nil
+                    && LocalPendingChangeScopeMatcher.matches($0, ownerUserID: ownerUserID,
+                        accountHash: scope.accountHash, storeIdentity: scope.storeIdentity)
+            }
+            guard dependents.count <= 1 else { throw HistorySessionSyncError.readBackMismatch }
+            let currentBodyMatches = HistorySessionPayloadCodec.fingerprintHash(for: currentRow) == upload.payloadFingerprint
+            guard currentBodyMatches || (entry.localChangeRevision > upload.revision && !dependents.isEmpty) else { continue }
             entry.assignHistoryScope(
                 ownerUserID: ownerUserID,
                 selectedShopID: scope.shopID,
@@ -284,19 +359,15 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 fingerprint: fingerprint,
                 syncedRevision: upload.revision
             )
-            entry.syncStatus = .syncedSuccessfully
-            let changeID = upload.pending.changeID
-            var pendingDescriptor = FetchDescriptor<LocalPendingChange>(
-                predicate: #Predicate<LocalPendingChange> { change in
-                    change.changeID == changeID
-                }
-            )
-            pendingDescriptor.fetchLimit = 1
-            if let pending = try context.fetch(pendingDescriptor).first,
-               upload.pending.matches(pending) {
-                pending.status = .acknowledged
-                pending.updatedAt = Date()
+            try LocalCatalogBodyProofStore.record(readBack, context: context, scope: scope)
+            if entry.localChangeRevision == upload.revision { entry.syncStatus = .syncedSuccessfully }
+            pending.status = .acknowledged
+            pending.updatedAt = Date()
+            for dependent in dependents {
+                dependent.baselineFingerprintHash = upload.payloadFingerprint
+                dependent.baseRemoteUpdatedAt = remoteUpdatedAt
             }
+            try LocalPendingBusinessAttemptStore.remove(changeID: changeID, context: context)
         }
         try enqueueHistorySyncEventWithLeaseHeld(
             context: context,
@@ -367,6 +438,13 @@ private nonisolated struct HistorySessionAutomaticPreparedUpload {
     let revision: Int
     let payloadFingerprint: String
     let pending: LocalPendingChangeCASToken
+}
+
+private nonisolated struct StoredHistoryUpload: Codable {
+    let localUID: UUID
+    let row: SharedSheetSessionUpsertRow
+    let revision: Int
+    let payloadFingerprint: String
 }
 
 private nonisolated struct HistorySessionAutomaticPreparation {

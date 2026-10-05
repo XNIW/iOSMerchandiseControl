@@ -1,0 +1,7 @@
+# TASK-144 — disponibilità locale, stato finale controllato
+
+Il sorgente corrente contiene47 file owned (43Swift e4localizzazioni), byte-identici al freezev3 e al GREEN13. La suite canonica completa senza filtri/parallelismo ha1541 ID ufficiali distinti: **1505 PASS,0 FAIL,36 SKIP preesistenti**, stesso skipset del full02; tutti14 UI PASS. Debug/Release/Analyze PASS;34 warning primary normalizzati identici alla baseline, zero nuovi nelle47 sorgenti. Proper fullTEST Release firmato PASS: profilo8 autorizzato applicato solo al copiedArtifact, firma strict-deep/entitlements/identità keychain verificati; **non installato**.
+
+Il [manifest](source-and-targeted-evidence.json) contiene source hash, ricevute finali e prove mirate native/file-backed. Full01/02 e i precedenti fault/fixture/driver failure sono preservati, senza reinterpretazione. Le prove includono Save locale durante recovery held, draft/focus attraverso C, replay immutabile A prima di B terminal, qualified body/denial/foreign guards, pending tra relazione/product ACK e conferma del record corrente con altro lavoro pending, shell empty onesta, quattro lingue e actual XXXL. Le durate XCTest non sono metriche prestazionali.
+
+Task resta FIX: **F autenticato, primaria459/install/retention e H sono NON ESEGUITI**. Parent N gestisce review finale equivalente/delta, Git selettivo, PR/CI/merge. Nessun CI/merge futuro viene dichiarato superato; i54 insert Task144 preesistenti restano fuori index e la rimozione dei soli tre hunks owned restituisce f30addf… esatto.

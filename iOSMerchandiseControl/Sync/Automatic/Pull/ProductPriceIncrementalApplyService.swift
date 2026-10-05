@@ -189,7 +189,8 @@ nonisolated struct ProductPriceIncrementalApplyService {
                     protected: protected,
                     context: context
                 )
-                if result.inserted > 0 || result.remoteIdentityLinked > 0 {
+                for row in priceRows { try LocalCatalogBodyProofStore.record(row, context: context, scope: scope) }
+                if context.hasChanges {
                     try context.save()
                 }
                 return result

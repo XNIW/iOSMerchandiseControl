@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum ShopSyncRecoveryLedgerOpenMode: Sendable {
     case createReplacingExisting
     case readExisting
+    case resumeAccepted(byteOffsets: [ShopSyncRecoveryDomain: Int])
 }
 
 /// A redacted, generation-scoped proof ledger. It contains only remote IDs,
@@ -38,6 +39,36 @@ nonisolated final class ShopSyncRecoveryLedger: @unchecked Sendable {
             guard fileManager.fileExists(atPath: directory.path, isDirectory: &isDirectory),
                   isDirectory.boolValue else {
                 throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: .products)
+            }
+            try validatePersistedResourceBudget()
+        case .resumeAccepted(let offsets):
+            let values = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard values.isDirectory == true, values.isSymbolicLink != true else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: .products)
+            }
+            for domain in ShopSyncRecoveryDomain.allCases {
+                let bytes = offsets[domain, default: 0]
+                guard bytes >= 0, bytes <= ShopSyncRecoveryLimits.maximumLedgerBytesPerDomain else {
+                    throw ShopSyncRecoveryContractError.resourceBudgetExceeded(domain: domain)
+                }
+                let file = url(for: domain)
+                if fileManager.fileExists(atPath: file.path) {
+                    let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard values.isRegularFile == true, values.isSymbolicLink != true,
+                          try persistedFileSize(file, domain: domain) >= bytes else {
+                        throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+                    }
+                    let handle = try FileHandle(forWritingTo: file)
+                    try handle.truncate(atOffset: UInt64(bytes))
+                    try handle.synchronize(); try handle.close()
+                } else if bytes != 0 {
+                    throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+                }
+                writtenBytes[domain] = bytes
+                totalWrittenBytes += bytes
+                var rows = 0
+                try forEachRecord(for: domain) { _ in rows += 1 }
+                writtenRows[domain] = rows
             }
             try validatePersistedResourceBudget()
         }
@@ -89,7 +120,7 @@ nonisolated final class ShopSyncRecoveryLedger: @unchecked Sendable {
         }
     }
 
-    private func forEachRecord(
+    func forEachRecord(
         for domain: ShopSyncRecoveryDomain,
         _ body: (ShopSyncRecoveryLedgerRecord) throws -> Void
     ) throws {
@@ -135,6 +166,16 @@ nonisolated final class ShopSyncRecoveryLedger: @unchecked Sendable {
         guard buffered.isEmpty else {
             throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
         }
+    }
+
+    func acceptedByteOffsets() throws -> [ShopSyncRecoveryDomain: Int] {
+        guard handles.isEmpty else { throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: .products) }
+        var result: [ShopSyncRecoveryDomain: Int] = [:]
+        for domain in ShopSyncRecoveryDomain.allCases {
+            let file = url(for: domain)
+            result[domain] = fileManager.fileExists(atPath: file.path) ? try persistedFileSize(file, domain: domain) : 0
+        }
+        return result
     }
 
     func receipt(
@@ -206,10 +247,12 @@ nonisolated final class ShopSyncRecoveryLedger: @unchecked Sendable {
     private func writableHandle(for domain: ShopSyncRecoveryDomain) throws -> FileHandle {
         if let handle = handles[domain] { return handle }
         let fileURL = url(for: domain)
-        guard fileManager.createFile(atPath: fileURL.path, contents: nil) else {
+        if !fileManager.fileExists(atPath: fileURL.path),
+           !fileManager.createFile(atPath: fileURL.path, contents: nil) {
             throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
         }
         let handle = try FileHandle(forWritingTo: fileURL)
+        try handle.seekToEnd()
         handles[domain] = handle
         return handle
     }

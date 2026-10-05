@@ -127,15 +127,19 @@ struct ContentView: View {
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
+    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var syncStoreGenerationController: SyncStoreGenerationController
     @EnvironmentObject private var productImageStore: ProductImageStore
+    @Environment(\.localRootPresentationState) private var localPresentation
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @StateObject private var excelSession = ExcelSessionViewModel()
     @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
-    @StateObject private var syncStateStore = SyncStateStore()
+    @StateObject private var syncStateStore: SyncStateStore
     @StateObject private var shopContextStore: ShopContextStore
     @State private var selectedTab = Self.initialSelectedTab()
+    @State private var mountedPresentationID: String?
     @State private var isCorruptJournalReviewPresented = false
     @State private var corruptJournalReplacementTask: Task<Void, Never>?
     @State private var corruptJournalReplacementError: String?
@@ -145,15 +149,18 @@ struct ContentView: View {
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil,
-        shopDeviceRegistrationService: ShopDeviceRegistrationService? = nil
+        shopDeviceRegistrationService: ShopDeviceRegistrationService? = nil,
+        shopContextOverride: ShopContextStore? = nil,
+        syncStateOverride: SyncStateStore? = nil
     ) {
         self.supabaseTransportClient = supabaseTransportClient
         self.supabasePullPreviewService = supabasePullPreviewService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
+        _syncStateStore = StateObject(wrappedValue: syncStateOverride ?? SyncStateStore())
         _shopContextStore = StateObject(
-            wrappedValue: ShopContextStore(
+            wrappedValue: shopContextOverride ?? ShopContextStore(
                 fetcher: supabaseTransportClient.map { MobileLinkedShopService(remote: $0) } ?? EmptyLinkedShopFetcher()
             )
         )
@@ -194,6 +201,14 @@ struct ContentView: View {
     }
 
     var body: some View {
+        Group {
+            if isCurrentModelGeneration {
+                activeRoot
+            }
+        }
+    }
+
+    private var activeRoot: some View {
         AppSyncRootHost(
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
@@ -255,6 +270,19 @@ struct ContentView: View {
         .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
+        .onAppear { restoreLocalPresentation() }
+        .onChange(of: selectedTab) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.selectedTab = value }
+        }
+        .onChange(of: supabaseAuthViewModel.localMutationOwnerUserID) { _, _ in
+            restoreLocalPresentation()
+            syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+        }
+        .onChange(of: localAuthorizationRevision) { _, _ in restoreLocalPresentation() }
+        .task { syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID) }
+        .onChange(of: syncStateStore.state.phase) { _, _ in
+            syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
             selectedTab = 1
         }
@@ -273,13 +301,48 @@ struct ContentView: View {
         }
     }
 
+    private var isCurrentModelGeneration: Bool {
+        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+    }
+
+    private func restoreLocalPresentation() {
+        guard isCurrentModelGeneration else { return }
+        mountedPresentationID = syncStoreGenerationController.presentationID
+        let values = localPresentation?.admit(
+            manifest: syncStoreGenerationController.activeManifest,
+            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID,
+            presentationID: syncStoreGenerationController.presentationID,
+            localAccessPermitted: Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID
+            )
+        )
+        if let selected = values?.selectedTab { selectedTab = selected }
+    }
+
     private var hidesBusinessDataForPendingRecovery: Bool {
-        // The existing recovery journal is the single fail-closed gate for
-        // both an account/shop replacement and a same-scope full recovery.
-        // Keep edit/import/image surfaces unavailable until checkpoint C has
-        // completed and the journal is actually cleared; otherwise a write to
-        // the old active generation could be lost at the atomic pointer swap.
-        AccountBindingStore().hasPendingReplacementJournal
+        _ = localAuthorizationRevision
+        if let owner = supabaseAuthViewModel.sessionInfo?.userID,
+           let shop = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)),
+           let device = try? DeviceInstallIDStore().requireDeviceInstallID(),
+           SelectedShopStore().hasConfirmedDeviceDenial(accountHash: AccountBindingStore.accountHash(for: owner),
+             shopID: shop.shopID, deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device)) {
+            return true
+        }
+        if syncStoreGenerationController.activeManifest != nil {
+            return !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+            )
+        }
+        if syncStoreGenerationController.permitsScopedEmptyRoot(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID) {
+            return false
+        }
+        return AccountBindingStore().hasPendingReplacementJournal
+            && !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+            )
     }
 
     private var hasUndecodableRecoveryJournal: Bool {
@@ -412,7 +475,8 @@ struct ContentView: View {
 
             // TAB 2: Database
             NavigationStack {
-                DatabaseView()
+                DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
             }
             .tabItem {
                 Label(L("tab.database"), systemImage: "shippingbox")
@@ -546,6 +610,8 @@ private struct AppSyncRootHost<Content: View>: View {
                 activityCenter: activityCenter,
                 syncEventSignalWatcher: syncEventSignalWatcher,
                 stateStore: syncStateStore,
+                storeGenerationController: syncStoreGenerationController,
+                storeGenerationLease: syncStoreGenerationController.captureLease(for: context.container),
                 decisionInputProvider: SyncDecisionInputProvider(modelContainer: context.container)
             )
         )
@@ -568,6 +634,9 @@ private struct AppSyncRootHost<Content: View>: View {
             }
             .task {
                 await refreshShopContextAndResumeSync()
+                #if DEBUG
+                Task144LocalAvailabilityRootFixture.current?.startIfNeeded()
+                #endif
             }
             .onChange(of: scenePhase) { _, phase in
                 syncOrchestrator.handleScenePhaseChanged(phase)
@@ -594,11 +663,20 @@ private struct AppSyncRootHost<Content: View>: View {
                 syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: shopContextStore.context) { _, context in
+                // Revoke the previous callback's authority synchronously.
+                // A suspended heartbeat must not invalidate a fresh run later.
+                syncOrchestrator.handleShopContextChanged()
                 Task { @MainActor in
-                    if authViewModel.isSignedIn, context.syncAllowed {
+                    #if DEBUG
+                    let heldPreviousHeartbeat = await Task144LocalAvailabilityRootFixture.current?.awaitControlledShopHeartbeatForOrderingProof() ?? false
+                    #endif
+                    if authViewModel.isSignedIn, context.syncAllowed,
+                       shopContextStore.context == context {
                         await shopDeviceRegistrationService?.registerHeartbeatAndCheck(reason: "shop_context_changed")
                     }
-                    syncOrchestrator.handleShopContextChanged()
+                    #if DEBUG
+                    if heldPreviousHeartbeat { Task144LocalAvailabilityRootFixture.current?.noteControlledShopHeartbeatCompleted() }
+                    #endif
                 }
             }
             .onChange(of: activityCenter.activeReasons) { _, _ in
@@ -677,7 +755,7 @@ private struct AppSyncRootHost<Content: View>: View {
 
     private func refreshShopContextAndResumeSync() async {
         await shopContextStore.refresh(
-            ownerUserID: authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil
+            ownerUserID: authViewModel.localMutationOwnerUserID
         )
         if SyncBootstrapReadiness.shouldStart(
             isSignedIn: authViewModel.isSignedIn,

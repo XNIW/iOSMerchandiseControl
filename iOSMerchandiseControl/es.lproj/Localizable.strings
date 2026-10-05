@@ -1862,3 +1862,9 @@
 "options.supabase.automaticSync.recovery.domain.prices" = "Precios";
 "options.supabase.automaticSync.recovery.domain.history" = "Historial";
 "options.supabase.automaticSync.recovery.domain.images" = "Imágenes";
+
+"database.first_snapshot.preparing" = "Preparando el catálogo…";
+"database.first_snapshot.detail" = "La primera copia local aún no está lista. Puedes navegar mientras se carga.";
+
+"product.save.local_pending" = "Guardado en este dispositivo · Esperando confirmación cloud";
+"product.save.cloud_confirmed" = "El cloud confirmó este guardado";

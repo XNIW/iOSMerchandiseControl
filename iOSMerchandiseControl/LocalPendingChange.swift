@@ -209,7 +209,7 @@ final class LocalPendingChange {
 /// Immutable optimistic-concurrency receipt for an outbound local mutation.
 /// It contains only redacted identifiers and value types, so it may cross an
 /// async network boundary while SwiftData models and contexts never do.
-nonisolated struct LocalPendingChangeCASToken: Equatable, Sendable {
+nonisolated struct LocalPendingChangeCASToken: Codable, Equatable, Sendable {
     let changeID: String
     let recordSchemaVersion: Int
     let ownerUserID: String?
@@ -761,7 +761,8 @@ nonisolated final class LocalPendingChangeAccumulator {
             .filter { !$0.status.isTerminal }
             .sorted { $0.updatedAt > $1.updatedAt }
 
-        if let current = existing.first {
+        let unattempted = existing.filter { $0.lastAttemptAt == nil }
+        if let current = unattempted.first {
             coalesce(
                 current,
                 operation: operation,
@@ -772,7 +773,7 @@ nonisolated final class LocalPendingChangeAccumulator {
                 entityRemoteID: entityRemoteID,
                 timestamp: timestamp
             )
-            for superseded in existing.dropFirst() {
+            for superseded in unattempted.dropFirst() {
                 superseded.status = .superseded
                 superseded.supersededByChangeID = current.changeID
                 superseded.updatedAt = timestamp
@@ -805,7 +806,10 @@ nonisolated final class LocalPendingChangeAccumulator {
             origin: origin,
             logicalKey: logicalKey,
             changedFields: changedFields,
-            baselineFingerprintHash: baselineFingerprintHash,
+            // An attempted row/key is immutable. A later Save has its own
+            // pending identity and descends from the attempted intent; only
+            // that request's actual ACK can advance its remote baseline.
+            baselineFingerprintHash: existing.first?.intendedFingerprintHash ?? baselineFingerprintHash,
             intendedFingerprintHash: intendedFingerprintHash,
             entityRemoteID: entityRemoteID,
             createdAt: timestamp,
@@ -844,6 +848,7 @@ nonisolated final class LocalPendingChangeAccumulator {
         entityRemoteID: UUID?,
         timestamp: Date
     ) {
+        let preservesFirstPendingBaseline = change.status == .pending && change.lastAttemptAt == nil
         let wasRetryableNonPending = !change.status.isTerminal && change.status != .pending
         let coalesced = PendingChangeCoalescer.coalesce(
             current: PendingChangeCoalescer.State(
@@ -862,7 +867,11 @@ nonisolated final class LocalPendingChangeAccumulator {
         change.entityRemoteID = coalesced.entityRemoteID
 
         change.origin = origin
-        change.baselineFingerprintHash = baselineFingerprintHash ?? change.baselineFingerprintHash
+        // Coalesced local edits still descend from the first remote baseline.
+        // The intervening local body is never evidence of a cloud revision.
+        change.baselineFingerprintHash = preservesFirstPendingBaseline
+            ? (change.baselineFingerprintHash ?? baselineFingerprintHash)
+            : (baselineFingerprintHash ?? change.baselineFingerprintHash)
         change.intendedFingerprintHash = intendedFingerprintHash ?? change.intendedFingerprintHash
         change.updatedAt = timestamp
         if wasRetryableNonPending, change.status == .pending {

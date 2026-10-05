@@ -163,6 +163,71 @@ nonisolated final class SyncIncrementalContinuationReceipt: @unchecked Sendable,
     }
 }
 
+/// A no-events observation with local work may only defer the initial
+/// reconciliation until the same automatic plan pushes and performs a fresh
+/// complete drain. This is deliberately not a continuation/readiness receipt.
+nonisolated final class SyncIncrementalLocalWorkDeferral: @unchecked Sendable, Equatable {
+    private let identity = UUID()
+    private let scope: Task126VerifiedOwnerStoreScope
+    private let controller: SyncStoreGenerationController
+    private let container: ModelContainer
+    private let defaults: UserDefaults
+    private let generationLease: SyncStoreGenerationLease
+    private let generationID: UUID
+    private let fenceKey: String
+    private let watermark: Int64
+    private let syncType: RuntimeSyncExecutionType
+
+    fileprivate init(scope: Task126VerifiedOwnerStoreScope, controller: SyncStoreGenerationController,
+        container: ModelContainer, defaults: UserDefaults, generationLease: SyncStoreGenerationLease,
+        generationID: UUID, fenceKey: String, summary: SyncIncrementalPullSummary) {
+        self.scope = scope
+        self.controller = controller
+        self.container = container
+        self.defaults = defaults
+        self.generationLease = generationLease
+        self.generationID = generationID
+        self.fenceKey = fenceKey
+        watermark = summary.watermarkAfter
+        syncType = summary.syncType
+    }
+
+    static func == (lhs: SyncIncrementalLocalWorkDeferral, rhs: SyncIncrementalLocalWorkDeferral) -> Bool {
+        lhs.identity == rhs.identity
+    }
+
+    func isBound(to consumerDefaults: UserDefaults) -> Bool { defaults === consumerDefaults }
+
+    func matches(_ summary: SyncIncrementalPullSummary) -> Bool {
+        summary.requiresFullRecoveryReason == "ordinary_continuation_local_work_pending"
+            && !summary.verifiedConvergence && summary.continuationReceipt == nil
+            && summary.syncType == syncType && summary.eventsFetched == 0 && summary.eventsProcessed == 0
+            && summary.totalApplied == 0 && summary.watermarkBefore == watermark
+            && summary.watermarkAfter == watermark
+    }
+
+    @MainActor
+    func validateForPush() throws {
+        try Task.checkCancellation()
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            try Task126OwnerStoreGate.validateRegisteredActiveContainerWithLeaseHeld(container)
+            try controller.validateLease(generationLease)
+            guard controller.modelContainer === container,
+                  controller.activeManifest?.generationID == generationID,
+                  try controller.isActiveRecoveryFinalized(scope: scope),
+                  !AccountBindingStore(defaults: defaults).hasPendingReplacementJournal,
+                  WatermarkStore(defaults: defaults).matchesRecoveryGeneration(generationID,
+                    watermark: watermark, scope: .init(ownerUserID: scope.ownerUserID, storeIdentity: scope.storeIdentity)),
+                  ShopSyncRecoveryFenceStore(defaults: defaults).continuationScopeKey(
+                    accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+                    deviceIdentityHash: scope.deviceIdentityHash, watermark: watermark,
+                    generationID: generationID) == fenceKey else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+        }
+    }
+}
+
 /// Only immutable defaults-backed read dependencies cross the actor hop.
 /// UserDefaults is thread-safe; copying WatermarkStore preserves its exact
 /// injected defaults reference without marking the domain service Sendable.
@@ -869,6 +934,13 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
               !protectedIDs.hasCappedImportMarker else {
             var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
             summary.requiresFullRecoveryReason = "ordinary_continuation_local_work_pending"
+            if classifiedSummary == nil, !protectedIDs.hasCappedImportMarker {
+                let deferral = SyncIncrementalLocalWorkDeferral(scope: scope, controller: controller,
+                    container: modelContainer, defaults: defaults, generationLease: generation.lease,
+                    generationID: generation.generationID, fenceKey: generation.fenceKey, summary: summary)
+                try await MainActor.run { try deferral.validateForPush() }
+                summary.localWorkDeferral = deferral
+            }
             return summary
         }
         let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope)
@@ -1118,6 +1190,15 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                 localIdentityIndex: &localCatalogIdentityIndex
                             )
                             let catalogApplyMs = mcNowMillis() - catalogStarted
+                            for row in selectedCatalog.suppliers where !protected.suppliers.contains(row.id) {
+                                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                            }
+                            for row in selectedCatalog.categories where !protected.categories.contains(row.id) {
+                                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                            }
+                            for row in selectedCatalog.products where !protected.products.contains(row.id) {
+                                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                            }
                             try atomicMutationProbeForTesting?(.afterCatalog)
 
                             let priceStarted = mcNowMillis()
@@ -1126,6 +1207,9 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                 protected: protected,
                                 context: context
                             )
+                            for row in selectedPrices {
+                                try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                            }
                             let priceApplyMs = mcNowMillis() - priceStarted
                             try atomicMutationProbeForTesting?(.afterPrices)
 
@@ -1159,6 +1243,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                 historyApplyMs: historyApplyMs
                             )
                         }
+                        Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
                     }
                     return completed
                 } catch let error as SyncEventLateDirtyHistoryError {

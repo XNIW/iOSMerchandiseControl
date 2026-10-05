@@ -65,6 +65,7 @@ actor AutomaticSyncEngine {
         var verifiedConvergence = false
         var continuationReceipt: SyncIncrementalContinuationReceipt?
         var compatibleDrains = true
+        var pendingWorkDeferral: SyncIncrementalLocalWorkDeferral?
         do {
             // Validate only after acquiring the process-wide flight. If an
             // atomic activation happened between runtime construction and
@@ -75,26 +76,39 @@ actor AutomaticSyncEngine {
             let shouldRecoverReplacement = replacementTarget?.mode == .accountOrShopReplacement
                 && action.allowsReplacementRecoveryOverride
             let steps = shouldRecoverReplacement ? [.bootstrap] : action.flattenedAutomaticSteps
-            syncPlan: for step in steps {
+            syncPlan: for (stepIndex, step) in steps.enumerated() {
                 try await cancellationPolicy.checkCancellation(token: cancellationToken)
+                let remaining = Array(steps.dropFirst(stepIndex + 1))
+                let mayDeferUntilPushAndFreshDrain = compatibleDrains
+                    && (remaining == [.pushPending, .drainEvents] || remaining == [.pushPending, .lightReconcile])
                 switch step {
                 case .blocked(let reason):
                     recordDiagnostic("lastOutcome", "blocked_\(reason)")
                     return await complete(.blocked(reason))
                 case .pushPending:
+                    let resumesDeferredLocalWork = pendingWorkDeferral != nil
+                    if let pendingWorkDeferral {
+                        try await MainActor.run { try pendingWorkDeferral.validateForPush() }
+                        try await cancellationPolicy.checkCancellation(token: cancellationToken)
+                        try await runAdmissionValidator?()
+                    }
                     didRun = try await pushPending(ownerUserID: ownerUserID, cancellationToken: cancellationToken) || didRun
-                    // A push after a domain receipt changes the final aggregate.
-                    // Only a later complete domain pipeline may authorize it.
+                    // Discard all pre-push authority. Only a later fresh full
+                    // domain pipeline can close the specifically deferred plan.
                     continuationReceipt = nil
+                    pendingWorkDeferral = nil
+                    if resumesDeferredLocalWork { compatibleDrains = true }
                 case .drainEvents:
                     let drain = try await drainRemoteEvents(
                         ownerUserID: ownerUserID,
                         source: source,
                         cancellationToken: cancellationToken,
                         forceLightReconcile: false,
-                        allowsExplicitRecovery: false
+                        allowsExplicitRecovery: false,
+                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain
                     )
                     didRun = drain.didWork || didRun
+                    pendingWorkDeferral = drain.localWorkDeferral
                     if let receipt = drain.continuationReceipt,
                        continuationReceipt.map({ receipt.canFollow($0) }) ?? true {
                         continuationReceipt = receipt
@@ -103,7 +117,7 @@ actor AutomaticSyncEngine {
                         compatibleDrains = false
                     }
                     if drain.didRecoverSnapshot {
-                        verifiedConvergence = true
+                        verifiedConvergence = drain.verifiedRecoveryConvergence
                         break syncPlan
                     }
                 case .lightReconcile:
@@ -112,9 +126,11 @@ actor AutomaticSyncEngine {
                         source: source,
                         cancellationToken: cancellationToken,
                         forceLightReconcile: true,
-                        allowsExplicitRecovery: false
+                        allowsExplicitRecovery: false,
+                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain
                     )
                     didRun = drain.didWork || didRun
+                    pendingWorkDeferral = drain.localWorkDeferral
                     if let receipt = drain.continuationReceipt,
                        continuationReceipt.map({ receipt.canFollow($0) }) ?? true {
                         continuationReceipt = receipt
@@ -123,7 +139,7 @@ actor AutomaticSyncEngine {
                         compatibleDrains = false
                     }
                     if drain.didRecoverSnapshot {
-                        verifiedConvergence = true
+                        verifiedConvergence = drain.verifiedRecoveryConvergence
                         break syncPlan
                     }
                 case .requestRecovery:
@@ -147,17 +163,18 @@ actor AutomaticSyncEngine {
                         compatibleDrains = false
                     }
                     if drain.didRecoverSnapshot {
-                        verifiedConvergence = true
+                        verifiedConvergence = drain.verifiedRecoveryConvergence
                         break syncPlan
                     }
                 case .bootstrap, .fullRecovery:
-                    didRun = try await recoverRemoteSnapshot(
+                    let recovery = try await recoverRemoteSnapshot(
                         ownerUserID: ownerUserID,
                         source: source,
                         cancellationToken: cancellationToken,
                         replacementTarget: replacementTarget
-                    ) || didRun
-                    verifiedConvergence = true
+                    )
+                    didRun = recovery.didWork || didRun
+                    verifiedConvergence = recovery.verifiedConvergence
                     // Atomic recovery may have replaced the active container.
                     // Providers owned by this engine were built for the prior
                     // generation and must never execute after publication.
@@ -280,8 +297,9 @@ actor AutomaticSyncEngine {
         source: SyncAutomaticTriggerSource,
         cancellationToken: Int,
         forceLightReconcile: Bool,
-        allowsExplicitRecovery: Bool
-    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?) {
+        allowsExplicitRecovery: Bool,
+        allowsLocalWorkDeferral: Bool = false
+    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?, verifiedRecoveryConvergence: Bool, localWorkDeferral: SyncIncrementalLocalWorkDeferral?) {
         guard let incrementalPullProvider else {
             recordDiagnostic("incremental.lastOutcome", "blocked_missing_provider")
             throw ReplacementRecoveryJournalError.incrementalProviderMissing
@@ -300,6 +318,12 @@ actor AutomaticSyncEngine {
         try await cancellationPolicy.checkCancellation(token: cancellationToken)
         recordIncrementalSummary(summary, source: source)
         if summary.requiresFullRecovery {
+            if allowsLocalWorkDeferral, let deferral = summary.localWorkDeferral,
+               deferral.isBound(to: defaults), deferral.matches(summary) {
+                try await MainActor.run { try deferral.validateForPush() }
+                // No receipt, watermark change, recovery or readiness grant.
+                return (false, false, nil, false, deferral)
+            }
             let reason = summary.requiresFullRecoveryReason
             recordRecoveryRequest(reason: reason)
             let incrementalDidWork = summary.eventsFetched > 0 || summary.totalApplied > 0
@@ -319,8 +343,10 @@ actor AutomaticSyncEngine {
                 replacementTarget: nil
             )
             return (
-                recoveryDidWork || incrementalDidWork,
+                recoveryDidWork.didWork || incrementalDidWork,
                 true,
+                nil,
+                recoveryDidWork.verifiedConvergence,
                 nil
             )
         }
@@ -338,8 +364,10 @@ actor AutomaticSyncEngine {
                 replacementTarget: nil
             )
             return (
-                recoveryDidWork || summary.eventsFetched > 0 || summary.totalApplied > 0,
+                recoveryDidWork.didWork || summary.eventsFetched > 0 || summary.totalApplied > 0,
                 true,
+                nil,
+                recoveryDidWork.verifiedConvergence,
                 nil
             )
         }
@@ -347,7 +375,7 @@ actor AutomaticSyncEngine {
             recordVerifiedRecoveryDiagnostics(outcome: "verified_not_required")
         }
         let receipt = summary.continuationReceipt.flatMap { $0.matches(summary) ? $0 : nil }
-        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false, receipt)
+        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false, receipt, false, nil)
     }
 
     private func recoverRemoteSnapshot(
@@ -355,7 +383,7 @@ actor AutomaticSyncEngine {
         source _: SyncAutomaticTriggerSource,
         cancellationToken: Int,
         replacementTarget: ReplacementRecoveryTarget?
-    ) async throws -> Bool {
+    ) async throws -> (didWork: Bool, verifiedConvergence: Bool) {
         guard let recoverySnapshotPullProvider else {
             recordDiagnostic("recovery.lastOutcome", "blocked_missing_provider")
             throw AutomaticRecoverySnapshotPullError.providerMissing
@@ -414,7 +442,7 @@ actor AutomaticSyncEngine {
             }
         }
         recordRecoverySummary(summary)
-        return summary.didWork
+        return (summary.didWork, !summary.hasPendingLocalWork)
     }
 
     private func replacementRecoveryTarget(

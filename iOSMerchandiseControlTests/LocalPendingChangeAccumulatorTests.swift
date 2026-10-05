@@ -9,6 +9,46 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
     private let ownerB = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
     private let now = Date(timeIntervalSince1970: 1_778_500_000)
 
+    func testPendingEditsKeepFirstRemoteBaselineAndAcknowledgedNewChainUsesFreshBaseline() throws {
+        let context = try makeContext()
+        let product = Product(barcode: "TASK144-COALESCED-BASELINE", remoteID: UUID(), productName: "Remote A")
+        context.insert(product)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerA)
+        let firstBaseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+        product.productName = "Local first"
+        let first = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update,
+            origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: firstBaseline))
+        try context.save()
+        let firstID = first.changeID
+        let firstKey = first.idempotencyKey
+        let intermediateLocalBody = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+        product.productName = "Local second"
+        let second = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update,
+            origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: intermediateLocalBody))
+        try context.save()
+        XCTAssertEqual(second.changeID, firstID)
+        XCTAssertEqual(second.idempotencyKey, firstKey)
+        XCTAssertEqual(second.baselineFingerprintHash, firstBaseline)
+        XCTAssertEqual(second.intendedFingerprintHash, LocalPendingChangeLogicalKey.productFingerprintHash(product))
+        XCTAssertEqual(try fetchChanges(context).count, 1)
+
+        // Exercise the existing terminal-ACK state boundary. This is a unit
+        // state transition, not a claim of a server response.
+        try LocalPendingAggregatedPushStateStore(context: context).markAcknowledged(changeIDs: [firstID], ownerUserID: ownerA)
+        XCTAssertEqual(first.status, .acknowledged)
+        let acknowledgedBody = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+        product.productName = "New chain after acknowledgment"
+        let next = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update,
+            origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: acknowledgedBody))
+        try context.save()
+        XCTAssertNotEqual(next.changeID, firstID)
+        XCTAssertNotEqual(next.idempotencyKey, firstKey)
+        XCTAssertEqual(next.baselineFingerprintHash, acknowledgedBody)
+        XCTAssertEqual(next.status, .pending)
+        XCTAssertEqual(try fetchChanges(context).count, 2)
+        XCTAssertEqual(first.status, .acknowledged)
+    }
+
     func testEnqueuesPendingOnlyOnConfirmedSave() throws {
         let context = try makeContext()
         let product = Product(barcode: "TASK093_SAVE", productName: "Saved")

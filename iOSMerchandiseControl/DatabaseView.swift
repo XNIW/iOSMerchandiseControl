@@ -1826,7 +1826,13 @@ private func importSurfaceCardWidth(for geometry: GeometryProxy) -> CGFloat {
 }
 
 struct DatabaseView: View {
+    // Root admission for a proven physically empty first bootstrap is
+    // presentation-only; it cannot imply a trustworthy empty catalog.
+    var isFirstSnapshotPreparing = false
     @Environment(\.modelContext) private var context
+    @Environment(\.localRootPresentationState) private var localPresentation
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
+    @EnvironmentObject private var generationController: SyncStoreGenerationController
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var productImageStore: ProductImageStore
@@ -1843,6 +1849,8 @@ struct DatabaseView: View {
     @Query(sort: \ProductCategory.name, order: .forward)
     private var categories: [ProductCategory]
 
+    @State private var savedProductReceipt: LocalProductSaveReceipt?
+    @State private var savedProductReadback: LocalProductSaveReadback?
     @State private var selectedDatabaseSection: DatabaseSection = .products
     @State private var barcodeFilter: String = ""
     @State private var namedEntityFilter: String = ""
@@ -1851,6 +1859,8 @@ struct DatabaseView: View {
     @State private var namedEntityEditor: DatabaseNamedEntityEditorPresentation?
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
+    @State private var mountedPresentationID: String?
+    @State private var productScrollAnchor: String?
     
     @State private var showScanner = false
     @State private var scannerFallbackFocusTask: Task<Void, Never>?
@@ -3315,6 +3325,7 @@ struct DatabaseView: View {
         let storefrontScope: StorefrontScope?
         let onEdit: () -> Void
         let onHistory: () -> Void
+        let saveFeedback: String?
 
         private var hasMetrics: Bool {
             product.purchasePrice != nil || product.retailPrice != nil || product.stockQuantity != nil
@@ -3336,6 +3347,12 @@ struct DatabaseView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     titleBlock
+                    if let saveFeedback {
+                        Text(saveFeedback)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     metricsBlock
 
@@ -3635,6 +3652,7 @@ struct DatabaseView: View {
                         .submitLabel(.search)
                         .focused($isSearchFocused)
                         .accessibilityLabel(activeSearchPlaceholder)
+                        .accessibilityIdentifier("task144.database.search")
 
                     if !activeSearchIsEmpty {
                         Button {
@@ -3665,7 +3683,7 @@ struct DatabaseView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
-                    .disabled(importProgress.isRunning)
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing)
                     .opacity(importProgress.isRunning ? 0.45 : 1)
                     .accessibilityLabel(L("database.action.scan"))
                 }
@@ -3743,14 +3761,21 @@ struct DatabaseView: View {
 
     @ViewBuilder
     private var databaseContent: some View {
-        switch selectedDatabaseSection {
+        if isFirstSnapshotPreparing {
+            ContentUnavailableView {
+                Label(L("database.first_snapshot.preparing"), systemImage: "arrow.triangle.2.circlepath")
+                    .accessibilityIdentifier("task144.database.first-snapshot-preparing")
+            } description: {
+                Text(L("database.first_snapshot.detail"))
+            }
+        } else { switch selectedDatabaseSection {
         case .products:
             productsContent
         case .suppliers:
             suppliersContent
         case .categories:
             categoriesContent
-        }
+        } }
     }
 
     @ViewBuilder
@@ -3771,8 +3796,10 @@ struct DatabaseView: View {
                         },
                         onHistory: {
                             productForHistory = product
-                        }
+                        },
+                        saveFeedback: savedProductFeedback(for: product)
                     )
+                    .id(product.barcode)
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                 }
                 .onDelete(perform: deleteProducts)
@@ -3795,6 +3822,7 @@ struct DatabaseView: View {
             .listStyle(.insetGrouped)
             .contentMargins(.top, 6, for: .scrollContent)
             .contentMargins(.bottom, 12, for: .scrollContent)
+            .scrollPosition(id: $productScrollAnchor)
         }
     }
 
@@ -3929,13 +3957,21 @@ struct DatabaseView: View {
     }
 
     var body: some View {
+        Group {
+            if isCurrentModelGeneration {
+                activeDatabase
+            }
+        }
+    }
+
+    private var databaseRootSurface: some View {
         ZStack {
             VStack(spacing: 0) {
                 databaseHeader
                 databaseContent
             }
             .background(Color(.systemGroupedBackground))
-            .disabled(importProgress.isRunning)
+            .disabled(importProgress.isRunning || isFirstSnapshotPreparing)
 
             if importProgress.showsOverlay {
                 importProgressOverlay
@@ -3943,7 +3979,42 @@ struct DatabaseView: View {
 
         }
         .accessibilityIdentifier("task140.database.root")
+        .background {
+            if let receipt = savedProductReceipt, receipt.matches(generationController.activeManifest) {
+                SavedProductReceiptReadback(receipt: receipt) { readback in
+                    guard !Task.isCancelled, isCurrentModelGeneration, savedProductReceipt == receipt,
+                          receipt.matches(generationController.activeManifest),
+                          currentPendingOwnerUserID.map(AccountBindingStore.accountHash(for:)) == receipt.accountHash,
+                          Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container,
+                            ownerUserID: currentPendingOwnerUserID) else { return }
+                    savedProductReadback = readback
+                }
+            }
+        }
+        .onReceive(localPresentation?.objectWillChange ?? ObservableObjectPublisher()) { _ in
+            restoreSavedProductReceipt()
+        }
+    }
+
+    private var activeDatabase: some View {
+        databaseRootSurface
         .navigationTitle(L("database.title"))
+        .onAppear { restoreLocalPresentation() }
+        .onChange(of: barcodeFilter) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.barcodeFilter = value }
+        }
+        .onChange(of: namedEntityFilter) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.namedEntityFilter = value }
+        }
+        .onChange(of: selectedDatabaseSection) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.databaseSection = String(describing: value) }
+        }
+        .onChange(of: storefrontFilter) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.storefrontFilter = value.rawValue }
+        }
+        .onChange(of: productScrollAnchor) { _, value in
+            localPresentation?.update(presentationID: mountedPresentationID) { $0.productScrollAnchor = value }
+        }
         .task {
             presentTask140UIAnalysisIfRequested()
         }
@@ -3979,7 +4050,7 @@ struct DatabaseView: View {
                         Label(L("database.import.title"), systemImage: "tray.and.arrow.down")
                             .labelStyle(.iconOnly)
                     }
-                    .disabled(importProgress.isRunning)
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing)
                     .accessibilityLabel(L("database.import.title"))
                     .accessibilityIdentifier("task140.database.import")
 
@@ -3989,7 +4060,7 @@ struct DatabaseView: View {
                         Label(L("database.export.title"), systemImage: "square.and.arrow.up")
                             .labelStyle(.iconOnly)
                     }
-                    .disabled(importProgress.isRunning)
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing)
                     .accessibilityLabel(L("database.export.title"))
 
                     Button {
@@ -3998,13 +4069,13 @@ struct DatabaseView: View {
                         Label(selectedDatabaseSection.addTitle, systemImage: "plus")
                             .labelStyle(.iconOnly)
                     }
-                    .disabled(importProgress.isRunning)
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing)
                     .accessibilityLabel(selectedDatabaseSection.addTitle)
                 }
             }
         }
         // Sheet per NUOVO prodotto
-        .sheet(isPresented: $showAddSheet) {
+        .sheet(isPresented: $showAddSheet, onDismiss: clearRetainedEditor) {
             NavigationStack {
                 EditProductView(
                     initialBarcode: pendingBarcodeForNewProduct,
@@ -4013,7 +4084,7 @@ struct DatabaseView: View {
             }
         }
         // Sheet per MODIFICA prodotto esistente
-        .sheet(item: $productToEdit) { (product: Product) in
+        .sheet(item: $productToEdit, onDismiss: clearRetainedEditor) { (product: Product) in
             NavigationStack {
                 EditProductView(
                     product: product,
@@ -4289,8 +4360,105 @@ struct DatabaseView: View {
 
     // MARK: - Azioni base
 
+    private var isCurrentModelGeneration: Bool {
+        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+    }
+
+    private func restoreLocalPresentation() {
+        guard isCurrentModelGeneration else { return }
+        mountedPresentationID = generationController.presentationID
+        guard let values = localPresentation?.admit(
+            manifest: generationController.activeManifest,
+            ownerUserID: currentPendingOwnerUserID,
+            presentationID: generationController.presentationID,
+            localAccessPermitted: Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
+        ) else { return }
+        savedProductReceipt = values.savedProduct
+        savedProductReadback = nil
+        selectedDatabaseSection = DatabaseSection.allCases.first {
+            String(describing: $0) == values.databaseSection
+        } ?? .products
+        barcodeFilter = values.barcodeFilter
+        namedEntityFilter = values.namedEntityFilter
+        storefrontFilter = StorefrontListFilter(rawValue: values.storefrontFilter) ?? .all
+        productScrollAnchor = values.productScrollAnchor
+        guard let editor = values.editor else { return }
+        if editor.baseline == nil {
+            pendingBarcodeForNewProduct = editor.originalBarcode
+            showAddSheet = true
+        } else {
+            do {
+                let remoteID = editor.remoteID
+                let barcode = editor.originalBarcode
+                var request = FetchDescriptor<Product>(predicate: #Predicate {
+                    (remoteID != nil && $0.remoteID == remoteID)
+                        || (remoteID == nil && $0.barcode == barcode)
+                })
+                request.fetchLimit = 2
+                let matching = try context.fetch(request)
+                if matching.count == 1 { productToEdit = matching[0] }
+            } catch {
+                // A vanished/ambiguous target cannot rebind an old model or
+                // authorize a Save in a different generation.
+            }
+        }
+    }
+
+    private func clearRetainedEditor() {
+        guard isCurrentModelGeneration else { return }
+        localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = nil }
+        restoreSavedProductReceipt()
+    }
+
+    private func restoreSavedProductReceipt() {
+        guard isCurrentModelGeneration else { return }
+        let receipt = localPresentation?.savedProduct(presentationID: mountedPresentationID)
+        if savedProductReceipt != receipt {
+            savedProductReceipt = receipt
+            savedProductReadback = nil
+        }
+    }
+
+    private func savedProductFeedback(for product: Product) -> String? {
+        guard let receipt = savedProductReceipt, receipt.matches(generationController.activeManifest),
+              receipt.matches(product, readback: savedProductReadback) else { return nil }
+        return L(savedProductReadback?.isCloudConfirmed == true ? "product.save.cloud_confirmed" : "product.save.local_pending")
+    }
+
+    /// One bounded exact-ID query for the current Save, outside list rows.
+    /// SwiftData pointers stay in this mounted generation; the receipt is values.
+    private struct SavedProductReceiptReadback: View {
+        let receipt: LocalProductSaveReceipt
+        let publish: (LocalProductSaveReadback) -> Void
+        @Query private var changes: [LocalPendingChange]
+
+        init(receipt: LocalProductSaveReceipt, publish: @escaping (LocalProductSaveReadback) -> Void) {
+            self.receipt = receipt
+            self.publish = publish
+            let ids = Array(receipt.intents.prefix(5).map(\.changeID))
+            var request = FetchDescriptor<LocalPendingChange>(predicate: #Predicate { ids.contains($0.changeID) })
+            request.fetchLimit = 6 // Duplicate/extra IDs fail the exact readback.
+            _changes = Query(request)
+        }
+        var body: some View {
+            let readback = receipt.readback(by: changes)
+            let scopeID = [receipt.accountHash, receipt.storeIdentity.storeId,
+                receipt.storeIdentity.localStoreId, receipt.shopID.uuidString,
+                receipt.deviceIdentityHash].joined(separator: "|")
+            let readbackID = scopeID + "|" + receipt.productFingerprint + "|"
+                + receipt.intents.map(\.eventFingerprint).joined(separator: "|") + ":\(readback.isCloudConfirmed)"
+                + ":\(readback.supplierRemoteID?.uuidString ?? "none"):\(readback.categoryRemoteID?.uuidString ?? "none")"
+            Color.clear.frame(width: 0, height: 0)
+                .task(id: readbackID) {
+                    guard !Task.isCancelled else { return }
+                    publish(readback)
+                }
+        }
+    }
+
     private var currentPendingOwnerUserID: UUID? {
-        supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
+        supabaseAuthViewModel.localMutationOwnerUserID
     }
 
     private var imageScope: ProductImageScope? {
@@ -4323,10 +4491,16 @@ struct DatabaseView: View {
         scannerFallbackFocusTask?.cancel()
         scannerFallbackFocusTask = nil
         showScanner = false
-        showAddSheet = false
-        productToEdit = nil
+        // Image capabilities can disappear during same-scope recovery while
+        // the operational local editor remains explicitly authorized.
+        if !isCurrentModelGeneration
+            || !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: context.container, ownerUserID: currentPendingOwnerUserID) {
+            showAddSheet = false
+            productToEdit = nil
+            pendingBarcodeForNewProduct = nil
+        }
         productForHistory = nil
-        pendingBarcodeForNewProduct = nil
     }
 
     private func handleDatabaseScan(_ code: String) {

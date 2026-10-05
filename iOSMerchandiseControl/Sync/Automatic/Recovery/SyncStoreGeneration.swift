@@ -164,6 +164,11 @@ nonisolated struct SyncStoreGenerationMutationFence: Equatable, Sendable {
     let files: [FileState]
 }
 
+nonisolated struct SyncStoreActiveMutationFence: Equatable, Sendable {
+    let presentationID: String
+    let files: [SyncStoreGenerationMutationFence.FileState]
+}
+
 nonisolated struct SyncStoreActiveGeneration: @unchecked Sendable {
     let container: ModelContainer
     let manifest: SyncStoreGenerationManifest?
@@ -203,6 +208,8 @@ nonisolated enum SyncStoreGenerationError: Error, Equatable, Sendable {
 /// crash harness blocks at one of these points so the host can deliver a real
 /// SIGKILL and verify the generation selected on relaunch.
 nonisolated enum SyncStoreActivationBoundary: Equatable, Sendable {
+    case beforeLocalWorkTransfer
+    case afterLocalWorkPreparation
     case beforeManifestRename
     case afterManifestRename
 }
@@ -397,7 +404,8 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         accountHash: String,
         shopID: UUID,
         storeIdentity: LocalStoreIdentity,
-        deviceIdentityHash: String
+        deviceIdentityHash: String,
+        resumeGenerationID: UUID? = nil
     ) throws -> SyncStoreGenerationHandle {
         lock.lock()
         defer { lock.unlock() }
@@ -412,7 +420,8 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
             } else if currentStaging.accountHash == accountHash,
                       currentStaging.shopID == shopID,
                       currentStaging.storeIdentity == storeIdentity,
-                      currentStaging.deviceIdentityHash == deviceIdentityHash {
+                      currentStaging.deviceIdentityHash == deviceIdentityHash,
+                      resumeGenerationID == nil || resumeGenerationID == currentStaging.generationID {
                 return currentStaging
             } else {
                 // Quarantine belongs to the captured scope. Release its
@@ -422,6 +431,31 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
                 markCurrentStagingQuarantinedLocked(currentStaging)
                 self.currentStaging = nil
             }
+        }
+
+        if let generationID = resumeGenerationID,
+           try decodeAndValidateManifestIfPresent()?.generationID != generationID,
+           fileManager.fileExists(atPath: generationsDirectory.appendingPathComponent(generationID.uuidString.lowercased())
+             .appendingPathComponent("recovery-page-progress-v1.json").path),
+           !fileManager.fileExists(atPath: generationsDirectory.appendingPathComponent(generationID.uuidString.lowercased())
+             .appendingPathComponent("quarantined").path) {
+            let relative = "generations/\(generationID.uuidString.lowercased())/store.store"
+            let url = baseDirectory.appendingPathComponent(relative)
+            let directory = url.deletingLastPathComponent()
+            let values = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            let fileValues = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            let progress = directory.appendingPathComponent("recovery-page-progress-v1.json")
+            guard values.isDirectory == true, values.isSymbolicLink != true,
+                  fileValues.isRegularFile == true, fileValues.isSymbolicLink != true,
+                  !fileManager.fileExists(atPath: directory.appendingPathComponent("quarantined").path),
+                  fileManager.fileExists(atPath: progress.path) else { throw SyncStoreGenerationError.invalidManifest }
+            let handle = SyncStoreGenerationHandle(generationID: generationID, storeURL: url,
+                relativeStorePath: relative, accountHash: accountHash, shopID: shopID,
+                storeIdentity: storeIdentity, deviceIdentityHash: deviceIdentityHash,
+                container: try SyncStoreSchema.makeFileBackedContainer(at: url))
+            try validateResourceBudget(for: handle)
+            currentStaging = handle
+            return handle
         }
 
         // A generation that was active earlier in this process may still be
@@ -467,6 +501,52 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         )
         currentStaging = handle
         return handle
+    }
+
+    func observeLocalWorkBoundary(_ boundary: SyncStoreActivationBoundary) {
+        activationBoundaryProbe(boundary)
+    }
+
+    func storeURLForLocalBodyReadback(_ manifest: SyncStoreGenerationManifest) throws -> URL {
+        lock.lock(); defer { lock.unlock() }
+        guard try decodeAndValidateManifestIfPresent() == manifest else { throw ShopSyncRecoveryContractError.checkpointChanged }
+        return try resolvedStoreURL(for: manifest)
+    }
+
+    func captureActiveMutationFence(
+        for active: SyncStoreActiveGeneration
+    ) throws -> SyncStoreActiveMutationFence {
+        lock.lock()
+        defer { lock.unlock() }
+        let currentManifest = try decodeAndValidateManifestIfPresent()
+        guard currentManifest == active.manifest else {
+            throw ShopSyncRecoveryContractError.checkpointChanged
+        }
+        let files: [SyncStoreGenerationMutationFence.FileState]
+        if let manifest = active.manifest {
+            let handle = SyncStoreGenerationHandle(
+                generationID: manifest.generationID,
+                storeURL: try resolvedStoreURL(for: manifest),
+                relativeStorePath: manifest.relativeStorePath,
+                accountHash: manifest.accountHash,
+                shopID: manifest.shopID,
+                storeIdentity: manifest.storeIdentity,
+                deviceIdentityHash: manifest.deviceIdentityHash,
+                container: active.container
+            )
+            files = try mutationFenceForGeneration(handle).files
+        } else {
+            // The legacy source has no generation directory. Limit the
+            // fence to its own SQLite family, never unrelated app files.
+            let storeURL = legacyDefaultStoreURL ?? SyncStoreSchema.defaultStoreURL
+            files = try ["", "-wal", "-shm"].compactMap { suffix in
+                let fileURL = URL(fileURLWithPath: storeURL.path + suffix)
+                guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
+                return try mutationFileState(fileURL, relativePath: fileURL.lastPathComponent)
+            }.sorted { $0.relativePath < $1.relativePath }
+            guard !files.isEmpty else { throw SyncStoreGenerationError.activeStoreMissing }
+        }
+        return SyncStoreActiveMutationFence(presentationID: active.presentationID, files: files)
     }
 
     func activate(
@@ -813,17 +893,9 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
                   fileSize >= 0 else {
                 throw SyncStoreGenerationError.generationResourceBudgetExceeded
             }
-            let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
-            guard let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value else {
-                throw SyncStoreGenerationError.generationResourceBudgetExceeded
-            }
-            files.append(.init(
-                relativePath: String(fileURL.standardizedFileURL.path.dropFirst(prefix.count)),
-                fileSize: fileSize,
-                allocatedSize: max(fileSize, values.fileAllocatedSize ?? 0),
-                modificationTimeBits: modificationDate.timeIntervalSinceReferenceDate.bitPattern,
-                systemFileNumber: inode
-            ))
+            _ = modificationDate
+            files.append(try mutationFileState(fileURL,
+                relativePath: String(fileURL.standardizedFileURL.path.dropFirst(prefix.count))))
             guard files.count <= 32 else {
                 throw SyncStoreGenerationError.generationResourceBudgetExceeded
             }
@@ -832,6 +904,26 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
             generationID: staging.generationID,
             files: files.sorted { $0.relativePath < $1.relativePath }
         )
+    }
+
+    private func mutationFileState(
+        _ fileURL: URL, relativePath: String
+    ) throws -> SyncStoreGenerationMutationFence.FileState {
+        let values = try fileURL.resourceValues(forKeys: [
+            .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey,
+            .fileAllocatedSizeKey, .contentModificationDateKey
+        ])
+        let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
+        guard values.isSymbolicLink != true, values.isRegularFile == true,
+              let size = values.fileSize, size >= 0,
+              let modified = values.contentModificationDate,
+              let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value else {
+            throw SyncStoreGenerationError.generationResourceBudgetExceeded
+        }
+        return .init(relativePath: relativePath, fileSize: size,
+            allocatedSize: max(size, values.fileAllocatedSize ?? 0),
+            modificationTimeBits: modified.timeIntervalSinceReferenceDate.bitPattern,
+            systemFileNumber: inode)
     }
 
     private func validateAvailableRecoveryCapacity(
@@ -937,10 +1029,27 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         // guard in prepareStaging prevents unbounded growth if deletion keeps
         // failing or many legacy directories already exist.
         guard let directories = try? generationDirectories() else { return }
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let journal = bindingStore.pendingRecoveryJournal
+        let resumableGeneration: UUID? = {
+            guard let journal, journal.phase == .staging || journal.phase == .verified,
+                  let generation = journal.generationID,
+                  journal.replacement.accountHash == bindingStore.currentBinding?.accountHash,
+                  journal.replacement.storeIdentity == bindingStore.currentBinding?.storeIdentity,
+                  let shop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: journal.replacement.accountHash),
+                  shop.localStoreIdentity == journal.replacement.storeIdentity,
+                  let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+                  DeviceInstallIDStore.identityHash(for: device) == journal.deviceIdentityHash else { return nil }
+            let directory = generationsDirectory.appendingPathComponent(generation.uuidString.lowercased())
+            guard fileManager.fileExists(atPath: directory.appendingPathComponent("recovery-page-progress-v1.json").path),
+                  !fileManager.fileExists(atPath: directory.appendingPathComponent("quarantined").path) else { return nil }
+            return generation
+        }()
         var deletionAttempts = 0
         for directory in directories {
             guard deletionAttempts < Self.maximumCleanupDeletionsPerLaunch else { return }
-            guard UUID(uuidString: directory.lastPathComponent) != activeGenerationID else { continue }
+            let generation = UUID(uuidString: directory.lastPathComponent)
+            guard generation != activeGenerationID, generation != resumableGeneration else { continue }
             deletionAttempts += 1
             try? fileManager.removeItem(at: directory)
         }
@@ -1173,9 +1282,17 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
 
     @Published private(set) var active: SyncStoreActiveGeneration
     @Published private(set) var loadFailureCode: String?
+    @Published private(set) var localBodyQualificationRevision = 0
     private let repository: SyncStoreGenerationRepository?
     private let defaults: UserDefaults
     private var presentationBoundaryObserver: ((String) -> Void)?
+    private var localBodyQualificationTask: Task<Bool, Never>?
+    private struct EmptyRootProof {
+        let scope: Task126VerifiedOwnerStoreScope
+        let container: ModelContainer
+        let fence: SyncStoreActiveMutationFence
+    }
+    private var emptyRootProof: EmptyRootProof?
 
     var modelContainer: ModelContainer { active.container }
     var activeManifest: SyncStoreGenerationManifest? { active.manifest }
@@ -1210,7 +1327,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             let loaded = try repository.loadActive()
             self.active = loaded
             self.loadFailureCode = nil
-            Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container)
+            Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container, manifest: loaded.manifest)
+            startLocalBodyQualification()
         } catch {
             let fallback = SyncStoreActiveGeneration(
                 container: try! SyncStoreSchema.makeInMemoryContainer(),
@@ -1234,7 +1352,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let loaded = try repository.loadActive()
         self.active = loaded
         self.loadFailureCode = nil
-        Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container)
+        Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container, manifest: loaded.manifest)
+        startLocalBodyQualification()
     }
 
     static func ephemeral() -> SyncStoreGenerationController {
@@ -1251,18 +1370,146 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         Task126OwnerStoreGate.registerActiveGenerationContainer(ephemeralContainer)
     }
 
+    /// Full current catalog readback is deliberately outside MainActor. The
+    /// result cannot authorize another scope, changed file or newer generation.
+    func startLocalBodyQualification(ownerUserID: UUID? = nil) {
+        guard let repository else { return }
+        guard let manifest = active.manifest else {
+            startEmptyRootQualification(ownerUserID: ownerUserID, repository: repository)
+            return
+        }
+        emptyRootProof = nil
+        guard !Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container) else { return }
+        localBodyQualificationTask?.cancel()
+        let captured = active
+        let container = captured.container
+        Task126OwnerStoreGate.configureLocalBodyFence(container: container, proven: false,
+            provider: { [weak container] in
+                guard let container else { return nil }
+                return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
+            })
+        let expectedBinding = AccountBindingStore(defaults: defaults).currentBinding
+        let expectedShop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: manifest.accountHash)
+        let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
+        localBodyQualificationTask = Task { [weak self] in
+            for _ in 0..<2 {
+                guard !Task.isCancelled else { return false }
+                let generation = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
+                let work = Task.detached(priority: .utility) {
+                    try Task.checkCancellation()
+                    let before = try repository.captureActiveMutationFence(for: captured)
+                    try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
+                        storeURL: repository.storeURLForLocalBodyReadback(manifest))
+                    let after = try repository.captureActiveMutationFence(for: captured)
+                    guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                    return after
+                }
+                do {
+                    let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    guard let self, !Task.isCancelled, self.active.container === container,
+                          self.active.manifest == manifest,
+                          AccountBindingStore(defaults: self.defaults).currentBinding == expectedBinding,
+                          SelectedShopStore(defaults: self.defaults).selectedShop(accountHash: manifest.accountHash) == expectedShop,
+                          (try? DeviceInstallIDStore(defaults: self.defaults).requireDeviceInstallID()) == device,
+                          expectedBinding?.accountHash == manifest.accountHash,
+                          expectedBinding?.storeIdentity == manifest.storeIdentity,
+                          expectedShop?.shopID == manifest.shopID,
+                          expectedShop?.localStoreIdentity == manifest.storeIdentity,
+                          device.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash else { return false }
+                    if Task126OwnerStoreGate.acceptLocalBodyProof(container: container, generation: generation, fence: fence) {
+                        self.localBodyQualificationRevision &+= 1
+                        return true
+                    }
+                } catch {
+                    if error as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
+                    self?.localBodyQualificationRevision &+= 1
+                    return false
+                }
+            }
+            self?.localBodyQualificationRevision &+= 1
+            return false
+        }
+    }
+
+    /// Presentation-only admission for a physically empty first bootstrap.
+    /// It grants neither local mutation authority nor cloud readiness.
+    func permitsScopedEmptyRoot(ownerUserID: UUID?) -> Bool {
+        guard let ownerUserID, let proof = emptyRootProof, let repository,
+              loadFailureCode == nil, active.manifest == nil, active.container === proof.container,
+              proof.scope.ownerUserID == ownerUserID,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: proof.scope.accountHash,
+                shopID: proof.scope.shopID, deviceIdentityHash: proof.scope.deviceIdentityHash),
+              (try? Task126OwnerStoreGate.revalidateAutomaticScope(proof.scope, defaults: defaults)) != nil,
+              (try? repository.captureActiveMutationFence(for: active)) == proof.fence else { return false }
+        return true
+    }
+
+    private func startEmptyRootQualification(ownerUserID: UUID?, repository: SyncStoreGenerationRepository) {
+        guard loadFailureCode == nil, let ownerUserID,
+              AccountBindingStore(defaults: defaults).hasPendingReplacementJournal,
+              let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true),
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash) else {
+            emptyRootProof = nil
+            return
+        }
+        if permitsScopedEmptyRoot(ownerUserID: ownerUserID) { return }
+        localBodyQualificationTask?.cancel()
+        emptyRootProof = nil
+        let captured = active
+        localBodyQualificationTask = Task { [weak self] in
+            let work = Task.detached(priority: .utility) {
+                try Task.checkCancellation()
+                let before = try repository.captureActiveMutationFence(for: captured)
+                let context = ModelContext(captured.container); context.autosaveEnabled = false
+                func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+                    try Task.checkCancellation()
+                    var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
+                    guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                }
+                try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
+                try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
+                try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
+                try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
+                let after = try repository.captureActiveMutationFence(for: captured)
+                guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                return after
+            }
+            do {
+                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                guard let self, !Task.isCancelled, self.active.container === captured.container,
+                      self.active.manifest == nil,
+                      (try? Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: self.defaults)) != nil,
+                      !SelectedShopStore(defaults: self.defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                        shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+                      try repository.captureActiveMutationFence(for: captured) == fence else { return false }
+                self.emptyRootProof = EmptyRootProof(scope: scope, container: captured.container, fence: fence)
+                self.localBodyQualificationRevision &+= 1
+                return true
+            } catch { return false }
+        }
+    }
+
+    func awaitLocalBodyQualification() async -> Bool {
+        if let localBodyQualificationTask { return await localBodyQualificationTask.value }
+        return active.manifest == nil || Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container)
+    }
+
     func prepareStaging(
         accountHash: String,
         shopID: UUID,
         storeIdentity: LocalStoreIdentity,
-        deviceIdentityHash: String
+        deviceIdentityHash: String,
+        resumeGenerationID: UUID? = nil
     ) throws -> SyncStoreGenerationHandle {
         guard let repository else { throw SyncStoreGenerationError.unavailable }
         return try repository.prepareStaging(
             accountHash: accountHash,
             shopID: shopID,
             storeIdentity: storeIdentity,
-            deviceIdentityHash: deviceIdentityHash
+            deviceIdentityHash: deviceIdentityHash,
+            resumeGenerationID: resumeGenerationID
         )
     }
 
@@ -1302,7 +1549,36 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             throw SyncStoreGenerationError.stagingScopeChanged
         }
         let defaults = self.defaults
-        let activeContainer = active.container
+        let capturedActive = active
+        let activeContainer = capturedActive.container
+        var publicationFence = mutationFence
+        var sourceFence: SyncStoreActiveMutationFence?
+        if journal.mode == .sameScopeRecovery {
+            // C is immutable and verified before the only owned overlay.
+            // Source scans and staging writes run off the UI thread without
+            // holding the Save/ACK lease. A source write forces bounded retry.
+            let preparation = Task.detached(priority: .utility) {
+                try Task.checkCancellation()
+                try repository.validateMutationFence(mutationFence, for: staging)
+                let before = try repository.captureActiveMutationFence(for: capturedActive)
+                repository.observeLocalWorkBoundary(.beforeLocalWorkTransfer)
+                try SameScopeRecoveryLocalWorkTransfer.apply(
+                    from: activeContainer, to: staging.container, scope: scope, stagingGenerationID: staging.generationID
+                )
+                let after = try repository.captureActiveMutationFence(for: capturedActive)
+                guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                try Task.checkCancellation()
+                return (after, try repository.captureMutationFence(for: staging))
+            }
+            let prepared = try await withTaskCancellationHandler {
+                try await preparation.value
+            } onCancel: {
+                preparation.cancel()
+            }
+            sourceFence = prepared.0
+            publicationFence = prepared.1
+            repository.observeLocalWorkBoundary(.afterLocalWorkPreparation)
+        }
         // This is the single publication boundary. It intentionally runs
         // synchronously on MainActor: durable manifest rename, in-process
         // container switch, retired-container registration, journal/binding/
@@ -1312,17 +1588,17 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             expectedGeneration: scope.leaseGeneration
         ) {
             try Task.checkCancellation()
-            if journal.mode == .sameScopeRecovery {
-                guard try SameScopeRecoveryActiveWorkInspector.snapshot(
-                    container: activeContainer,
-                    scope: scope
-                ).isDrained else {
-                    throw AtomicGenerationRecoveryError.pendingLocalWorkRequiresDrain
-                }
+            guard active.container === activeContainer,
+                  active.presentationID == capturedActive.presentationID else {
+                throw ShopSyncRecoveryContractError.checkpointChanged
+            }
+            if let sourceFence,
+               try repository.captureActiveMutationFence(for: capturedActive) != sourceFence {
+                throw ShopSyncRecoveryContractError.checkpointChanged
             }
             let activated = try repository.activate(
                 staging,
-                mutationFence: mutationFence,
+                mutationFence: publicationFence,
                 checkpointBeforeDownload: checkpointBeforeDownload,
                 checkpoint: checkpoint,
                 localVerification: localVerification,
@@ -1335,8 +1611,16 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             Task126OwnerStoreGate.replaceActiveGenerationContainerWithLeaseHeld(
                 old: activeContainer,
-                new: activated.container
+                new: activated.container,
+                manifest: manifest
             )
+            Task126OwnerStoreGate.configureLocalBodyFenceWithLeaseHeld(container: activated.container, proven: true,
+                provider: { [weak container = activated.container] in
+                    guard let container else { return nil }
+                    return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
+                })
+            localBodyQualificationTask?.cancel()
+            localBodyQualificationTask = nil
             // Never roll back to the retired container after the durable
             // pointer rename. A metadata failure leaves the new generation
             // active and the durable recovery journal fail-closed for retry.
@@ -1512,7 +1796,10 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
         }
 
         var activeOutbox = 0
-        for entry in try context.fetch(FetchDescriptor<SyncEventOutboxEntry>()) {
+        let localOnly = "localOnly"
+        for entry in try context.fetch(FetchDescriptor<SyncEventOutboxEntry>(predicate: #Predicate {
+            $0.statusRaw != localOnly
+        })) {
             guard let status = SyncEventOutboxStatus(rawValue: entry.statusRaw) else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
