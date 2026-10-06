@@ -1287,6 +1287,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private let defaults: UserDefaults
     private var presentationBoundaryObserver: ((String) -> Void)?
     private var localBodyQualificationTask: Task<Bool, Never>?
+    #if DEBUG
+    private var rootQualificationObservationTicket: UInt64 = 0
+    #endif
     private struct EmptyRootProof {
         let scope: Task126VerifiedOwnerStoreScope
         let container: ModelContainer
@@ -1373,13 +1376,29 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     /// Full current catalog readback is deliberately outside MainActor. The
     /// result cannot authorize another scope, changed file or newer generation.
     func startLocalBodyQualification(ownerUserID: UUID? = nil) {
-        guard let repository else { return }
+        guard let repository else {
+            #if DEBUG
+            Task144RootObservation.record("body-start", "branch.repository-absent", callsite: "SyncStoreGeneration.startLocalBodyQualification")
+            #endif
+            return
+        }
         guard let manifest = active.manifest else {
+            #if DEBUG
+            Task144RootObservation.record("body-start", "branch.empty-root-dispatch", callsite: "SyncStoreGeneration.startLocalBodyQualification")
+            #endif
             startEmptyRootQualification(ownerUserID: ownerUserID, repository: repository)
             return
         }
         emptyRootProof = nil
-        guard !Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container) else { return }
+        guard !Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container) else {
+            #if DEBUG
+            Task144RootObservation.record("body-start", "branch.manifest-body-already-proven", callsite: "SyncStoreGeneration.startLocalBodyQualification")
+            #endif
+            return
+        }
+        #if DEBUG
+        Task144RootObservation.record("body-start", "branch.manifest-body-qualification", callsite: "SyncStoreGeneration.startLocalBodyQualification")
+        #endif
         localBodyQualificationTask?.cancel()
         let captured = active
         let container = captured.container
@@ -1391,6 +1410,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let expectedBinding = AccountBindingStore(defaults: defaults).currentBinding
         let expectedShop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: manifest.accountHash)
         let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
+        #if DEBUG
+        if Task144RootObservation.enabled { rootQualificationObservationTicket &+= 1 }
+        #endif
         localBodyQualificationTask = Task { [weak self] in
             for _ in 0..<2 {
                 guard !Task.isCancelled else { return false }
@@ -1434,6 +1456,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     /// Presentation-only admission for a physically empty first bootstrap.
     /// It grants neither local mutation authority nor cloud readiness.
     func permitsScopedEmptyRoot(ownerUserID: UUID?) -> Bool {
+        #if DEBUG
+        if Task144RootObservation.enabled { return observeScopedEmptyRoot(ownerUserID: ownerUserID) }
+        #endif
         guard let ownerUserID, let proof = emptyRootProof, let repository,
               loadFailureCode == nil, active.manifest == nil, active.container === proof.container,
               proof.scope.ownerUserID == ownerUserID,
@@ -1455,7 +1480,201 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         return true
     }
 
+    #if DEBUG
+    private func observeScopedEmptyRoot(ownerUserID: UUID?) -> Bool {
+        let observation = Task144RootObservation.Evaluation("empty-admission", callsite: "SyncStoreGeneration.permitsScopedEmptyRoot")
+        var result = false
+        defer { observation.finish(result) }
+        guard let owner = observation.optional(ownerUserID, "owner"),
+              let proof = observation.optional(emptyRootProof, "proof"),
+              let repository = observation.optional(repository, "repository"),
+              observation.check(loadFailureCode == nil, "load"),
+              observation.check(active.manifest == nil, "manifest"),
+              observation.check(active.container === proof.container, "container"),
+              observation.check(proof.scope.ownerUserID == owner, "proof-owner"),
+              let current = observation.attempt("capture-current", {
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                      defaults: defaults, allowsPendingReplacement: true)
+              }) else { return false }
+        guard observation.check(current.ownerUserID == proof.scope.ownerUserID, "owner-equal"),
+              observation.check(current.accountHash == proof.scope.accountHash, "account-equal"),
+              observation.check(current.shopID == proof.scope.shopID, "shop-equal"),
+              observation.check(current.storeIdentity == proof.scope.storeIdentity, "full-store-equal"),
+              observation.check(current.deviceInstallID == proof.scope.deviceInstallID, "install-equal"),
+              observation.check(current.deviceIdentityHash == proof.scope.deviceIdentityHash, "device-equal"),
+              observation.check(current.pendingReplacement == proof.scope.pendingReplacement, "full-pending-equal"),
+              observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                  accountHash: proof.scope.accountHash, shopID: proof.scope.shopID,
+                  deviceIdentityHash: proof.scope.deviceIdentityHash), "not-denied"),
+              let fence = observation.attempt("physical-fence-read", {
+                  try repository.captureActiveMutationFence(for: active)
+              }),
+              observation.check(fence == proof.fence, "physical-fence-equal"),
+              observation.attempt("current-revalidate", {
+                  try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
+              }) != nil else { return false }
+        result = true
+        return true
+    }
+
+    private func observeEmptyPublicationAllowed(scope: Task126VerifiedOwnerStoreScope,
+        captured: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence,
+        repository: SyncStoreGenerationRepository, ticket: UInt64) throws -> Task126VerifiedOwnerStoreScope? {
+        let observation = Task144RootObservation.Evaluation("empty-publication", callsite: "SyncStoreGeneration.startEmptyRootQualification.after-await")
+        var result = false
+        observation.note("ticket-current", rootQualificationObservationTicket == ticket)
+        defer { observation.finish(result) }
+        guard observation.check(!Task.isCancelled, "not-cancelled"),
+              observation.check(active.container === captured.container, "container"),
+              observation.check(active.manifest == nil, "manifest"),
+              let current = observation.attempt("capture-current", {
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                      defaults: defaults, allowsPendingReplacement: true)
+              }),
+              observation.check(current.ownerUserID == scope.ownerUserID, "owner-equal"),
+              observation.check(current.accountHash == scope.accountHash, "account-equal"),
+              observation.check(current.shopID == scope.shopID, "shop-equal"),
+              observation.check(current.storeIdentity == scope.storeIdentity, "full-store-equal"),
+              observation.check(current.deviceInstallID == scope.deviceInstallID, "install-equal"),
+              observation.check(current.deviceIdentityHash == scope.deviceIdentityHash, "device-equal"),
+              observation.check(current.pendingReplacement == scope.pendingReplacement, "full-pending-equal"),
+              observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                  accountHash: scope.accountHash, shopID: scope.shopID,
+                  deviceIdentityHash: scope.deviceIdentityHash), "not-denied") else { return nil }
+        let currentFence = try observation.required("physical-fence-read", {
+            try repository.captureActiveMutationFence(for: captured)
+        })
+        guard observation.check(currentFence == fence, "physical-fence-equal"),
+              observation.attempt("current-revalidate", {
+                  try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
+              }) != nil else { return nil }
+        result = true
+        return current
+    }
+    private func observeStartEmptyRootQualification(ownerUserID: UUID?, repository: SyncStoreGenerationRepository) {
+        let observation = Task144RootObservation.Evaluation("empty-start", callsite: "SyncStoreGeneration.startEmptyRootQualification")
+        var accepted = false
+        var branch = "initial-guard-denied"
+        defer { observation.finish(accepted, branch: branch) }
+        guard observation.check(loadFailureCode == nil, "load"),
+              let ownerUserID = observation.optional(ownerUserID, "owner"),
+              observation.check(AccountBindingStore(defaults: defaults).hasPendingReplacementJournal, "pending-journal") else {
+            emptyRootProof = nil
+            return
+        }
+        let scope: Task126VerifiedOwnerStoreScope
+        do {
+            scope = try observation.required("capture-current", {
+                try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                    defaults: defaults, allowsPendingReplacement: true)
+            })
+        } catch Task126OwnerStoreGateError.shopContextUnavailable {
+            // Retain only a same-owner candidate during unresolved shop context.
+            // Admission still requires a fresh current scope and physical fence.
+            branch = "shop-context-unavailable-candidate-guard"
+            guard let proof = observation.optional(emptyRootProof, "candidate-proof"),
+                  observation.check(proof.scope.ownerUserID == ownerUserID, "candidate-owner"),
+                  observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: proof.scope.accountHash,
+                    shopID: proof.scope.shopID, deviceIdentityHash: proof.scope.deviceIdentityHash), "candidate-not-denied") else {
+                emptyRootProof = nil
+                return
+            }
+            branch = "shop-context-unavailable-candidate-retained"
+            // Candidate retention is not presentation admission.
+            return
+        } catch {
+            branch = Task144RootObservation.errorCategory(error)
+            emptyRootProof = nil
+            return
+        }
+        branch = "confirmed-device-denial"
+        guard observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash), "not-denied") else {
+            emptyRootProof = nil
+            return
+        }
+        if permitsScopedEmptyRoot(ownerUserID: ownerUserID) {
+            accepted = true; branch = "existing-empty-proof-admitted"
+            return
+        }
+        localBodyQualificationTask?.cancel()
+        emptyRootProof = nil
+        let captured = active
+        rootQualificationObservationTicket &+= 1
+        let ticket = rootQualificationObservationTicket
+        let revisionAtStart = localBodyQualificationRevision
+        branch = "empty-task-assigned-after-existing-cancel-statement"
+        localBodyQualificationTask = Task { [weak self] in
+            var completion = "NOT_COMPLETED"
+            defer {
+                Task144RootObservation.record("empty-task-completion",
+                    "ticket.\(ticket);result.\(completion);controller-present.\(self != nil);ticket-current.\(self.map { $0.rootQualificationObservationTicket == ticket } ?? false);revision-changed.\(self.map { $0.localBodyQualificationRevision != revisionAtStart } ?? false)",
+                    callsite: "SyncStoreGeneration.startEmptyRootQualification")
+            }
+            let work = Task.detached(priority: .utility) {
+                var stage = "check-cancellation"
+                do {
+                try Task.checkCancellation()
+                stage = "physical-fence-before"
+                let before = try repository.captureActiveMutationFence(for: captured)
+                stage = "existing-nine-empty-fetches"
+                let context = ModelContext(captured.container); context.autosaveEnabled = false
+                func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+                    try Task.checkCancellation()
+                    var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
+                    guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                }
+                try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
+                try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
+                try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
+                try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
+                stage = "physical-fence-after"
+                let after = try repository.captureActiveMutationFence(for: captured)
+                stage = "physical-fence-equality"
+                guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                return after
+                } catch {
+                    Task144RootObservation.record("empty-worker-error", "ticket.\(ticket);stage.\(stage);error.\(Task144RootObservation.errorCategory(error))",
+                        callsite: "SyncStoreGeneration.startEmptyRootQualification.worker")
+                    throw error
+                }
+            }
+            do {
+                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: {
+                    Task144RootObservation.record("empty-worker-cancel", "ticket.\(ticket);existing-cancel-handler.entered",
+                        callsite: "SyncStoreGeneration.startEmptyRootQualification.on-cancel")
+                    work.cancel()
+                }
+                guard let self else {
+                    completion = "self-absent"
+                    return false
+                }
+                guard let current = try self.observeEmptyPublicationAllowed(scope: scope, captured: captured,
+                    fence: fence, repository: repository, ticket: ticket) else {
+                    completion = "after-await-guard-denied"
+                    return false
+                }
+                self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
+                self.localBodyQualificationRevision &+= 1
+                completion = "published"
+                return true
+            } catch {
+                completion = Task144RootObservation.errorCategory(error)
+                return false
+            }
+        }
+        accepted = true
+    }
+
+    #endif
+
     private func startEmptyRootQualification(ownerUserID: UUID?, repository: SyncStoreGenerationRepository) {
+        #if DEBUG
+        if Task144RootObservation.enabled {
+            observeStartEmptyRootQualification(ownerUserID: ownerUserID, repository: repository)
+            return
+        }
+        #endif
         guard loadFailureCode == nil, let ownerUserID,
               AccountBindingStore(defaults: defaults).hasPendingReplacementJournal else {
             emptyRootProof = nil
@@ -1658,6 +1877,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     guard let container else { return nil }
                     return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
                 })
+            #if DEBUG
+            if Task144RootObservation.enabled {
+                rootQualificationObservationTicket &+= 1
+                Task144RootObservation.record("empty-task-invalidation", "branch.activation-cancel", callsite: "SyncStoreGeneration.activate")
+            }
+            #endif
             localBodyQualificationTask?.cancel()
             localBodyQualificationTask = nil
             // Never roll back to the retired container after the durable

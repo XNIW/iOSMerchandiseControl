@@ -7,6 +7,153 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+/// Temporary observations scoped to the unchanged original empty/callback fixture. This buffer is not ObservableObject and never
+/// publishes, reads a model/store, submits work or changes an admission result.
+nonisolated final class Task144RootObservation: @unchecked Sendable {
+    static let enabled = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
+        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
+        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
+    private static let shared = Task144RootObservation()
+    private let lock = NSLock()
+    private var sequence = 0
+    private var events: [String] = []
+    private var lastByKind: [String: String] = [:]
+    private var dropped = 0
+
+    static func record(_ kind: String, _ closedFacts: String, callsite: String = #function) {
+        guard enabled else { return }
+        let buffer = shared
+        buffer.lock.lock()
+        let key = kind + ":" + callsite
+        guard kind.hasPrefix("qualification-") || buffer.lastByKind[key] != closedFacts else { buffer.lock.unlock(); return }
+        buffer.lastByKind[key] = closedFacts
+        buffer.sequence += 1
+        let event = "seq.\(buffer.sequence).uptime.\(ProcessInfo.processInfo.systemUptime).pid.\(ProcessInfo.processInfo.processIdentifier).source.\(callsite).\(kind).\(closedFacts)"
+        if buffer.events.count < 128 { buffer.events.append(event) } else { buffer.dropped += 1 }
+        let shouldPrint = buffer.sequence <= 128
+        let firstDrop = buffer.sequence == 129
+        buffer.lock.unlock()
+        // Closed synthetic facts only. Whether app stdout reaches the runner's
+        // raw log is a runtime observation, never an assumed export guarantee.
+        if shouldPrint { print("TASK144_RAM_OBSERVATION \(event)") }
+        else if firstDrop { print("TASK144_RAM_OBSERVATION CAP128;later.NOT_RETAINED") }
+    }
+
+    static func snapshotAtRealRender() -> String {
+        guard enabled else { return "" }
+        let buffer = shared
+        buffer.lock.lock(); defer { buffer.lock.unlock() }
+        return ";task144.observation.cached-at-real-render;dropped.\(buffer.dropped);"
+            + buffer.events.joined(separator: ";")
+    }
+
+    static func errorCategory(_ error: Error) -> String {
+        if let error = error as? Task126OwnerStoreGateError {
+            switch error {
+            case .cancelled: return "Task126OwnerStoreGateError.cancelled"
+            case .activeAccountMismatch: return "Task126OwnerStoreGateError.activeAccountMismatch"
+            case .shopContextUnavailable: return "Task126OwnerStoreGateError.shopContextUnavailable"
+            case .bindingMismatch: return "Task126OwnerStoreGateError.bindingMismatch"
+            case .replacementInterrupted: return "Task126OwnerStoreGateError.replacementInterrupted"
+            case .scopeChanged: return "Task126OwnerStoreGateError.scopeChanged"
+            case .retiredStoreGeneration: return "Task126OwnerStoreGateError.retiredStoreGeneration"
+            case .localModelUnavailable: return "Task126OwnerStoreGateError.localModelUnavailable"
+            case .localRemoteConflictRequiresReview: return "Task126OwnerStoreGateError.localRemoteConflictRequiresReview"
+            }
+        }
+        if error is CancellationError { return "CancellationError" }
+        if let error = error as? SyncStoreGenerationError {
+            switch error {
+            case .baseDirectoryUnavailable: return "SyncStoreGenerationError.baseDirectoryUnavailable"
+            case .invalidManifest: return "SyncStoreGenerationError.invalidManifest"
+            case .activeStoreMissing: return "SyncStoreGenerationError.activeStoreMissing"
+            case .stagingAlreadyOpen: return "SyncStoreGenerationError.stagingAlreadyOpen"
+            case .stagingScopeChanged: return "SyncStoreGenerationError.stagingScopeChanged"
+            case .stagingStoreMissing: return "SyncStoreGenerationError.stagingStoreMissing"
+            case .activationReadBackFailed: return "SyncStoreGenerationError.activationReadBackFailed"
+            case .cleanupRequiresRelaunch: return "SyncStoreGenerationError.cleanupRequiresRelaunch"
+            case .unavailable: return "SyncStoreGenerationError.unavailable"
+            case .staleGenerationLease: return "SyncStoreGenerationError.staleGenerationLease"
+            case .generationResourceBudgetExceeded: return "SyncStoreGenerationError.generationResourceBudgetExceeded"
+            case .insufficientRecoveryDiskCapacity: return "SyncStoreGenerationError.insufficientRecoveryDiskCapacity"
+            case .defaultsConfigurationMismatch: return "SyncStoreGenerationError.defaultsConfigurationMismatch"
+            case .stagingChangedAfterVerification: return "SyncStoreGenerationError.stagingChangedAfterVerification"
+            }
+        }
+        if let error = error as? ShopSyncRecoveryContractError {
+            switch error {
+            case .checkpointChanged: return "ShopSyncRecoveryContractError.checkpointChanged"
+            case .authenticationChanged: return "ShopSyncRecoveryContractError.authenticationChanged"
+            case .invalidCheckpoint: return "ShopSyncRecoveryContractError.invalidCheckpoint"
+            case .invalidPage: return "ShopSyncRecoveryContractError.invalidPage"
+            case .nonCanonicalTimestamp: return "ShopSyncRecoveryContractError.nonCanonicalTimestamp"
+            case .nonMonotonicOrDuplicateID: return "ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID"
+            case .rowOutsideScope: return "ShopSyncRecoveryContractError.rowOutsideScope"
+            case .digestMismatch: return "ShopSyncRecoveryContractError.digestMismatch"
+            case .countMismatch: return "ShopSyncRecoveryContractError.countMismatch"
+            case .invalidCursor: return "ShopSyncRecoveryContractError.invalidCursor"
+            case .scopeFenceMissing: return "ShopSyncRecoveryContractError.scopeFenceMissing"
+            case .markerNotVerified: return "ShopSyncRecoveryContractError.markerNotVerified"
+            case .fullRecoveryRequired: return "ShopSyncRecoveryContractError.fullRecoveryRequired"
+            case .relationViolation: return "ShopSyncRecoveryContractError.relationViolation"
+            case .pageBudgetExceeded: return "ShopSyncRecoveryContractError.pageBudgetExceeded"
+            case .invalidImageMetadata: return "ShopSyncRecoveryContractError.invalidImageMetadata"
+            case .persistedLedgerInvalid: return "ShopSyncRecoveryContractError.persistedLedgerInvalid"
+            case .resourceBudgetExceeded: return "ShopSyncRecoveryContractError.resourceBudgetExceeded"
+            case .totalResourceBudgetExceeded: return "ShopSyncRecoveryContractError.totalResourceBudgetExceeded"
+            }
+        }
+        if let error = error as? DeviceInstallIDStoreError {
+            switch error {
+            case .durableStorageUnavailable: return "DeviceInstallIDStoreError.durableStorageUnavailable"
+            case .invalidDurableIdentity: return "DeviceInstallIDStoreError.invalidDurableIdentity"
+            }
+        }
+        if let error = error as? URLError {
+            return error.code == .timedOut ? "URLError.timedOut" : "URLError.other"
+        }
+        return "other"
+    }
+
+    final class Evaluation {
+        private let kind: String
+        private let callsite: String
+        private var operands: [String] = []
+        private var firstFailed = "none"
+        init(_ kind: String, callsite: String) { self.kind = kind; self.callsite = callsite }
+        func check(_ value: Bool, _ name: String) -> Bool {
+            operands.append("\(name).\(value)")
+            if !value && firstFailed == "none" { firstFailed = name }
+            return value
+        }
+        func optional<T>(_ value: T?, _ name: String) -> T? {
+            _ = check(value != nil, name)
+            return value
+        }
+        func attempt<T>(_ name: String, _ operation: () throws -> T) -> T? {
+            do { return optional(try operation(), name) }
+            catch {
+                _ = check(false, name)
+                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
+                return nil
+            }
+        }
+        func required<T>(_ name: String, _ operation: () throws -> T) throws -> T {
+            do { let value = try operation(); _ = check(true, name); return value }
+            catch {
+                _ = check(false, name)
+                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
+                throw error
+            }
+        }
+        func note(_ name: String, _ value: Bool) { operands.append("\(name).\(value)") }
+        func finish(_ result: Bool, branch: String = "guard", firstFalseLabel: String = "first-failed") {
+            Task144RootObservation.record(kind, "result.\(result).branch.\(branch).\(firstFalseLabel).\(firstFailed).later.NOT_EVALUATED;"
+                + operands.joined(separator: ";"), callsite: callsite)
+        }
+    }
+}
+
 /// An explicitly requested, isolated UI-test dependency boundary. The App,
 /// ContentView, editor, recovery service and automatic queue remain production
 /// implementations. No default/private Supabase configuration is loaded.
@@ -141,7 +288,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             authStorage: storage, session: session, autoRefreshToken: false,
             authRegistry: SupabaseAuthClientRegistry())
         authViewModel = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: provider))
-        transport.onHeld = { [weak self] in self?.facts.insert("task144.controlled.held") }
+        transport.onHeld = { [weak self] in
+            self?.facts.insert("task144.controlled.held")
+            Task144RootObservation.record("fixture-boundary", "branch.existing-transport-on-held", callsite: "Task144.onHeld")
+        }
         transport.checkpointBoundary = { [weak self] in await self?.releasePreviousShopCallbackAtCheckpoint() }
         if provesIndependentPending {
             // Explicit opt-in controlled counterexample: commit the first
@@ -330,8 +480,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard provesShopCallbackOrder, !callbackHeartbeatEntered else { return false }
         callbackHeartbeatEntered = true
         facts.insert("task144.controlled.previous-shop-callback-entered")
+        Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-entered", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
         await withCheckedContinuation { callbackHeartbeatContinuation = $0 }
         facts.insert("task144.controlled.previous-shop-callback-released")
+        Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-released", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
         return true
     }
 

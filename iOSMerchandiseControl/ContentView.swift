@@ -321,6 +321,9 @@ struct ContentView: View {
     }
 
     private var hidesBusinessDataForPendingRecovery: Bool {
+        #if DEBUG
+        if Task144RootObservation.enabled { return observeTask144RootPrivacyChoice() }
+        #endif
         _ = localAuthorizationRevision
         if let owner = supabaseAuthViewModel.sessionInfo?.userID,
            let shop = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)),
@@ -344,6 +347,45 @@ struct ContentView: View {
                 ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
             )
     }
+
+    #if DEBUG
+    private func observeTask144RootPrivacyChoice() -> Bool {
+        let observation = Task144RootObservation.Evaluation("root-privacy", callsite: "ContentView.hidesBusinessDataForPendingRecovery")
+        var hidden = false
+        var branch = "NOT_SELECTED"
+        defer { observation.finish(hidden, branch: branch, firstFalseLabel: "first-false-branch-condition") }
+        _ = localAuthorizationRevision
+        if let owner = observation.optional(supabaseAuthViewModel.sessionInfo?.userID, "owner"),
+           let shop = observation.optional(SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)), "selected-shop"),
+           let device = observation.attempt("device", { try DeviceInstallIDStore().requireDeviceInstallID() }),
+           observation.check(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: AccountBindingStore.accountHash(for: owner),
+             shopID: shop.shopID, deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device)), "confirmed-denial") {
+            branch = "confirmed-device-denial"; hidden = true
+            return true
+        }
+        if observation.check(syncStoreGenerationController.activeManifest != nil, "active-manifest-present") {
+            branch = "active-local-access"
+            hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "existing-local-access")
+            return hidden
+        }
+        if observation.check(syncStoreGenerationController.permitsScopedEmptyRoot(
+            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID), "scoped-empty-admitted") {
+            branch = "scoped-empty"; hidden = false
+            return false
+        }
+        if observation.check(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") {
+            branch = "pending-local-access"
+            hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "fallback-local-access")
+            return hidden
+        }
+        branch = "no-pending-journal"; hidden = false
+        return false
+    }
+    #endif
 
     private var hasUndecodableRecoveryJournal: Bool {
         let store = AccountBindingStore()

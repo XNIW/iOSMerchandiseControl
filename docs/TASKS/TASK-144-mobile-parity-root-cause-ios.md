@@ -206,6 +206,36 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 — diagnostica del primo diniego A conservata per CI
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — osservazione DEBUG dei soli operandi già valutati e del ramo che nasconde la root.
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/SyncStoreGeneration.swift` — osservazione DEBUG dell’ammissione vuota, ticket corrente, completamento/pubblicazione e classe/caso di errore prima della sanitizzazione.
+- `iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift` — osservazione DEBUG delle guardie di capture/revalidate realmente valutate, con gli stessi errori e short circuit.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — recorder RAM esistente con PID e limiti invariati; ancore del callback held/previous. Nessun payload, identificativo di business o descrizione libera di errore.
+- Questo file task — sole evidenze owned Execution/Fix/Handoff dal blob HEAD; il file worktree preesistente SHA14c119 rimane invariato.
+
+**Azioni eseguite:**
+1. Entrambi i medesimi reviewer dati/UX hanno approvato il freeze080b senza finding. Root ha verificato le copie forward/inverse, applicato selettivamente quattro file (receipt5ded), preservato DB3584 e gli altri44 file. Run freeze effettivo7db; nessuna modifica a test originali114/6fb, guardie d’autorità, query, scritture SQLite, navigation o dipendenze.
+2. Un’unica compilazione ed esecuzione del test originale `testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission` sul runner finale2c2/source7db: 1 PASS, 0 FAIL, 0 SKIP, 21.465908s, exit0, receiptfac64f78. Deadline unica600s comprensiva90s cleanup; rilascio del gruppo21:47:19.494429Z. Il risultato locale è NON_REPRODUCED e non attribuisce la causa del precedente fallimento CI6ff.
+3. Tutti i quattro export ufficiali sono exit0 entro la deadline originale (receipte50a). Verifica root18/18 PASS975038ed ed executor22/22 PASS7b0c45b5: source48, HEAD75ff, Task14c, MASTER/workflow/index/status, config86a67 checksum/stat e tre file default.store preservati; PG77206 assente e simulatore6B Shutdown.
+4. Diagnostica conservata esatta per ambiente/toolchain/ordine CI pertinente. Nessun inverse automatico su PASS. CAP128, dedup o assenza di un marker pertinente sono NOT_OBSERVED; startup proof-absent, timeout held intenzionale e ticket non corrente non costituiscono da soli la causa corrente.
+5. Le otto regressioni genuine sono PASS sul precedente freeze produzione754/HEAD75ff (receiptf807/root724). I gate completi sulla revisione comprensiva della diagnostica sono ancora da eseguire; il precedente Full04 è sospeso perché lega source754. AndroidAPK88/sessione/dati preservati; interazione primaria ancora bloccata dalla finestra Running Devices non raggiungibile.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build | ✅ ESEGUITO | Compilazione del singolo test originaleA/source7db PASS; Debug/Release/Analyze completi sulla revisione finale successiva NON ESEGUITI |
+| Static / reviewer | ✅ ESEGUITO | Medesimi due reviewer approvano080b; root20 sourcechecks e24 producerchecks PASS_STATIC |
+| Warning nuovi | ❌ NON ESEGUITO | Comparatore canonico Debug/Release/Analyze deve verificare la revisione finale; nessun PASS precedente riclassificato |
+| Coerenza planning | ✅ ESEGUITO | Diagnosi circoscritta di A; autorità e assert originali preservati |
+| Criteri di accettazione | ❌ NON ESEGUITO | Task FIX; gate finali, CI esatta, installazione primaria, live/parità e performance restano separatamente aperti |
+
+**Incertezze:**
+- Causa storica di A ancora UNKNOWN. Nessun nuovo fix di produzione A giustificato dal PASS locale.
+- I warning SQLite storici non sono dichiarati innocui o causali senza prova pertinente.
+
+
 ### Esecuzione — 2026-10-06 — editor ripristinato dopo l’aggancio alla finestra
 
 **File modificati:**
@@ -987,6 +1017,9 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix — 2026-10-06, A diagnostica080b:** conservata dopo il PASS originale locale. Solo osservazione DEBUG dei valori già valutati; errore/ordine/short circuit/callee count preservati. B rimane il fix DB3584 già verificato sul test originale; nessuna causa comune A/B dedotta. La source diagnostica e il runner finale restano tracciati nei pacchetti esterni `ios-empty-root-first-denial-observation-offline-20261006` e `ios-empty-root-first-denial-one-ui-run-01`.
+
+
 ### Fix — 2026-10-06 — confine di presentazione editor
 
 Candidate source48 approvato4f0ba0a3: solo Database3584 differisce dal B4, altri47 byte-identici. Callback sincrona `viewDidAppear` con controller e parent nella stessa finestra; ammissione fresca e presentationID corrente, tentativo unico per generazione e invalidazione su dismantle. Originale B completo PASS e72c; l’altro fallimento ufficiale UI277 resta distinto. Gate completi finali e nuova CI necessari prima dell’integrazione.
@@ -1022,6 +1055,9 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — A_ORIGINAL_LOCAL_PASS_NON_REPRODUCED / DIAGNOSTIC080B_RETAINED / B_DB3584_RETAINED; task FIX, NON DONE.** Unico A originale/source7db: 1P0F0S, nessuna causa CI attribuita. Dopo chiusura export/risorse, normale commit dei quattro soli file diagnostici e log owned, freeze effettivo con HEAD reale, genuine8 e gate completi sullo stesso source, poi CI pertinente. Vecchio Full04/source754 HOLD. Medesimi reviewer verificano terminali; no rerun cieco, inverse automatico, merge/install o PASS live. AndroidAPK88 non reinstallare/reset/logout: attende solo la finestra Running Devices accessibile già richiesta all’utente.
+
 
 **CURRENT 2026-10-06 — B_EDITOR_ORIGINAL_UI_PASS / PRODUCTION_PATCH_RETAINED; task FIX, NON DONE.** Root ha verificato receipt e72c/inverse91e/executor d77/root706 e conserva DB3584 con commit normale. Nuovo native HEAD e source freeze sono registrati nel pacchetto esterno `ios-window-attached-editor-production-retention-01`; vecchio freeze4f resta immutabile e non viene rinominato. Successivo owner I: genuine target8 sul nuovo source/freeze, poi full canonico1548 e Debug/Release/Analyze/TEST. A: diagnosi DEBUG circoscritta sui primi operandi effettivi, zero query aggiuntive o autorità indebolita; nessun rilancio cieco della CI originale. Android APK88/sessione/dati conservati, verifica UI primaria ancora bloccata dal canvas non raggiungibile. Nessun merge/CI verde/install/accettazione live dichiarato.
 
