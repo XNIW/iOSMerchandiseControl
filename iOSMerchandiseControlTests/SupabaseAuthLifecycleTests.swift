@@ -6,6 +6,221 @@ import XCTest
 
 @MainActor
 final class SupabaseAuthLifecycleTests: XCTestCase {
+    func testRealDeviceAuthorizationPublicationOccursOnMainActorBeforeObservedDefaultsWrite() async throws {
+        let fixture = try AuthLifecycleFixture()
+        _ = try await fixture.provider.client.auth.session
+        let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+        defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+        let observation = DeviceAuthorizationPublicationObservation()
+        let service = ShopDeviceRegistrationService(clientProvider: fixture.provider,
+            authorizationPublicationObserver: { observation.record($0) })
+        let first = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_THREAD_FIRST_ACTIVE", force: true) }
+        await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+        fixture.transport.releaseDeviceStatus()
+        let firstActive = await first.value
+        XCTAssertTrue(firstActive.canWrite)
+        let refused = await service.currentOwnerDeviceStatus(reason: "TASK144_THREAD_PUBLICATION", force: true)
+        XCTAssertEqual(refused.status, "revoked")
+        XCTAssertFalse(refused.canWrite)
+        XCTAssertEqual(observation.values, [true],
+            "The real actor service must publish observed authorization defaults on MainActor; a worker lease cannot synchronously wait on the UI lease reader")
+        XCTAssertTrue(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+    }
+
+    func testHealthyCacheReadDoesNotSupersedeAnAdmittedHeldDeviceStatusRPC() async throws {
+        let fixture = try AuthLifecycleFixture()
+        _ = try await fixture.provider.client.auth.session
+        let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+        defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+        let service = ShopDeviceRegistrationService(clientProvider: fixture.provider)
+        let initial = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_HTTP_FIRST", force: true) }
+        await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+        fixture.transport.releaseDeviceStatus()
+        let active = await initial.value
+        XCTAssertTrue(active.canWrite)
+        let held = expectation(description: "Actual later device RPC admitted and held")
+        fixture.transport.holdNextDeviceStatus(active: false, entered: held)
+        let admitted = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_HTTP_REVOKED", force: true) }
+        await fulfillment(of: [held], timeout: 3)
+        let cached = await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_READ_DURING_HTTP", force: false)
+        XCTAssertEqual(cached, active)
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 2, "Healthy cache must add no RPC")
+        fixture.transport.releaseDeviceStatus()
+        let revoked = await admitted.value
+        XCTAssertEqual(revoked.status, "revoked", "A read-only healthy cache lookup must not retire genuine HTTP admission")
+        XCTAssertFalse(revoked.canWrite)
+        XCTAssertTrue(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+    }
+
+    func testEarlierActiveDeviceStatusCannotEraseLaterRevocationOrGrantReturnedAuthority() async throws {
+        let fixture = try AuthLifecycleFixture()
+        _ = try await fixture.provider.client.auth.session
+        let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+        defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+        let service = ShopDeviceRegistrationService(clientProvider: fixture.provider)
+        let oldActive = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_HELD_ACTIVE", force: true) }
+        await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+        let revoked = await service.currentOwnerDeviceStatus(reason: "TASK144_LATER_REVOKED", force: true)
+        XCTAssertEqual(revoked.status, "revoked")
+        XCTAssertFalse(revoked.canWrite)
+        XCTAssertTrue(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+        fixture.transport.releaseDeviceStatus()
+        let stale = await oldActive.value
+        XCTAssertNotEqual(stale.status, "active", "The obsolete RPC return value must not grant authority either")
+        XCTAssertFalse(stale.canWrite)
+        let reopenedDefaults = UserDefaults()
+        XCTAssertTrue(SelectedShopStore(defaults: reopenedDefaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash), "A fresh store reader must retain the device revocation")
+        let cached = await service.currentOwnerDeviceStatus(reason: "TASK144_CURRENT_SNAPSHOT", force: false)
+        XCTAssertEqual(cached.status, "revoked")
+        XCTAssertEqual(cached.checkedAt, revoked.checkedAt)
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 2)
+        let fresh = await service.currentOwnerDeviceStatus(reason: "TASK144_FRESH_ACTIVE_AFTER_REVOKED", force: true)
+        XCTAssertEqual(fresh.status, "active")
+        XCTAssertTrue(fresh.canWrite)
+        XCTAssertFalse(SelectedShopStore(defaults: reopenedDefaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash), "A genuinely new admission may restore this exact device")
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 3)
+    }
+
+    func testCancelledHeldDeviceStatusCannotClearConfirmedRevocation() async throws {
+        let fixture = try AuthLifecycleFixture()
+        _ = try await fixture.provider.client.auth.session
+        let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+        defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+        let service = ShopDeviceRegistrationService(clientProvider: fixture.provider)
+        let cancelled = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_CANCELLED_ACTIVE", force: true) }
+        await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+        let revoked = await service.currentOwnerDeviceStatus(reason: "TASK144_REVOCATION_BEFORE_CANCEL", force: true)
+        XCTAssertEqual(revoked.status, "revoked")
+        cancelled.cancel()
+        fixture.transport.releaseDeviceStatus()
+        let returned = await cancelled.value
+        XCTAssertFalse(returned.canWrite)
+        XCTAssertNotEqual(returned.status, "active")
+        XCTAssertTrue(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+        let cached = await service.currentOwnerDeviceStatus(reason: "TASK144_CANCELLED_CURRENT_SNAPSHOT", force: false)
+        XCTAssertEqual(cached.status, "revoked")
+        XCTAssertEqual(cached.checkedAt, revoked.checkedAt)
+    }
+
+    func testCachedActiveDeviceStatusCannotOverrideExternalRevocationAndFreshAdmissionCanRestore() async throws {
+        let fixture = try AuthLifecycleFixture()
+        _ = try await fixture.provider.client.auth.session
+        let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+        defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+        let service = ShopDeviceRegistrationService(clientProvider: fixture.provider)
+        let first = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_FIRST_ACTIVE", force: true) }
+        await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+        fixture.transport.releaseDeviceStatus()
+        let active = await first.value
+        XCTAssertEqual(active.status, "active"); XCTAssertTrue(active.canWrite)
+        let healthyCache = await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_HEALTHY", force: false)
+        XCTAssertEqual(healthyCache, active)
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 1, "Unchanged authority should reuse its healthy cache offline")
+        let external = ShopDeviceRegistrationService(clientProvider: fixture.provider)
+        let revoked = await external.currentOwnerDeviceStatus(reason: "TASK144_EXTERNAL_INSTANCE_REVOKED", force: true)
+        XCTAssertEqual(revoked.status, "revoked")
+        XCTAssertTrue(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+        let cachedAfterDenial = await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_AFTER_REVOCATION", force: false)
+        XCTAssertFalse(cachedAfterDenial.canWrite, "A writable TTL cache cannot override a current durable denial")
+        XCTAssertNotEqual(cachedAfterDenial.status, "active")
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 2, "Known durable denial must be enforced without an online request")
+        XCTAssertTrue(SelectedShopStore(defaults: UserDefaults()).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+        let fresh = await service.currentOwnerDeviceStatus(reason: "TASK144_EXPLICIT_NEW_ACTIVE", force: true)
+        XCTAssertTrue(fresh.canWrite); XCTAssertEqual(fresh.status, "active")
+        XCTAssertFalse(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+            shopID: scope.shopID, deviceIdentityHash: scope.deviceHash))
+        let freshCached = await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_FRESH_RESTORED", force: false)
+        XCTAssertEqual(freshCached, fresh)
+        XCTAssertEqual(fixture.transport.deviceStatusRequestCount, 3)
+    }
+
+    func testDeviceCacheCannotReuseAuthorityAcrossAccountBindingOrInstallChange() async throws {
+        for mismatch in ["account", "binding", "device"] {
+            let fixture = try AuthLifecycleFixture()
+            _ = try await fixture.provider.client.auth.session
+            let scope = try makeDeviceStatusStandardSelection(owner: fixture.original.user.id)
+            defer { scope.restore(); fixture.transport.releaseDeviceStatus() }
+            let suite = "Task144DeviceCache.\(UUID().uuidString)"
+            let deviceDefaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { deviceDefaults.removePersistentDomain(forName: suite) }
+            deviceDefaults.set(try DeviceInstallIDStore().requireDeviceInstallID(), forKey: "shop.device.install.id")
+            let service = ShopDeviceRegistrationService(clientProvider: fixture.provider,
+                installIDStore: DeviceInstallIDStore(defaults: deviceDefaults))
+            let first = Task { await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_SCOPE_FIRST", force: true) }
+            await fulfillment(of: [fixture.transport.deviceStatusStarted], timeout: 3)
+            fixture.transport.releaseDeviceStatus()
+            let original = await first.value
+            XCTAssertTrue(original.canWrite)
+            if mismatch == "account" {
+                SelectedShopStore().noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+            } else if mismatch == "binding" {
+                XCTAssertTrue(AccountBindingStore().saveBinding(accountHash: scope.accountHash, storeIdentity: .anonymous))
+            } else {
+                deviceDefaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id")
+            }
+            let changed = await service.currentOwnerDeviceStatus(reason: "TASK144_CACHE_SCOPE_CHANGED", force: false)
+            XCTAssertFalse(changed.canWrite, "A cached authorization belongs only to the admitted account/binding/install")
+            XCTAssertNotEqual(changed, original)
+        }
+    }
+
+    private func makeDeviceStatusStandardSelection(owner: UUID) throws -> (accountHash: String, shopID: UUID, deviceHash: String, restore: () -> Void) {
+        let defaults = UserDefaults.standard
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shopID = UUID()
+        let deviceHash = DeviceInstallIDStore.identityHash(for: try DeviceInstallIDStore().requireDeviceInstallID())
+        let keys = ["mobile.shopContext.activeAccountHash.v1", "sync.accountBinding.v1",
+                    "mobile.shopContext.selected.v1.account.\(accountHash)",
+                    "mobile.shopContext.resolved.v1.account.\(accountHash)",
+                    "mobile.shopContext.localDeviceDenied.v1.\(accountHash).\(shopID.uuidString.lowercased()).\(deviceHash)",
+                    SelectedShopStore.localAuthorizationRevisionKey]
+        // Only known admission keys are retained in memory and restored; no
+        // private configuration/session or unrelated defaults are enumerated.
+        let previous = keys.map { defaults.object(forKey: $0) }
+        let selected = SelectedShop(shopID: shopID, code: "TASK144", name: "Controlled device status",
+            role: "owner", status: "active", selectable: true, canWrite: true)
+        let store = SelectedShopStore()
+        store.noteActiveAccount(accountHash)
+        XCTAssertTrue(store.save(selected, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore().saveBinding(accountHash: accountHash, storeIdentity: selected.localStoreIdentity))
+        return (accountHash, shopID, deviceHash, {
+            Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+                for (index, key) in keys.enumerated() {
+                    if let old = previous[index] { defaults.set(old, forKey: key) }
+                    else { defaults.removeObject(forKey: key) }
+                }
+            }
+            for (index, key) in keys.enumerated() {
+                XCTAssertEqual(defaults.object(forKey: key) as? NSObject, previous[index] as? NSObject)
+            }
+        })
+    }
+
+    func testExpiredKnownSessionKeepsLocalMutationIdentityWhileRefreshIsHeldAndLogoutClearsIt() async throws {
+        let fixture = try AuthLifecycleFixture(expiredOriginal: true)
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        defer { fixture.transport.releaseRefresh() }
+        let service = SupabaseAuthService(provider: fixture.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        XCTAssertEqual(viewModel.sessionInfo?.userID, fixture.original.user.id)
+        XCTAssertFalse(viewModel.isSignedIn, "Cloud calls still require the existing valid session gate")
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.original.user.id,
+            "Known SDK identity must reach the exact local store fence before refresh completes")
+        fixture.transport.releaseRefresh()
+        _ = try await fixture.provider.client.auth.session
+        try await service.signOut()
+        viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertNil(viewModel.localMutationOwnerUserID, "Explicit logout must remove local identity")
+    }
+
     func testEarlierRefreshCannotRestoreCompletedLogoutOrRestart() async throws {
         let fixture = try AuthLifecycleFixture()
         let service = SupabaseAuthService(provider: fixture.provider)
@@ -426,6 +641,7 @@ nonisolated private final class AuthLifecycleMemoryStorage: AuthLocalStorage, @u
 }
 
 nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
+    let deviceStatusStarted = XCTestExpectation(description: "Real device status RPC held")
     let refreshStarted = XCTestExpectation(description: "Real SDK refresh HTTP started")
     let secondRefreshStarted = XCTestExpectation(description: "Replacement SDK refresh HTTP started")
     let loginStarted = XCTestExpectation(description: "Real SDK sign-in HTTP started")
@@ -436,6 +652,11 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
     private var pendingLogin: AuthLifecycleURLProtocol?
     private var loginCount = 0
     private var observedLogoutScopes: [String] = []
+    private var heldDeviceStatus: AuthLifecycleURLProtocol?
+    private var heldDeviceStatusActive = true
+    private var nextDeviceStatusHold: (active: Bool, entered: XCTestExpectation)?
+    private var deviceStatusCount = 0
+    var deviceStatusRequestCount: Int { lock.withLock { deviceStatusCount } }
     private let refreshed: Data
     private let newLogin: Data
     private let oldLogin: Data
@@ -480,6 +701,21 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
             lock.withLock { observedLogoutScopes.append(scope) }
             logoutStarted.fulfill()
             if !holdLogout { request.respond(status: logoutStatus, data: responseData(status: logoutStatus, success: Data())) }
+        } else if url.lastPathComponent == "shop_device_status_for_shop" {
+            let (index, extraHold) = lock.withLock { () -> (Int, XCTestExpectation?) in
+                let index = deviceStatusCount
+                deviceStatusCount += 1
+                if index == 0 { heldDeviceStatus = request; heldDeviceStatusActive = true }
+                else if let extra = nextDeviceStatusHold {
+                    heldDeviceStatus = request; heldDeviceStatusActive = extra.active
+                    nextDeviceStatusHold = nil
+                    return (index, extra.entered)
+                }
+                return (index, nil)
+            }
+            if index == 0 { deviceStatusStarted.fulfill() }
+            else if let extraHold { extraHold.fulfill() }
+            else { request.respond(status: 200, data: deviceStatusData(active: index > 1)) }
         } else {
             request.client?.urlProtocol(request, didFailWithError: URLError(.unsupportedURL))
         }
@@ -491,6 +727,17 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
     func releaseLogin() {
         let request = lock.withLock { let value = pendingLogin; pendingLogin = nil; return value }
         request?.respond(status: heldLoginStatus, data: responseData(status: heldLoginStatus, success: oldLogin))
+    }
+    func holdNextDeviceStatus(active: Bool, entered: XCTestExpectation) {
+        lock.withLock { nextDeviceStatusHold = (active, entered) }
+    }
+    func releaseDeviceStatus() {
+        let (request, active) = lock.withLock { let value = heldDeviceStatus; heldDeviceStatus = nil; return (value, heldDeviceStatusActive) }
+        request?.respond(status: 200, data: deviceStatusData(active: active))
+    }
+    private func deviceStatusData(active: Bool) -> Data {
+        Data((active ? #"{"ok":true,"status":"active","code":"active","can_write":true}"#
+                    : #"{"ok":false,"status":"revoked","code":"revoked","can_write":false}"#).utf8)
     }
     private func responseData(status: Int, success: Data) -> Data {
         status < 400 ? success : Data(#"{"code":"synthetic_test_error","message":"synthetic controlled error"}"#.utf8)
@@ -521,4 +768,11 @@ nonisolated private final class AuthLifecycleURLProtocol: URLProtocol, @unchecke
         client?.urlProtocol(self, didLoad: data)
         client?.urlProtocolDidFinishLoading(self)
     }
+}
+
+nonisolated private final class DeviceAuthorizationPublicationObservation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [Bool] = []
+    func record(_ value: Bool) { lock.withLock { recorded.append(value) } }
+    var values: [Bool] { lock.withLock { recorded } }
 }

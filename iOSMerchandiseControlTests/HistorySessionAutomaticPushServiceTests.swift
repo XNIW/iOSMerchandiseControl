@@ -42,7 +42,20 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
 
         var read = ModelContext(container)
         XCTAssertEqual(try pendingStatuses(context: read), [.pending])
-        XCTAssertEqual(try read.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+        let afterLoss = try read.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        XCTAssertEqual(afterLoss.count, 1, "The original attempted business payload is durable before HTTP")
+        let sealed = try XCTUnwrap(afterLoss.first)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        let pending = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first)
+        let attemptedBody = try JSONDecoder().decode(SharedSheetSessionUpsertRow.self,
+            from: XCTUnwrap(remote.attemptedPayloads().first))
+        XCTAssertEqual(sealed.id, pending.changeID)
+        XCTAssertEqual(sealed.clientEventID, pending.idempotencyKey)
+        XCTAssertEqual(sealed.domain, LocalPendingBusinessAttemptStore.domain)
+        XCTAssertEqual(sealed.status, .localOnly)
+        XCTAssertTrue(try HistorySessionPushService.sealedAttemptExplainsHistoryFingerprint(
+            HistorySessionPayloadCodec.fingerprintHash(for: attemptedBody), entry: sealed,
+            change: pending, localHistory: XCTUnwrap(read.fetch(FetchDescriptor<HistoryEntry>()).first), scope: scope))
         let persistedAfterLoss = remote.persistedRowCount()
         XCTAssertEqual(persistedAfterLoss, 1)
 
@@ -53,6 +66,9 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
         let attemptedAfterRetry = remote.attemptedRemoteIDs()
         XCTAssertEqual(persistedAfterRetry, 1)
         XCTAssertEqual(attemptedAfterRetry, [remoteID, remoteID])
+        let retriedPayloads = try remote.attemptedPayloads()
+        XCTAssertEqual(retriedPayloads.count, 2)
+        XCTAssertEqual(retriedPayloads.first, retriedPayloads.last, "The exact original A payload is replayed before its ACK")
         read = ModelContext(container)
         let stored = try XCTUnwrap(try read.fetch(FetchDescriptor<HistoryEntry>()).first)
         XCTAssertEqual(stored.remoteDeletedAt, deletedAt)
@@ -109,6 +125,77 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
         XCTAssertEqual(starvationRequestSizes, [1])
         XCTAssertEqual(starvationAttemptedIDs, [dirtyID])
         XCTAssertEqual(try pendingStatuses(context: ModelContext(container)), [.acknowledged])
+    }
+
+    func testHistoryLostAckThenSecondSaveReopensAndReplaysOriginalRevisionBeforeLaterIntent() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("history.sqlite")
+        let fixture = try makeScopeFixture()
+        defer { fixture.cleanup() }
+        let remoteID = UUID()
+        let remote = AutomaticHistoryRemoteFake(failFirstAfterCommit: true)
+        var originalKey = ""
+        var originalPayload = Data()
+        var originalID = ""
+        var laterKey = ""
+        var laterID = ""
+        do {
+            let container = try makeContainer(storeURL: storeURL)
+            let context = ModelContext(container)
+            let entry = makeEntry(remoteID: remoteID, fixture: fixture, revision: 1,
+                                  lastSyncedRevision: 0, deletedAt: nil,
+                                  data: [["value"], ["First durable history intent"]])
+            context.insert(entry)
+            let pending = makePending(remoteID: remoteID, fixture: fixture)
+            context.insert(pending); originalKey = pending.idempotencyKey; originalID = pending.changeID
+            try context.save()
+            do {
+                _ = try await HistorySessionPushService(modelContainer: container, remote: remote,
+                    recorder: nil, defaults: fixture.defaults).syncHistorySessions(ownerUserID: owner, mode: .incremental)
+                XCTFail("The server must commit the first revision and lose its response")
+            } catch AutomaticHistoryRemoteError.committedResponseLost {}
+            originalPayload = try XCTUnwrap(remote.attemptedPayloads().first)
+            let edit = ModelContext(container)
+            let current = try XCTUnwrap(edit.fetch(FetchDescriptor<HistoryEntry>()).first)
+            current.data = [["value"], ["Later durable history intent"]]
+            current.markHistorySessionLocalMutation()
+            let later = try XCTUnwrap(try LocalPendingChangeAccumulator(context: edit, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordHistorySessionChange(entry: current,
+                    operation: .upsert, changedFields: ["payload"]))
+            laterKey = later.idempotencyKey; laterID = later.changeID
+            XCTAssertNotEqual(laterKey, originalKey)
+            XCTAssertNotEqual(laterID, originalID)
+            // The UI uses standard defaults. This isolated fixture keeps its
+            // selection in a private suite and supplies that same scope here.
+            current.assignHistoryScope(ownerUserID: owner, selectedShopID: fixture.shopID,
+                                       storeIdentity: fixture.storeIdentity)
+            try edit.save()
+        }
+        let reopened = try makeContainer(storeURL: storeURL)
+        XCTAssertTrue(try ModelContext(reopened).fetch(FetchDescriptor<LocalPendingChange>())
+            .contains { $0.idempotencyKey == originalKey })
+        _ = try await HistorySessionPushService(modelContainer: reopened, remote: remote,
+            recorder: nil, defaults: fixture.defaults).syncHistorySessions(ownerUserID: owner, mode: .incremental)
+        let attempts = try remote.attemptedPayloads()
+        XCTAssertGreaterThanOrEqual(attempts.count, 3)
+        XCTAssertEqual(attempts.dropFirst().first, originalPayload,
+                       "The original payload/revision must survive process death and precede the later Save")
+        XCTAssertNotEqual(attempts.last, originalPayload)
+        let read = ModelContext(reopened)
+        let entry = try XCTUnwrap(read.fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(entry.data, [["value"], ["Later durable history intent"]])
+        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
+        XCTAssertEqual(remote.persistedRowCount(), 1)
+        XCTAssertTrue(try pendingStatuses(context: read).allSatisfy { $0 == .acknowledged })
+        let pending = try read.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pending.first { $0.changeID == laterID }?.idempotencyKey, laterKey)
+        XCTAssertEqual(remote.persistedRow(remoteID: remoteID)?.data, [["value"], ["Later durable history intent"]])
+        XCTAssertTrue(try read.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
+        _ = try await HistorySessionPushService(modelContainer: reopened, remote: remote,
+            recorder: nil, defaults: fixture.defaults).syncHistorySessions(ownerUserID: owner, mode: .incremental)
+        XCTAssertEqual(try remote.attemptedPayloads().count, attempts.count)
     }
 
     func testHistoryRequestsAreChunkedAndEachAckHasDurableLocalEvent() async throws {
@@ -274,7 +361,7 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
         )).map(\.status)
     }
 
-    private func makeContainer() throws -> ModelContainer {
+    private func makeContainer(storeURL: URL? = nil) throws -> ModelContainer {
         let schema = Schema([
             Product.self,
             Supplier.self,
@@ -286,9 +373,10 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
             SyncEventOutboxEntry.self,
             LocalPendingChange.self
         ])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = storeURL.map { ModelConfiguration(schema: schema, url: $0) }
+            ?? ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
-        Self.retainedContainers.append(container)
+        if storeURL == nil { Self.retainedContainers.append(container) }
         return container
     }
 }
@@ -313,6 +401,7 @@ private final class AutomaticHistoryRemoteFake: HistorySessionRemoteWriting, @un
     private var rowsByID: [UUID: RemoteSharedSheetSessionRow] = [:]
     private var requestRowCounts: [Int] = []
     private var attemptedIDs: [UUID] = []
+    private var attemptedRows: [SharedSheetSessionUpsertRow] = []
     private var shouldFailAfterCommit: Bool
 
     init(failFirstAfterCommit: Bool = false) {
@@ -325,6 +414,7 @@ private final class AutomaticHistoryRemoteFake: HistorySessionRemoteWriting, @un
     ) async throws -> [RemoteSharedSheetSessionRow] {
         requestRowCounts.append(rows.count)
         attemptedIDs.append(contentsOf: rows.map(\.remoteID))
+        attemptedRows.append(contentsOf: rows)
         for row in rows {
             rowsByID[row.remoteID] = RemoteSharedSheetSessionRow(
                 remoteID: row.remoteID,
@@ -365,6 +455,12 @@ private final class AutomaticHistoryRemoteFake: HistorySessionRemoteWriting, @un
     }
 
     func persistedRowCount() -> Int { rowsByID.count }
+    func persistedRow(remoteID: UUID) -> RemoteSharedSheetSessionRow? { rowsByID[remoteID] }
     func requestSizes() -> [Int] { requestRowCounts }
     func attemptedRemoteIDs() -> [UUID] { attemptedIDs }
+    func attemptedPayloads() throws -> [Data] {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try attemptedRows.map { try encoder.encode($0) }
+    }
 }

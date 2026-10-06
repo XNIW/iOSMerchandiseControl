@@ -118,6 +118,8 @@ struct StorefrontProductRowSummary: View {
 }
 
 struct StorefrontEditorSection: View {
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
+    @Environment(\.localRootPresentationState) private var localPresentation
     @EnvironmentObject private var auth: SupabaseAuthViewModel
     @EnvironmentObject private var shopContext: ShopContextStore
     @EnvironmentObject private var store: StorefrontAuthoringStore
@@ -131,6 +133,23 @@ struct StorefrontEditorSection: View {
     let operationalName: String
     let operationalRetailPrice: Double?
     let operationalCategoryRemoteID: UUID?
+    private let capturedRemoteID: UUID?
+    private let mountedPresentationID: String?
+
+    init(product: Product?, operationalName: String, operationalRetailPrice: Double?, operationalCategoryRemoteID: UUID?, presentationID: String? = nil) {
+        self.product = product
+        self.operationalName = operationalName
+        self.operationalRetailPrice = operationalRetailPrice
+        self.operationalCategoryRemoteID = operationalCategoryRemoteID
+        self.capturedRemoteID = product?.remoteID
+        self.mountedPresentationID = presentationID
+    }
+
+    private var isCurrentModelGeneration: Bool {
+        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+    }
+    private var currentProduct: Product? { isCurrentModelGeneration ? product : nil }
+    private var currentRemoteID: UUID? { isCurrentModelGeneration ? capturedRemoteID : nil }
 
     @State private var expanded = false
     @State private var draftExpectedVersion: Int64 = 0
@@ -202,7 +221,7 @@ struct StorefrontEditorSection: View {
     }
 
     private var scopeTaskID: String {
-        "\(scope?.cacheNamespace ?? "none").\(product?.remoteID?.uuidString ?? "unreconciled")"
+        "\(scope?.cacheNamespace ?? "none").\(currentRemoteID?.uuidString ?? "unreconciled")"
     }
 
     private var canMutate: Bool {
@@ -210,7 +229,7 @@ struct StorefrontEditorSection: View {
         if debugCanMutateOverride,
            store.isAvailable,
            scope != nil,
-           product?.remoteID != nil,
+           currentRemoteID != nil,
            !mutating,
            !adoptingImage {
             return true
@@ -218,7 +237,7 @@ struct StorefrontEditorSection: View {
         #endif
         guard store.isAvailable,
               scope != nil,
-              product?.remoteID != nil,
+              currentRemoteID != nil,
               shopContext.context.syncAllowed,
               let selected = shopContext.context.selectedShop else { return false }
         return selected.canWrite && selected.isValidProductImageSelection && !mutating && !adoptingImage
@@ -233,7 +252,7 @@ struct StorefrontEditorSection: View {
 
     @ViewBuilder
     private var collapsedSummary: some View {
-        if product?.remoteID == nil {
+        if currentRemoteID == nil {
             Label(L("storefront.sync.required"), systemImage: "icloud.slash")
                 .foregroundStyle(.orange)
                 .fixedSize(horizontal: false, vertical: true)
@@ -305,7 +324,7 @@ struct StorefrontEditorSection: View {
         if !store.isAvailable {
             Label(L("storefront.unavailable"), systemImage: "lock.fill")
                 .foregroundStyle(.secondary)
-        } else if product?.remoteID == nil {
+        } else if currentRemoteID == nil {
             Label(L("storefront.sync.required"), systemImage: "icloud.slash")
                 .foregroundStyle(.orange)
         } else {
@@ -387,8 +406,8 @@ struct StorefrontEditorSection: View {
             Text(L("storefront.field.public_image"))
                 .font(.subheadline.weight(.semibold))
             if let imageScope,
-               let productID = product?.remoteID,
-               let versionID = product?.primaryImageVersionID {
+               let productID = currentRemoteID,
+               let versionID = currentProduct?.primaryImageVersionID {
                 ProductImageRemoteView(
                     scope: imageScope,
                     productID: productID,
@@ -530,7 +549,7 @@ struct StorefrontEditorSection: View {
     }
 
     private func load(scope: StorefrontScope) async {
-        guard let productID = product?.remoteID else { return }
+        guard let productID = currentRemoteID else { return }
         loading = true
         message = nil
         do {
@@ -560,7 +579,7 @@ struct StorefrontEditorSection: View {
     private func mutate(_ operation: StorefrontMutationOperation) {
         guard validate(operation: operation),
               let scope,
-              let productID = product?.remoteID else { return }
+              let productID = currentRemoteID else { return }
         operationTask?.cancel()
         mutating = true
         message = nil
@@ -641,8 +660,8 @@ struct StorefrontEditorSection: View {
 
     private func adoptOperationalImage() {
         guard let imageScope,
-              let productID = product?.remoteID,
-              let sourceVersionID = product?.primaryImageVersionID,
+              let productID = currentRemoteID,
+              let sourceVersionID = currentProduct?.primaryImageVersionID,
               let publicationID = publication?.publicationId else { return }
         operationTask?.cancel()
         adoptingImage = true
@@ -675,7 +694,7 @@ struct StorefrontEditorSection: View {
     }
 
     private func reloadFromConflict(_ server: StorefrontPublication) {
-        if let scope, let productID = product?.remoteID {
+        if let scope, let productID = currentRemoteID {
             do { try store.clearLocalDraft(scope: scope, productID: productID) }
             catch { message = L("storefront.error.local_persistence"); return }
         }

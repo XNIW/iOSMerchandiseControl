@@ -204,7 +204,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
         case product(PersistentIdentifier)
     }
 
-    nonisolated private enum CatalogRemoteCall: Sendable {
+    nonisolated private enum CatalogRemoteCall: Codable, Sendable {
         case createSupplier(SyncAutomaticSupplierCreatePayload)
         case updateSupplier(UUID, SyncAutomaticSupplierUpdatePayload)
         case createCategory(SyncAutomaticCategoryCreatePayload)
@@ -233,6 +233,13 @@ final class CatalogPushService: SyncCatalogPushProviding {
         let isTombstone: Bool
     }
 
+    nonisolated private struct StoredCatalogMutation: Codable {
+        let call: CatalogRemoteCall
+        let businessFingerprint: String?
+        let isCreate: Bool
+        let isTombstone: Bool
+    }
+
     nonisolated private static func withFreshScopedContext<Result>(
         modelContainer: ModelContainer,
         scope: Task126VerifiedOwnerStoreScope,
@@ -248,7 +255,9 @@ final class CatalogPushService: SyncCatalogPushProviding {
             )
             let context = ModelContext(modelContainer)
             context.autosaveEnabled = false
-            return try body(context)
+            let result = try body(context)
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+            return result
         }
     }
 
@@ -264,6 +273,40 @@ final class CatalogPushService: SyncCatalogPushProviding {
     }
 
     nonisolated private static func prepareMutation(
+        changeID: String, context: ModelContext, ownerUserID: UUID,
+        scope: Task126VerifiedOwnerStoreScope
+    ) throws -> PreparedCatalogMutation? {
+        guard let change = try fetchPendingChange(changeID: changeID, context: context),
+              change.status == .pending,
+              LocalPendingChangeScopeMatcher.matches(change, ownerUserID: ownerUserID,
+                accountHash: scope.accountHash, storeIdentity: scope.storeIdentity) else { return nil }
+        if let stored = try LocalPendingBusinessAttemptStore.load(StoredCatalogMutation.self,
+            change: change, kind: "catalog", context: context, scope: scope) {
+            let entity: CatalogEntityReference?
+            switch change.entityKind {
+            case .supplier: entity = try findSupplier(for: change, context: context).map { .supplier($0.persistentModelID) }
+            case .productCategory: entity = try findCategory(for: change, context: context).map { .category($0.persistentModelID) }
+            case .product: entity = try findProduct(for: change, context: context).map { .product($0.persistentModelID) }
+            default: throw CatalogPushError.responseMismatch
+            }
+            return PreparedCatalogMutation(pending: LocalPendingChangeCASToken(change), entity: entity,
+                businessFingerprint: stored.businessFingerprint, action: .remote(stored.call),
+                isCreate: stored.isCreate, isTombstone: stored.isTombstone)
+        }
+        guard let fresh = try prepareFreshMutation(changeID: changeID, context: context,
+            ownerUserID: ownerUserID, scope: scope) else { return nil }
+        guard case .remote(let call) = fresh.action else { return fresh }
+        change.lastAttemptAt = Date()
+        let token = LocalPendingChangeCASToken(change)
+        try LocalPendingBusinessAttemptStore.seal(StoredCatalogMutation(call: call,
+            businessFingerprint: fresh.businessFingerprint, isCreate: fresh.isCreate,
+            isTombstone: fresh.isTombstone), pending: token, kind: "catalog", context: context, scope: scope)
+        return PreparedCatalogMutation(pending: token, entity: fresh.entity,
+            businessFingerprint: fresh.businessFingerprint, action: fresh.action,
+            isCreate: fresh.isCreate, isTombstone: fresh.isTombstone)
+    }
+
+    nonisolated private static func prepareFreshMutation(
         changeID: String,
         context: ModelContext,
         ownerUserID: UUID,
@@ -641,6 +684,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
             throw Task126OwnerStoreGateError.scopeChanged
         }
         let tokenMatches = mutation.pending.matches(change)
+        let dependents = try pendingCatalogChanges(context: context, ownerUserID: ownerUserID, scope: scope).filter {
+            $0.changeID != change.changeID && $0.logicalKey == mutation.pending.logicalKey
+                && $0.entityKindRaw == mutation.pending.entityKindRaw && $0.lastAttemptAt == nil
+                && $0.createdAt >= change.createdAt
+                && $0.baselineFingerprintHash == mutation.pending.intendedFingerprintHash
+        }
         var metadataAccepted = false
         var currentBusinessFingerprint: String?
         var outcome = CatalogPushOutcome(result: SyncCatalogPushResult(plan: plan))
@@ -711,26 +760,55 @@ final class CatalogPushService: SyncCatalogPushProviding {
             outcome.result.supplierUpdates = 1
             outcome.supplierIDs = [row.id]
             if mutation.isTombstone { outcome.supplierTombstoneIDs = [row.id] }
-            metadataAccepted = tokenMatches && mutation.isTombstone
+            metadataAccepted = tokenMatches && (mutation.isTombstone || (mutation.isCreate && !dependents.isEmpty))
         case (.category(let row), nil):
             outcome.result.categoryUpdates = 1
             outcome.categoryIDs = [row.id]
             if mutation.isTombstone { outcome.categoryTombstoneIDs = [row.id] }
-            metadataAccepted = tokenMatches && mutation.isTombstone
+            metadataAccepted = tokenMatches && (mutation.isTombstone || (mutation.isCreate && !dependents.isEmpty))
         case (.product(let row), nil):
             outcome.result.productUpdates = 1
             outcome.productIDs = [row.id]
             if mutation.isTombstone { outcome.productTombstoneIDs = [row.id] }
-            metadataAccepted = tokenMatches && mutation.isTombstone
+            metadataAccepted = tokenMatches && (mutation.isTombstone || (mutation.isCreate && !dependents.isEmpty))
         default:
             throw CatalogPushError.responseMismatch
         }
 
         let businessMatches = mutation.isTombstone
             || currentBusinessFingerprint == mutation.businessFingerprint
-        if tokenMatches, businessMatches, metadataAccepted {
+        if tokenMatches, businessMatches || !dependents.isEmpty, metadataAccepted {
+            // Bind this original intent to its verified typed ACK. Newly
+            // created relations had no remote ID when the Save was captured.
+            switch readBack {
+            case .supplier(let row): change.entityRemoteID = row.id
+            case .category(let row): change.entityRemoteID = row.id
+            case .product(let row): change.entityRemoteID = row.id
+            }
             change.status = .acknowledged
             change.updatedAt = Date()
+            for dependent in dependents {
+                // Only a proven response for the sealed predecessor advances
+                // this dependent chain. Its new key and local body stay intact.
+                let id: UUID
+                let updatedAt: String?
+                switch readBack {
+                case .supplier(let row): id = row.id; updatedAt = row.updatedAt
+                case .category(let row): id = row.id; updatedAt = row.updatedAt
+                case .product(let row): id = row.id; updatedAt = row.updatedAt
+                }
+                dependent.entityRemoteID = id
+                dependent.logicalKey = LocalPendingChangeLogicalKey.remoteEntity(kind: dependent.entityKind, remoteID: id)
+                if dependent.operation == .create { dependent.operation = .update }
+                dependent.baseRemoteUpdatedAt = SupabaseRemoteDateParser.parse(updatedAt)
+                dependent.baselineFingerprintHash = mutation.businessFingerprint
+            }
+            try LocalPendingBusinessAttemptStore.remove(changeID: mutation.pending.changeID, context: context)
+            switch readBack {
+            case .supplier(let row): try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            case .category(let row): try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            case .product(let row): try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            }
         }
         try enqueueCatalogSyncEventWithLeaseHeld(
             context: context,

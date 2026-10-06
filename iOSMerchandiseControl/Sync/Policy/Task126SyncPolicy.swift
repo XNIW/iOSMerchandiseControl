@@ -396,8 +396,15 @@ nonisolated enum Task126OwnerStoreGate {
             case .retired:
                 throw Task126OwnerStoreGateError.retiredStoreGeneration
             case .active:
+                if leaseStore.activeManifestWithLeaseHeld(modelContainer) != nil,
+                   !leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer) {
+                    throw Task126OwnerStoreGateError.bindingMismatch
+                }
                 let bindingStore = AccountBindingStore(defaults: defaults)
-                guard !bindingStore.hasPendingReplacementJournal else {
+                guard !bindingStore.hasPendingReplacementJournal
+                    || permitsSameScopeLocalAccessWithLeaseHeld(
+                        modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults
+                    ) else {
                     throw Task126OwnerStoreGateError.replacementInterrupted
                 }
                 if let ownerUserID {
@@ -408,6 +415,11 @@ nonisolated enum Task126OwnerStoreGate {
                           let selectedShop = SelectedShopStore(defaults: defaults)
                             .selectedShop(accountHash: accountHash),
                           selectedShop.selectable,
+                          selectedShop.canWrite,
+                          let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+                          !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                            accountHash: accountHash, shopID: selectedShop.shopID,
+                            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device)),
                           !blockedShopStatuses.contains(
                             selectedShop.status
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -432,15 +444,65 @@ nonisolated enum Task126OwnerStoreGate {
             }
             let freshContext = ModelContext(modelContainer)
             freshContext.autosaveEnabled = false
-            return try mutation(freshContext)
+            let result = try mutation(freshContext)
+            leaseStore.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+            return result
         }
     }
 
     /// Registers a generation container without making unrelated test or
     /// preview containers invalid. Registrations are weak and are pruned on
     /// every access, so repeated recovery generations remain bounded.
-    static func registerActiveGenerationContainer(_ container: ModelContainer) {
-        leaseStore.registerActiveContainer(container)
+    static func registerActiveGenerationContainer(
+        _ container: ModelContainer, manifest: SyncStoreGenerationManifest? = nil
+    ) {
+        leaseStore.registerActiveContainer(container, manifest: manifest)
+    }
+
+    /// Local authorization uses the coherent generation opened by the
+    /// controller and durable scope binding, independently of cloud freshness.
+    /// A journal for another account/shop, an unknown journal, and preview
+    /// containers can never grant this exception to the mutation fence.
+    static func permitsSameScopeLocalAccess(
+        modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults = .standard
+    ) -> Bool {
+        leaseStore.withCurrentLease { _ in
+            permitsSameScopeLocalAccessWithLeaseHeld(
+                modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults
+            )
+        }
+    }
+
+    private static func permitsSameScopeLocalAccessWithLeaseHeld(
+        modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults
+    ) -> Bool {
+        guard let ownerUserID,
+              let manifest = leaseStore.activeManifestWithLeaseHeld(modelContainer),
+              leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer) else { return false }
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        guard defaults.string(forKey: activeAccountKey) == accountHash,
+              manifest.accountHash == accountHash,
+              let binding = bindingStore.currentBinding,
+              binding.accountHash == accountHash,
+              binding.storeIdentity == manifest.storeIdentity,
+              let selectedShop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: accountHash),
+              selectedShop.shopID == manifest.shopID,
+              selectedShop.localStoreIdentity == manifest.storeIdentity,
+              selectedShop.selectable,
+              !blockedShopStatuses.contains(selectedShop.status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()),
+              let deviceInstallID = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+              DeviceInstallIDStore.identityHash(for: deviceInstallID) == manifest.deviceIdentityHash,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                accountHash: accountHash, shopID: manifest.shopID,
+                deviceIdentityHash: manifest.deviceIdentityHash) else { return false }
+        guard bindingStore.hasPendingReplacementJournal else { return true }
+        guard let journal = bindingStore.pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery,
+              journal.replacement.accountHash == accountHash,
+              journal.replacement.storeIdentity == manifest.storeIdentity,
+              journal.deviceIdentityHash == manifest.deviceIdentityHash else { return false }
+        return true
     }
 
     /// Must only be called while the Task126 lease is already held. Retiring
@@ -448,9 +510,10 @@ nonisolated enum Task126OwnerStoreGate {
     /// makes queued writers fail closed after the atomic generation switch.
     static func replaceActiveGenerationContainerWithLeaseHeld(
         old: ModelContainer,
-        new: ModelContainer
+        new: ModelContainer,
+        manifest: SyncStoreGenerationManifest? = nil
     ) {
-        leaseStore.replaceActiveContainerWithLeaseHeld(old: old, new: new)
+        leaseStore.replaceActiveContainerWithLeaseHeld(old: old, new: new, manifest: manifest)
     }
 
     /// Validates a background/batched writer that owns an explicit container
@@ -459,6 +522,46 @@ nonisolated enum Task126OwnerStoreGate {
         _ container: ModelContainer
     ) throws {
         try leaseStore.validateLocalMutationContainerWithLeaseHeld(container)
+    }
+
+    static func activeManifestWithLeaseHeld(_ container: ModelContainer) -> SyncStoreGenerationManifest? {
+        leaseStore.activeManifestWithLeaseHeld(container)
+    }
+
+    static func configureLocalBodyFence(
+        container: ModelContainer, proven: Bool,
+        provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
+    ) {
+        leaseStore.withCurrentLease { _ in
+            leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven, provider: provider)
+        }
+    }
+
+    static func configureLocalBodyFenceWithLeaseHeld(
+        container: ModelContainer, proven: Bool,
+        provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
+    ) {
+        leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven, provider: provider)
+    }
+
+    static func localBodyProofAdmissionGeneration() -> UInt64 {
+        leaseStore.withCurrentLease { $0 }
+    }
+
+    static func hasCurrentLocalBodyProof(_ container: ModelContainer) -> Bool {
+        leaseStore.withCurrentLease { _ in leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(container) }
+    }
+
+    static func acceptLocalBodyProof(container: ModelContainer, generation: UInt64,
+                                    fence: SyncStoreActiveMutationFence) -> Bool {
+        leaseStore.withCurrentLease { current in
+            guard current == generation else { return false }
+            return leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence)
+        }
+    }
+
+    static func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer) {
+        leaseStore.finishAcceptedLocalWriteWithLeaseHeld(container)
     }
 
     /// Continuation authority requires a registered application generation;
@@ -629,10 +732,14 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
     private final class WeakContainerRegistration {
         weak var container: ModelContainer?
         var isRetired: Bool
+        let manifest: SyncStoreGenerationManifest?
+        var localBodyFence: SyncStoreActiveMutationFence?
+        var localBodyFenceProvider: (@Sendable () -> SyncStoreActiveMutationFence?)?
 
-        init(container: ModelContainer, isRetired: Bool) {
+        init(container: ModelContainer, isRetired: Bool, manifest: SyncStoreGenerationManifest? = nil) {
             self.container = container
             self.isRetired = isRetired
+            self.manifest = manifest
         }
     }
 
@@ -690,17 +797,20 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
         return try operation()
     }
 
-    func registerActiveContainer(_ container: ModelContainer) {
+    func registerActiveContainer(_ container: ModelContainer, manifest: SyncStoreGenerationManifest?) {
         lock.lock()
         defer { lock.unlock() }
         pruneReleasedContainersWithLeaseHeld()
         containerRegistrations[ObjectIdentifier(container)] = WeakContainerRegistration(
             container: container,
-            isRetired: false
+            isRetired: false,
+            manifest: manifest
         )
     }
 
-    func replaceActiveContainerWithLeaseHeld(old: ModelContainer, new: ModelContainer) {
+    func replaceActiveContainerWithLeaseHeld(
+        old: ModelContainer, new: ModelContainer, manifest: SyncStoreGenerationManifest?
+    ) {
         pruneReleasedContainersWithLeaseHeld()
         containerRegistrations[ObjectIdentifier(old)] = WeakContainerRegistration(
             container: old,
@@ -708,13 +818,53 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
         )
         containerRegistrations[ObjectIdentifier(new)] = WeakContainerRegistration(
             container: new,
-            isRetired: false
+            isRetired: false,
+            manifest: manifest
         )
+    }
+
+    func activeManifestWithLeaseHeld(_ container: ModelContainer) -> SyncStoreGenerationManifest? {
+        pruneReleasedContainersWithLeaseHeld()
+        guard let registration = containerRegistrations[ObjectIdentifier(container)],
+              !registration.isRetired else { return nil }
+        return registration.manifest
+    }
+
+    func configureLocalBodyFenceWithLeaseHeld(
+        _ container: ModelContainer, proven: Bool,
+        provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
+    ) {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired else { return }
+        registration.localBodyFenceProvider = provider
+        registration.localBodyFence = proven ? provider() : nil
+    }
+
+    func hasCurrentLocalBodyProofWithLeaseHeld(_ container: ModelContainer) -> Bool {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
+              let fence = registration.localBodyFence, let provider = registration.localBodyFenceProvider else { return false }
+        return provider() == fence
+    }
+
+    func acceptLocalBodyProofWithLeaseHeld(_ container: ModelContainer, fence: SyncStoreActiveMutationFence) -> Bool {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
+              registration.localBodyFenceProvider?() == fence else { return false }
+        registration.localBodyFence = fence
+        return true
+    }
+
+    func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer) {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
+              registration.localBodyFence != nil else { return }
+        registration.localBodyFence = registration.localBodyFenceProvider?()
     }
 
     func validateLocalMutationContainerWithLeaseHeld(_ container: ModelContainer) throws {
         if localMutationContainerStateWithLeaseHeld(container) == .retired {
             throw Task126OwnerStoreGateError.retiredStoreGeneration
+        }
+        if activeManifestWithLeaseHeld(container) != nil,
+           !hasCurrentLocalBodyProofWithLeaseHeld(container) {
+            throw Task126OwnerStoreGateError.bindingMismatch
         }
     }
 

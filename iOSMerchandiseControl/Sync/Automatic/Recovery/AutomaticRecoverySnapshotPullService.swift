@@ -8,6 +8,7 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
     var watermarkAfter: Int64
     var activatedGenerationID: UUID?
     var completedRecoveryJournal: Bool
+    var hasPendingLocalWork: Bool
 
     init(
         catalog: SupabasePullApplyResult,
@@ -15,7 +16,8 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
         productPrices: ProductPriceApplyResult,
         watermarkAfter: Int64,
         activatedGenerationID: UUID? = nil,
-        completedRecoveryJournal: Bool = false
+        completedRecoveryJournal: Bool = false,
+        hasPendingLocalWork: Bool = false
     ) {
         self.catalog = catalog
         self.history = history
@@ -23,6 +25,7 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
         self.watermarkAfter = watermarkAfter
         self.activatedGenerationID = activatedGenerationID
         self.completedRecoveryJournal = completedRecoveryJournal
+        self.hasPendingLocalWork = hasPendingLocalWork
     }
 
     var didWork: Bool {

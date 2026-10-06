@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct SyncAutomaticSupplierCreatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticSupplierCreatePayload: Codable, Equatable, Sendable {
     let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
@@ -21,7 +21,7 @@ nonisolated struct SyncAutomaticSupplierCreatePayload: Encodable, Equatable, Sen
     }
 }
 
-nonisolated struct SyncAutomaticSupplierUpdatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticSupplierUpdatePayload: Codable, Equatable, Sendable {
     let name: String?
     let deletedAt: String?
 
@@ -36,7 +36,7 @@ nonisolated struct SyncAutomaticSupplierUpdatePayload: Encodable, Equatable, Sen
     }
 }
 
-nonisolated struct SyncAutomaticCategoryCreatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticCategoryCreatePayload: Codable, Equatable, Sendable {
     let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
@@ -57,7 +57,7 @@ nonisolated struct SyncAutomaticCategoryCreatePayload: Encodable, Equatable, Sen
     }
 }
 
-nonisolated struct SyncAutomaticCategoryUpdatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticCategoryUpdatePayload: Codable, Equatable, Sendable {
     let name: String?
     let deletedAt: String?
 
@@ -72,7 +72,7 @@ nonisolated struct SyncAutomaticCategoryUpdatePayload: Encodable, Equatable, Sen
     }
 }
 
-nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticProductCreatePayload: Codable, Equatable, Sendable {
     let id: UUID
     let ownerUserID: UUID
     let shopID: UUID?
@@ -130,7 +130,7 @@ nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Send
     }
 }
 
-nonisolated struct SyncAutomaticProductUpdatePayload: Encodable, Equatable, Sendable {
+nonisolated struct SyncAutomaticProductUpdatePayload: Codable, Equatable, Sendable {
     let barcode: String?
     let itemNumber: String?
     let productName: String?

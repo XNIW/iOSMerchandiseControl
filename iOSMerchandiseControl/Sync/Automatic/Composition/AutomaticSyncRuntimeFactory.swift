@@ -12,6 +12,12 @@ enum SyncAutomaticRuntimeFactory {
         stateStore: SyncStateStore? = nil,
         deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil
     ) -> any SyncAutomaticRuntimeProviding {
+        #if DEBUG
+        if let fixture = Task144LocalAvailabilityRootFixture.current,
+           fixture.controller === storeGenerationController {
+            return fixture.runtime(modelContainer: modelContainer, stateStore: stateStore ?? fixture.stateStore)
+        }
+        #endif
         let generationLease = storeGenerationController.captureLease(for: modelContainer)
         let catalogPushProvider: (any SyncCatalogPushProviding)? = supabaseTransportClient.map {
             CatalogPushService(

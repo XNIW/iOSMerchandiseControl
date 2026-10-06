@@ -6,6 +6,1983 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testCurrentDurableACKSurvivesOrdinarySameShopRefreshWhileOldWriterLeaseIsRejected() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let container = fixture.controller.modelContainer
+        let original = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertNil(original.pendingReplacement)
+        proof.remote.prepareProductForPush(ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0))
+        var receipt: LocalProductSaveReceipt?
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            product.stockQuantity = 1
+            let accumulator = LocalPendingChangeAccumulator(context: context,
+                ownerUserID: fixture.ownerUserID, storeIdentity: original.storeIdentity)
+            let change = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update,
+                origin: .manualCatalogSave, changedFields: ["stockQuantity"]))
+            let history = HistoryEntry(id: "ACK_SCOPE_PENDING", timestamp: Date(timeIntervalSince1970: 1_784_635_200),
+                data: [["Item", "Quantity"], ["Independent pending history", "1"]], uid: UUID())
+            context.insert(history)
+            _ = try accumulator.recordHistorySessionChange(entry: history, operation: .create, changedFields: ["data"])
+            try context.save()
+            receipt = LocalProductSaveReceipt(product: product, manifest: manifest,
+                intents: [LocalPendingChangeCASToken(change)])
+        }
+        let saved = try XCTUnwrap(receipt)
+        let pushed = try await Task126OwnerStoreGate.withAutomaticScope(original) {
+            try await CatalogPushService(modelContainer: container, remote: proof.remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(pushed.productUpdates, 1)
+        let registered = try await Task126OwnerStoreGate.withAutomaticScope(original) {
+            try await SyncActivityRegistrationService(modelContainer: container, recorder: proof.remote,
+                defaults: fixture.defaults).registerSyncActivities(ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(registered.summary.registered, 1)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+        XCTAssertEqual(proof.remote.recordRequests.count, 1)
+        let before = ModelContext(container)
+        let changes = try before.fetch(FetchDescriptor<LocalPendingChange>())
+        let productChanges = changes.filter { $0.entityKind == .product }
+        let historyChanges = changes.filter { $0.entityKind == .historySession }
+        XCTAssertEqual(productChanges.count, 1); XCTAssertEqual(historyChanges.count, 1)
+        XCTAssertTrue(saved.isCloudConfirmed(by: productChanges))
+        let product = try XCTUnwrap(before.fetch(FetchDescriptor<Product>()).first)
+        XCTAssertTrue(saved.matches(product, readback: saved.readback(by: productChanges)))
+        XCTAssertEqual(historyChanges.first?.status, .pending)
+        let events = try before.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(events.count, 1)
+        let event = try XCTUnwrap(events.first)
+        XCTAssertEqual(event.status, .sent)
+        let request = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: event)
+        XCTAssertEqual(request, proof.remote.recordRequests.first)
+        XCTAssertEqual(request.entityIDs, try AutomaticSyncEventOutboxWriter.entityIDs([
+            "supplier_ids": [], "category_ids": [], "product_ids": [proof.productID]]))
+        try Task126OwnerStoreGate.revalidateAutomaticScope(original, defaults: fixture.defaults)
+        let snapshot = try completedRecoveryBusinessSnapshot(fixture)
+        let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+        let selected = try XCTUnwrap(selectionStore.selectedShop(accountHash: original.accountHash))
+        // This is the ordinary persisted same-shop API, not a direct lease
+        // primitive or a timing hook. It intentionally retires old writers.
+        XCTAssertTrue(selectionStore.save(selected, accountHash: original.accountHash))
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: original.accountHash), selected)
+        XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(original,
+            defaults: fixture.defaults)) { XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged) }
+        var staleWriterEntered = false
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(original,
+            defaults: fixture.defaults) { staleWriterEntered = true }) {
+            XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged)
+        }
+        XCTAssertFalse(staleWriterEntered)
+        let current = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertNil(current.pendingReplacement)
+        XCTAssertEqual(current.ownerUserID, original.ownerUserID)
+        XCTAssertEqual(current.accountHash, original.accountHash)
+        XCTAssertEqual(current.shopID, original.shopID)
+        XCTAssertEqual(current.storeIdentity, original.storeIdentity)
+        XCTAssertEqual(current.deviceInstallID, original.deviceInstallID)
+        XCTAssertEqual(current.deviceIdentityHash, original.deviceIdentityHash)
+        XCTAssertEqual(current.pendingReplacement, original.pendingReplacement)
+        XCTAssertNotEqual(current.leaseGeneration, original.leaseGeneration)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+        XCTAssertTrue(fixture.controller.modelContainer === container)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), snapshot)
+        let after = ModelContext(fixture.controller.modelContainer)
+        let currentProduct = try XCTUnwrap(after.fetch(FetchDescriptor<Product>()).first)
+        let currentChanges = try after.fetch(FetchDescriptor<LocalPendingChange>())
+        let currentProductChanges = currentChanges.filter { $0.entityKind == .product }
+        let currentHistoryChanges = currentChanges.filter { $0.entityKind == .historySession }
+        XCTAssertTrue(saved.matches(fixture.controller.activeManifest))
+        XCTAssertTrue(saved.isCloudConfirmed(by: currentProductChanges))
+        XCTAssertTrue(saved.matches(currentProduct, readback: saved.readback(by: currentProductChanges)))
+        XCTAssertEqual(currentProductChanges.first?.intendedFingerprintHash,
+            LocalPendingChangeLogicalKey.productFingerprintHash(currentProduct))
+        XCTAssertEqual(currentHistoryChanges.first?.status, .pending)
+        XCTAssertTrue(currentHistoryChanges.allSatisfy { LocalPendingChangeScopeMatcher.matches($0,
+            ownerUserID: current.ownerUserID, accountHash: current.accountHash, storeIdentity: current.storeIdentity) })
+        let currentEvents = try after.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(currentEvents.count, 1)
+        let currentEvent = try XCTUnwrap(currentEvents.first)
+        XCTAssertEqual(currentEvent.id, event.id); XCTAssertEqual(currentEvent.status, .sent)
+        XCTAssertEqual(try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: currentEvent), request)
+    }
+
+    func testReopenQualificationCapturedBeforeSameScopeSelectionRefreshMustRestartForCurrentSelection() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "reopen-selection-qualification-order", products: [product], prices: [])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let before = try completedRecoveryBusinessSnapshot(fixture)
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let binding = try XCTUnwrap(bindingStore.currentBinding)
+        let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+        let original = try XCTUnwrap(selectionStore.selectedShop(accountHash: binding.accountHash))
+
+        // init admits the real detached file readback against the old selection.
+        // Do not yield MainActor before refreshing selectedAt: its result cannot
+        // be published before this deterministic same-scope selection change.
+        let reopened = try reopenFixture(fixture)
+        let container = reopened.controller.modelContainer
+        let refreshed = SelectedShop(shopID: original.shopID, code: original.code, name: original.name,
+            role: original.role, status: original.status, selectable: original.selectable,
+            canWrite: original.canWrite, selectedAt: original.selectedAt.addingTimeInterval(1))
+        XCTAssertTrue(selectionStore.save(refreshed, accountHash: binding.accountHash))
+        XCTAssertEqual(bindingStore.currentBinding, binding)
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: binding.accountHash), refreshed)
+        XCTAssertEqual(reopened.controller.activeManifest, manifest)
+
+        let obsoleteQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(obsoleteQualification, "The correctly rejected old selection result is not a corrupt store")
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(reopened), before)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal)
+
+        // The normal qualification API captures the now-current tuple and
+        // validates the same actual file; no body/fingerprint/metadata is reset.
+        reopened.controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
+        let currentQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(currentQualification)
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
+        XCTAssertTrue(reopened.controller.modelContainer === container)
+        XCTAssertEqual(reopened.controller.activeManifest, manifest)
+        XCTAssertEqual(bindingStore.currentBinding, binding)
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: binding.accountHash), refreshed)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(reopened), before)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal)
+        print("TASK144_REOPEN_QUALIFICATION_ORDER old=false current=true same-generation=true same-body=true")
+    }
+
+    func testPendingFinalizedRecoveryJournalAutomaticallyResumesForForegroundAndReconnect() async throws {
+        for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
+            let proof = try await makeRealContinuationProof()
+            let fixture = proof.fixture
+            let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+                storeIdentity: manifest.storeIdentity, reason: "actual-pending-auto-resume",
+                deviceIdentityHash: proof.scope.deviceIdentityHash))
+            var scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryStaging(accountHash: scope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                generationID: manifest.generationID, scope: scope))
+            scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryVerified(accountHash: scope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                generationID: manifest.generationID, checkpointDigest: manifest.checkpoint.checkpointDigest,
+                watermark: try XCTUnwrap(manifest.checkpoint.maxEventID), baselineRunID: manifest.baselineRunID, scope: scope))
+            XCTAssertNotNil(binding.pendingRecoveryJournal)
+            XCTAssertTrue(proof.stateStore.recoveryJournalIsPending)
+            proof.stateStore.recordRunResult(.recoveryRequired())
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            XCTAssertTrue(auth.viewModel.isSignedIn)
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [proof.checkpoint], productRows: [ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)])
+            let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+                catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+                incrementalPullProvider: nil, recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+                activityRegistrationProvider: nil,
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true), defaults: fixture.defaults,
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+            let finished = expectation(description: "Actual pending journal resumes automatically: \(source)")
+            runtime.expectedCompletions = [finished]
+            let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth, runtime: runtime, lease: lease)
+            orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+            await fulfillment(of: [finished], timeout: 2)
+            for _ in 0..<100 where proof.stateStore.state.phase != .idle { await Task.yield() }
+            XCTAssertEqual(runtime.actions, [.bootstrap])
+            XCTAssertEqual(runtime.sources, [source])
+            XCTAssertEqual(runtime.results.count, 1)
+            XCTAssertTrue(runtime.results.first?.verifiedConvergence == true,
+                "Actual resume result: \(runtime.results.map { "\($0.status)/\($0.errorCode ?? "none")" })")
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertEqual(proof.stateStore.state.phase, .idle)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, manifest.generationID)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
+            XCTAssertEqual(transport.counts().checkpoints, 0, "The durable finalized checkpoint must be reused")
+            XCTAssertEqual(transport.counts().pages, 0)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+            orchestrator.stop()
+        }
+    }
+
+    func testCompletedRecoveryForegroundAdmissionRunsOrdinaryCurrentGenerationWithoutAnotherRecovery() async throws {
+        let proof = try await makeRealContinuationProof()
+        let auth = try RI08SyntheticAuth(ownerUserID: proof.fixture.ownerUserID)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        proof.stateStore.recordRunResult(.recoveryRequired())
+        let lease = try XCTUnwrap(proof.fixture.controller.captureLease(for: proof.fixture.controller.modelContainer))
+        let runtime = makeOrdinaryRuntime(fixture: proof.fixture, auth: auth, remote: proof.remote)
+        let generationID = try XCTUnwrap(proof.fixture.controller.activeManifest?.generationID)
+        let finished = expectation(description: "Current completed generation runs ordinary automatic work")
+        runtime.expectedCompletions = [finished]
+        let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth, runtime: runtime, lease: lease)
+        defer { orchestrator.stop() }
+        orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+        await fulfillment(of: [finished], timeout: 2)
+        for _ in 0..<100 where proof.stateStore.state.phase != .idle { await Task.yield() }
+        XCTAssertEqual(runtime.actions, [.lightReconcile])
+        XCTAssertEqual(runtime.results.count, 1)
+        XCTAssertNotNil(runtime.results.first?.continuationReceipt)
+        XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(proof.fixture.controller.activeManifest?.generationID, generationID)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+    }
+
+    func testCompletedRecoveryForegroundAdmissionRejectsUnqualifiedAuthorityAndOldRoot() async throws {
+        for mutation in ["absent-controller", "old-root", "missing-finalization", "corrupt-finalization",
+                         "body", "owner", "shop", "device", "revoked", "journal"] {
+            var oldLease: SyncStoreGenerationLease?
+            let proof = try await makeRealContinuationProof(beforeRecovery: { fixture in
+                oldLease = fixture.controller.captureLease(for: fixture.controller.modelContainer)
+            })
+            let fixture = proof.fixture
+            let auth = try RI08SyntheticAuth(ownerUserID: mutation == "owner" ? UUID() : fixture.ownerUserID)
+            defer { auth.close() }
+            XCTAssertTrue(auth.viewModel.isSignedIn)
+            var lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            switch mutation {
+            case "old-root": lease = try XCTUnwrap(oldLease)
+            case "missing-finalization": try FileManager.default.removeItem(at: fixture.recoveryFinalizationURL)
+            case "corrupt-finalization": try Data("invalid-finalization".utf8).write(to: fixture.recoveryFinalizationURL)
+            case "body":
+                let context = ModelContext(fixture.controller.modelContainer); context.autosaveEnabled = false
+                let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+                product.productName = "Unexplained corrupt body"; try context.save()
+            case "shop":
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).save(
+                    SelectedShop(shopID: UUID(), code: "OTHER", name: "Other isolated shop", role: "owner",
+                        status: "active", selectable: true, canWrite: true), accountHash: proof.scope.accountHash))
+            case "device": fixture.defaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id")
+            case "revoked": XCTAssertTrue(recordCompletedRecoveryDenial(proof))
+            case "journal":
+                XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+                    accountHash: proof.scope.accountHash, storeIdentity: proof.scope.storeIdentity,
+                    reason: "current-admission-negative", deviceIdentityHash: proof.scope.deviceIdentityHash))
+            default: break
+            }
+            proof.stateStore.recordRunResult(.recoveryRequired())
+            let before = try completedRecoveryBusinessSnapshot(fixture)
+            let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: proof.remote)
+            let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth, runtime: runtime,
+                lease: lease, includeController: mutation != "absent-controller")
+            orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+            for _ in 0..<100 { await Task.yield() }
+            XCTAssertTrue(runtime.actions.isEmpty, mutation)
+            XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, mutation)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), before, mutation)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41, mutation)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0, mutation)
+            orchestrator.stop()
+        }
+    }
+
+    func testCompletedRecoveryForegroundAdmissionRevalidatesAfterHeldDecisionAndCancellation() async throws {
+        for interruption in ["cancel", "revoked", "lease"] {
+            let proof = try await makeRealContinuationProof()
+            let fixture = proof.fixture
+            _ = try saveLocalAvailabilityEdit(fixture: fixture, productID: proof.productID)
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            XCTAssertTrue(auth.viewModel.isSignedIn)
+            proof.stateStore.recordRunResult(.recoveryRequired())
+            let before = try completedRecoveryBusinessSnapshot(fixture)
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: proof.remote)
+            let entered = expectation(description: "Actual ordinary decision is held before any runtime write")
+            let provider = Task144HeldRealDecisionProvider(underlying: completedRecoveryDecisionProvider(fixture), entered: entered)
+            let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth, runtime: runtime,
+                lease: lease, decisionProvider: provider)
+            defer { orchestrator.stop() }
+            orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+            await fulfillment(of: [entered], timeout: 2)
+            XCTAssertTrue(runtime.actions.isEmpty)
+            if interruption == "cancel" { orchestrator.stop() }
+            else if interruption == "revoked" { XCTAssertTrue(recordCompletedRecoveryDenial(proof)) }
+            else { Task126OwnerStoreGate.invalidateAutomaticScopeLease() }
+            provider.release()
+            for _ in 0..<200 { await Task.yield() }
+            XCTAssertTrue(provider.returned)
+            XCTAssertTrue(runtime.actions.isEmpty, interruption)
+            XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, interruption)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), before, interruption)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41, interruption)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0, interruption)
+        }
+    }
+
+    func testCurrentSaveReceiptRejectsSameNameDifferentRelationAfterRealACK() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let initial = ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)
+        var receipt: LocalProductSaveReceipt?
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            let supplier = Supplier(name: "New receipt supplier")
+            let category = ProductCategory(name: "New receipt category")
+            context.insert(supplier); context.insert(category)
+            product.supplier = supplier; product.category = category; product.productName = "Saved relation body"
+            let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: proof.scope.storeIdentity)
+            let changes = [try XCTUnwrap(accumulator.recordSupplierChange(supplier: supplier, operation: .create, origin: .manualCatalogSave)),
+                try XCTUnwrap(accumulator.recordCategoryChange(category: category, operation: .create, origin: .manualCatalogSave)),
+                try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                    changedFields: ["productName", "supplierName", "categoryName"]))]
+            try context.save()
+            receipt = LocalProductSaveReceipt(product: product, manifest: try XCTUnwrap(fixture.controller.activeManifest),
+                intents: changes.map(LocalPendingChangeCASToken.init))
+        }
+        let saved = try XCTUnwrap(receipt)
+        let remote = AtomicRecoveryLostAckCatalogRemote(initial: initial, loseFirstResponse: false, acceptsRelatedCreate: true)
+        let pushed = try await CatalogPushService(modelContainer: fixture.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(pushed.productUpdates, 1)
+        let context = ModelContext(fixture.controller.modelContainer); context.autosaveEnabled = false
+        let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(changes.count, 3); XCTAssertTrue(changes.allSatisfy { $0.status == .acknowledged })
+        XCTAssertTrue(saved.isCloudConfirmed(by: changes), "All three original intents require real typed service ACK")
+        let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        let supplier = try XCTUnwrap(product.supplier); let category = try XCTUnwrap(product.category)
+        let supplierID = try XCTUnwrap(supplier.remoteID); let categoryID = try XCTUnwrap(category.remoteID)
+        let readback = saved.readback(by: changes)
+        XCTAssertTrue(readback.isCloudConfirmed)
+        XCTAssertEqual(readback.supplierRemoteID, supplierID); XCTAssertEqual(readback.categoryRemoteID, categoryID)
+        XCTAssertTrue(saved.matches(product, readback: readback), "The expected relation ACK mapping must preserve this Save")
+        for kind in ["supplier", "category"] {
+            supplier.remoteID = supplierID; category.remoteID = categoryID
+            if kind == "supplier" { supplier.remoteID = UUID() } else { category.remoteID = UUID() }
+            try context.save()
+            XCTAssertTrue(saved.isCloudConfirmed(by: changes), "The unchanged old ACK alone cannot identify the changed body")
+            XCTAssertFalse(saved.matches(product, readback: readback), "A different relation UUID with the same name must not inherit that Save: \(kind)")
+        }
+    }
+
+    private func completedRecoveryDecisionProvider(_ fixture: AtomicRecoveryFixture) -> SyncDecisionInputProvider {
+        SyncDecisionInputProvider(modelContainer: fixture.controller.modelContainer, initialNetworkStatus: .satisfied,
+            bindingStore: AccountBindingStore(defaults: fixture.defaults), selectedShopStore: SelectedShopStore(defaults: fixture.defaults))
+    }
+
+    private func makeCompletedRecoveryOrchestrator(proof: RI08RealContinuationProof, auth: RI08SyntheticAuth,
+        runtime: RI08ObservedRealRuntime, lease: SyncStoreGenerationLease, includeController: Bool = true,
+        decisionProvider: (any SyncDecisionInputProviding)? = nil) -> SyncOrchestrator {
+        SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: proof.stateStore, storeGenerationController: includeController ? proof.fixture.controller : nil,
+            storeGenerationLease: lease, defaults: proof.fixture.defaults,
+            decisionInputProvider: decisionProvider ?? completedRecoveryDecisionProvider(proof.fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+    }
+
+    private func recordCompletedRecoveryDenial(_ proof: RI08RealContinuationProof) -> Bool {
+        SelectedShopStore(defaults: proof.fixture.defaults).recordDeviceAuthorization(
+            .init(status: "revoked", code: "revoked", canWrite: false, serverTime: nil, lastSeenAt: nil,
+                reasonCode: "isolated-negative", recommendedAction: "none", checkedAt: Date()),
+            ownerUserID: proof.fixture.ownerUserID, shopID: proof.fixture.shopID, deviceIdentityHash: proof.scope.deviceIdentityHash)
+    }
+
+    private func completedRecoveryBusinessSnapshot(_ fixture: AtomicRecoveryFixture) throws -> [String] {
+        let context = ModelContext(fixture.controller.modelContainer)
+        let products = try context.fetch(FetchDescriptor<Product>()).map {
+            LocalPendingChangeLogicalKey.productFingerprintHash($0)
+        }.sorted()
+        let changes = try context.fetch(FetchDescriptor<LocalPendingChange>()).map {
+            LocalPendingChangeCASToken($0).eventFingerprint
+        }.sorted()
+        let outbox = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>()).map {
+            "\($0.id)|\($0.statusRaw)|\($0.clientEventID)"
+        }.sorted()
+        return [fixture.controller.presentationID] + products + changes + outbox
+    }
+
+    func testSameScopeShopRefreshAfterPublicationCompletesOnlyThePublishedGeneration() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "same-scope-finalization-refresh", products: [product], prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product])
+        var refreshed = false
+        var publishedGeneration: UUID?
+        var publishedCheckpoint: ShopSyncRecoveryCheckpoint?
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            guard event.progress.stage == .finalizing, !refreshed else { return }
+            refreshed = true
+            publishedGeneration = fixture.controller.activeManifest?.generationID
+            publishedCheckpoint = fixture.controller.activeManifest?.checkpoint
+            XCTAssertNotNil(publishedGeneration, "The refresh must occur after the actual durable cutover")
+            XCTAssertEqual(publishedCheckpoint?.scope, checkpoint.scope)
+            XCTAssertEqual(publishedCheckpoint?.catalog, checkpoint.catalog)
+            XCTAssertEqual(publishedCheckpoint?.prices, checkpoint.prices)
+            XCTAssertEqual(publishedCheckpoint?.history, checkpoint.history)
+            XCTAssertEqual(publishedCheckpoint?.images, checkpoint.images)
+            XCTAssertEqual(publishedCheckpoint?.integrity, checkpoint.integrity)
+            XCTAssertEqual(publishedCheckpoint?.checkpointDigest, checkpoint.checkpointDigest)
+            XCTAssertEqual(publishedCheckpoint?.maxEventID, checkpoint.maxEventID)
+            XCTAssertEqual(publishedCheckpoint?.syncEvents.verifiedBaselineId, checkpoint.syncEvents.maxId)
+            let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+            guard let selected = selectedStore.selectedShop(accountHash: event.scope.accountHash) else {
+                XCTFail("The existing exact-scope selection must be present"); return
+            }
+            // These are the exact durable transitions made by the newly
+            // mounted AppSyncRootHost's ordinary ShopContextStore.refresh.
+            selectedStore.markResolutionUnresolved(accountHash: event.scope.accountHash)
+            XCTAssertTrue(selectedStore.save(selected, accountHash: event.scope.accountHash))
+            let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertNotNil(current)
+            XCTAssertEqual(current?.ownerUserID, event.scope.ownerUserID)
+            XCTAssertEqual(current?.shopID, event.scope.shopID)
+            XCTAssertEqual(current?.storeIdentity, event.scope.storeIdentity)
+            XCTAssertEqual(current?.deviceIdentityHash, event.scope.deviceIdentityHash)
+            XCTAssertNotEqual(current?.leaseGeneration, event.scope.leaseGeneration)
+        })
+        let summary = try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(refreshed)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, publishedGeneration)
+        XCTAssertEqual(fixture.controller.activeManifest?.checkpoint, publishedCheckpoint)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(transport.counts().checkpoints, 2, "Finalization cannot restart the snapshot download")
+        XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertTrue(try fixture.controller.isActiveRecoveryFinalized(scope: scope))
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        let context = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).map(\.remoteID), [product.id])
+        XCTAssertEqual(reopened.controller.activeManifest?.generationID, publishedGeneration)
+    }
+
+    func testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "two-same-scope-finalization-refresh", products: [product], prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product])
+        var refreshCount = 0
+        var publishedGeneration: UUID?
+        var publishedCheckpoint: ShopSyncRecoveryCheckpoint?
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            guard event.progress.stage == .finalizing, refreshCount < 2 else { return }
+            refreshCount += 1
+            publishedGeneration = fixture.controller.activeManifest?.generationID
+            publishedCheckpoint = fixture.controller.activeManifest?.checkpoint
+            XCTAssertNotNil(publishedGeneration, "The refresh must occur after the actual durable cutover")
+            XCTAssertEqual(publishedCheckpoint?.scope, checkpoint.scope)
+            XCTAssertEqual(publishedCheckpoint?.catalog, checkpoint.catalog)
+            XCTAssertEqual(publishedCheckpoint?.prices, checkpoint.prices)
+            XCTAssertEqual(publishedCheckpoint?.history, checkpoint.history)
+            XCTAssertEqual(publishedCheckpoint?.images, checkpoint.images)
+            XCTAssertEqual(publishedCheckpoint?.integrity, checkpoint.integrity)
+            XCTAssertEqual(publishedCheckpoint?.checkpointDigest, checkpoint.checkpointDigest)
+            XCTAssertEqual(publishedCheckpoint?.maxEventID, checkpoint.maxEventID)
+            XCTAssertEqual(publishedCheckpoint?.syncEvents.verifiedBaselineId, checkpoint.syncEvents.maxId)
+            let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+            guard let selected = selectedStore.selectedShop(accountHash: event.scope.accountHash) else {
+                XCTFail("The existing exact-scope selection must be present"); return
+            }
+            // These are the exact durable transitions made by the newly
+            // mounted AppSyncRootHost's ordinary ShopContextStore.refresh.
+            selectedStore.markResolutionUnresolved(accountHash: event.scope.accountHash)
+            XCTAssertTrue(selectedStore.save(selected, accountHash: event.scope.accountHash))
+            let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertNotNil(current)
+            XCTAssertEqual(current?.ownerUserID, event.scope.ownerUserID)
+            XCTAssertEqual(current?.shopID, event.scope.shopID)
+            XCTAssertEqual(current?.storeIdentity, event.scope.storeIdentity)
+            XCTAssertEqual(current?.deviceIdentityHash, event.scope.deviceIdentityHash)
+            XCTAssertNotEqual(current?.leaseGeneration, event.scope.leaseGeneration)
+        })
+        let summary: SyncRecoverySnapshotPullSummary
+        do {
+            summary = try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        } catch {
+            XCTAssertEqual(refreshCount, 2, "Both exact-scope refreshes must occur after publication")
+            XCTFail("Two same-scope lifecycle refreshes cannot strand the published generation: \(error)")
+            return
+        }
+        XCTAssertEqual(refreshCount, 2)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, publishedGeneration)
+        XCTAssertEqual(fixture.controller.activeManifest?.checkpoint, publishedCheckpoint)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(transport.counts().checkpoints, 2, "Finalization cannot restart the snapshot download")
+        XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertTrue(try fixture.controller.isActiveRecoveryFinalized(scope: scope))
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        let context = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).map(\.remoteID), [product.id])
+        XCTAssertEqual(reopened.controller.activeManifest?.generationID, publishedGeneration)
+    }
+
+    func testPublishedGenerationFinalizationRetainsJournalForForeignOwnerOrConfirmedDeviceDenial() async throws {
+        for refusal in ["foreign-owner", "device-revoked"] {
+            let fixture = try makeFixture()
+            let product = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "finalization-refusal-\(refusal)", products: [product], prices: [])
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint, checkpoint], productRows: [product])
+            var refused = false
+            var publishedGeneration: UUID?
+            var publishedCheckpoint: ShopSyncRecoveryCheckpoint?
+            let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+                guard event.progress.stage == .finalizing, !refused else { return }
+                refused = true
+                publishedGeneration = fixture.controller.activeManifest?.generationID
+                publishedCheckpoint = fixture.controller.activeManifest?.checkpoint
+                XCTAssertNotNil(publishedGeneration)
+                XCTAssertEqual(publishedCheckpoint?.scope, checkpoint.scope)
+                XCTAssertEqual(publishedCheckpoint?.catalog, checkpoint.catalog)
+                XCTAssertEqual(publishedCheckpoint?.prices, checkpoint.prices)
+                XCTAssertEqual(publishedCheckpoint?.history, checkpoint.history)
+                XCTAssertEqual(publishedCheckpoint?.images, checkpoint.images)
+                XCTAssertEqual(publishedCheckpoint?.integrity, checkpoint.integrity)
+                XCTAssertEqual(publishedCheckpoint?.checkpointDigest, checkpoint.checkpointDigest)
+                XCTAssertEqual(publishedCheckpoint?.maxEventID, checkpoint.maxEventID)
+                XCTAssertEqual(publishedCheckpoint?.syncEvents.verifiedBaselineId, checkpoint.syncEvents.maxId)
+                let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+                if refusal == "foreign-owner" {
+                    selectedStore.noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+                } else {
+                    XCTAssertTrue(selectedStore.recordDeviceAuthorization(.init(status: "revoked",
+                        code: "TEST_DEVICE_REVOKED", canWrite: false, serverTime: nil, lastSeenAt: nil,
+                        reasonCode: "TEST", recommendedAction: "contact_admin", checkedAt: Date()),
+                        ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                        deviceIdentityHash: event.scope.deviceIdentityHash))
+                }
+            })
+            do {
+                _ = try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTFail("A changed owner or confirmed device denial cannot finalize the journal: \(refusal)")
+            } catch {
+                XCTAssertTrue(error is Task126OwnerStoreGateError, refusal)
+            }
+            XCTAssertTrue(refused)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, publishedGeneration)
+            XCTAssertEqual(fixture.controller.activeManifest?.checkpoint, publishedCheckpoint)
+            let journal = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+            XCTAssertEqual(journal.generationID, publishedGeneration)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+            XCTAssertEqual(transport.counts().checkpoints, 2)
+            XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        }
+    }
+
+    func testRepeatedPublishedFinalizationRefusesLaterForeignDeviceDenialAndCancellation() async throws {
+        for refusal in ["foreign-owner", "device-revoked", "changed-device", "cancelled"] {
+            let fixture = try makeFixture()
+            let product = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "repeated-finalization-refusal-\(refusal)", products: [product], prices: [])
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint, checkpoint], productRows: [product])
+            var refused = false
+            var finalizingCount = 0
+            var publishedGeneration: UUID?
+            var publishedCheckpoint: ShopSyncRecoveryCheckpoint?
+            let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+                guard event.progress.stage == .finalizing, !refused else { return }
+                finalizingCount += 1
+                if finalizingCount == 1 {
+                    let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+                    guard let selected = selectedStore.selectedShop(accountHash: event.scope.accountHash) else {
+                        XCTFail("The exact-scope selection must be present"); return
+                    }
+                    selectedStore.markResolutionUnresolved(accountHash: event.scope.accountHash)
+                    XCTAssertTrue(selectedStore.save(selected, accountHash: event.scope.accountHash))
+                    return
+                }
+                refused = true
+                publishedGeneration = fixture.controller.activeManifest?.generationID
+                publishedCheckpoint = fixture.controller.activeManifest?.checkpoint
+                XCTAssertNotNil(publishedGeneration)
+                XCTAssertEqual(publishedCheckpoint?.scope, checkpoint.scope)
+                XCTAssertEqual(publishedCheckpoint?.catalog, checkpoint.catalog)
+                XCTAssertEqual(publishedCheckpoint?.prices, checkpoint.prices)
+                XCTAssertEqual(publishedCheckpoint?.history, checkpoint.history)
+                XCTAssertEqual(publishedCheckpoint?.images, checkpoint.images)
+                XCTAssertEqual(publishedCheckpoint?.integrity, checkpoint.integrity)
+                XCTAssertEqual(publishedCheckpoint?.checkpointDigest, checkpoint.checkpointDigest)
+                XCTAssertEqual(publishedCheckpoint?.maxEventID, checkpoint.maxEventID)
+                XCTAssertEqual(publishedCheckpoint?.syncEvents.verifiedBaselineId, checkpoint.syncEvents.maxId)
+                let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+                if refusal == "foreign-owner" {
+                    selectedStore.noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+                } else if refusal == "changed-device" {
+                    fixture.defaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id")
+                    Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {}
+                } else if refusal == "cancelled" {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                } else {
+                    XCTAssertTrue(selectedStore.recordDeviceAuthorization(.init(status: "revoked",
+                        code: "TEST_DEVICE_REVOKED", canWrite: false, serverTime: nil, lastSeenAt: nil,
+                        reasonCode: "TEST", recommendedAction: "contact_admin", checkedAt: Date()),
+                        ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                        deviceIdentityHash: event.scope.deviceIdentityHash))
+                }
+            })
+            do {
+                let operation = Task { try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID) }
+                _ = try await operation.value
+                XCTFail("A changed owner or confirmed device denial cannot finalize the journal: \(refusal)")
+            } catch {
+                XCTAssertTrue(error is Task126OwnerStoreGateError || (refusal == "cancelled" && error is CancellationError), refusal)
+            }
+            XCTAssertTrue(refused)
+            XCTAssertEqual(finalizingCount, 2)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, publishedGeneration)
+            XCTAssertEqual(fixture.controller.activeManifest?.checkpoint, publishedCheckpoint)
+            let journal = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+            XCTAssertEqual(journal.generationID, publishedGeneration)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+            XCTAssertEqual(transport.counts().checkpoints, 2)
+            XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        }
+    }
+
+    func testCleanCanonicalPriceSemanticTamperCannotQualifyLocalAccessAfterReopen() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let price = RemoteInventoryProductPriceRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, productID: product.id, type: "retail", price: 12, priceCanonical: "12",
+            effectiveAt: "2026-07-21 12:00:00", source: "TEST_CANONICAL_PRICE", note: "canonical body",
+            createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "clean-price-body-qualification", products: [product], prices: [price])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint],
+            productRows: [product], priceRows: [price])).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let clean = try reopenFixture(fixture)
+        let cleanQualified = await clean.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(cleanQualified, "A valid canonical nonzero price must be usable")
+        let generation = clean.controller.activeManifest?.generationID
+        let finalizedCheckpoint = try XCTUnwrap(clean.controller.activeManifest?.checkpoint)
+        XCTAssertEqual(finalizedCheckpoint.catalog, checkpoint.catalog)
+        XCTAssertEqual(finalizedCheckpoint.prices, checkpoint.prices)
+        XCTAssertEqual(finalizedCheckpoint.history, checkpoint.history)
+        XCTAssertEqual(finalizedCheckpoint.syncEvents.verifiedBaselineId, finalizedCheckpoint.syncEvents.maxId)
+        let context = ModelContext(clean.controller.modelContainer)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<ProductPrice>()).first)
+        XCTAssertEqual(stored.remoteID, price.id)
+        XCTAssertEqual(stored.price, 12)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        stored.price = 999 // Deliberate clean-body corruption; IDs, bridges and counts remain unchanged.
+        try context.save()
+        let reopened = try reopenFixture(clean)
+        XCTAssertEqual(reopened.controller.activeManifest?.generationID, generation)
+        XCTAssertEqual(reopened.controller.activeManifest?.checkpoint, finalizedCheckpoint)
+        let reread = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try reread.fetch(FetchDescriptor<ProductPrice>()).first?.price, 999)
+        XCTAssertEqual(try reread.fetchCount(FetchDescriptor<ProductPrice>()), 1)
+        XCTAssertEqual(try reread.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(qualified, "An unchanged count/bridge cannot authorize a corrupted price body")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: reopened.controller.modelContainer, ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults))
+        XCTAssertThrowsError(try saveLocalAvailabilityEdit(fixture: reopened, productID: product.id))
+    }
+
+    func testCleanCanonicalHistorySemanticTamperCannotQualifyLocalAccessAfterReopen() async throws {
+        let fixture = try makeFixture()
+        let history = AtomicRecoveryHistoryRowPayload(remoteID: UUID(), payloadVersion: 2,
+            displayName: "Canonical History body", timestamp: "2026-07-21 12:00:00", supplier: "", category: "",
+            isManualEntry: false, data: [["Item", "Quantity"], ["Known item", "1"]], sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "clean-history-body-qualification", historyRow: history)
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], historyRows: [history]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let clean = try reopenFixture(fixture)
+        let cleanQualified = await clean.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(cleanQualified, "A valid clean History body must be usable")
+        let generation = clean.controller.activeManifest?.generationID
+        let finalizedCheckpoint = try XCTUnwrap(clean.controller.activeManifest?.checkpoint)
+        XCTAssertEqual(finalizedCheckpoint.catalog, checkpoint.catalog)
+        XCTAssertEqual(finalizedCheckpoint.prices, checkpoint.prices)
+        XCTAssertEqual(finalizedCheckpoint.history, checkpoint.history)
+        XCTAssertEqual(finalizedCheckpoint.syncEvents.verifiedBaselineId, finalizedCheckpoint.syncEvents.maxId)
+        let context = ModelContext(clean.controller.modelContainer)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(stored.remoteID, history.remoteID)
+        XCTAssertEqual(stored.data, history.data)
+        XCTAssertEqual(stored.localChangeRevision, stored.lastSyncedLocalRevision)
+        let cleanFingerprint = try XCTUnwrap(stored.remotePayloadFingerprint)
+        stored.data = [["Item", "Quantity"], ["Tampered item", "999"]]
+        try context.save()
+        let reopened = try reopenFixture(clean)
+        XCTAssertEqual(reopened.controller.activeManifest?.generationID, generation)
+        XCTAssertEqual(reopened.controller.activeManifest?.checkpoint, finalizedCheckpoint)
+        let reread = ModelContext(reopened.controller.modelContainer)
+        let corrupted = try XCTUnwrap(reread.fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(corrupted.remotePayloadFingerprint, cleanFingerprint)
+        XCTAssertEqual(corrupted.localChangeRevision, corrupted.lastSyncedLocalRevision)
+        XCTAssertEqual(corrupted.data.last, ["Tampered item", "999"])
+        XCTAssertEqual(try reread.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
+        XCTAssertEqual(try reread.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(qualified, "Clean metadata and an old fingerprint cannot authorize a corrupted History grid")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: reopened.controller.modelContainer, ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: reopened.controller.modelContainer, ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults) { _ in () })
+    }
+
+    func testEmptyBootstrapShellProofGrantsNoWriteAuthorityAndRejectsForeignOrNonemptyStore() async throws {
+        let fixture = try makeFixture()
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity, reason: "TEST_EMPTY_SHELL",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let completed = await fixture.controller.awaitLocalBodyQualification(); XCTAssertTrue(completed)
+        XCTAssertTrue(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: UUID()))
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: nil))
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).hasPendingReplacementJournal)
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        let context = ModelContext(fixture.controller.modelContainer)
+        context.insert(Product(barcode: "TEST_FOREIGN_UNQUALIFIED_BODY")); try context.save()
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let nonemptyCompleted = await fixture.controller.awaitLocalBodyQualification(); XCTAssertFalse(nonemptyCompleted)
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+    }
+
+    func testConfirmedDeviceDenialInvalidatesEmptyBootstrapShellProof() async throws {
+        let fixture = try makeFixture()
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity, reason: "TEST_EMPTY_DENIED_SHELL",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let completed = await fixture.controller.awaitLocalBodyQualification(); XCTAssertTrue(completed)
+        XCTAssertTrue(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "TEST_EXPLICIT_DENIAL", canWrite: false,
+            serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
+        XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(denial,
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).hasConfirmedDeviceDenial(accountHash: binding.accountHash,
+            shopID: fixture.shopID, deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        _ = await fixture.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+    }
+
+    func testPendingPriceForNewOwnedLocalProductRemainsQualifiedBeforeCatalogAck() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "owned-new-product-price-local")
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = Product(barcode: "TEST_NEW_OWNED_PRICE_PARENT")
+            context.insert(product)
+            let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+            try accumulator.recordProductChange(product: product, operation: .create, origin: .manualCatalogSave,
+                changedFields: ["barcode", "productName"])
+            let price = ProductPrice(type: .retail, price: 12, product: product); context.insert(price)
+            try accumulator.recordProductPriceChange(price: price, origin: .productPriceSave); try context.save()
+        }
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification(); XCTAssertTrue(qualified)
+        let context = ModelContext(reopened.controller.modelContainer)
+        XCTAssertNil(try context.fetch(FetchDescriptor<Product>()).first?.remoteID)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ProductPrice>()), 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).filter { !$0.status.isTerminal }.count, 2)
+    }
+
+    func testAcknowledgedNewPriceThenOwnedParentDeleteRemainsQualifiedAfterReopen() async throws {
+        let fixture = try await makeAcknowledgedPriceQualificationFixture()
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+            try accumulator.recordProductChange(product: product, operation: .delete, origin: .manualCatalogSave,
+                changedFields: ["tombstone"], baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product))
+            try accumulator.supersedeProductPriceChanges(for: product)
+            context.delete(product); try context.save()
+        }
+        let reopened = try reopenFixture(fixture)
+        XCTAssertEqual(try ModelContext(reopened.controller.modelContainer).fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified, "An exact owned parent delete may remove its acknowledged append-only physical prices")
+        XCTAssertTrue(try ModelContext(reopened.controller.modelContainer).fetch(FetchDescriptor<LocalPendingChange>())
+            .contains { $0.entityKind == .product && $0.operation == .delete && !$0.status.isTerminal })
+        XCTAssertNil(AccountBindingStore(defaults: reopened.defaults).pendingRecoveryJournal)
+    }
+
+    func testRawParentCascadeCannotHideAcknowledgedNewPriceFromQualification() async throws {
+        let fixture = try await makeAcknowledgedPriceQualificationFixture()
+        let context = ModelContext(fixture.controller.modelContainer)
+        context.delete(try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)); try context.save()
+        let reopened = try reopenFixture(fixture)
+        XCTAssertEqual(try ModelContext(reopened.controller.modelContainer).fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(qualified, "A raw physical cascade has no owned parent deletion proof")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: reopened.controller.modelContainer,
+            ownerUserID: reopened.ownerUserID, defaults: reopened.defaults))
+    }
+
+    func testCorruptAcknowledgedPriceBodyReceiptCannotQualifyAfterReopen() async throws {
+        let fixture = try await makeAcknowledgedPriceQualificationFixture()
+        let context = ModelContext(fixture.controller.modelContainer)
+        let proof = try XCTUnwrap(context.fetch(FetchDescriptor<SyncEventOutboxEntry>()).first {
+            $0.domain == LocalCatalogBodyProofStore.domain && $0.eventType == "productPrice"
+        })
+        proof.metadataPayloadJSON = (proof.metadataPayloadJSON ?? "") + " "
+        try context.save()
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(qualified)
+    }
+
+    func testNewHistoryActualAckAndOrdinaryApplyRemainQualifiedAfterReopen() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "current-history-ack-qualification")
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let id = UUID()
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let entry = HistoryEntry(id: "TEST_HISTORY_ACK", timestamp: Date(timeIntervalSince1970: 1_784_635_200),
+                data: [["Item", "Quantity"], ["History A", "1"]], uid: id)
+            context.insert(entry)
+            try LocalPendingChangeAccumulator(context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+                .recordHistorySessionChange(entry: entry, operation: .create, changedFields: ["data"])
+            // The production App uses standard defaults; this isolated suite
+            // supplies its actual selected shop explicitly to the model.
+            entry.assignHistoryScope(ownerUserID: fixture.ownerUserID, selectedShopID: fixture.shopID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+            XCTAssertEqual(entry.shopID, fixture.shopID)
+            try context.save()
+        }
+        let remote = AtomicRecoveryQualificationHistoryRemote()
+        _ = try await HistorySessionPushService(modelContainer: fixture.controller.modelContainer,
+            remote: remote, recorder: nil, defaults: fixture.defaults).syncHistorySessions(ownerUserID: fixture.ownerUserID, mode: .incremental)
+        XCTAssertEqual(remote.attempts, 1)
+        let acknowledged = try reopenFixture(fixture)
+        let ackQualified = await acknowledged.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(ackQualified, "Actual ACK describes a new clean History body outside immutable C")
+        let row = try XCTUnwrap(remote.rows.first)
+        let changed = RemoteSharedSheetSessionRow(remoteID: row.remoteID, payloadVersion: row.payloadVersion,
+            displayName: row.displayName, timestamp: row.timestamp, supplier: row.supplier, category: row.category,
+            isManualEntry: row.isManualEntry, data: [["Item", "Quantity"], ["Ordinary History C", "2"]],
+            sessionOverlay: row.sessionOverlay, ownerUserID: row.ownerUserID, shopID: row.shopID,
+            updatedAt: "2026-07-23T12:01:00.000000Z", deletedAt: nil)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: fixture.defaults) {
+            let context = ModelContext(acknowledged.controller.modelContainer)
+            try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
+            let applied = try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions([changed],
+                ownerUserID: fixture.ownerUserID, context: context, scope: scope)
+            XCTAssertEqual(applied.updatedCount, 1); try context.save()
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+        }
+        let terminal = try reopenFixture(acknowledged)
+        let appliedQualified = await terminal.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(appliedQualified)
+        XCTAssertEqual(try ModelContext(terminal.controller.modelContainer).fetch(FetchDescriptor<HistoryEntry>()).first?.data,
+            changed.data)
+        XCTAssertEqual(terminal.controller.activeManifest?.generationID, acknowledged.controller.activeManifest?.generationID)
+        XCTAssertEqual(terminal.controller.activeManifest?.checkpoint, acknowledged.controller.activeManifest?.checkpoint)
+    }
+
+    func testTimestampOnlyValidatedHistoryAdvancePreservesBodyQualificationAfterReopen() async throws {
+        let fixture = try makeFixture()
+        let history = AtomicRecoveryHistoryRowPayload(remoteID: UUID(), payloadVersion: 2,
+            displayName: "Timestamp-only History", timestamp: "2026-07-21 12:00:00", supplier: "", category: "",
+            isManualEntry: false, data: [["Item", "Quantity"], ["Known item", "1"]], sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "timestamp-only-history", historyRow: history)
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], historyRows: [history]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let clean = try reopenFixture(fixture)
+        let initialQualified = await clean.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(initialQualified)
+        let originalManifest = try XCTUnwrap(clean.controller.activeManifest)
+        let before = try XCTUnwrap(ModelContext(clean.controller.modelContainer).fetch(FetchDescriptor<HistoryEntry>()).first)
+        let originalFingerprint = before.remotePayloadFingerprint
+        let row = RemoteSharedSheetSessionRow(remoteID: history.remoteID, payloadVersion: history.payloadVersion,
+            displayName: history.displayName, timestamp: history.timestamp, supplier: history.supplier,
+            category: history.category, isManualEntry: history.isManualEntry, data: history.data,
+            sessionOverlay: history.sessionOverlay, ownerUserID: history.ownerUserID, shopID: history.shopID,
+            updatedAt: "2026-07-23T12:01:00.000000Z", deletedAt: nil)
+        XCTAssertEqual(HistorySessionPayloadCodec.fingerprintHash(for: row), originalFingerprint)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: fixture.defaults) {
+            let context = ModelContext(clean.controller.modelContainer)
+            try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
+            let applied = try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions([row],
+                ownerUserID: fixture.ownerUserID, context: context, scope: scope)
+            XCTAssertEqual(applied.skippedCleanCount, 1)
+            try context.save()
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+        }
+        let terminal = try reopenFixture(clean)
+        let stored = try XCTUnwrap(ModelContext(terminal.controller.modelContainer).fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(stored.data, history.data)
+        XCTAssertEqual(stored.remotePayloadFingerprint, originalFingerprint)
+        XCTAssertEqual(stored.remoteUpdatedAt, try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.updatedAt),
+            "A real validated timestamp advance must update the physical metadata alongside its current-body proof")
+        let qualified = await terminal.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified, "A validated newer timestamp with an unchanged semantic body remains usable after reopen")
+        XCTAssertEqual(terminal.controller.activeManifest, originalManifest)
+    }
+
+    func testOlderSameFingerprintHistoryEventCannotRollCurrentBodyProofBackward() async throws {
+        let fixture = try makeFixture()
+        let history = AtomicRecoveryHistoryRowPayload(remoteID: UUID(), payloadVersion: 2,
+            displayName: "Timestamp-only History", timestamp: "2026-07-21 12:00:00", supplier: "", category: "",
+            isManualEntry: false, data: [["Item", "Quantity"], ["Known item", "1"]], sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "older-same-body-history", historyRow: history)
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], historyRows: [history]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let clean = try reopenFixture(fixture)
+        let initialQualified = await clean.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(initialQualified)
+        let originalManifest = try XCTUnwrap(clean.controller.activeManifest)
+        let before = try XCTUnwrap(ModelContext(clean.controller.modelContainer).fetch(FetchDescriptor<HistoryEntry>()).first)
+        let originalFingerprint = before.remotePayloadFingerprint
+        let row = RemoteSharedSheetSessionRow(remoteID: history.remoteID, payloadVersion: history.payloadVersion,
+            displayName: history.displayName, timestamp: history.timestamp, supplier: history.supplier,
+            category: history.category, isManualEntry: history.isManualEntry, data: history.data,
+            sessionOverlay: history.sessionOverlay, ownerUserID: history.ownerUserID, shopID: history.shopID,
+            updatedAt: "2026-07-23T12:01:00.000000Z", deletedAt: nil)
+        XCTAssertEqual(HistorySessionPayloadCodec.fingerprintHash(for: row), originalFingerprint)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: fixture.defaults) {
+            let context = ModelContext(clean.controller.modelContainer)
+            try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
+            let applied = try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions([row],
+                ownerUserID: fixture.ownerUserID, context: context, scope: scope)
+            XCTAssertEqual(applied.skippedCleanCount, 1)
+            try context.save()
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+        }
+        let older = RemoteSharedSheetSessionRow(remoteID: row.remoteID, payloadVersion: row.payloadVersion,
+            displayName: row.displayName, timestamp: row.timestamp, supplier: row.supplier,
+            category: row.category, isManualEntry: row.isManualEntry, data: row.data,
+            sessionOverlay: row.sessionOverlay, ownerUserID: row.ownerUserID, shopID: row.shopID,
+            updatedAt: "2026-07-22T12:01:00.000000Z", deletedAt: nil)
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: fixture.defaults) {
+            let context = ModelContext(clean.controller.modelContainer)
+            try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
+            let applied = try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions([older],
+                ownerUserID: fixture.ownerUserID, context: context, scope: scope)
+            XCTAssertEqual(applied.skippedCleanCount, 1)
+            try context.save()
+            Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+        }
+        let terminal = try reopenFixture(clean)
+        let stored = try XCTUnwrap(ModelContext(terminal.controller.modelContainer).fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(stored.data, history.data)
+        XCTAssertEqual(stored.remotePayloadFingerprint, originalFingerprint)
+        XCTAssertEqual(stored.remoteUpdatedAt, try HistorySessionPayloadCodec.parseUpdatedAtStrict(row.updatedAt),
+            "A real validated timestamp advance must update the physical metadata alongside its current-body proof")
+        let qualified = await terminal.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified, "A validated newer timestamp with an unchanged semantic body remains usable after reopen")
+        XCTAssertEqual(terminal.controller.activeManifest, originalManifest)
+    }
+
+    private func makeAcknowledgedPriceQualificationFixture() async throws -> AtomicRecoveryFixture {
+        let fixture = try makeFixture(); let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "acknowledged-new-price-parent-proof", products: [product], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let parent = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            let date = Date(timeIntervalSince1970: 1_784_635_200)
+            let price = ProductPrice(type: .retail, price: 12, effectiveAt: date, source: "TEST_PRICE_ACK",
+                note: "owned append-only point", createdAt: date, product: parent)
+            context.insert(price)
+            try LocalPendingChangeAccumulator(context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+                .recordProductPriceChange(price: price, origin: .productPriceSave)
+            try context.save()
+        }
+        let remote = AtomicRecoveryLostAckPriceRemote()
+        do {
+            _ = try await ProductPricePushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: fixture.ownerUserID)
+            XCTFail("The controlled first actual price ACK must be lost")
+        } catch AtomicRecoveryLostAckPriceRemote.Fault.responseLost {}
+        _ = try await ProductPricePushService(modelContainer: fixture.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(remote.attempts.count, 2)
+        XCTAssertEqual(remote.attempts[0], remote.attempts[1])
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification(); XCTAssertTrue(qualified)
+        XCTAssertEqual(try ModelContext(reopened.controller.modelContainer).fetchCount(FetchDescriptor<ProductPrice>()), 1)
+        return reopened
+    }
+
+    func testLostPriceAckAndLaterPricePointSurviveCutoverReopenOriginalReplayAndTerminalDrainWithoutDuplicates() async throws {
+        let fixture = try makeFixture()
+        let initial = localAvailabilityProduct(fixture: fixture)
+        let checkpointA = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "lost-price-ack-a", products: [initial], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointA, checkpointA], productRows: [initial]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        func savePoint(amount: Double, date: Date) throws -> AtomicRecoveryLocalOperation {
+            try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                let product = try XCTUnwrap(try context.fetch(FetchDescriptor<Product>()).first { $0.remoteID == initial.id })
+                let price = ProductPrice(type: .retail, price: amount, effectiveAt: date,
+                    source: "EDIT_PRODUCT", createdAt: date, product: product)
+                context.insert(price)
+                let change = try XCTUnwrap(try LocalPendingChangeAccumulator(context: context,
+                    ownerUserID: fixture.ownerUserID,
+                    storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+                    .recordProductPriceChange(price: price, origin: .productPriceSave))
+                try context.save()
+                return AtomicRecoveryLocalOperation(changeID: change.changeID, idempotencyKey: change.idempotencyKey,
+                    baselineFingerprintHash: change.baselineFingerprintHash,
+                    intendedFingerprintHash: change.intendedFingerprintHash, status: change.status)
+            }
+        }
+        let dateA = Date(timeIntervalSince1970: 1_784_635_200)
+        let first = try savePoint(amount: 12, date: dateA)
+        let remote = AtomicRecoveryLostAckPriceRemote()
+        do {
+            _ = try await ProductPricePushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: fixture.ownerUserID)
+            XCTFail("The first price response must be lost after its actual remote commit")
+        } catch AtomicRecoveryLostAckPriceRemote.Fault.responseLost {}
+        let originalPayload = try XCTUnwrap(remote.attempts.first?.first)
+        XCTAssertEqual(remote.rows.count, 1)
+        XCTAssertEqual(remote.rows.first?.priceCanonical, "12", "The controlled server must return canonical price text")
+        let second = try savePoint(amount: 13, date: dateA.addingTimeInterval(60))
+        XCTAssertNotEqual(first.changeID, second.changeID)
+        XCTAssertNotEqual(first.idempotencyKey, second.idempotencyKey)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_PRICE_ORIGINAL_REPLAY_CUTOVER",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let checkpointC = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 42,
+            seed: "lost-price-ack-c", products: [initial], prices: remote.rows)
+        let recovery = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointC, checkpointC],
+            productRows: [initial], priceRows: remote.rows
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovery.hasPendingLocalWork)
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        let before = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try before.fetchCount(FetchDescriptor<ProductPrice>()), 2,
+                       "The canonical committed A and local B must each retain one physical point")
+        let pendingBefore = try before.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pendingBefore.first { $0.changeID == first.changeID }?.idempotencyKey, first.idempotencyKey)
+        XCTAssertEqual(pendingBefore.first { $0.changeID == second.changeID }?.idempotencyKey, second.idempotencyKey)
+        _ = try await ProductPricePushService(modelContainer: reopened.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(remote.attempts.count, 2)
+        let replay = try XCTUnwrap(remote.attempts.last)
+        XCTAssertEqual(replay.first { $0.id == originalPayload.id }, originalPayload,
+                       "Process death and cutover must not reconstruct or change the original A payload or ID")
+        let payloadB = try XCTUnwrap(replay.first { $0.id != originalPayload.id })
+        XCTAssertEqual(payloadB.price, 13)
+        XCTAssertNotEqual(payloadB.effectiveAt, originalPayload.effectiveAt)
+        XCTAssertEqual(remote.rows.count, 2)
+        let terminal = try reopenFixture(reopened)
+        let terminalQualification = await terminal.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(terminalQualification)
+        let final = ModelContext(terminal.controller.modelContainer)
+        XCTAssertEqual(try final.fetchCount(FetchDescriptor<Product>()), 1)
+        XCTAssertEqual(try final.fetchCount(FetchDescriptor<ProductPrice>()), 2)
+        XCTAssertEqual(try final.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+        XCTAssertEqual(Set(try final.fetch(FetchDescriptor<ProductPrice>()).map(\.price)), [12, 13])
+        XCTAssertTrue(try final.fetch(FetchDescriptor<LocalPendingChange>()).allSatisfy { $0.status == .acknowledged })
+        _ = try await ProductPricePushService(modelContainer: terminal.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(remote.attempts.count, 2, "A repeated terminal drain must not resend or duplicate either point")
+    }
+
+    func testSealedHistoryLostAckThenSameFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck() async throws {
+        try await assertSealedHistoryCutoverPreservesOriginalAndLaterIntent(sameField: true)
+    }
+
+    func testSealedHistoryLostAckThenDifferentFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck() async throws {
+        try await assertSealedHistoryCutoverPreservesOriginalAndLaterIntent(sameField: false)
+    }
+
+    func testExternalHistoryBodyCannotUseOwnSealedAttemptToClearCutoverConflict() async throws {
+        try await assertSealedHistoryCutoverPreservesOriginalAndLaterIntent(sameField: true, refusal: "external-body")
+    }
+
+    func testForeignDeviceSealedHistoryAttemptCannotExplainCanonicalCutover() async throws {
+        try await assertSealedHistoryCutoverPreservesOriginalAndLaterIntent(sameField: true, refusal: "foreign-device")
+    }
+
+    private func assertSealedHistoryCutoverPreservesOriginalAndLaterIntent(sameField: Bool, refusal: String? = nil) async throws {
+        let fixture = try makeFixture()
+        let initial = AtomicRecoveryHistoryRowPayload(remoteID: UUID(), payloadVersion: 2,
+            displayName: "Initial History", timestamp: "2026-07-21 12:00:00", supplier: "", category: "",
+            isManualEntry: false, data: [["Item", "Quantity"], ["Initial item", "1"]], sessionOverlay: nil,
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            dataCheckpointDigest: String(repeating: "a", count: 64),
+            overlayCheckpointDigest: String(repeating: "b", count: 64),
+            updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil)
+        let checkpointA = makeCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "sealed-history-a-\(sameField)", historyRow: initial)
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointA, checkpointA], historyRows: [initial]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        func saveHistory(data: [[String]]?, title: String?) throws -> AtomicRecoveryLocalOperation {
+            try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                let entry = try XCTUnwrap(try context.fetch(FetchDescriptor<HistoryEntry>()).first)
+                if let data { entry.data = data }
+                if let title { entry.title = title }
+                entry.markHistorySessionLocalMutation()
+                let identity = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity)
+                let change = try XCTUnwrap(try LocalPendingChangeAccumulator(context: context,
+                    ownerUserID: fixture.ownerUserID, storeIdentity: identity)
+                    .recordHistorySessionChange(entry: entry, operation: .upsert,
+                        changedFields: data == nil ? ["title"] : ["data"]))
+                // The actual model normally reads the App's standard defaults;
+                // this isolated generation fixture supplies its private suite.
+                entry.assignHistoryScope(ownerUserID: fixture.ownerUserID,
+                    selectedShopID: fixture.shopID, storeIdentity: identity)
+                try context.save()
+                return AtomicRecoveryLocalOperation(changeID: change.changeID, idempotencyKey: change.idempotencyKey,
+                    baselineFingerprintHash: change.baselineFingerprintHash,
+                    intendedFingerprintHash: change.intendedFingerprintHash, status: change.status)
+            }
+        }
+        let dataA = [["Item", "Quantity"], ["History A", "2"]]
+        let dataB = sameField ? [["Item", "Quantity"], ["History B", "3"]] : dataA
+        let first = try saveHistory(data: dataA, title: nil)
+        let remote = AtomicRecoveryLostAckHistoryRemote()
+        do {
+            _ = try await HistorySessionPushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, recorder: nil, defaults: fixture.defaults)
+                .syncHistorySessions(ownerUserID: fixture.ownerUserID, mode: .incremental)
+            XCTFail("History A must commit remotely before its response is lost")
+        } catch AtomicRecoveryLostAckHistoryRemote.Fault.responseLost {}
+        let originalPayload = try XCTUnwrap(remote.payloadBytes.first)
+        let originalRow = try XCTUnwrap(remote.rows.first)
+        XCTAssertEqual(originalRow.data, dataA)
+        let beforeSaveB = ModelContext(fixture.controller.modelContainer)
+        let tokenA = LocalPendingChangeCASToken(try XCTUnwrap(try beforeSaveB.fetch(FetchDescriptor<LocalPendingChange>())
+            .first { $0.changeID == first.changeID }))
+        let sealedA = try XCTUnwrap(try beforeSaveB.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+            .first { LocalPendingBusinessAttemptStore.isSealed($0) })
+        let originalEnvelope = sealedA.metadataPayloadJSON
+        let originalEnvelopeDigest = sealedA.entityIDsShape
+        let second = try saveHistory(data: sameField ? dataB : nil, title: sameField ? nil : "History B title")
+        XCTAssertNotEqual(first.changeID, second.changeID)
+        XCTAssertNotEqual(first.idempotencyKey, second.idempotencyKey)
+        let tokenB = LocalPendingChangeCASToken(try XCTUnwrap(try ModelContext(fixture.controller.modelContainer)
+            .fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == second.changeID }))
+        let originalGeneration = fixture.controller.activeManifest?.generationID
+        if refusal == "foreign-device" {
+            let corrupt = ModelContext(fixture.controller.modelContainer)
+            let sealed = try XCTUnwrap(try corrupt.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+                .first { LocalPendingBusinessAttemptStore.isSealed($0) })
+            sealed.sourceDeviceID = UUID().uuidString
+            try corrupt.save()
+        }
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_HISTORY_ORIGINAL_REPLAY_CUTOVER",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let canonicalC = AtomicRecoveryHistoryRowPayload(remoteID: originalRow.remoteID,
+            payloadVersion: originalRow.payloadVersion, displayName: originalRow.displayName,
+            timestamp: originalRow.timestamp, supplier: originalRow.supplier, category: originalRow.category,
+            isManualEntry: originalRow.isManualEntry,
+            data: refusal == "external-body" ? [["Item", "Quantity"], ["External History C", "999"]] : originalRow.data,
+            sessionOverlay: originalRow.sessionOverlay,
+            ownerUserID: originalRow.ownerUserID, shopID: originalRow.shopID,
+            dataCheckpointDigest: String(repeating: "c", count: 64),
+            overlayCheckpointDigest: String(repeating: "d", count: 64),
+            updatedAt: originalRow.updatedAt, deletedAt: originalRow.deletedAt)
+        let checkpointC = makeCheckpoint(fixture: fixture, maxEventID: 42,
+            seed: "sealed-history-c-\(sameField)", historyRow: canonicalC)
+        if refusal == "foreign-device" {
+            do {
+                _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                    ownerUserID: fixture.ownerUserID, checkpoints: [checkpointC, checkpointC], historyRows: [canonicalC]))
+                    .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTFail("A sealed request from a foreign device cannot authorize same-scope transfer")
+            } catch {
+                XCTAssertEqual(error as? SyncStoreGenerationError, .activationReadBackFailed)
+            }
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, originalGeneration)
+            XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+            XCTAssertEqual(remote.payloadBytes, [originalPayload])
+            let remaining = ModelContext(fixture.controller.modelContainer)
+            XCTAssertEqual(try remaining.fetch(FetchDescriptor<HistoryEntry>()).first?.data, dataB)
+            XCTAssertTrue(tokenA.matches(try XCTUnwrap(try remaining.fetch(FetchDescriptor<LocalPendingChange>())
+                .first { $0.changeID == first.changeID })))
+            return
+        }
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointC, checkpointC], historyRows: [canonicalC]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.hasPendingLocalWork)
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        XCTAssertEqual(reopened.controller.activeManifest?.checkpoint.history, checkpointC.history)
+        let read = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
+        XCTAssertEqual(try read.fetch(FetchDescriptor<HistoryEntry>()).first?.data, dataB)
+        let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+        let replayA = try XCTUnwrap(changes.first { $0.changeID == first.changeID })
+        let pendingB = try XCTUnwrap(changes.first { $0.changeID == second.changeID })
+        if refusal == "external-body" {
+            XCTAssertEqual(replayA.status, .staleBaseline)
+            XCTAssertEqual(pendingB.status, .staleBaseline)
+            XCTAssertEqual(try read.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+                .first { LocalPendingBusinessAttemptStore.isSealed($0) }?.metadataPayloadJSON, originalEnvelope)
+            _ = try await HistorySessionPushService(modelContainer: reopened.controller.modelContainer,
+                remote: remote, recorder: nil, defaults: fixture.defaults)
+                .syncHistorySessions(ownerUserID: fixture.ownerUserID, mode: .incremental)
+            XCTAssertEqual(remote.payloadBytes, [originalPayload], "A genuine external C conflict must not replay or send B")
+            return
+        }
+        XCTAssertTrue(tokenA.matches(replayA), "Cutover cannot mutate the CAS token of sealed original A")
+        XCTAssertTrue(tokenB.matches(pendingB), "A committed by this client cannot turn later B into a false conflict")
+        XCTAssertEqual(replayA.status, .pending)
+        XCTAssertEqual(pendingB.status, .pending)
+        let copiedEnvelope = try XCTUnwrap(try read.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+            .first { LocalPendingBusinessAttemptStore.isSealed($0) })
+        XCTAssertEqual(copiedEnvelope.metadataPayloadJSON, originalEnvelope)
+        XCTAssertEqual(copiedEnvelope.entityIDsShape, originalEnvelopeDigest)
+        _ = try await HistorySessionPushService(modelContainer: reopened.controller.modelContainer,
+            remote: remote, recorder: nil, defaults: fixture.defaults)
+            .syncHistorySessions(ownerUserID: fixture.ownerUserID, mode: .incremental)
+        XCTAssertEqual(remote.payloadBytes.count, 3)
+        // Count is a required invariant; avoid a secondary test indexing crash
+        // when a regression prevents the expected original replay and B send.
+        guard remote.payloadBytes.count == 3 else { return }
+        XCTAssertEqual(remote.payloadBytes[1], originalPayload,
+                       "After cutover/process death the exact original request must precede B")
+        XCTAssertNotEqual(remote.payloadBytes[2], originalPayload)
+        XCTAssertEqual(remote.rows.count, 1)
+        XCTAssertEqual(remote.rows.first?.data, dataB)
+        XCTAssertEqual(remote.rows.first?.displayName, sameField ? originalRow.displayName : "History B title")
+        let terminal = try reopenFixture(reopened)
+        let terminalQualified = await terminal.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(terminalQualified)
+        let final = ModelContext(terminal.controller.modelContainer)
+        let entry = try XCTUnwrap(try final.fetch(FetchDescriptor<HistoryEntry>()).first)
+        XCTAssertEqual(entry.data, dataB)
+        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
+        XCTAssertEqual(try final.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
+        XCTAssertEqual(try final.fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        XCTAssertTrue(try final.fetch(FetchDescriptor<LocalPendingChange>()).allSatisfy { $0.status == .acknowledged })
+        XCTAssertEqual(try final.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == second.changeID }?.idempotencyKey,
+            second.idempotencyKey)
+        XCTAssertTrue(try final.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
+        _ = try await HistorySessionPushService(modelContainer: terminal.controller.modelContainer,
+            remote: remote, recorder: nil, defaults: fixture.defaults)
+            .syncHistorySessions(ownerUserID: fixture.ownerUserID, mode: .incremental)
+        XCTAssertEqual(remote.payloadBytes.count, 3, "Double drain cannot replay A or duplicate B after terminal ACK")
+    }
+
+    func testSealedCatalogAttemptAndLaterSaveSurviveCutoverAndReopenBeforeOriginalReplay() async throws {
+        let fixture = try makeFixture()
+        let initial = localAvailabilityProduct(fixture: fixture)
+        let checkpointA = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "sealed-cutover-a", products: [initial], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointA, checkpointA], productRows: [initial]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let first = try saveLocalAvailabilityEdit(fixture: fixture, productID: initial.id, name: "First sealed body")
+        let remote = AtomicRecoveryLostAckCatalogRemote(initial: initial)
+        do {
+            _ = try await CatalogPushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+            XCTFail("The first response must be lost after server commit")
+        } catch AtomicRecoveryLostAckCatalogRemote.Fault.responseLost {}
+        let firstPayload = try XCTUnwrap(remote.attempts.first)
+        let second = try saveLocalAvailabilityEdit(fixture: fixture, productID: initial.id, name: "Later saved body")
+        XCTAssertNotEqual(first.changeID, second.changeID)
+        XCTAssertNotEqual(first.idempotencyKey, second.idempotencyKey)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_SEALED_ATTEMPT_CUTOVER",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let checkpointC = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 42,
+            seed: "sealed-cutover-c", products: [remote.current], prices: [])
+        let summary = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointC, checkpointC], productRows: [remote.current]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.hasPendingLocalWork)
+        let reopened = try reopenFixture(fixture)
+        let cutoverQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(cutoverQualification)
+        let before = ModelContext(reopened.controller.modelContainer)
+        let pending = try before.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pending.first { $0.changeID == first.changeID }?.idempotencyKey, first.idempotencyKey)
+        XCTAssertEqual(pending.first { $0.changeID == second.changeID }?.idempotencyKey, second.idempotencyKey)
+        let sealed = try before.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed)
+        XCTAssertEqual(sealed.count, 1)
+        _ = try await CatalogPushService(modelContainer: reopened.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(remote.attempts.count, 3)
+        XCTAssertEqual(remote.attempts[1], firstPayload)
+        XCTAssertEqual(remote.attempts[2].productName, "Later saved body")
+        let final = ModelContext(try reopenFixture(reopened).controller.modelContainer)
+        XCTAssertEqual(try final.fetch(FetchDescriptor<Product>()).first?.productName, "Later saved body")
+        XCTAssertTrue(try final.fetch(FetchDescriptor<LocalPendingChange>()).allSatisfy { $0.status == .acknowledged })
+        XCTAssertTrue(try final.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
+    }
+    func testLateCatalogAckKeepsSecondSaveInSameAndDifferentFieldsUntilItsOwnConfirmation() async throws {
+        for sameField in [true, false] {
+            let fixture = try makeFixture()
+            let initial = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "late-catalog-ack-\(sameField)", products: [initial], prices: [])
+            _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [initial]
+            )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            let first = try saveLocalAvailabilityEdit(fixture: fixture, productID: initial.id, name: "First body")
+            let observation = AtomicRecoveryLateEditObservation()
+            observation.edit = {
+                if sameField {
+                    return try self.saveLocalAvailabilityEdit(fixture: fixture, productID: initial.id, name: "Second body")
+                }
+                return try Task126OwnerStoreGate.withLocalMutationFence(
+                    modelContainer: fixture.controller.modelContainer,
+                    ownerUserID: fixture.ownerUserID, defaults: fixture.defaults
+                ) { context in
+                    let product = try XCTUnwrap(try context.fetch(FetchDescriptor<Product>()).first { $0.remoteID == initial.id })
+                    let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                    product.itemNumber = "Second item"
+                    let change = try XCTUnwrap(try LocalPendingChangeAccumulator(context: context,
+                        ownerUserID: fixture.ownerUserID, storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity))
+                        .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                            changedFields: ["itemNumber"], baselineFingerprintHash: baseline))
+                    try context.save()
+                    return AtomicRecoveryLocalOperation(changeID: change.changeID, idempotencyKey: change.idempotencyKey,
+                        baselineFingerprintHash: change.baselineFingerprintHash, intendedFingerprintHash: change.intendedFingerprintHash,
+                        status: change.status)
+                }
+            }
+            let remote = AtomicRecoveryLostAckCatalogRemote(initial: initial, loseFirstResponse: false,
+                                                            beforeFirstResponse: { observation.runOnce() })
+            _ = try await CatalogPushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+            XCTAssertTrue(observation.entered)
+            XCTAssertNil(observation.failure)
+            let second = try XCTUnwrap(observation.operation)
+            XCTAssertNotEqual(first.changeID, second.changeID)
+            XCTAssertNotEqual(first.idempotencyKey, second.idempotencyKey)
+            let afterFirst = ModelContext(fixture.controller.modelContainer)
+            let pending = try afterFirst.fetch(FetchDescriptor<LocalPendingChange>())
+            XCTAssertEqual(pending.first { $0.changeID == first.changeID }?.status, .acknowledged)
+            XCTAssertEqual(pending.first { $0.changeID == second.changeID }?.status, .pending,
+                           "ACK A must not acknowledge the later Save B")
+            let product = try XCTUnwrap(afterFirst.fetch(FetchDescriptor<Product>()).first)
+            let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+            let currentIntent = try XCTUnwrap(pending.first { $0.changeID == second.changeID })
+            let publicReceipt = LocalProductSaveReceipt(product: product, manifest: manifest,
+                intents: [LocalPendingChangeCASToken(currentIntent)])
+            XCTAssertFalse(publicReceipt.isCloudConfirmed(by: pending.filter { $0.changeID == second.changeID }),
+                           "Public feedback must not use ACK A to confirm the current Save B")
+            XCTAssertEqual(product.productName, sameField ? "Second body" : "First body")
+            XCTAssertEqual(product.itemNumber, sameField ? initial.itemNumber : "Second item")
+            let reopened = try reopenFixture(fixture)
+            let lateAckQualification = await reopened.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(lateAckQualification)
+            _ = try await CatalogPushService(modelContainer: reopened.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(remote.attempts.count, 2)
+            XCTAssertEqual(remote.current.productName, sameField ? "Second body" : "First body")
+            XCTAssertEqual(remote.current.itemNumber, sameField ? initial.itemNumber : "Second item")
+            let final = ModelContext(try reopenFixture(reopened).controller.modelContainer)
+            XCTAssertTrue(try final.fetch(FetchDescriptor<LocalPendingChange>()).allSatisfy { $0.status == .acknowledged })
+            let confirmedChanges = try final.fetch(FetchDescriptor<LocalPendingChange>()).filter { $0.changeID == second.changeID }
+            XCTAssertTrue(publicReceipt.isCloudConfirmed(by: confirmedChanges),
+                          "Only B's durable typed-response ACK confirms the current Save after reopen")
+            XCTAssertEqual(try final.fetchCount(FetchDescriptor<Product>()), 1)
+            XCTAssertEqual(try final.fetchCount(FetchDescriptor<ProductPrice>()), 0)
+            XCTAssertEqual(try final.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+            _ = try await CatalogPushService(modelContainer: reopened.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(remote.attempts.count, 2, "A repeated drain must not resend either acknowledged operation")
+        }
+    }
+    func testCommittedPricePageIsNotDownloadedAgainAfterNextPageTimeoutAndReopen() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let prices = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"].map { rawID in
+            RemoteInventoryProductPriceRow(id: UUID(uuidString: rawID)!, ownerUserID: fixture.ownerUserID,
+                shopID: fixture.shopID, productID: product.id, type: "RETAIL", price: 12.34,
+                priceCanonical: "12.34", effectiveAt: "2026-07-21 12:00:00", source: "fixture", note: nil,
+                createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "accepted-price-page-resume", products: [product], prices: prices)
+        var failedSecondPage = false
+        let firstTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: [product], priceRows: prices,
+            pageInterception: { parameters in
+                if parameters.domain == ShopSyncRecoveryDomain.prices.rawValue, parameters.afterID != nil {
+                    failedSecondPage = true
+                    throw URLError(.timedOut)
+                }
+            })
+        do {
+            _ = try await makeService(fixture: fixture, transport: firstTransport,
+                maximumAttempts: 1, pageLimit: 1).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("The second price page must time out after the first page commits")
+        } catch { XCTAssertTrue(failedSecondPage, "The fault must follow a committed first page") }
+        XCTAssertEqual(firstTransport.pageCursors(domain: .prices), [nil, prices[0].id.uuidString.lowercased()])
+        XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertNil(fixture.controller.activeManifest, "A partial stage must never be active")
+        let resumed = try reopenFixture(fixture)
+        let nextTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product], priceRows: prices)
+        let summary = try await makeService(fixture: resumed, transport: nextTransport,
+            maximumAttempts: 1, pageLimit: 1).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertEqual(nextTransport.pageCursors(domain: .prices), [prices[0].id.uuidString.lowercased()],
+                       "Durably accepted materialization/cursor must resume without replaying the first RPC")
+        let final = try reopenFixture(resumed)
+        let read = ModelContext(final.controller.modelContainer)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<ProductPrice>()), 2)
+        XCTAssertEqual(final.controller.activeManifest?.localVerification.prices, checkpoint.prices)
+    }
+    func testUnexplainedCleanBodyCorruptionIsNotLocalAvailabilityAfterReopenOrFreshBinding() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "clean-body-local-qualification", products: [product], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        let context = ModelContext(fixture.controller.modelContainer)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        stored.productName = "Unexplained clean corruption"
+        try context.save() // Deliberate fixture corruption outside any accepted writer.
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        let reopened = try reopenFixture(fixture)
+        let corruptedQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(corruptedQualification, "The actual completed body readback must reject corruption")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: reopened.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try saveLocalAvailabilityEdit(fixture: reopened, productID: product.id))
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).saveBinding(
+            accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID),
+            storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity)))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: reopened.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults), "A fresh identity binding is not a body readback proof")
+        XCTAssertEqual(try ModelContext(reopened.controller.modelContainer).fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+    }
+
+    func testValidatedOrdinaryApplyAndAcknowledgedSaveRemainLocallyUsableAfterReopen() async throws {
+        let proof = try await makeRealContinuationProof(eventID: 42)
+        XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 1)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42)
+        let reapplied = try reopenFixture(proof.fixture)
+        let ordinaryQualification = await reapplied.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(ordinaryQualification)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: reapplied.controller.modelContainer, ownerUserID: reapplied.ownerUserID,
+            defaults: reapplied.defaults), "A validated ordinary apply must supersede the historical body proof")
+        let context = ModelContext(reapplied.controller.modelContainer)
+        let stored = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        let remoteRow = ordinaryContinuationProduct(fixture: reapplied, id: proof.productID, stock: 1)
+        XCTAssertEqual(stored.stockQuantity, remoteRow.stockQuantity)
+        _ = try saveLocalAvailabilityEdit(fixture: reapplied, productID: proof.productID, name: "Acknowledged new body")
+        let remote = AtomicRecoveryLostAckCatalogRemote(initial: remoteRow, loseFirstResponse: false)
+        _ = try await CatalogPushService(modelContainer: reapplied.controller.modelContainer,
+            remote: remote, defaults: reapplied.defaults).pushPendingCatalog(ownerUserID: reapplied.ownerUserID)
+        let acknowledged = try reopenFixture(reapplied)
+        let acknowledgedQualification = await acknowledged.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(acknowledgedQualification)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: acknowledged.controller.modelContainer, ownerUserID: acknowledged.ownerUserID,
+            defaults: acknowledged.defaults), "An actual acknowledged body must not be compared to immutable checkpoint A")
+        XCTAssertEqual(try ModelContext(acknowledged.controller.modelContainer).fetch(FetchDescriptor<Product>()).first?.productName,
+                       "Acknowledged new body")
+        XCTAssertTrue(try ModelContext(acknowledged.controller.modelContainer).fetch(FetchDescriptor<LocalPendingChange>())
+            .allSatisfy { $0.status == .acknowledged })
+        let next = try saveLocalAvailabilityEdit(fixture: acknowledged, productID: proof.productID,
+                                                name: "Next independent local save")
+        XCTAssertEqual(next.status, .pending)
+    }
+
+    func testPreparedPricePageAfterModelCommitReplaysFromDiskWithoutDuplicateRowsOrRPC() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let prices = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"].map { value in
+            RemoteInventoryProductPriceRow(id: UUID(uuidString: value)!, ownerUserID: fixture.ownerUserID,
+                shopID: fixture.shopID, productID: product.id, type: "RETAIL", price: 12.34,
+                priceCanonical: "12.34", effectiveAt: "2026-07-21 12:00:00", source: "fixture", note: nil,
+                createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "prepared-page-replay", products: [product], prices: prices)
+        let first = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: [product], priceRows: prices)
+        do {
+            _ = try await makeService(fixture: fixture, transport: first, maximumAttempts: 1, pageLimit: 1,
+                pageCommitProbe: { domain in if domain == .prices { throw URLError(.timedOut) } })
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("Interrupt after SwiftData save and before accepted cursor commit")
+        } catch { XCTAssertEqual((error as? URLError)?.code, .timedOut) }
+        XCTAssertEqual(first.pageCursors(domain: .prices), [nil])
+        let stagedID = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal?.generationID)
+        let stageRoot = fixture.temporaryRoot.appendingPathComponent("generation-root/generations/\(stagedID.uuidString.lowercased())")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stageRoot.appendingPathComponent("recovery-page-prepared-v1.json").path))
+        XCTAssertNil(fixture.controller.activeManifest)
+        let resumed = try reopenFixture(fixture)
+        let second = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product], priceRows: prices)
+        _ = try await makeService(fixture: resumed, transport: second, maximumAttempts: 1, pageLimit: 1)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(second.pageCursors(domain: .prices), [prices[0].id.uuidString.lowercased()])
+        XCTAssertEqual(resumed.controller.activeManifest?.generationID, stagedID)
+        let read = ModelContext(try reopenFixture(resumed).controller.modelContainer)
+        let stored = try read.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(stored.count, 2)
+        XCTAssertEqual(Set(stored.compactMap(\.remoteID)), Set(prices.map(\.id)))
+        XCTAssertEqual(resumed.controller.activeManifest?.localVerification.prices, checkpoint.prices)
+    }
+
+    func testAcceptedCursorCannotAuthorizeChangedDeviceProgressOrPublishPartialStage() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "cursor-wrong-device", products: [product], prices: [])
+        let first = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: [product], pageInterception: { parameters in
+                if parameters.domain == ShopSyncRecoveryDomain.prices.rawValue { throw URLError(.timedOut) }
+            })
+        do {
+            _ = try await makeService(fixture: fixture, transport: first, maximumAttempts: 1)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("The price boundary must be interrupted")
+        } catch { XCTAssertEqual((error as? URLError)?.code, .timedOut) }
+        let stagedID = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal?.generationID)
+        let headerURL = fixture.temporaryRoot.appendingPathComponent(
+            "generation-root/generations/\(stagedID.uuidString.lowercased())/recovery-page-progress-v1.json")
+        var header = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: headerURL)) as? [String: Any])
+        header["deviceIdentityHash"] = String(repeating: "e", count: 64)
+        try JSONSerialization.data(withJSONObject: header, options: [.sortedKeys]).write(to: headerURL, options: .atomic)
+        let resumed = try reopenFixture(fixture)
+        let next = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: [product])
+        do {
+            _ = try await makeService(fixture: resumed, transport: next, maximumAttempts: 1)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("Foreign progress must fail before any page read or activation")
+        } catch { XCTAssertEqual(error as? ShopSyncRecoveryContractError, .invalidCheckpoint) }
+        XCTAssertEqual(next.counts().pages, 0)
+        XCTAssertNil(resumed.controller.activeManifest)
+        XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+    }
+
+    func testChangedRemoteBodyPreservesLocalIntentAsConflictAndKeepsUntouchedRemoteFields() async throws {
+        let fixture = try makeFixture()
+        let initial = localAvailabilityProduct(fixture: fixture)
+        let firstCheckpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "local-conflict-a", products: [initial], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [firstCheckpoint, firstCheckpoint], productRows: [initial]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let operation = try saveLocalAvailabilityEdit(fixture: fixture, productID: initial.id)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_CHANGED_REMOTE_CONFLICT",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let changed = RemoteInventoryProductRow(id: initial.id, ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            barcode: initial.barcode, itemNumber: "New remote item", productName: "Changed by another device",
+            secondProductName: "New remote secondary", purchasePrice: nil, retailPrice: nil,
+            supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-07-22T12:00:00.000000Z", deletedAt: nil)
+        let checkpointC = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 42,
+            seed: "local-conflict-c", products: [changed], prices: [])
+        let summary = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpointC, checkpointC], productRows: [changed]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.hasPendingLocalWork)
+        let context = ModelContext(try reopenFixture(fixture).controller.modelContainer)
+        let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        XCTAssertEqual(product.productName, "Saved while recovery is active")
+        XCTAssertEqual(product.itemNumber, changed.itemNumber)
+        XCTAssertEqual(product.secondProductName, changed.secondProductName)
+        let pending = try XCTUnwrap(context.fetch(FetchDescriptor<LocalPendingChange>()).first)
+        XCTAssertEqual(pending.status, .staleBaseline, "A real changed C must retain the conflict, never silently overwrite it")
+        XCTAssertEqual(pending.changeID, operation.changeID)
+        XCTAssertEqual(pending.idempotencyKey, operation.idempotencyKey)
+        XCTAssertEqual(pending.baselineFingerprintHash, operation.baselineFingerprintHash)
+        XCTAssertEqual(pending.intendedFingerprintHash, operation.intendedFingerprintHash)
+    }
+
+    func testExplicitDeviceDenialRemainsLocalReadAndWriteDeniedAfterReopenAndShopRefresh() async throws {
+        for status in ["retired", "suspended", "revoked"] {
+            let fixture = try makeFixture()
+            let row = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "local-device-denial-\(status)", products: [row], prices: [])
+            _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+            )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: fixture.controller.modelContainer, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+            let blocked = await localAuthorizationRuntime(fixture: fixture, status: status, canWrite: false)
+                .run(action: .noOp, source: .rootForeground)
+            XCTAssertEqual(blocked.blockReason, .deviceNotActive)
+            XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: fixture.controller.modelContainer, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults), status)
+            XCTAssertThrowsError(try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id), status)
+
+            let reopened = try reopenFixture(fixture)
+            let deniedBodyQualification = await reopened.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(deniedBodyQualification)
+            let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+            let selected = try XCTUnwrap(selectionStore.selectedShop(accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID)))
+            XCTAssertTrue(selectionStore.save(selected, accountHash: AccountBindingStore.accountHash(for: fixture.ownerUserID)),
+                "A fresh active linked-shop membership cannot erase a device denial")
+            XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: reopened.controller.modelContainer, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults), status)
+            XCTAssertThrowsError(try saveLocalAvailabilityEdit(fixture: reopened, productID: row.id), status)
+
+            _ = await localAuthorizationRuntime(fixture: reopened, status: "active", canWrite: true)
+                .run(action: .noOp, source: .rootForeground)
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: reopened.controller.modelContainer, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+            _ = try saveLocalAvailabilityEdit(fixture: reopened, productID: row.id)
+        }
+    }
+
+    func testTransientDeviceStatusDoesNotRevokeConfirmedLocalGeneration() async throws {
+        let fixture = try makeFixture()
+        let row = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "local-device-transient", products: [row], prices: [])
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        for status in ["network_error", "unauthorized"] {
+            _ = await localAuthorizationRuntime(fixture: fixture, status: status, canWrite: false)
+                .run(action: .noOp, source: .rootForeground)
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: fixture.controller.modelContainer, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults), status)
+        }
+        _ = try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id)
+    }
+
+    private func localAuthorizationRuntime(
+        fixture: AtomicRecoveryFixture, status: String, canWrite: Bool
+    ) -> AutomaticSyncRuntimeFacade {
+        AutomaticSyncRuntimeFacade(authViewModel: SupabaseAuthViewModel(authService: nil),
+            catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: nil, activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: status, canWrite: canWrite),
+            defaults: fixture.defaults, authenticatedOwnerProvider: { fixture.ownerUserID })
+    }
+
+    func testSaveAfterLocalPreparationRejectsStaleCutoverAndSurvivesBoundedRetry() async throws {
+        let observation = AtomicRecoveryLateEditObservation()
+        let fixture = try makeFixture(activationBoundaryProbe: { boundary in
+            guard boundary == .afterLocalWorkPreparation else { return }
+            MainActor.assumeIsolated { observation.runOnce() }
+        })
+        let row = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "late-local-save-cas", products: [row], prices: []
+        )
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let first = try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id)
+        let oldGenerationID = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_LOCAL_PREPARATION_CAS",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        observation.edit = {
+            try self.saveLocalAvailabilityEdit(fixture: fixture, productID: row.id,
+                name: "Saved after local preparation")
+        }
+        do {
+            _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+            ), maximumAttempts: 1).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A source write after preparation must reject that stale cutover")
+        } catch {
+            XCTAssertEqual(error as? ShopSyncRecoveryContractError, .checkpointChanged)
+        }
+        XCTAssertTrue(observation.entered)
+        XCTAssertNil(observation.failure)
+        let late = try XCTUnwrap(observation.operation)
+        XCTAssertEqual(late.changeID, first.changeID)
+        XCTAssertEqual(late.idempotencyKey, first.idempotencyKey)
+        XCTAssertEqual(late.baselineFingerprintHash, first.baselineFingerprintHash,
+            "A second local edit cannot replace its original remote baseline with a local body")
+        XCTAssertNotEqual(late.intendedFingerprintHash, first.intendedFingerprintHash)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, oldGenerationID)
+        XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        try await assertLocalAvailabilityEdit(fixture: try reopenFixture(fixture), productID: row.id,
+            operation: late, name: "Saved after local preparation")
+
+        let summary = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.hasPendingLocalWork)
+        XCTAssertNotEqual(fixture.controller.activeManifest?.generationID, oldGenerationID)
+        try await assertLocalAvailabilityEdit(fixture: try reopenFixture(fixture), productID: row.id,
+            operation: late, name: "Saved after local preparation")
+    }
+
+    func testSameScopeLocalWorkPreparationRunsOutsideMainThread() async throws {
+        let observations = AtomicRecoveryThreadObservations()
+        let fixture = try makeFixture(activationBoundaryProbe: { boundary in
+            guard boundary == .beforeLocalWorkTransfer else { return }
+            observations.record(isMainThread: Thread.isMainThread)
+        })
+        let row = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "local-preparation-thread", products: [row], prices: []
+        )
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let operation = try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_LOCAL_PREPARATION_THREAD",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let summary = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(observations.values, [false, false], "Both same-scope source scans and staging writes must run outside the UI thread")
+        XCTAssertTrue(summary.hasPendingLocalWork)
+        try await assertLocalAvailabilityEdit(fixture: try reopenFixture(fixture), productID: row.id, operation: operation)
+    }
+
+    func testSameScopeRecoveryHeldPageAllowsDurableLocalSaveAndPreservesOperationAcrossCutover() async throws {
+        let fixture = try makeFixture()
+        let row = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "local-availability-held", products: [row], prices: []
+        )
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let oldGenerationID = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_LOCAL_AVAILABILITY_HELD_PAGE",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        let pageEntered = expectation(description: "same-scope recovery products page is held")
+        let hold = AtomicRecoveryHeldPage()
+        let transport = AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row],
+            pageInterception: { parameters in
+                guard parameters.domain == ShopSyncRecoveryDomain.products.rawValue else { return }
+                pageEntered.fulfill()
+                await hold.wait()
+            }
+        )
+        let service = makeService(fixture: fixture, transport: transport)
+        let recovery = Task { try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID) }
+        defer { hold.release(); recovery.cancel() }
+        await fulfillment(of: [pageEntered], timeout: 3)
+        XCTAssertFalse(hold.isReleased, "All local assertions must run before the network response is released")
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, oldGenerationID)
+        let beforeSave = try XCTUnwrap(try ModelContext(fixture.controller.modelContainer)
+            .fetch(FetchDescriptor<Product>()).first)
+        XCTAssertEqual(beforeSave.remoteID, row.id)
+        XCTAssertEqual(beforeSave.productName, row.productName)
+
+        var savedOperation: AtomicRecoveryLocalOperation?
+        var saveFailure: Error?
+        do {
+            savedOperation = try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id)
+        } catch { saveFailure = error }
+        XCTAssertNil(saveFailure, "A verified same-scope active store must accept a durable local Save during held recovery")
+        let savedBeforeRelease = try ModelContext(fixture.controller.modelContainer)
+            .fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(savedBeforeRelease.count, 1)
+        XCTAssertFalse(hold.isReleased)
+        hold.release()
+
+        var recoverySummary: SyncRecoverySnapshotPullSummary?
+        var recoveryFailure: Error?
+        do { recoverySummary = try await recovery.value } catch { recoveryFailure = error }
+        XCTAssertNil(recoveryFailure, "Cutover must reconcile the committed local operation rather than reject all pending work")
+        XCTAssertEqual(recoverySummary?.completedRecoveryJournal, true)
+        XCTAssertNotEqual(fixture.controller.activeManifest?.generationID, oldGenerationID)
+        let reopened = try reopenFixture(fixture)
+        try await assertLocalAvailabilityEdit(fixture: reopened, productID: row.id, operation: savedOperation)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+    }
+
+    func testSameScopeRecoveryPreservesExistingDurableLocalOperationWithoutRequiringManualDrain() async throws {
+        let fixture = try makeFixture()
+        let row = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(
+            fixture: fixture, maxEventID: 41, seed: "local-availability-existing", products: [row], prices: []
+        )
+        _ = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+        )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        let operation = try saveLocalAvailabilityEdit(fixture: fixture, productID: row.id)
+        let oldGenerationID = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+        XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+            accountHash: binding.accountHash, storeIdentity: binding.storeIdentity,
+            reason: "TASK144_LOCAL_AVAILABILITY_PENDING",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)
+        ))
+        var recoverySummary: SyncRecoverySnapshotPullSummary?
+        var recoveryFailure: Error?
+        do {
+            recoverySummary = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [row]
+            )).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        } catch { recoveryFailure = error }
+        XCTAssertNil(recoveryFailure, "Existing durable same-scope work must survive recovery without a manual drain prerequisite")
+        XCTAssertEqual(recoverySummary?.completedRecoveryJournal, true)
+        XCTAssertNotEqual(fixture.controller.activeManifest?.generationID, oldGenerationID)
+        try await assertLocalAvailabilityEdit(fixture: try reopenFixture(fixture), productID: row.id, operation: operation)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+    }
+
+    private func localAvailabilityProduct(fixture: AtomicRecoveryFixture) -> RemoteInventoryProductRow {
+        RemoteInventoryProductRow(
+            id: UUID(), ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            barcode: "TASK144-LOCAL-AVAILABILITY", itemNumber: "local-availability",
+            productName: "Cloud baseline", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil
+        )
+    }
+
+    private func saveLocalAvailabilityEdit(
+        fixture: AtomicRecoveryFixture, productID: UUID, name: String = "Saved while recovery is active"
+    ) throws -> AtomicRecoveryLocalOperation {
+        try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults
+        ) { context in
+            let product = try XCTUnwrap(try context.fetch(FetchDescriptor<Product>()).first(where: { $0.remoteID == productID }))
+            let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            product.productName = name
+            let change = try XCTUnwrap(try LocalPendingChangeAccumulator(
+                context: context, ownerUserID: fixture.ownerUserID,
+                storeIdentity: try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding?.storeIdentity)
+            ).recordProductChange(
+                product: product, operation: .update, origin: .manualCatalogSave,
+                changedFields: ["productName"], baselineFingerprintHash: baseline
+            ))
+            try context.save()
+            return AtomicRecoveryLocalOperation(
+                changeID: change.changeID, idempotencyKey: change.idempotencyKey,
+                baselineFingerprintHash: change.baselineFingerprintHash,
+                intendedFingerprintHash: change.intendedFingerprintHash,
+                status: change.status
+            )
+        }
+    }
+
+    private func assertLocalAvailabilityEdit(
+        fixture: AtomicRecoveryFixture, productID: UUID, operation: AtomicRecoveryLocalOperation?,
+        name: String = "Saved while recovery is active"
+    ) async throws {
+        let qualified = await fixture.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        let context = ModelContext(fixture.controller.modelContainer)
+        let product = try XCTUnwrap(try context.fetch(FetchDescriptor<Product>()).first(where: { $0.remoteID == productID }))
+        XCTAssertEqual(product.productName, name)
+        let pending = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pending.count, 1, "Cutover/reopen must retain exactly one operation")
+        let change = try XCTUnwrap(pending.first)
+        let original = try XCTUnwrap(operation)
+        XCTAssertEqual(change.changeID, original.changeID)
+        XCTAssertEqual(change.idempotencyKey, original.idempotencyKey)
+        XCTAssertEqual(change.baselineFingerprintHash, original.baselineFingerprintHash)
+        XCTAssertEqual(change.intendedFingerprintHash, original.intendedFingerprintHash)
+        XCTAssertEqual(change.changedFields, ["productname"])
+        XCTAssertEqual(change.status, original.status, "Cutover must preserve the status committed by the real accumulator")
+        XCTAssertEqual(change.entityRemoteIDRaw, productID.uuidString.lowercased())
+    }
+
     func testRecoveryReportsPersistedPagesAndActualPublicationStagesWithoutProvingConvergence() async throws {
         let fixture = try makeFixture()
         let products = try canonicalNumericPrefixIDs().prefix(26).enumerated().map { index, id in
@@ -510,6 +2487,145 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(otherState.state.phase, .recoveryRequired)
     }
 
+    func testAutomaticReconcilePushDrainDefersPendingWorkOnlyUntilFreshFinalProof() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let generation = proof.fixture.controller.activeManifest?.generationID
+        let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                source: .localMutation, ownerUserID: proof.fixture.ownerUserID)
+        }
+        XCTAssertEqual(setup.summaries.first?.requiresFullRecoveryReason, "ordinary_continuation_local_work_pending")
+        XCTAssertNil(setup.summaries.first?.continuationReceipt,
+            "The pending-work observation never authorizes readiness")
+        XCTAssertEqual(result.status, .success)
+        XCTAssertNotNil(result.continuationReceipt, "Only the fresh post-push complete drain may authorize continuation")
+        XCTAssertFalse(result.verifiedConvergence)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+        XCTAssertEqual(proof.remote.recordRequests.count, 1)
+        XCTAssertEqual(proof.remote.fenceAdvances.map(\.through), [42])
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42)
+        XCTAssertEqual(proof.fixture.controller.activeManifest?.generationID, generation)
+        XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
+        proof.stateStore.recordRunResult(result)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        let reopened = try reopenFixture(proof.fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        XCTAssertEqual(try ordinaryStock(fixture: reopened, productID: proof.productID), 1)
+        let context = ModelContext(reopened.controller.modelContainer)
+        let pending = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pending.count, 1)
+        XCTAssertEqual(pending.first?.changeID, setup.changeID)
+        XCTAssertEqual(pending.first?.status, .acknowledged)
+        let outbox = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        XCTAssertEqual(outbox.filter { $0.status == .sent }.count, 1)
+        XCTAssertTrue(outbox.allSatisfy { $0.status == .sent || $0.status == .localOnly })
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
+    func testStandaloneReconcileWithPendingWorkCannotPublishContinuation() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: .lightReconcile, source: .foregroundPoll,
+                ownerUserID: proof.fixture.ownerUserID)
+        }
+        XCTAssertEqual(result.status, .recoveryRequired)
+        XCTAssertNil(result.continuationReceipt)
+        XCTAssertFalse(result.verifiedConvergence)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+        XCTAssertTrue(proof.remote.recordRequests.isEmpty)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
+        let context = ModelContext(try reopenFixture(proof.fixture).controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .pending)
+    }
+
+    func testAutomaticReconcilePushDrainPreservesGenuineRemoteDirtyConflict() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        proof.remote.replace(event: try ordinaryContinuationEvent(fixture: proof.fixture,
+            productID: proof.productID, id: 42), product: ordinaryContinuationProduct(
+                fixture: proof.fixture, id: proof.productID, stock: 2))
+        let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                source: .localMutation, ownerUserID: proof.fixture.ownerUserID)
+        }
+        XCTAssertEqual(result.status, .recoveryRequired)
+        XCTAssertNil(result.continuationReceipt)
+        XCTAssertFalse(result.verifiedConvergence)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+        XCTAssertTrue(proof.remote.recordRequests.isEmpty)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 1)
+        let context = ModelContext(try reopenFixture(proof.fixture).controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.changeID, setup.changeID)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .pending)
+    }
+
+    func testAutomaticReconcilePushDrainCancellationBeforePushPreservesIntent() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture(cancelAfterProvider: true)
+        let proof = setup.proof
+        let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                source: .localMutation, ownerUserID: proof.fixture.ownerUserID)
+        }
+        XCTAssertEqual(result.status, .cancelled)
+        XCTAssertNil(result.continuationReceipt)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+        XCTAssertTrue(proof.remote.recordRequests.isEmpty)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        let context = ModelContext(try reopenFixture(proof.fixture).controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.changeID, setup.changeID)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .pending)
+    }
+
+    private func makePendingAutomaticSequenceFixture(cancelAfterProvider: Bool = false) async throws
+        -> RI08PendingAutomaticSequenceFixture {
+        let proof = try await makeRealContinuationProof()
+        proof.stateStore.recordRunResult(proof.result)
+        proof.remote.prepareProductForPush(ordinaryContinuationProduct(fixture: proof.fixture,
+            id: proof.productID, stock: 0))
+        let changeID = try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: proof.fixture.controller.modelContainer,
+            ownerUserID: proof.fixture.ownerUserID, defaults: proof.fixture.defaults
+        ) { context in
+            let id = proof.productID
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == id })).first)
+            let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            product.stockQuantity = 1
+            let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                ownerUserID: proof.fixture.ownerUserID, storeIdentity: proof.scope.storeIdentity)
+                .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                    changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+            try context.save()
+            return change.changeID
+        }
+        let pull = SyncEventIncrementalPullService(modelContainer: proof.fixture.controller.modelContainer,
+            remote: proof.remote, defaults: proof.fixture.defaults, storeGenerationController: proof.fixture.controller)
+        let observed = RI08PendingAutomaticSequenceFixture(proof: proof, changeID: changeID)
+        let policy = AutomaticSyncCancellationPolicy()
+        let provider = RI08TransformingRealPullProvider(pull: pull, transform: { [weak observed] summary in
+            observed?.summaries.append(summary)
+            return summary
+        }, cancelAfterProvider: cancelAfterProvider ? policy : nil)
+        let controller = proof.fixture.controller
+        let lease = try XCTUnwrap(controller.captureLease(for: controller.modelContainer))
+        observed.engine = AutomaticSyncEngine(catalogPushProvider: CatalogPushService(
+            modelContainer: controller.modelContainer, remote: proof.remote, defaults: proof.fixture.defaults),
+            productPriceProvider: nil, historySessionProvider: nil, incrementalPullProvider: provider,
+            activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: controller.modelContainer,
+                recorder: proof.remote, defaults: proof.fixture.defaults), defaults: proof.fixture.defaults,
+            cancellationPolicy: policy, runAdmissionValidator: {
+                try await MainActor.run { try controller.validateLease(lease) }
+            })
+        proof.stateStore.updatePhase(.checking)
+        return observed
+    }
+
     func testOrdinarySelfEventContinuesAfterRealLocalPushAndOutboxAcknowledgement() async throws {
         let proof = try await makeRealContinuationProof()
         proof.stateStore.recordRunResult(proof.result)
@@ -531,7 +2647,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
         let beforeRegistration = ModelContext(proof.fixture.controller.modelContainer)
         XCTAssertEqual(try beforeRegistration.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .acknowledged)
-        XCTAssertEqual(try beforeRegistration.fetch(FetchDescriptor<SyncEventOutboxEntry>()).first?.status, .pending)
+        let eventsBefore = try beforeRegistration.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(eventsBefore.count, 1)
+        let currentEventID = try XCTUnwrap(eventsBefore.first?.id)
+        XCTAssertEqual(eventsBefore.first?.status, .pending)
+        XCTAssertTrue(try beforeRegistration.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
         let registered = try await SyncActivityRegistrationService(modelContainer: proof.fixture.controller.modelContainer,
             recorder: proof.remote, defaults: proof.fixture.defaults).registerSyncActivities(ownerUserID: proof.fixture.ownerUserID)
         XCTAssertEqual(registered.summary.registered, 1)
@@ -540,7 +2660,9 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(ack.eventType, "catalog_changed")
         XCTAssertEqual(ack.sourceDeviceKey, ShopSyncRecoveryCanonical.sha256(proof.fixture.deviceInstallID))
         let afterRegistration = ModelContext(proof.fixture.controller.modelContainer)
-        XCTAssertEqual(try afterRegistration.fetch(FetchDescriptor<SyncEventOutboxEntry>()).first?.status, .sent)
+        let eventsAfter = try afterRegistration.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.id == currentEventID }
+        XCTAssertEqual(eventsAfter.count, 1)
+        XCTAssertEqual(eventsAfter.first?.status, .sent)
         proof.stateStore.updatePhase(.pullingEvents)
         let selfResult = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
             await proof.engine.run(action: .drainEvents, source: .foregroundPoll, ownerUserID: proof.fixture.ownerUserID)
@@ -575,6 +2697,57 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(proof.remote.reconciliationFetchCallCount, countReadsBeforeEmpty + 1)
         XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
         XCTAssertFalse(empty.verifiedConvergence)
+    }
+
+    func testOutboxMetadataSaveCannotRefreshBodyProofAfterRawBusinessCorruption() async throws {
+        let proof = try await makeRealContinuationProof()
+        proof.remote.prepareProductForPush(ordinaryContinuationProduct(fixture: proof.fixture, id: proof.productID, stock: 0))
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: proof.fixture.controller.modelContainer,
+            ownerUserID: proof.fixture.ownerUserID, defaults: proof.fixture.defaults) { context in
+            let id = proof.productID
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == id })).first)
+            product.stockQuantity = 1
+            try LocalPendingChangeAccumulator(context: context, ownerUserID: proof.fixture.ownerUserID,
+                storeIdentity: proof.scope.storeIdentity).recordProductChange(
+                    product: product, operation: .update, origin: .manualCatalogSave, changedFields: ["stockQuantity"])
+            try context.save()
+        }
+        let pushed = try await CatalogPushService(modelContainer: proof.fixture.controller.modelContainer,
+            remote: proof.remote, defaults: proof.fixture.defaults).pushPendingCatalog(ownerUserID: proof.fixture.ownerUserID)
+        XCTAssertEqual(pushed.productUpdates, 1)
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(proof.fixture.controller.modelContainer))
+        let raw = ModelContext(proof.fixture.controller.modelContainer)
+        let id = proof.productID
+        let product = try XCTUnwrap(raw.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == id })).first)
+        product.productName = "Unfenced external corruption"
+        try raw.save()
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(proof.fixture.controller.modelContainer))
+        do {
+            _ = try await SyncActivityRegistrationService(modelContainer: proof.fixture.controller.modelContainer,
+                recorder: proof.remote, defaults: proof.fixture.defaults).registerSyncActivities(ownerUserID: proof.fixture.ownerUserID)
+            XCTFail("Technical outbox state cannot adopt a body changed outside the accepted writer")
+        } catch {
+            XCTAssertEqual(error as? Task126OwnerStoreGateError, .bindingMismatch)
+        }
+        let read = ModelContext(proof.fixture.controller.modelContainer)
+        let events = try read.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.status, .pending, "A rejected metadata commit must retain retryable original event")
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(proof.fixture.controller.modelContainer))
+        proof.fixture.controller.startLocalBodyQualification()
+        let qualified = await proof.fixture.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(qualified, "The real semantic verifier still rejects the corrupted clean body")
+    }
+
+    private func assertOnlyCurrentBodyProofEntries(context: ModelContext,
+            fixture: AtomicRecoveryFixture, expectedCount: Int) throws {
+        let all = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        XCTAssertEqual(all.count, expectedCount, "No business attempt or technical event may remain in this fixture")
+        XCTAssertTrue(all.allSatisfy { $0.domain == LocalCatalogBodyProofStore.domain && $0.status == .localOnly },
+            "Only typed non-work current-body receipts may remain; an unknown local-only row is not ignored")
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let storeURL = try XCTUnwrap(context.container.configurations.first?.url)
+        try LocalCatalogBodyProofStore.validate(container: context.container, manifest: manifest, storeURL: storeURL)
     }
 
     func testKnownNoTargetNotificationContinuesButUnknownWireTypeHasNoReceipt() async throws {
@@ -857,7 +3030,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             let context = ModelContext(controller.modelContainer)
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), includeFirstCanonicalDelta ? 1 : 0)
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
-            XCTAssertEqual(try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+            try assertOnlyCurrentBodyProofEntries(context: context, fixture: fixture,
+                expectedCount: includeFirstCanonicalDelta ? 1 : 0)
             orchestrator.stop()
             await runtime.cancelAndWait()
             await runtime.resumeAfterStoreReplacement()
@@ -1006,9 +3180,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         cancelAfterProvider: Bool = false,
         configure: ((RI08OrdinaryIncrementalRemote, AtomicRecoveryFixture, UUID) throws -> Void)? = nil,
         transform: ((SyncIncrementalPullSummary) -> SyncIncrementalPullSummary)? = nil,
-        afterAtomicMutation: (@Sendable () async throws -> Void)? = nil
+        afterAtomicMutation: (@Sendable () async throws -> Void)? = nil,
+        beforeRecovery: ((AtomicRecoveryFixture) -> Void)? = nil
     ) async throws -> RI08RealContinuationProof {
         let fixture = try makeFixture()
+        beforeRecovery?(fixture)
         let productID = try XCTUnwrap(UUID(uuidString: "45454545-4545-4545-8545-454545454545"))
         let baseline = ordinaryContinuationProduct(fixture: fixture, id: productID, stock: 0)
         let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
@@ -1183,6 +3359,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 await runtime.resumeAfterStoreReplacement()
                 try recordOrdinaryReopenMetadata("before-fresh-open", fixture: fixture)
                 fixture = try reopenFixture(fixture)
+                let locallyQualified = await fixture.controller.awaitLocalBodyQualification()
+                XCTAssertTrue(locallyQualified, "The fresh application controller must finish its actual off-main current-body readback before ordinary writes")
                 try recordOrdinaryReopenMetadata("after-fresh-open", fixture: fixture)
                 stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: statePrefix)
                 XCTAssertEqual(stateStore.state.lastVerifiedAt, verifiedAt)
@@ -1224,7 +3402,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(recoveryTransport.counts().pages, recoveryCountsBeforeEvents.pages)
             let context = ModelContext(fixture.controller.modelContainer)
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
-            XCTAssertEqual(try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+            try assertOnlyCurrentBodyProofEntries(context: context, fixture: fixture, expectedCount: 1)
             let advances = remote.fenceAdvances
             XCTAssertEqual(advances.map(\.from), [41, 42])
             XCTAssertEqual(advances.map(\.through), [42, 43])
@@ -1296,7 +3474,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 XCTAssertEqual(remote.fenceAdvances.map(\.through), [42, 43, 44])
                 let finalContext = ModelContext(fixture.controller.modelContainer)
                 XCTAssertEqual(try finalContext.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
-                XCTAssertEqual(try finalContext.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+                try assertOnlyCurrentBodyProofEntries(context: finalContext, fixture: fixture, expectedCount: 1)
             }
             XCTAssertEqual(auth.networkBlocker.requestCount, 0, "Synthetic SDK auth must not use network")
             orchestrator.stop()
@@ -2798,7 +4976,9 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         fixture: AtomicRecoveryFixture,
         transport: AtomicRecoveryTestTransport,
         maximumAttempts: Int = 2,
-        progressReporter: SyncRecoveryProgressReporter? = nil
+        pageLimit: Int = 25,
+        progressReporter: SyncRecoveryProgressReporter? = nil,
+        pageCommitProbe: @escaping @Sendable (ShopSyncRecoveryDomain) throws -> Void = { _ in }
     ) -> AtomicGenerationRecoverySnapshotPullService {
         AtomicGenerationRecoverySnapshotPullService(
             storeGenerationController: fixture.controller,
@@ -2807,13 +4987,16 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 defaults: fixture.defaults
             ),
             defaults: fixture.defaults,
-            pageLimit: 25,
+            pageLimit: pageLimit,
             maximumAttempts: maximumAttempts,
-            progressReporter: progressReporter
+            progressReporter: progressReporter,
+            pageCommitProbe: pageCommitProbe
         )
     }
 
-    private func makeFixture() throws -> AtomicRecoveryFixture {
+    private func makeFixture(
+        activationBoundaryProbe: @escaping @Sendable (SyncStoreActivationBoundary) -> Void = { _ in }
+    ) throws -> AtomicRecoveryFixture {
         let suiteName = "AtomicGenerationRecoverySnapshotPullServiceTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
@@ -2849,7 +5032,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let repository = try SyncStoreGenerationRepository(
             baseDirectory: temporaryRoot.appendingPathComponent("generation-root"),
             legacyDefaultStoreURL: legacyStoreURL,
-            defaults: defaults
+            defaults: defaults,
+            activationBoundaryProbe: activationBoundaryProbe
         )
         let controller = try SyncStoreGenerationController(
             repository: repository,
@@ -3218,6 +5402,213 @@ private struct AtomicRecoveryFixture {
     let deviceInstallID: String
 }
 
+@MainActor
+private final class AtomicRecoveryQualificationHistoryRemote: HistorySessionRemoteWriting {
+    private(set) var attempts = 0
+    private(set) var rows: [RemoteSharedSheetSessionRow] = []
+    func upsertSharedSheetSessions(_ payloads: [SharedSheetSessionUpsertRow], ownerUserID: UUID) async throws -> [RemoteSharedSheetSessionRow] {
+        attempts += 1
+        rows = payloads.map { row in RemoteSharedSheetSessionRow(remoteID: row.remoteID, payloadVersion: row.payloadVersion,
+            displayName: row.displayName, timestamp: row.timestamp, supplier: row.supplier, category: row.category,
+            isManualEntry: row.isManualEntry, data: row.data, sessionOverlay: row.sessionOverlay,
+            ownerUserID: ownerUserID, shopID: row.shopID, updatedAt: "2026-07-22T12:01:00.000000Z", deletedAt: row.deletedAt) }
+        return rows
+    }
+    func fetchSharedSheetSessionsPage(ownerUserID: UUID, from: Int, to: Int) async throws -> [RemoteSharedSheetSessionRow] { [] }
+    func fetchSharedSheetSessionsByIDs(ownerUserID: UUID, sessionIDs: Set<UUID>) async throws -> [RemoteSharedSheetSessionRow] {
+        rows.filter { sessionIDs.contains($0.remoteID) }
+    }
+}
+
+@MainActor
+private final class AtomicRecoveryLostAckHistoryRemote: HistorySessionRemoteWriting {
+    enum Fault: Error { case responseLost; case originalPayloadChanged }
+    private(set) var payloadBytes: [Data] = []
+    private(set) var rows: [RemoteSharedSheetSessionRow] = []
+    func upsertSharedSheetSessions(_ payloads: [SharedSheetSessionUpsertRow], ownerUserID: UUID) async throws -> [RemoteSharedSheetSessionRow] {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        for payload in payloads {
+            let bytes = try encoder.encode(payload)
+            if payloadBytes.count == 1 && bytes != payloadBytes[0] { throw Fault.originalPayloadChanged }
+            payloadBytes.append(bytes)
+            rows = [RemoteSharedSheetSessionRow(remoteID: payload.remoteID, payloadVersion: payload.payloadVersion,
+                displayName: payload.displayName, timestamp: payload.timestamp, supplier: payload.supplier, category: payload.category,
+                isManualEntry: payload.isManualEntry, data: payload.data, sessionOverlay: payload.sessionOverlay,
+                ownerUserID: ownerUserID, shopID: payload.shopID,
+                updatedAt: payloadBytes.count <= 2 ? "2026-07-22T12:01:00.000000Z" : "2026-07-22T12:02:00.000000Z",
+                deletedAt: payload.deletedAt)]
+        }
+        if payloadBytes.count == 1 { throw Fault.responseLost }
+        return rows
+    }
+    func fetchSharedSheetSessionsPage(ownerUserID: UUID, from: Int, to: Int) async throws -> [RemoteSharedSheetSessionRow] { [] }
+    func fetchSharedSheetSessionsByIDs(ownerUserID: UUID, sessionIDs: Set<UUID>) async throws -> [RemoteSharedSheetSessionRow] {
+        rows.filter { sessionIDs.contains($0.remoteID) }
+    }
+}
+
+@MainActor
+private final class AtomicRecoveryLostAckPriceRemote: SyncAutomaticProductPriceRemoteWriting {
+    enum Fault: Error { case responseLost; case payloadChanged }
+    private(set) var attempts: [[SyncAutomaticProductPricePayload]] = []
+    private var committed: [UUID: RemoteInventoryProductPriceRow] = [:]
+    var rows: [RemoteInventoryProductPriceRow] {
+        committed.values.sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+    }
+    func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
+        attempts.append(payloads)
+        for payload in payloads {
+            if let existing = committed[payload.id] {
+                guard existing.ownerUserID == payload.ownerUserID, existing.shopID == payload.shopID,
+                      existing.productID == payload.productID, existing.type == payload.type,
+                      existing.price == payload.price, existing.effectiveAt == payload.effectiveAt,
+                      existing.source == payload.source, existing.note == payload.note,
+                      existing.createdAt == payload.createdAt else { throw Fault.payloadChanged }
+            } else {
+                guard let amount = PriceCanonicalizer.canonicalAmount(from: payload.price) else { throw Fault.payloadChanged }
+                committed[payload.id] = RemoteInventoryProductPriceRow(id: payload.id,
+                    ownerUserID: payload.ownerUserID, shopID: payload.shopID, productID: payload.productID,
+                    type: payload.type, price: payload.price, priceCanonical: amount.value,
+                    effectiveAt: payload.effectiveAt, source: payload.source, note: payload.note,
+                    createdAt: payload.createdAt, updatedAt: "2026-07-22T12:01:00.000000Z")
+            }
+        }
+        if attempts.count == 1 { throw Fault.responseLost }
+        return try payloads.map { payload in
+            guard let row = committed[payload.id] else { throw Fault.payloadChanged }
+            return row
+        }
+    }
+}
+
+@MainActor
+private final class AtomicRecoveryLostAckCatalogRemote: SyncAutomaticCatalogRemoteWriting {
+    enum Fault: Error { case responseLost; case unexpectedCall }
+    private(set) var current: RemoteInventoryProductRow
+    private(set) var attempts: [SyncAutomaticProductUpdatePayload] = []
+    private let loseFirstResponse: Bool
+    private let acceptsRelatedCreate: Bool
+    private var beforeFirstResponse: (() throws -> Void)?
+    init(initial: RemoteInventoryProductRow, loseFirstResponse: Bool = true, acceptsRelatedCreate: Bool = false,
+         beforeFirstResponse: (() throws -> Void)? = nil) {
+        current = initial
+        self.loseFirstResponse = loseFirstResponse
+        self.acceptsRelatedCreate = acceptsRelatedCreate
+        self.beforeFirstResponse = beforeFirstResponse
+    }
+    func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
+        guard acceptsRelatedCreate, payloads.count == 1, let row = payloads.first,
+              row.ownerUserID == current.ownerUserID, row.shopID == current.shopID else { throw Fault.unexpectedCall }
+        return [.init(id: row.id, ownerUserID: row.ownerUserID, shopID: row.shopID, name: row.name,
+            updatedAt: "2026-07-22T12:00:30.000000Z", deletedAt: nil)]
+    }
+    func updateSupplier(id: UUID, payload: SyncAutomaticSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow { throw Fault.unexpectedCall }
+    func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
+        guard acceptsRelatedCreate, payloads.count == 1, let row = payloads.first,
+              row.ownerUserID == current.ownerUserID, row.shopID == current.shopID else { throw Fault.unexpectedCall }
+        return [.init(id: row.id, ownerUserID: row.ownerUserID, shopID: row.shopID, name: row.name,
+            updatedAt: "2026-07-22T12:00:30.000000Z", deletedAt: nil)]
+    }
+    func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow { throw Fault.unexpectedCall }
+    func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] { throw Fault.unexpectedCall }
+    func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        guard id == current.id else { throw Fault.unexpectedCall }
+        attempts.append(payload)
+        let name = payload.productName ?? current.productName
+        let item = payload.itemNumber ?? current.itemNumber
+        if current.productName != name || current.itemNumber != item {
+            current = RemoteInventoryProductRow(id: id, ownerUserID: current.ownerUserID, shopID: current.shopID,
+                barcode: current.barcode, itemNumber: item, productName: name,
+                secondProductName: current.secondProductName, purchasePrice: current.purchasePrice,
+                retailPrice: current.retailPrice, supplierID: payload.supplierID ?? current.supplierID, categoryID: payload.categoryID ?? current.categoryID,
+                stockQuantity: current.stockQuantity,
+                updatedAt: attempts.count == 1 ? "2026-07-22T12:01:00.000000Z" : "2026-07-22T12:02:00.000000Z",
+                deletedAt: payload.deletedAt)
+        }
+        if attempts.count == 1 {
+            let callback = beforeFirstResponse
+            beforeFirstResponse = nil
+            try callback?()
+            if loseFirstResponse { throw Fault.responseLost }
+        }
+        return current
+    }
+}
+
+private struct AtomicRecoveryLocalOperation {
+    let changeID: String
+    let idempotencyKey: String
+    let baselineFingerprintHash: String?
+    let intendedFingerprintHash: String?
+    let status: LocalPendingChangeStatus
+}
+
+private struct AtomicRecoveryDeviceAuthorization: ShopDeviceAuthorizationChecking {
+    let status: String
+    let canWrite: Bool
+
+    func registerCurrentOwnerDevice(reason: String, force: Bool) async -> Bool { true }
+    func registerHeartbeatAndCheck(reason: String) async -> ShopDeviceAuthorizationSnapshot { snapshot }
+    func currentOwnerDeviceStatus(reason: String, force: Bool) async -> ShopDeviceAuthorizationSnapshot { snapshot }
+    func ensureActiveForCloudWrite(reason: String) async throws -> ShopDeviceAuthorizationSnapshot {
+        guard status == "active", canWrite else { throw ShopDeviceAuthorizationBlockedError(snapshot: snapshot) }
+        return snapshot
+    }
+    private var snapshot: ShopDeviceAuthorizationSnapshot {
+        .init(status: status, code: status, canWrite: canWrite, serverTime: nil, lastSeenAt: nil,
+            reasonCode: status, recommendedAction: "", checkedAt: Date())
+    }
+}
+
+@MainActor
+private final class AtomicRecoveryLateEditObservation {
+    var edit: (() throws -> AtomicRecoveryLocalOperation)?
+    private(set) var entered = false
+    private(set) var operation: AtomicRecoveryLocalOperation?
+    private(set) var failure: Error?
+
+    func runOnce() {
+        guard let edit else { return }
+        self.edit = nil
+        entered = true
+        do { operation = try edit() } catch { failure = error }
+    }
+}
+
+private final class AtomicRecoveryThreadObservations: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [Bool] = []
+
+    func record(isMainThread: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.append(isMainThread)
+    }
+
+    var values: [Bool] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+}
+
+@MainActor
+private final class AtomicRecoveryHeldPage {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var isReleased = false
+
+    func wait() async {
+        guard !isReleased else { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func release() {
+        isReleased = true
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
 private nonisolated enum AtomicRecoveryTailBehavior: Sendable {
     case safe
     case missingEntityIDs
@@ -3250,9 +5641,11 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
     private let markerMutation: (@Sendable () throws -> Void)?
     private let rawCheckpoint: Data?
     private let rawMarker: Data?
+    private let pageInterception: (@MainActor (ShopSyncRecoveryPageParameters) async throws -> Void)?
     private var checkpointIndex = 0
     private var checkpointCalls = 0
     private var pageCalls = 0
+    private var pageCallParameters: [ShopSyncRecoveryPageParameters] = []
     private var tailPages = 0
     private var markerBaselineIDs: [String] = []
     private var checkpointCallParameters: [AtomicRecoveryCheckpointCall] = []
@@ -3273,7 +5666,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         markerFailure: ShopSyncRecoveryContractError? = nil,
         markerMutation: (@Sendable () throws -> Void)? = nil,
         rawCheckpoint: Data? = nil,
-        rawMarker: Data? = nil
+        rawMarker: Data? = nil,
+        pageInterception: (@MainActor (ShopSyncRecoveryPageParameters) async throws -> Void)? = nil
     ) {
         self.ownerUserID = ownerUserID
         self.checkpoints = checkpoints
@@ -3289,6 +5683,7 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         self.markerMutation = markerMutation
         self.rawCheckpoint = rawCheckpoint
         self.rawMarker = rawMarker
+        self.pageInterception = pageInterception
     }
 
     func authenticatedUserID() async throws -> UUID {
@@ -3333,6 +5728,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
 
     func page(_ parameters: ShopSyncRecoveryPageParameters) async throws -> Data {
         pageCalls += 1
+        pageCallParameters.append(parameters)
+        try await pageInterception?(parameters)
         guard let domain = ShopSyncRecoveryDomain(rawValue: parameters.domain),
               let checkpoint = latestCheckpoint ?? checkpoints.first else {
             throw ShopSyncRecoveryContractError.invalidCheckpoint
@@ -3370,6 +5767,15 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
             ))
         }
         if domain == .prices, !priceRows.isEmpty {
+            let start: Int
+            if let cursor = parameters.afterID {
+                guard let index = priceRows.firstIndex(where: { $0.id.uuidString.lowercased() == cursor.lowercased() })
+                else { throw ShopSyncRecoveryContractError.invalidCursor }
+                start = index + 1
+            } else { start = 0 }
+            let end = min(start + parameters.limit, priceRows.count)
+            let rows = Array(priceRows[start..<end])
+            let hasMore = end < priceRows.count
             return try encoder.encode(AtomicRecoveryRowsPage(
                 schemaVersion: "shop-sync-recovery-page-v1",
                 shopId: parameters.shopID,
@@ -3381,9 +5787,9 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
                 pageDomainEventMaxId: parameters.expectedDomainEventMaxID,
                 domainScope: domain == .history ? checkpoint.scope.historyKind : checkpoint.scope.kind,
                 pageLimit: forcedPageLimit ?? parameters.limit,
-                rows: priceRows,
-                nextAfterId: nil,
-                hasMore: false
+                rows: rows,
+                nextAfterId: hasMore ? rows.last?.id.uuidString.lowercased() : nil,
+                hasMore: hasMore
             ))
         }
         if domain == .history, !historyRows.isEmpty {
@@ -3471,6 +5877,10 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
             )
         )
         return try encoder.encode(marker)
+    }
+
+    func pageCursors(domain: ShopSyncRecoveryDomain) -> [String?] {
+        pageCallParameters.filter { $0.domain == domain.rawValue }.map(\.afterID)
     }
 
     func eventPage(_ parameters: ShopSyncEventPageParameters) async throws -> Data {
@@ -3631,6 +6041,18 @@ private struct RI08RealContinuationProof {
     let result: SyncAutomaticRunResult
     var watermarkScope: WatermarkStore.Scope { .init(ownerUserID: fixture.ownerUserID, storeIdentity: scope.storeIdentity) }
     var fenceDefaultsKey: String { "sync.recovery.fence.account.\(scope.accountHash).store.\(scope.storeIdentity.rawValue)" }
+}
+
+@MainActor
+private final class RI08PendingAutomaticSequenceFixture {
+    let proof: RI08RealContinuationProof
+    let changeID: String
+    var summaries: [SyncIncrementalPullSummary] = []
+    var engine: AutomaticSyncEngine!
+    init(proof: RI08RealContinuationProof, changeID: String) {
+        self.proof = proof
+        self.changeID = changeID
+    }
 }
 
 @MainActor
@@ -3977,6 +6399,28 @@ private final class RI08ZeroIncrementalRemote: SyncAutomaticIncrementalRemote,
         .init(status: "active", code: "active", canWrite: true, serverTime: nil,
             lastSeenAt: nil, reasonCode: "ri08-zero-synthetic", recommendedAction: "none", checkedAt: Date())
     }
+}
+
+@MainActor
+private final class Task144HeldRealDecisionProvider: SyncDecisionInputProviding {
+    private let underlying: any SyncDecisionInputProviding
+    private let entered: XCTestExpectation
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var returned = false
+    init(underlying: any SyncDecisionInputProviding, entered: XCTestExpectation) {
+        self.underlying = underlying; self.entered = entered
+    }
+    func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async { await underlying.updateNetworkStatus(status) }
+    func recordRealtimeEvent() async { await underlying.recordRealtimeEvent() }
+    func makeSnapshot(triggerSource: SyncAutomaticTriggerSource, isAuthenticated: Bool,
+                      ownerUserID: UUID?, isSyncBusy: Bool) async -> SyncDecisionInputSnapshot {
+        let snapshot = await underlying.makeSnapshot(triggerSource: triggerSource, isAuthenticated: isAuthenticated,
+            ownerUserID: ownerUserID, isSyncBusy: isSyncBusy)
+        await withCheckedContinuation { continuation = $0; entered.fulfill() }
+        returned = true
+        return snapshot
+    }
+    func release() { continuation?.resume(); continuation = nil }
 }
 
 @MainActor

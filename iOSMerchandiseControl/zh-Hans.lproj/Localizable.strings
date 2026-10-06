@@ -1862,3 +1862,9 @@
 "options.supabase.automaticSync.recovery.domain.prices" = "价格";
 "options.supabase.automaticSync.recovery.domain.history" = "历史记录";
 "options.supabase.automaticSync.recovery.domain.images" = "图片";
+
+"database.first_snapshot.preparing" = "正在准备商品目录…";
+"database.first_snapshot.detail" = "第一份本地快照尚未准备就绪。加载期间仍可浏览其他页面。";
+
+"product.save.local_pending" = "已保存在此设备 · 正在等待云端确认";
+"product.save.cloud_confirmed" = "云端已确认本次保存";

@@ -32,6 +32,8 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     /// Event-page emptiness and count parity alone must leave this false.
     var verifiedConvergence = false
     var continuationReceipt: SyncIncrementalContinuationReceipt? = nil
+    /// Cannot authorize publication; only the owning plan may consume it before push.
+    var localWorkDeferral: SyncIncrementalLocalWorkDeferral? = nil
     var eventPageFetchMs: Int = 0
     var catalogFetchMs: Int = 0
     var catalogApplyMs: Int = 0

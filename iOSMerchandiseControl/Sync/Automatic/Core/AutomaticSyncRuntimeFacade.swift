@@ -93,7 +93,7 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
            !action.allowsPendingRecoveryAdmission(mode: pendingRecovery.mode) {
             return .recoveryRequired(didWork: false)
         }
-        let scope: Task126VerifiedOwnerStoreScope
+        var scope: Task126VerifiedOwnerStoreScope
         do {
             scope = try Task126OwnerStoreGate.captureAutomaticScope(
                 ownerUserID: ownerUserID,
@@ -109,10 +109,31 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
                 let snapshot = try await deviceAuthorization.ensureActiveForCloudWrite(
                     reason: "automatic_\(source.rawValue)"
                 )
-                recordDeviceAuthorization(snapshot, reason: source.rawValue)
+                guard authenticatedOwnerProvider() == ownerUserID else { return .blocked(.authRequired) }
+                // The callback may update durable device authorization and
+                // invalidate the lease. Re-capture only the identical entity
+                // scope; never carry a pre-request shop/identity into a writer.
+                let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                    defaults: defaults,
+                    allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
+                    allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery)
+                guard sameEntityScope(current, scope) else { return .blocked(.accountDecisionRequired) }
+                recordDeviceAuthorization(snapshot, scope: current, reason: source.rawValue)
+                scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                    defaults: defaults,
+                    allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
+                    allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery)
+                guard sameEntityScope(current, scope) else { return .blocked(.accountDecisionRequired) }
             } catch {
                 if let blocked = error as? ShopDeviceAuthorizationBlockedError {
-                    recordDeviceAuthorization(blocked.snapshot, reason: source.rawValue)
+                    if authenticatedOwnerProvider() == ownerUserID,
+                       let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                         defaults: defaults,
+                         allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
+                         allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery),
+                       sameEntityScope(current, scope) {
+                        recordDeviceAuthorization(blocked.snapshot, scope: current, reason: source.rawValue)
+                    }
                 }
                 return .blocked(.deviceNotActive)
             }
@@ -150,8 +171,11 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
 
     private func recordDeviceAuthorization(
         _ snapshot: ShopDeviceAuthorizationSnapshot,
+        scope: Task126VerifiedOwnerStoreScope,
         reason: String
     ) {
+        SelectedShopStore(defaults: defaults).recordDeviceAuthorization(snapshot,
+            ownerUserID: scope.ownerUserID, shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash)
         #if DEBUG
         defaults.set(snapshot.status, forKey: "sync.runtime.device.status")
         defaults.set(snapshot.code, forKey: "sync.runtime.device.code")
@@ -169,6 +193,12 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
             }
         }
         #endif
+    }
+
+    private func sameEntityScope(_ lhs: Task126VerifiedOwnerStoreScope, _ rhs: Task126VerifiedOwnerStoreScope) -> Bool {
+        lhs.ownerUserID == rhs.ownerUserID && lhs.accountHash == rhs.accountHash && lhs.shopID == rhs.shopID
+            && lhs.storeIdentity == rhs.storeIdentity && lhs.deviceIdentityHash == rhs.deviceIdentityHash
+            && lhs.pendingReplacement == rhs.pendingReplacement
     }
 }
 

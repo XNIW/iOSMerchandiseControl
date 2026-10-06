@@ -239,6 +239,7 @@ nonisolated struct InventoryHomeShopContextPresentation: Equatable, Sendable {
 }
 
 nonisolated final class SelectedShopStore: @unchecked Sendable {
+    static let localAuthorizationRevisionKey = "mobile.shopContext.localAuthorization.revision.v1"
     private let defaults: UserDefaults
     private let keyPrefix: String
     private let activeAccountKey: String
@@ -296,6 +297,46 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
 
     func isResolutionReady(accountHash: String) -> Bool {
         defaults.bool(forKey: resolutionKey(accountHash: accountHash))
+    }
+
+    func hasConfirmedDeviceDenial(accountHash: String, shopID: UUID, deviceIdentityHash: String) -> Bool {
+        defaults.bool(forKey: localDeviceDenialKey(accountHash: accountHash, shopID: shopID,
+            deviceIdentityHash: deviceIdentityHash))
+    }
+
+    /// Membership refresh cannot erase a device refusal. Only a successful
+    /// fresh device status for this exact owner/shop/install can restore it.
+    @discardableResult
+    func recordDeviceAuthorization(
+        _ snapshot: ShopDeviceAuthorizationSnapshot, ownerUserID: UUID,
+        shopID: UUID, deviceIdentityHash: String
+    ) -> Bool {
+        let denied: Bool
+        switch snapshot.status {
+        case "retired", "suspended", "revoked", "disabled", "blocked": denied = true
+        case "active" where snapshot.canWrite: denied = false
+        default: return false // Expiry, refresh and network failure do not revoke local access.
+        }
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let key = localDeviceDenialKey(accountHash: accountHash, shopID: shopID,
+            deviceIdentityHash: deviceIdentityHash)
+        guard defaults.bool(forKey: key) != denied else { return false }
+        return Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            guard defaults.string(forKey: activeAccountKey) == accountHash,
+                  let selected = selectedShop(accountHash: accountHash), selected.shopID == shopID,
+                  let binding = AccountBindingStore(defaults: defaults).currentBinding,
+                  binding.accountHash == accountHash, binding.storeIdentity == selected.localStoreIdentity,
+                  let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+                  DeviceInstallIDStore.identityHash(for: device) == deviceIdentityHash else { return false }
+            if denied { defaults.set(true, forKey: key) } else { defaults.removeObject(forKey: key) }
+            defaults.set(defaults.integer(forKey: Self.localAuthorizationRevisionKey) &+ 1,
+                forKey: Self.localAuthorizationRevisionKey)
+            return defaults.bool(forKey: key) == denied
+        }
+    }
+
+    private func localDeviceDenialKey(accountHash: String, shopID: UUID, deviceIdentityHash: String) -> String {
+        "mobile.shopContext.localDeviceDenied.v1.\(accountHash).\(shopID.uuidString.lowercased()).\(deviceIdentityHash)"
     }
 
     @discardableResult
@@ -571,11 +612,12 @@ final class ShopContextStore: ObservableObject {
         let persistedSelection = selectedStore.selectedShop(accountHash: accountHash)
         selectedStore.noteActiveAccount(accountHash)
         selectedStore.markResolutionUnresolved(accountHash: accountHash)
-        if context.accountHash == accountHash {
-            context = context.blocked(message: nil)
-        } else {
-            context = .blocked(accountHash: accountHash, message: nil)
+        let localSelection = persistedSelection.flatMap {
+            accountBindingStore.permitsLocalShopSelection(ownerUserID: ownerUserID, selectedShop: $0) ? $0 : nil
         }
+        context = ShopContext(accountHash: accountHash,
+            linkedShops: context.accountHash == accountHash ? context.linkedShops : [],
+            selectedShop: localSelection, syncAllowed: false, errorMessage: nil)
 
         do {
             let linkedShops = try await fetcher.fetchLinkedShops()
@@ -600,16 +642,12 @@ final class ShopContextStore: ObservableObject {
         } catch {
             guard refreshGeneration == expectedGeneration else { return }
             let restoredSelection: SelectedShop?
-            if let persistedSelection {
-                let scope = ProductImageScope(
-                    accountID: ownerUserID,
-                    shopID: persistedSelection.shopID
-                )
-                restoredSelection = ProductImageOwnerStoreGate.allows(
-                    scope: scope,
-                    selectedShop: persistedSelection,
-                    binding: accountBindingStore.currentBinding,
-                    hasPendingReplacement: accountBindingStore.hasPendingReplacementJournal
+            if Self.isConfirmedPermissionRefusal(error) {
+                _ = selectedStore.clear(accountHash: accountHash)
+                restoredSelection = nil
+            } else if let persistedSelection {
+                restoredSelection = accountBindingStore.permitsLocalShopSelection(
+                    ownerUserID: ownerUserID, selectedShop: persistedSelection
                 ) ? persistedSelection : nil
             } else {
                 restoredSelection = nil
@@ -631,6 +669,20 @@ final class ShopContextStore: ObservableObject {
                     errorMessage: error.localizedDescription
                 )
             }
+        }
+    }
+
+    private static func isConfirmedPermissionRefusal(_ error: Error) -> Bool {
+        guard let transportError = error as? SupabaseTransportClientError else { return false }
+        switch transportError {
+        case .permissionDeniedOrRLS:
+            return true
+        case .networkError(let statusCode, _):
+            // An expired access token can produce 401 while refresh is still
+            // pending. Only an explicit permission refusal revokes this cache.
+            return statusCode == 403
+        default:
+            return false
         }
     }
 

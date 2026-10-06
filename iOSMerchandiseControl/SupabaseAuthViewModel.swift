@@ -103,6 +103,12 @@ final class SupabaseAuthViewModel: ObservableObject {
         }
     }
 
+    /// Identity supplied to the local mutation fence. That fence, rather
+    /// than this presentation value, owns authorization for the active store.
+    var localMutationOwnerUserID: UUID? {
+        sessionInfo?.userID
+    }
+
     func signInWithGoogle() {
         guard canSignIn, let authService else { return }
 

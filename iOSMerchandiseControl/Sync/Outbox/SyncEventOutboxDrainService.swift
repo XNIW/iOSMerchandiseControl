@@ -121,7 +121,16 @@ struct SyncEventOutboxDrainService {
                 )
             },
             saveChanges: {
+                // save() already owns the validated Task126 lease. A technical
+                // state commit may advance a proven file fence, never adopt an
+                // unaccepted business-body write or a retired generation.
+                if automaticScope != nil {
+                    try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
+                }
                 try context.save()
+                if automaticScope != nil {
+                    Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+                }
             },
             rollbackChanges: {
                 context.rollback()

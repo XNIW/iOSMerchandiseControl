@@ -626,6 +626,79 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogLostAckThenSecondSaveReopensAndReplaysOriginalPayloadBeforeLaterIntent() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("catalog.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID,
+                                          failFirstProductCreateAfterCommit: true)
+        var originalID = ""
+        var originalKey = ""
+        var originalPayload: SyncAutomaticProductCreatePayload?
+        var laterID = ""
+        var laterKey = ""
+        do {
+            let container = try makeContainer(storeURL: storeURL)
+            let context = ModelContext(container)
+            let product = Product(barcode: "LOST-ACK-REOPEN", productName: "First durable intent")
+            context.insert(product)
+            let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                                                              storeIdentity: fixture.storeIdentity)
+            let pending = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .create,
+                origin: .manualCatalogSave, changedFields: ["barcode", "productName"]))
+            originalID = pending.changeID; originalKey = pending.idempotencyKey
+            try context.save()
+            do {
+                _ = try await CatalogPushService(modelContainer: container, remote: remote,
+                    defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+                XCTFail("The server must commit the first body and lose its response")
+            } catch Task118CatalogRemoteError.committedResponseLost {}
+            originalPayload = try XCTUnwrap(remote.attemptedProductCreatePayloads().first)
+            let edit = ModelContext(container)
+            let current = try XCTUnwrap(fetchProduct(barcode: "LOST-ACK-REOPEN", context: edit))
+            current.productName = "Later durable intent"
+            let later = try XCTUnwrap(try LocalPendingChangeAccumulator(context: edit, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: current, operation: .update,
+                    origin: .manualCatalogSave, changedFields: ["productName"]))
+            laterID = later.changeID; laterKey = later.idempotencyKey
+            XCTAssertNotEqual(laterID, originalID)
+            XCTAssertNotEqual(laterKey, originalKey)
+            try edit.save()
+        }
+        let reopened = try makeContainer(storeURL: storeURL)
+        let beforeRetry = ModelContext(reopened)
+        let durableOriginal = try beforeRetry.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == originalID }
+        XCTAssertEqual(durableOriginal?.idempotencyKey, originalKey)
+        _ = try await CatalogPushService(modelContainer: reopened, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        let attempts = remote.attemptedProductCreatePayloads()
+        XCTAssertGreaterThanOrEqual(attempts.count, 2)
+        XCTAssertEqual(attempts.dropFirst().first, originalPayload,
+                       "A retry must replay the first committed request, not the current local projection")
+        let read = ModelContext(reopened)
+        XCTAssertEqual(try fetchProduct(barcode: "LOST-ACK-REOPEN", context: read)?.productName, "Later durable intent")
+        XCTAssertEqual(try activeChangeCount(context: read, ownerUserID: owner), 0)
+        XCTAssertEqual(remote.remoteProductRowCount(), 1)
+        XCTAssertEqual(remote.productUpdatePayloads().count, 1)
+        XCTAssertEqual(remote.productUpdatePayloads().first?.productName, "Later durable intent")
+        XCTAssertEqual(remote.persistedProductRow(id: try XCTUnwrap(originalPayload).id)?.productName, "Later durable intent")
+        let pending = try read.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(pending.first { $0.changeID == laterID }?.idempotencyKey, laterKey)
+        XCTAssertEqual(pending.first { $0.changeID == laterID }?.status, .acknowledged)
+        XCTAssertTrue(try read.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
+        let attemptsBeforeRepeat = remote.attemptedProductIDs().count + remote.productUpdatePayloads().count
+        _ = try await CatalogPushService(modelContainer: reopened, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(remote.attemptedProductIDs().count + remote.productUpdatePayloads().count, attemptsBeforeRepeat)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        XCTAssertEqual(try read.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
+    @MainActor
     func testCatalogPushIsolatesBlockedSiblingAndStillPushesEligibleRow() async throws {
         let container = try makeContainer()
         let owner = UUID()
@@ -1277,7 +1350,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         return try String(contentsOf: url, encoding: .utf8)
     }
 
-    private func makeContainer() throws -> ModelContainer {
+    private func makeContainer(storeURL: URL? = nil) throws -> ModelContainer {
         let schema = Schema([
             Product.self,
             Supplier.self,
@@ -1289,9 +1362,10 @@ final class Task118AutomaticDomainTests: XCTestCase {
             SyncEventOutboxEntry.self,
             LocalPendingChange.self
         ])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = storeURL.map { ModelConfiguration(schema: schema, url: $0) }
+            ?? ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
-        Self.retainedContainers.append(container)
+        if storeURL == nil { Self.retainedContainers.append(container) }
         return container
     }
 
@@ -1399,6 +1473,10 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
         createdProductPayloads.count
     }
 
+    func attemptedProductCreatePayloads() -> [SyncAutomaticProductCreatePayload] {
+        createdProductPayloads
+    }
+
     func attemptedProductIDs() -> [UUID] {
         productCreateAttemptIDs
     }
@@ -1406,6 +1484,7 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     func remoteProductRowCount() -> Int {
         persistedProductRows.count
     }
+    func persistedProductRow(id: UUID) -> RemoteInventoryProductRow? { persistedProductRows[id] }
 
     func updatedProductIDs() -> [UUID] {
         productUpdateRequests.map(\.0)
@@ -1514,22 +1593,25 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
 
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
         productUpdateRequests.append((id, payload))
-        return RemoteInventoryProductRow(
+        let existing = persistedProductRows[id]
+        let row = RemoteInventoryProductRow(
             id: id,
             ownerUserID: ownerUserID,
             shopID: shopID,
-            barcode: payload.barcode ?? "TASK118-BAR",
-            itemNumber: payload.itemNumber,
-            productName: payload.productName,
-            secondProductName: payload.secondProductName,
-            purchasePrice: payload.purchasePrice,
-            retailPrice: payload.retailPrice,
-            supplierID: payload.supplierID,
-            categoryID: payload.categoryID,
-            stockQuantity: payload.stockQuantity,
+            barcode: payload.barcode ?? existing?.barcode ?? "TASK118-BAR",
+            itemNumber: payload.itemNumber ?? existing?.itemNumber,
+            productName: payload.productName ?? existing?.productName,
+            secondProductName: payload.secondProductName ?? existing?.secondProductName,
+            purchasePrice: payload.purchasePrice ?? existing?.purchasePrice,
+            retailPrice: payload.retailPrice ?? existing?.retailPrice,
+            supplierID: payload.supplierID ?? existing?.supplierID,
+            categoryID: payload.categoryID ?? existing?.categoryID,
+            stockQuantity: payload.stockQuantity ?? existing?.stockQuantity,
             updatedAt: "2026-05-24T00:00:00Z",
             deletedAt: payload.deletedAt
         )
+        persistedProductRows[id] = row
+        return row
     }
 }
 

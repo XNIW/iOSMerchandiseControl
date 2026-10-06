@@ -2,6 +2,74 @@ import XCTest
 @testable import iOSMerchandiseControl
 
 final class ShopContextTests: XCTestCase {
+    @MainActor
+    func testSlowCheckingKeepsPreviouslyAuthorizedLocalShopBeforeResponse() async throws {
+        let owner = UUID()
+        let defaults = makeDefaults()
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let persisted = selectedShop(id: UUID(), name: "Authorized local shop")
+        XCTAssertTrue(selectedStore.save(persisted, accountHash: accountHash))
+        XCTAssertTrue(bindingStore.saveBinding(accountHash: accountHash, storeIdentity: persisted.localStoreIdentity))
+        let fetcher = DeferredLinkedShopFetcher()
+        let store = ShopContextStore(fetcher: fetcher, selectedStore: selectedStore, accountBindingStore: bindingStore)
+        let refresh = Task { await store.refresh(ownerUserID: owner) }
+        defer { fetcher.resume(call: 0, shops: []); refresh.cancel() }
+        try await fetcher.waitForCallCount(1)
+        XCTAssertEqual(store.context.selectedShop, persisted, "Local shop presentation must survive while the real discovery call is still held")
+        XCTAssertFalse(store.context.syncAllowed, "Local usability must not grant an online RPC permission")
+        XCTAssertFalse(selectedStore.isResolutionReady(accountHash: accountHash))
+        fetcher.resume(call: 0, shops: [linkedShop(id: persisted.shopID, name: persisted.name)])
+        await refresh.value
+        XCTAssertTrue(store.context.syncAllowed)
+    }
+
+    @MainActor
+    func testTransientDiscoveryFailureKeepsSameScopeRecoveryLocalShopWithoutOnlinePermission() async {
+        let owner = UUID()
+        let defaults = makeDefaults()
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let persisted = selectedShop(id: UUID(), name: "Recovery local shop")
+        XCTAssertTrue(selectedStore.save(persisted, accountHash: accountHash))
+        XCTAssertTrue(bindingStore.saveBinding(accountHash: accountHash, storeIdentity: persisted.localStoreIdentity))
+        let deviceID = DeviceInstallIDStore(defaults: defaults).deviceInstallID
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(accountHash: accountHash,
+            storeIdentity: persisted.localStoreIdentity, reason: "TASK144_LOCAL_CHECKING",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceID)))
+        let store = ShopContextStore(fetcher: LocalAvailabilityFailingShopFetcher(
+            error: .networkError(statusCode: nil, message: nil)), selectedStore: selectedStore, accountBindingStore: bindingStore)
+        await store.refresh(ownerUserID: owner)
+        XCTAssertEqual(store.context.selectedShop, persisted)
+        XCTAssertEqual(selectedStore.selectedShop(accountHash: accountHash), persisted)
+        XCTAssertFalse(store.context.syncAllowed)
+        XCTAssertFalse(selectedStore.isResolutionReady(accountHash: accountHash))
+        XCTAssertEqual(bindingStore.pendingRecoveryJournal?.mode, .sameScopeRecovery)
+    }
+
+    @MainActor
+    func testConfirmedDiscoveryPermissionRefusalDoesNotRetainOfflineAuthorization() async {
+        let owner = UUID()
+        let defaults = makeDefaults()
+        let selectedStore = SelectedShopStore(defaults: defaults)
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let persisted = selectedShop(id: UUID(), name: "Refused shop")
+        XCTAssertTrue(selectedStore.save(persisted, accountHash: accountHash))
+        XCTAssertTrue(bindingStore.saveBinding(accountHash: accountHash, storeIdentity: persisted.localStoreIdentity))
+        let store = ShopContextStore(fetcher: LocalAvailabilityFailingShopFetcher(
+            error: .permissionDeniedOrRLS(statusCode: 403, code: "42501", message: nil)),
+            selectedStore: selectedStore, accountBindingStore: bindingStore)
+        await store.refresh(ownerUserID: owner)
+        XCTAssertNil(store.context.selectedShop)
+        XCTAssertNil(selectedStore.selectedShop(accountHash: accountHash))
+        XCTAssertFalse(store.context.syncAllowed)
+        XCTAssertEqual(bindingStore.currentBinding?.storeIdentity, persisted.localStoreIdentity,
+            "Refused authorization must not delete or rebind the previous store and queue")
+    }
+
     func testZeroLinkedShopsKeepsLegacyCleanPresentation() {
         let persisted = selectedShop(id: UUID(), name: "Old shop")
 
@@ -465,6 +533,12 @@ private struct ThrowingLinkedShopFetcher: LinkedShopFetching {
     func fetchLinkedShops() async throws -> [LinkedShop] {
         throw MobileLinkedShopRPCDecoder.DecodeError.rpcFailed(code: "unavailable")
     }
+}
+
+private struct LocalAvailabilityFailingShopFetcher: LinkedShopFetching {
+    let error: SupabaseTransportClientError
+
+    func fetchLinkedShops() async throws -> [LinkedShop] { throw error }
 }
 
 @MainActor

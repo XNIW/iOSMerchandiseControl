@@ -250,6 +250,16 @@ protocol ShopDeviceAuthorizationChecking: Sendable {
 }
 
 actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
+    private struct StatusCacheAuthority: Equatable {
+        let clientID: ObjectIdentifier
+        let ownerID: UUID
+        let shopID: UUID?
+        let deviceID: String
+        let binding: AccountBinding?
+        let activeAccountHash: String?
+        let authorizationRevision: Int
+    }
+
     private let clientProvider: SupabaseClientProvider
     private let installIDStore: DeviceInstallIDStore
     private let logger = Logger(
@@ -260,14 +270,40 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
     private var lastRegistrationScope: String?
     private var lastStatusSnapshot: ShopDeviceAuthorizationSnapshot?
     private var lastStatusScope: String?
+    private var lastStatusAuthority: StatusCacheAuthority?
+    // The HTTP nonce is also checked atomically on MainActor at the observed
+    // defaults publication boundary. Cache-only reads never replace it.
+    private nonisolated let statusAdmission = StatusAdmission()
+
+    private nonisolated final class StatusAdmission: @unchecked Sendable {
+        private let lock = NSLock()
+        private var current = UUID()
+        func admit() -> UUID {
+            lock.lock(); defer { lock.unlock() }
+            current = UUID()
+            return current
+        }
+        func accepts(_ id: UUID) -> Bool {
+            lock.lock(); defer { lock.unlock() }
+            return current == id
+        }
+        func withCurrent<Result>(_ id: UUID, _ operation: () -> Result?) -> Result? {
+            lock.lock(); defer { lock.unlock() }
+            guard current == id else { return nil }
+            return operation()
+        }
+    }
     private let statusCacheTTL: TimeInterval = 15
+    private let authorizationPublicationObserver: (@Sendable (Bool) -> Void)?
 
     init(
         clientProvider: SupabaseClientProvider,
-        installIDStore: DeviceInstallIDStore = DeviceInstallIDStore()
+        installIDStore: DeviceInstallIDStore = DeviceInstallIDStore(),
+        authorizationPublicationObserver: (@Sendable (Bool) -> Void)? = nil
     ) {
         self.clientProvider = clientProvider
         self.installIDStore = installIDStore
+        self.authorizationPublicationObserver = authorizationPublicationObserver
     }
 
     @discardableResult
@@ -368,16 +404,14 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
 
     func currentOwnerDeviceStatus(reason: String, force: Bool = false) async -> ShopDeviceAuthorizationSnapshot {
         let now = Date()
+        guard !Task.isCancelled else {
+            return networkErrorSnapshot(error: CancellationError(), checkedAt: now)
+        }
         let selectedShopID = currentSelectedShopID()
         let statusScope = authorizationScope(shopID: selectedShopID)
-        if !force,
-           lastStatusScope == statusScope,
-           let lastStatusSnapshot,
-           now.timeIntervalSince(lastStatusSnapshot.checkedAt) < statusCacheTTL {
-            return lastStatusSnapshot
-        }
-
-        guard clientProvider.client.auth.currentSession?.isExpired == false else {
+        let admittedClient = clientProvider.client
+        guard let currentSession = admittedClient.auth.currentSession,
+              !currentSession.isExpired else {
             let snapshot = ShopDeviceAuthorizationSnapshot(
                 status: "unauthorized",
                 code: "unauthorized",
@@ -389,11 +423,41 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
                 checkedAt: now
             )
             lastStatusSnapshot = snapshot
+            lastStatusAuthority = nil
             return snapshot
         }
 
+        // Actor reentrancy during HTTP must not let an older active response
+        // erase a newer refusal, or publish an obsolete writable snapshot.
+        let authorizationRevision = UserDefaults.standard.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey)
+        let bindingAtAdmission = AccountBindingStore().currentBinding
+        let activeAccountAtAdmission = UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1")
+
         do {
             let deviceInstallID = try installIDStore.requireDeviceInstallID()
+            let cacheAuthority = StatusCacheAuthority(clientID: ObjectIdentifier(admittedClient),
+                ownerID: currentSession.user.id, shopID: selectedShopID, deviceID: deviceInstallID,
+                binding: bindingAtAdmission, activeAccountHash: activeAccountAtAdmission,
+                authorizationRevision: authorizationRevision)
+            if !force,
+               lastStatusScope == statusScope,
+               lastStatusAuthority == cacheAuthority,
+               let lastStatusSnapshot,
+               now.timeIntervalSince(lastStatusSnapshot.checkedAt) < statusCacheTTL {
+                return lastStatusSnapshot
+            }
+            // Another status producer may have confirmed a refusal since our
+            // cached active response. Enforce it locally without requiring RPC.
+            if !force, let selectedShopID,
+               SelectedShopStore().hasConfirmedDeviceDenial(
+                accountHash: AccountBindingStore.accountHash(for: currentSession.user.id),
+                shopID: selectedShopID,
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceInstallID)) {
+                return ShopDeviceAuthorizationSnapshot(status: "blocked", code: "local_device_denied",
+                    canWrite: false, serverTime: nil, lastSeenAt: lastStatusSnapshot?.lastSeenAt,
+                    reasonCode: "local_device_denied", recommendedAction: "check_device_status", checkedAt: now)
+            }
+            let admissionID = statusAdmission.admit()
             let params = ShopDeviceStatusRPCParameters(
                 pDeviceIdentifier: deviceInstallID
             )
@@ -402,7 +466,7 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
                 : "shop_device_status_for_shop"
             let responseData: Data
             if let selectedShopID {
-                responseData = try await clientProvider.client
+                responseData = try await admittedClient
                     .rpc(
                         "shop_device_status_for_shop",
                         params: ShopDeviceStatusForShopRPCParameters(
@@ -413,15 +477,73 @@ actor ShopDeviceRegistrationService: ShopDeviceAuthorizationChecking {
                     .execute()
                     .data
             } else {
-                responseData = try await clientProvider.client
+                responseData = try await admittedClient
                     .rpc("shop_device_status_current_owner", params: params)
                     .execute()
                     .data
             }
             let result = try JSONDecoder().decode(ShopDeviceStatusRPCResult.self, from: responseData)
             let snapshot = result.snapshot(checkedAt: now)
+            // A late callback from another account/shop/install cannot grant
+            // or revoke the current local scope. Every status entry point,
+            // including heartbeat and polling, shares this durable callback.
+            guard !Task.isCancelled, statusAdmission.accepts(admissionID),
+                  clientProvider.client === admittedClient,
+                  admittedClient.auth.currentSession?.user.id == currentSession.user.id,
+                  currentSelectedShopID() == selectedShopID,
+                  (try? installIDStore.requireDeviceInstallID()) == deviceInstallID,
+                  UserDefaults.standard.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey) == authorizationRevision,
+                  AccountBindingStore().currentBinding == bindingAtAdmission,
+                  UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == activeAccountAtAdmission else {
+                return networkErrorSnapshot(error: Task126OwnerStoreGateError.scopeChanged, checkedAt: now)
+            }
+            let admission = statusAdmission
+            let provider = clientProvider
+            let installStore = installIDStore
+            let publicationObserver = authorizationPublicationObserver
+            let publishedRevision: Int? = await MainActor.run {
+                // No Task126 lease is held while hopping to MainActor. Recheck
+                // every admission fact after the hop, before observed writes.
+                admission.withCurrent(admissionID) {
+                    guard !Task.isCancelled,
+                          provider.client === admittedClient,
+                          let session = admittedClient.auth.currentSession, !session.isExpired,
+                          session.user.id == currentSession.user.id,
+                          ShopContextSelection.selectedShopID(ownerUserID: session.user.id) == selectedShopID,
+                          (try? installStore.requireDeviceInstallID()) == deviceInstallID,
+                          UserDefaults.standard.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey) == authorizationRevision,
+                          AccountBindingStore().currentBinding == bindingAtAdmission,
+                          UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == activeAccountAtAdmission else { return nil }
+                    if let selectedShopID {
+#if DEBUG
+                        if reason == "TASK144_THREAD_PUBLICATION" {
+                            publicationObserver?(Thread.isMainThread)
+                        }
+#endif
+                        SelectedShopStore().recordDeviceAuthorization(snapshot,
+                            ownerUserID: currentSession.user.id, shopID: selectedShopID,
+                            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceInstallID))
+                    }
+                    return UserDefaults.standard.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey)
+                }
+            }
+            guard let publishedRevision, !Task.isCancelled, statusAdmission.accepts(admissionID),
+                  clientProvider.client === admittedClient,
+                  let session = admittedClient.auth.currentSession, !session.isExpired,
+                  session.user.id == currentSession.user.id,
+                  currentSelectedShopID() == selectedShopID,
+                  (try? installIDStore.requireDeviceInstallID()) == deviceInstallID,
+                  UserDefaults.standard.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey) == publishedRevision,
+                  AccountBindingStore().currentBinding == bindingAtAdmission,
+                  UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == activeAccountAtAdmission else {
+                return networkErrorSnapshot(error: Task126OwnerStoreGateError.scopeChanged, checkedAt: now)
+            }
             lastStatusSnapshot = snapshot
             lastStatusScope = statusScope
+            lastStatusAuthority = StatusCacheAuthority(clientID: ObjectIdentifier(admittedClient),
+                ownerID: currentSession.user.id, shopID: selectedShopID, deviceID: deviceInstallID,
+                binding: bindingAtAdmission, activeAccountHash: activeAccountAtAdmission,
+                authorizationRevision: publishedRevision)
             logger.info(
                 "\(Self.safeLogText(rpcName), privacy: .public) result reason=\(Self.safeLogText(reason), privacy: .public) scope=\(Self.safeLogText(statusScope), privacy: .public) status=\(Self.safeLogText(snapshot.status), privacy: .public) code=\(Self.safeLogText(snapshot.code), privacy: .public) can_write=\(snapshot.canWrite, privacy: .public)"
             )

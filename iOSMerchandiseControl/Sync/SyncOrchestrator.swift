@@ -89,6 +89,9 @@ final class SyncOrchestrator: ObservableObject {
     private let activityCenter: ForegroundCloudWorkflowActivityCenter
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let stateStore: SyncStateStore
+    private let storeGenerationController: SyncStoreGenerationController?
+    private let storeGenerationLease: SyncStoreGenerationLease?
+    private let defaults: UserDefaults
     private let decisionInputProvider: any SyncDecisionInputProviding
     private let backgroundScheduler: any SyncBackgroundTaskScheduling
 
@@ -115,6 +118,9 @@ final class SyncOrchestrator: ObservableObject {
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         stateStore: SyncStateStore? = nil,
+        storeGenerationController: SyncStoreGenerationController? = nil,
+        storeGenerationLease: SyncStoreGenerationLease? = nil,
+        defaults: UserDefaults = .standard,
         decisionInputProvider: any SyncDecisionInputProviding,
         backgroundScheduler: (any SyncBackgroundTaskScheduling)? = nil,
         maximumForegroundBusyRetryAttempts: Int = 3,
@@ -127,7 +133,10 @@ final class SyncOrchestrator: ObservableObject {
         self.authViewModel = authViewModel
         self.activityCenter = activityCenter
         self.syncEventSignalWatcher = syncEventSignalWatcher
-        self.stateStore = stateStore ?? SyncStateStore()
+        self.stateStore = stateStore ?? SyncStateStore(defaults: defaults)
+        self.storeGenerationController = storeGenerationController
+        self.storeGenerationLease = storeGenerationLease
+        self.defaults = defaults
         self.decisionInputProvider = decisionInputProvider
         self.backgroundScheduler = backgroundScheduler ?? SyncBackgroundTaskScheduler.shared
         self.maximumForegroundBusyRetryAttempts = max(0, maximumForegroundBusyRetryAttempts)
@@ -240,15 +249,18 @@ final class SyncOrchestrator: ObservableObject {
 
     func handleLocalPendingChanges() {
         backgroundScheduler.schedule(reason: .localPendingWrite)
-        guard didReachInteractiveUI,
-              currentScenePhase == .active else { return }
-        submitForegroundTrigger(source: .localMutation, forceIncremental: true)
+        // The notification can be synchronous inside the local writer lease.
+        // Submit after its atomic save returns, before capturing sync authority.
+        Task { @MainActor [weak self] in
+            guard let self, !self.isStopped, self.didReachInteractiveUI,
+                  self.currentScenePhase == .active else { return }
+            self.submitForegroundTrigger(source: .localMutation, forceIncremental: true)
+        }
     }
 
     func stop() {
         isStopped = true
-        clearDeferredForegroundCheck()
-        cancelScheduledForegroundRetry()
+        cancelForegroundCheck()
         stopSyncEventSafetyLoop()
         reconnectObserver?.cancel()
         reconnectObserver = nil
@@ -338,10 +350,11 @@ final class SyncOrchestrator: ObservableObject {
             isAutomaticRecoveryResume = false
         }
         let isRecoveryRetry = isExplicitRecoveryRetry || isAutomaticRecoveryResume
+        let completedRecoveryScope = completedRecoveryForegroundScopeIfAllowed()
         guard !Self.shouldPreserveRecoveryRequired(
             phase: stateStore.state.phase,
             source: source
-        ) || isAutomaticRecoveryResume else {
+        ) || isAutomaticRecoveryResume || completedRecoveryScope != nil else {
             recordRuntimeDiagnostic("foreground.outcome", "recovery_required_preserved")
             return
         }
@@ -354,6 +367,12 @@ final class SyncOrchestrator: ObservableObject {
                 forceLightReconcile: forceIncremental
             )
             guard !Task.isCancelled else {
+                completeForegroundTask()
+                return
+            }
+            if let completedRecoveryScope,
+               !isCompletedRecoveryForegroundScopeCurrent(completedRecoveryScope) {
+                recordRuntimeDiagnostic("foreground.outcome", "completed_recovery_scope_changed")
                 completeForegroundTask()
                 return
             }
@@ -765,13 +784,49 @@ final class SyncOrchestrator: ObservableObject {
     private func automaticRecoveryResumeIdentityIfAllowed(
         source: SyncAutomaticTriggerSource
     ) -> String? {
-        guard stateStore.state.phase == .recoveryRequired,
+        guard !isStopped,
+              stateStore.state.phase == .recoveryRequired,
               let journal = stateStore.pendingRecoveryJournal,
               Self.allowsAutomaticRecoveryResume(
                 source: source,
                 hasDecodableJournal: true
               ) else { return nil }
         return Self.automaticRecoveryResumeIdentity(for: journal)
+    }
+
+    /// A remounted root may inherit recoveryRequired after the previous root's
+    /// run was cancelled. Only its own finalized, physically qualified current
+    /// generation may enter the ordinary decision path without another journal.
+    private func completedRecoveryForegroundScopeIfAllowed() -> Task126VerifiedOwnerStoreScope? {
+        guard !isStopped, !stateStore.recoveryJournalIsPending,
+              stateStore.state.phase == .recoveryRequired,
+              let ownerUserID = authViewModel.sessionInfo?.userID,
+              let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID, defaults: defaults),
+              isCompletedRecoveryForegroundScopeCurrent(scope) else { return nil }
+        return scope
+    }
+
+    private func isCompletedRecoveryForegroundScopeCurrent(
+        _ scope: Task126VerifiedOwnerStoreScope
+    ) -> Bool {
+        guard !Task.isCancelled, authViewModel.isSignedIn, !authViewModel.isTransitioning,
+              authViewModel.sessionInfo?.userID == scope.ownerUserID,
+              scope.pendingReplacement == nil, !stateStore.recoveryJournalIsPending,
+              let storeGenerationController, let storeGenerationLease else { return false }
+        do {
+            try storeGenerationController.validateLease(storeGenerationLease)
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            guard try storeGenerationController.isActiveRecoveryFinalized(scope: scope),
+                  Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                    modelContainer: storeGenerationController.modelContainer,
+                    ownerUserID: scope.ownerUserID, defaults: defaults
+                  ) else { return false }
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            try storeGenerationController.validateLease(storeGenerationLease)
+            return !Task.isCancelled && !stateStore.recoveryJournalIsPending
+        } catch {
+            return false
+        }
     }
 
     static func automaticRecoveryResumeIdentity(

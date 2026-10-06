@@ -39,6 +39,7 @@ struct OptionsView: View {
     private let requestAutomaticCloudCheck: (() -> Void)?
     private let accountStoreReplacementRuntime: SyncOrchestrator?
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Environment(\.foregroundCloudWorkflowActivityCenter) private var foregroundActivityCenter
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -268,6 +269,7 @@ struct OptionsView: View {
                 requestExplicitRecovery: requestExplicitRecoveryNow
             )
         }
+        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .leading)
         .padding(.vertical, 4)
     }
 
@@ -298,44 +300,91 @@ struct OptionsView: View {
         .accessibilityElement(children: .combine)
     }
 
+    @ViewBuilder
     private var cloudAccountPublicHeader: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 12) {
-                cloudAccountStatusLabel
-                Spacer(minLength: 12)
-                cloudAccountActionButton
-            }
-
+        if dynamicTypeSize.isAccessibilitySize {
+            // Give the complete account text the form row's available width.
+            // The action remains separate when accessibility fonts are large.
             VStack(alignment: .leading, spacing: 12) {
-                cloudAccountStatusLabel
+                // A Form aligns native Label titles by outdenting their icon.
+                // Use the row's explicit width for both at accessibility sizes.
+                HStack(alignment: .top, spacing: 12) {
+                    cloudAccountStatusIcon.accessibilityHidden(true)
+                    cloudAccountStatusText
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
                 cloudAccountActionButton
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            #if DEBUG
+            .onAppear {
+                Task144LocalAvailabilityRootFixture.current?.noteOptionsAccountLayout(
+                    dynamicTypeSize: dynamicTypeSize, usesAccessibilityStack: true)
+            }
+            #endif
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 12) {
+                    cloudAccountStatusLabel
+                    Spacer(minLength: 12)
+                    cloudAccountActionButton
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    cloudAccountStatusLabel
+                    cloudAccountActionButton
+                }
+            }
+            #if DEBUG
+            .onAppear {
+                Task144LocalAvailabilityRootFixture.current?.noteOptionsAccountLayout(
+                    dynamicTypeSize: dynamicTypeSize, usesAccessibilityStack: false)
+            }
+            #endif
         }
     }
 
     private var cloudAccountStatusLabel: some View {
         Label {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(cloudAccountTitle)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(cloudAccountDetail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            cloudAccountStatusText
         } icon: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(cloudAccountColor.opacity(0.14))
+            cloudAccountStatusIcon
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var cloudAccountStatusText: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(cloudAccountTitle)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(cloudAccountDetail)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var cloudAccountStatusIcon: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(cloudAccountColor.opacity(0.14))
+            if dynamicTypeSize.isAccessibilitySize {
+                Image(systemName: cloudAccountSystemImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(cloudAccountColor)
+            } else {
                 Image(systemName: cloudAccountSystemImage)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(cloudAccountColor)
             }
-            .frame(width: 36, height: 36)
         }
-        .accessibilityElement(children: .combine)
+        .frame(width: 36, height: 36)
     }
 
     @ViewBuilder
@@ -344,7 +393,17 @@ struct OptionsView: View {
             Button(role: .destructive) {
                 supabaseAuthViewModel.signOut()
             } label: {
-                Label(L("options.supabase.auth.signOut"), systemImage: "rectangle.portrait.and.arrow.right")
+                if dynamicTypeSize.isAccessibilitySize {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .accessibilityHidden(true)
+                        Text(L("options.supabase.auth.signOut"))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Label(L("options.supabase.auth.signOut"), systemImage: "rectangle.portrait.and.arrow.right")
+                }
             }
             .buttonStyle(.borderless)
             .font(.subheadline.weight(.semibold))
@@ -1212,6 +1271,8 @@ private extension LocalDatabaseCloudStatusInput {
 // MARK: - Release automatic sync status surface
 
 private struct SupabaseAutomaticSyncStatusCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
     @State private var isDiagnosticsExpanded = false
     @State private var currentDate = Date()
@@ -1269,18 +1330,24 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         let visibleProgress = progress.flatMap(SyncStatusPresenter.visibleProgress(from:))
 
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Label {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(title(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(detail(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: systemImage(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
+                            .foregroundStyle(tint(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
+                            .accessibilityHidden(true)
+                        statusTitleAndDetail(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
+                    statusBadge(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Label {
+                    statusTitleAndDetail(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics)
                 } icon: {
                     Image(systemName: systemImage(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                         .foregroundStyle(tint(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
@@ -1290,6 +1357,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                 Spacer(minLength: 8)
 
                 statusBadge(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics)
+                }
             }
 
             if isStalled {
@@ -1336,9 +1404,33 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                 diagnosticsView(diagnostics, isRunning: isRunning, isStalled: isStalled)
             }
         }
+        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .leading)
         .padding(.vertical, 4)
-        .onReceive(Timer.publish(every: 15, on: .main, in: .common).autoconnect()) { date in
-            currentDate = date
+        .task(id: "\(isRunning)-\(scenePhase)") {
+            guard scenePhase == .active else { return }
+            currentDate = Date() // Refresh once on foreground, even while idle.
+            guard isRunning else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(15)) }
+                catch { return }
+                guard !Task.isCancelled else { return }
+                currentDate = Date()
+            }
+        }
+    }
+
+    private func statusTitleAndDetail(
+        isRunning: Bool, isStalled: Bool, diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(detail(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -1592,7 +1684,8 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             Image(systemName: statusBadgeSystemImage(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                 .imageScale(.small)
             Text(statusBadgeText(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
         }
         .font(.caption)
         .fontWeight(.medium)
@@ -1703,7 +1796,10 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
     @ViewBuilder
     private func actionRow(canRetry: Bool) -> some View {
-        HStack(spacing: 8) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+        layout {
             if accountSyncDecision != nil, let reviewAccountDecision {
                 Button {
                     reviewAccountDecision()

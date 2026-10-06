@@ -13,7 +13,7 @@ nonisolated struct HistorySessionOverlayPayload: Codable, Equatable, Sendable {
     }
 }
 
-nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
+nonisolated struct SharedSheetSessionUpsertRow: Codable, Equatable, Sendable {
     let remoteID: UUID
     let payloadVersion: Int
     let displayName: String

@@ -127,9 +127,7 @@ struct InventoryHomeView: View {
                 } else {
                     entry = try excelSession.createManualHistoryEntry(
                         in: context,
-                        ownerUserID: supabaseAuthViewModel.isSignedIn
-                            ? supabaseAuthViewModel.sessionInfo?.userID
-                            : nil
+                        ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID
                     )
                 }
 
