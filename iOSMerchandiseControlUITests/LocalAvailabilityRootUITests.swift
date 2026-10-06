@@ -120,6 +120,61 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["task144.controlled.queue-empty-no-duplicates"].exists)
     }
 
+    func testCurrentProductACKWithIndependentHistorySurvivesImmutableCommittedResponseReplay() {
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_LOSE_FIRST_PRODUCT_RESPONSE"] = "1"
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] = "1"
+        app.launch()
+        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
+        let row = app.staticTexts["Safe local baseline"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        let name = app.textFields["task144.product.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        replaceText(in: name, with: "Saved before network release")
+        assertHeldBoundary()
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Saved before network release"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Saved on this device · Waiting for cloud confirmation"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["task144.controlled.independent-history-pending"].waitForExistence(timeout: 5),
+                      "The independent intent must be durably present before release")
+        app.buttons["task144.controlled.release"].press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
+        // This new lost-response scenario may have no deferred foreground work.
+        // Allow the existing 30s automatic safety poll plus 10s UI/transport
+        // margin; the original normal-response test retains its 20s budget.
+        // No manual Retry, lifecycle change or private runtime trigger is used.
+        let ownACK = app.staticTexts["task144.controlled.product-ack-other-pending"].waitForExistence(timeout: 40)
+        if !ownACK { captureControlledAutomaticReadback() }
+        XCTAssertTrue(ownACK, "Actual product ACK must coexist with the other durable unacknowledged intent")
+        XCTAssertTrue(app.staticTexts["Cloud confirmed this save"].waitForExistence(timeout: 5),
+                      "Independent pending work must not hide an exact current-record ACK")
+        XCTAssertFalse(app.staticTexts["task144.controlled.queue-empty-no-duplicates"].exists)
+        let readback = app.buttons["task144.controlled.release"].value as? String ?? ""
+        let expected = ["task144.controlled.auto.calls.2.events.1",
+            "task144.controlled.independent.attempt-observation-capped.false",
+            "task144.controlled.independent.first-product-commit-response-lost.true",
+            ".provider-returned.false.", ".provider-returned.true.",
+            ".preceding-ack.false.preceding-cas-matches.true.",
+            "task144.controlled.independent.predicate.product-ack.true",
+            "task144.controlled.independent.predicate.product-fingerprint.true",
+            "task144.controlled.independent.predicate.history-status-pending.true",
+            "task144.controlled.independent.predicate.product-exact-scope.true",
+            "task144.controlled.independent.predicate.history-exact-scope.true",
+            "task144.controlled.independent.predicate.single-immutable-product-ack-and-event.true"]
+        let incoming = readback.components(separatedBy: ";").filter {
+            $0.hasPrefix("task144.controlled.independent.http.")
+        }
+        let provesBothOriginal = incoming.count == 2 && incoming.allSatisfy {
+            $0.contains(".sealed-owner-store-schema-device-valid.true.")
+                && $0.contains(".sealed-corresponds.true.")
+                && $0.contains(".same-first-id.true.same-first-body.true.same-first-scope.true.same-first-sealed-revision.true")
+        }
+        if !provesBothOriginal || !expected.allSatisfy({ readback.contains($0) }) {
+            captureControlledAutomaticReadback()
+        }
+        XCTAssertTrue(provesBothOriginal, "Both real incoming bodies must be the same validated sealed Product attempt")
+        for fact in expected { XCTAssertTrue(readback.contains(fact), "Missing actual controlled replay fact: \(fact)") }
+    }
+
     func testSaveWithNewSupplierAndCategoryKeepsPublicPendingAndOwnACKFeedback() {
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] = "1"
         app.launch()

@@ -206,6 +206,27 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 UTC, fonte finale48 e ACK con autorità corrente
+
+**Stato corrente: FIX; fonte48 `10a15560`, HEAD0757 prima del commit correttivo.** Mirati10 PASS; full09 senza filtri/nuovi skip e parallelNO: **1544 ID distinti,1508PASS/0FAIL/36SKIP preesistenti,15nativeUI PASS**. Tutti1541ID/status Full05 preservati, più soltanto unit ordine reopen, UI replay risposta persa e unit ACK/lease. Debug/Release/Analyze09 PASS,34warning primari baseline/zero nuovi nelle48 sorgenti. Proper fullTEST09 Release firmato PASS,23file/profilo154a/fresh signer/Xcode entitlements/keychain/strict-deep;binary `79931be9fd6f779608e5f2a011e88eee1a0f50cf1f173224416875d5f5df614f`, **NON INSTALLATO**. Ricevute e mapping esaustivo nel manifest finale.
+
+**Tre file di codice/test propri:** fixture DEBUG avvia la normale qualificazione DOPO refresh auth/shop e PRIMA await al reopen; l'oracolo ACK conserva tutte le prove typed sealedA/token/body/key/revisione/CAS/fullscope, replay soltanto prima ACK, evento catalog reale del solo Product e readback corrente ProductACK+Historypending. Il delta finale13righe cattura strettamente l'autorità CORRENTE senza permessi pending, confronta l'intera identità stabile owner/account/shop/store/device, verifica container/qualificazione locale e rivalida questa autorità immediatamente prima true. La lease storica non concede autorità, né si riadotta un vecchio pending. Unità reale file-backed Save→CatalogACK→eventACK→ordinary same-shop save dimostra vecchio writer DENIED/current authority PASS e ACK/body/intento/evento invariati. Tutte144righe di osservazione diagnostica provvisoria rimosse.
+
+AtomicTests aggiunge due prove reali controller/file (ordine reopen e ACK/lease). UI aggiunge UNA regressione autonoma opt-in perdita della prima risposta Product DOPO commit controllato e PRIMA CAS locale; attende40s solo nel nuovo metodo, derivati dal poll automatico esistente30s+10margine. Nessun Retry/manualsubmit/lifecycle/timer/policy change. Rimuovendo il metodo aggiunto si ripristina tutto il vecchio file4f2779;14metodi/assertion/budget5s20s originali intatti. I normali provider faultOFF, live writer/SDK/Ready invariati. Stessi due reviewer APPROVED10a,carry46/UI6fb verificati.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| Mirati10 incl. tre lease negative | ESEGUITO |10PASS/0FAIL/0SKIP; `785929f0a037ba62b2c29ab7aa1623693e1c3c846bcc368d7a8d27ed815de227` |
+| Full09 senza only/skip | ESEGUITO |1544ID/1508P0F36S/15UI; `1ee87ae4422e10c5ed65f8ed9a04b06b7a226284fec13e6de1025c7ba3a49e5a` |
+| Debug/Release/Analyze09 e warning | ESEGUITO |3exit0,baseline34/nuovi0; `fd14aaf1e6c0c207565c92006b6b11eca58d4c5082e0b7ef63d9c20c448197e8` |
+| Proper fullTEST09 Release firmato | ESEGUITO |23file/signature/profile/entitlements/keychainP; `bf687605541ab0c6014367dad0c9a7f3aaebc63307f22248354c5c8ca4e9a49b` |
+| Scope/planning/preservazione | ESEGUITO |Fonte48/head/baseline invariati,MASTER/Planning intatti,index vuoto,ownedPID/groupgone,6B04Shutdown,0input/install primari |
+| Nuova CI/F/H/primaria | NON ESEGUITO |Nuova exact-headCI PENDING;F/459/H separati,Mac unlock pendente |
+
+**Limiti conservati:** CI0757 FAIL e Full06/07/08 FAIL storici non reinterpretati. Full06cause e Full08leaf UNKNOWN; observation1P significa NOT_OBSERVED. Il controesempio committed-loss e la prova ACK/lease sono semantici separati. Negativi privatiRAM variazione/postACK NON ESEGUITI direttamente; reali A/B/sealed/foreign/external/lease PASS. Primo callerCAS UNKNOWN; ACK finale distinto. Locale Xcode27/Swift6.4 non equivale a CI26.6. Durate XCTest non sono performance.
+
+**Handoff:** `ios-current-ack-and-reopen-final-handoff-v9-20261006/manifest.json`; parent soloGit. Stage fixture/Atomic/UI,2portable docs e SOLO3nuovi hunks Task144;inverse wholeworking→8815b979… esatto,54foreign preservati fuori index. Source/heavy/device/input rilasciati soltanto alla consegna finale.
+
 ### Esecuzione e fix — 2026-10-06 UTC, fixture CI e diagnostica UI corrente
 
 **Fonte48, HEAD639d prima del nuovo commit, task FIX.** CI37394390166 sullo stesso PR16: Debug PASS, XCTest1541 unici1501PASS/4FAIL/36SKIP; Analyze e secret scan NON ESEGUITI. Una sola esecuzione Task114 fallisce due assertion con deadline fixture50ms ed elapsed71ms; nessuna regressione del timeout prodotto dimostrata. I tre UI falliscono dopo Options→History o soltanto sul marker dopo rilancio; gli allegati remoti non esistono, causa UNKNOWN. Non si deducono perdita del Save, failure del callback o colpa del parallelismo/toolchain.
@@ -849,6 +870,8 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix 2026-10-06 — oracolo DEBUG corrente, prodotto normale invariato:** normale qualificazione al reopen dopo refresh; replay typedsealedA esaustivo e preACK, evento Product reale/currentACK+Historypending; finale13righe usa autorità stretta corrente, intera identità stabile e prova body/container, rivalidazione corrente. Vecchi writer stale restano DENIED. Prove reali ordine/ACKlease + nuova solaUI replay40s;14metodi/budget originali intatti. Mirati10/full09/build09/proper09 PASS;stessi due reviewer10a APPROVED. CI0757 e Full06/07/08 restano FAIL storici con limiti UNKNOWN;nessun Ready/count-only/pending-authority shortcut o nuovo skip.
+
 **Fix CI runtime — 2026-10-06:** il positivo Task114 verifica l'esito con il default ordinario, non una latenza50ms sull'intero MainActor; negativo vero5ms e oracoli di successo intatti. Nessun fix prodotto UI basato su ipotesi: i tre casi originali e il loro ordine di classe passano localmente, con diagnosi corrente su future failure. Full05 e build/analyze/proper05 PASS sulla fonte48; CI639d4FAIL e causa UI UNKNOWN restano storici espliciti. Nessun nuovo skip o timeout UI modificato.
 
 
@@ -868,6 +891,8 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — SOURCE48_10a / TARGET10_PASS / FULL09_1544IDs_1508P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE09_PASS / SIGNED_FULLTEST09_PASS; task FIX.** HEAD0757 precommit;binary `79931be9fd6f779608e5f2a011e88eee1a0f50cf1f173224416875d5f5df614f`/profile154a/23file/signature-entitlements-keychainP,NON INSTALLATO. Nuova exact-headCI PENDING,CI0757 storicaFAIL;Full06cause/Full08leaf UNKNOWN. Parent soloGit: stessaPR16/exactCI/normalmerge/mainCI/primaryFF preservando dirty. Stage3source+2docs+solo3ownedTaskhunks,inverse→8815 e54foreign fuoriindex. Nessun ownedrunner/group,6B04Shutdown/baseline/config primaria intatti;I source/heavy/device/input0 dopo rilascio. F autenticato/459/H NON ESEGUITI,Mac unlock pending;nessun bypass.
 
 **CURRENT 2026-10-06 — SOURCE48_FIXTURE_CI_DIAGNOSTICS / FULL05_1505P_0F_36S / DEBUG_RELEASE_ANALYZE_PASS / SIGNED_FULLTEST05_PASS, task FIX.** HEAD639d prima del nuovo commit;3 delta owned e45 carry esatti. Artifact binary `2795dc0916328b69ce2345ccbe7c38c50420de9140274c86d602c938684b04fa`,23 file/profilo154a/firma/entitlements/keychain PASS,NON INSTALLATO. CI37394390166 resta FAIL1501P4F36S: causa tre UI UNKNOWN, nuova CI exact-head PENDING. Parent soloGit per aggiornare PR16 esistente/CI/merge/mainCI/FF preservando dirty. Stage solo3 source+2docs+tre nuovi hunks Task144 sopraHEAD639d;inverse→08321017… e54 foreign fuori index. Nessun runner/group attivo,6B04 Shutdown/baseline/config primaria preservati;F autenticato,primaria459/H NON ESEGUITI. Pacchetto esterno `ios-ci-current-runtime-final-handoff-20261006/manifest.json`; questo prevale sugli snapshot storici sotto.
 

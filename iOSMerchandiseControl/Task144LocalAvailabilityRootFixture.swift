@@ -48,6 +48,22 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private var lastAutomaticCallbackUptime: TimeInterval?
     private var lastObservationPayload = ""
     private var observationSequence = 0
+    // Bounded value-only evidence for the existing independent-pending control.
+    // These observations do not grant scope, submit work or alter its oracle.
+    private struct ProductHTTPObservation {
+        let id: UUID
+        let payloadHash: String
+        let scope: Task126VerifiedOwnerStoreScope
+        let sealedToken: LocalPendingChangeCASToken?
+        let sealedHash: String?
+        let sealedBodyCorresponds: Bool
+        let precedingACK: String
+        let precedingCASMatches: String
+        var providerReturned = false
+    }
+    private var productHTTPObservations: [ProductHTTPObservation] = []
+    private var automaticCompletionObservations: [String] = []
+    private var productHTTPObservationCapped = false
     private let namespace: UUID
     private var callbackHeartbeatEntered = false
     private var callbackHeartbeatCompleted = false
@@ -123,6 +139,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         authViewModel = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: provider))
         transport.onHeld = { [weak self] in self?.facts.insert("task144.controlled.held") }
         transport.checkpointBoundary = { [weak self] in await self?.releasePreviousShopCallbackAtCheckpoint() }
+        if provesIndependentPending {
+            // Explicit opt-in controlled counterexample: commit the first
+            // typed Product body, lose only its response, then let the normal
+            // runtime retry the durable sealed attempt. The oracle is unchanged.
+            catalogRemote.losesFirstCommittedProductResponse = ProcessInfo.processInfo.environment[
+                "TASK144_LOCAL_AVAILABILITY_LOSE_FIRST_PRODUCT_RESPONSE"] == "1"
+            catalogRemote.observeProductAttempt = { [weak self] id, payload, scope, providerReturning in
+                self?.observeProductHTTP(id: id, payload: payload, scope: scope, providerReturning: providerReturning)
+            }
+        }
     }
 
     func noteOptionsAccountLayout(dynamicTypeSize: DynamicTypeSize, usesAccessibilityStack: Bool) {
@@ -157,9 +183,22 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 guard shopContextStore.context.syncAllowed else { throw URLError(.timedOut) }
                 if controller.activeManifest != nil {
                     setupStage = .reopen
-                    guard await controller.awaitLocalBodyQualification(), try terminalReadback() else {
+                    controller.startLocalBodyQualification(ownerUserID: owner)
+                    let qualified = await controller.awaitLocalBodyQualification()
+                    facts.insert("task144.controlled.reopen-qualification.\(qualified)")
+                    guard qualified else {
+                        facts.insert("task144.controlled.reopen-terminal.not-run")
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
+                    let terminal: Bool
+                    do {
+                        terminal = try terminalReadback(observesReopenFailure: true)
+                    } catch {
+                        facts.insert("task144.controlled.reopen-terminal.throws")
+                        throw error
+                    }
+                    facts.insert("task144.controlled.reopen-terminal.\(terminal)")
+                    guard terminal else { throw SyncStoreGenerationError.activationReadBackFailed }
                     facts.formUnion(["task144.controlled.reopened", "task144.controlled.queue-empty-no-duplicates"])
                     hasStarted = true
                     isPreparedForRoot = true
@@ -417,6 +456,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         lastAutomaticPresentationID = presentationID
         lastAutomaticInvocationID = invocationID
         lastAutomaticCallbackUptime = ProcessInfo.processInfo.systemUptime
+        if provesIndependentPending, automaticCompletionObservations.count < 8 {
+            automaticCompletionObservations.append(lastAutomaticResult + ".http-entries.\(catalogRemote.attemptCount)")
+        }
         refreshAutomaticObservation()
     }
 
@@ -454,7 +496,130 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         } catch {
             diagnostic.append("\(prefix)rows.read-failed")
         }
+        if provesIndependentPending { diagnostic.append(contentsOf: independentProductObservation()) }
         publishAutomaticObservation(diagnostic)
+    }
+
+    // The private Catalog mutation is decoded only for observation, after the
+    // real immutable-attempt validator has checked its complete envelope.
+    private func observeProductHTTP(id: UUID, payload: SyncAutomaticProductUpdatePayload,
+        scope: Task126VerifiedOwnerStoreScope, providerReturning: Bool) {
+        guard provesIndependentPending else { return }
+        do {
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            let payloadData = try encoder.encode(payload)
+            let payloadHash = ShopSyncRecoveryCanonical.sha256(String(decoding: payloadData, as: UTF8.self))
+            if providerReturning {
+                guard let index = productHTTPObservations.indices.last,
+                      productHTTPObservations[index].id == id,
+                      productHTTPObservations[index].payloadHash == payloadHash,
+                      productHTTPObservations[index].scope == scope else { return }
+                productHTTPObservations[index].providerReturned = true
+                return
+            }
+            guard productHTTPObservations.count < 8 else { productHTTPObservationCapped = true; return }
+            let context = ModelContext(controller.modelContainer)
+            var changesRequest = FetchDescriptor<LocalPendingChange>(); changesRequest.fetchLimit = 101
+            var outboxRequest = FetchDescriptor<SyncEventOutboxEntry>(); outboxRequest.fetchLimit = 101
+            let changes = try context.fetch(changesRequest)
+            let outbox = try context.fetch(outboxRequest)
+            guard changes.count <= 100, outbox.count <= 100 else { productHTTPObservationCapped = true; return }
+            var precedingACK = "not-observed"
+            var precedingCASMatches = "not-observed"
+            if let previous = productHTTPObservations.last?.sealedToken {
+                let sameID = changes.filter { $0.changeID == previous.changeID }
+                if sameID.count == 1 {
+                    precedingACK = String(sameID[0].status == .acknowledged)
+                    precedingCASMatches = String(previous.matches(sameID[0]))
+                }
+            }
+            let products = changes.filter { $0.entityKind == .product && $0.status == .pending }
+            var token: LocalPendingChangeCASToken?
+            var sealedHash: String?
+            var corresponds = false
+            if products.count == 1 {
+                let sealed = outbox.filter { $0.id == products[0].changeID && LocalPendingBusinessAttemptStore.isSealed($0) }
+                if sealed.count == 1 {
+                    let data = try LocalPendingBusinessAttemptStore.validate(sealed[0], kind: "catalog", scope: scope)
+                    let envelope = try JSONDecoder().decode(
+                        LocalPendingBusinessAttemptStore.Envelope<Task144ObservedStoredProductMutation>.self, from: data)
+                    token = envelope.pending
+                    sealedHash = sealed[0].entityIDsShape
+                    let incoming = envelope.payload.call.updateProduct
+                    corresponds = envelope.pending.matches(products[0]) && incoming.id == id && incoming.payload == payload
+                }
+            }
+            productHTTPObservations.append(.init(id: id, payloadHash: payloadHash, scope: scope,
+                sealedToken: token, sealedHash: sealedHash, sealedBodyCorresponds: corresponds,
+                precedingACK: precedingACK, precedingCASMatches: precedingCASMatches))
+        } catch {
+            // Never change the incoming HTTP request or propagate a diagnostic failure.
+            productHTTPObservationCapped = true
+        }
+    }
+
+    private func independentProductObservation() -> [String] {
+        let prefix = "task144.controlled.independent."
+        var result = ["\(prefix)attempt-observation-capped.\(productHTTPObservationCapped)",
+            "\(prefix)caller-cas-result.not-directly-observed",
+            "\(prefix)first-product-commit-response-lost.\(catalogRemote.firstProductResponseWasLost)"]
+        let first = productHTTPObservations.first
+        for (index, observation) in productHTTPObservations.enumerated() {
+            let token = observation.sealedToken
+            let scope = observation.scope
+            let scopeHash = LocalPendingChangeLogicalKey.privacyHash([
+                scope.ownerUserID.uuidString.lowercased(), scope.shopID.uuidString.lowercased(),
+                scope.deviceIdentityHash, scope.storeIdentity.storeId, scope.storeIdentity.localStoreId,
+                String(scope.storeIdentity.syncProtocolVersion), String(scope.storeIdentity.schemaVersion),
+                String(scope.storeIdentity.storeEpoch), String(scope.leaseGeneration)].joined(separator: "|"))
+            let values: [String] = ["\(prefix)http.\(index + 1)",
+                "id.\(LocalPendingChangeLogicalKey.privacyHash(observation.id.uuidString.lowercased()))",
+                "body.\(observation.payloadHash)", "scope.\(scopeHash)",
+                "sealed-key.\(token.map { LocalPendingChangeLogicalKey.privacyHash($0.idempotencyKey) } ?? "absent")",
+                "sealed-revision.\(token?.eventFingerprint ?? "absent")", "sealed-body.\(observation.sealedHash ?? "absent")",
+                "incoming-scope-verified.true", "sealed-owner-store-schema-device-valid.\(token != nil)",
+                "sealed-corresponds.\(observation.sealedBodyCorresponds)",
+                "provider-returned.\(observation.providerReturned)", "preceding-ack.\(observation.precedingACK)",
+                "preceding-cas-matches.\(observation.precedingCASMatches)",
+                "same-first-id.\(observation.id == first?.id)", "same-first-body.\(observation.payloadHash == first?.payloadHash)",
+                "same-first-scope.\(scope == first?.scope)", "same-first-sealed-revision.\(token != nil && token == first?.sealedToken)"]
+            result.append(values.joined(separator: "."))
+        }
+        result.append(contentsOf: automaticCompletionObservations.enumerated().map { "\(prefix)completion.\($0.offset + 1).\($0.element)" })
+        result.append(contentsOf: catalogRemote.eventRequestObservations.map { "\(prefix)event.\($0)" })
+        do {
+            let context = ModelContext(controller.modelContainer)
+            var productRequest = FetchDescriptor<Product>(); productRequest.fetchLimit = 2
+            var pendingRequest = FetchDescriptor<LocalPendingChange>(); pendingRequest.fetchLimit = 101
+            let products = try context.fetch(productRequest)
+            let pending = try context.fetch(pendingRequest)
+            guard pending.count <= 100 else { result.append("\(prefix)predicates.capped"); return result }
+            let productChanges = pending.filter { $0.entityKind == .product }
+            let historyChanges = pending.filter { $0.entityKind == .historySession }
+            let oneProduct = products.count == 1 && productChanges.count == 1
+            let oneHistory = historyChanges.count == 1
+            let historyCount = try context.fetchCount(FetchDescriptor<HistoryEntry>())
+            let productACK = oneProduct && productChanges[0].status == .acknowledged
+            let productFingerprint = oneProduct && productChanges[0].intendedFingerprintHash
+                == LocalPendingChangeLogicalKey.productFingerprintHash(products[0])
+            let historyNonterminal = oneHistory && !historyChanges[0].status.isTerminal
+            let historyOwner = oneHistory && historyChanges[0].ownerUserID == owner.uuidString.lowercased()
+            let historyScope = oneHistory && first.map { LocalPendingChangeScopeMatcher.matches(historyChanges[0],
+                ownerUserID: $0.scope.ownerUserID, accountHash: $0.scope.accountHash, storeIdentity: $0.scope.storeIdentity) } == true
+            let productScope = oneProduct && first.map { LocalPendingChangeScopeMatcher.matches(productChanges[0],
+                ownerUserID: $0.scope.ownerUserID, accountHash: $0.scope.accountHash, storeIdentity: $0.scope.storeIdentity) } == true
+            let predicates: [(String, Bool)] = [("product-unique", products.count == 1), ("product-intent-unique", productChanges.count == 1),
+                ("history-intent-unique", oneHistory), ("product-name", oneProduct && products[0].productName == "Saved before network release"),
+                ("product-ack", productACK), ("product-fingerprint", productFingerprint), ("history-nonterminal", historyNonterminal),
+                ("history-owner", historyOwner), ("history-count-one", historyCount == 1), ("http-count-one", catalogRemote.attemptCount == 1),
+                ("product-exact-scope", productScope), ("history-exact-scope", historyScope),
+                ("history-status-pending", oneHistory && historyChanges[0].status == .pending),
+                ("single-immutable-product-ack-and-event", oneProduct && oneHistory
+                    && hasOneImmutableProductAttemptACK(product: products[0], change: productChanges[0],
+                        historyChange: historyChanges[0], context: context))]
+            result.append(contentsOf: predicates.map { "\(prefix)predicate.\($0.0).\($0.1)" })
+        } catch { result.append("\(prefix)predicates.read-failed") }
+        return result
     }
 
     private func publishAutomaticObservation(_ diagnostic: [String]) {
@@ -527,7 +692,73 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             && !historyChanges[0].status.isTerminal
             && historyChanges[0].ownerUserID == owner.uuidString.lowercased()
             && historyCount == 1
-            && catalogRemote.attemptCount == 1
+            && hasOneImmutableProductAttemptACK(product: products[0], change: productChanges[0],
+                historyChange: historyChanges[0], context: context)
+    }
+
+    private func hasOneImmutableProductAttemptACK(product: Product, change: LocalPendingChange,
+        historyChange: LocalPendingChange, context: ModelContext) -> Bool {
+        guard change.status == .acknowledged,
+              change.intendedFingerprintHash == LocalPendingChangeLogicalKey.productFingerprintHash(product),
+              !historyChange.status.isTerminal,
+              !productHTTPObservationCapped, !catalogRemote.eventObservationCapped,
+              !productHTTPObservations.isEmpty,
+              productHTTPObservations.count == catalogRemote.attemptCount,
+              let first = productHTTPObservations.first, let token = first.sealedToken,
+              first.sealedHash != nil, first.id == product.remoteID,
+              first.scope.ownerUserID == owner, first.scope.shopID == shop,
+              token.changeID == change.changeID, token.idempotencyKey == change.idempotencyKey,
+              token.intendedFingerprintHash == change.intendedFingerprintHash,
+              productHTTPObservations.last?.providerReturned == true,
+              LocalPendingChangeScopeMatcher.matches(change, ownerUserID: first.scope.ownerUserID,
+                accountHash: first.scope.accountHash, storeIdentity: first.scope.storeIdentity),
+              LocalPendingChangeScopeMatcher.matches(historyChange, ownerUserID: first.scope.ownerUserID,
+                accountHash: first.scope.accountHash, storeIdentity: first.scope.storeIdentity),
+              productHTTPObservations.enumerated().allSatisfy({ entry in
+                let observation = entry.element
+                return observation.sealedBodyCorresponds && observation.id == first.id
+                    && observation.payloadHash == first.payloadHash && observation.scope == first.scope
+                    && observation.sealedToken == token && observation.sealedHash == first.sealedHash
+                    && (entry.offset == 0 || (observation.precedingACK == "false"
+                        && observation.precedingCASMatches == "true"))
+              }) else { return false }
+        do {
+            // Historical request evidence is immutable. Its retired lease does
+            // not authorize this readback: admit and revalidate current authority.
+            let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner)
+            guard current.ownerUserID == first.scope.ownerUserID,
+                  current.accountHash == first.scope.accountHash,
+                  current.shopID == first.scope.shopID,
+                  current.storeIdentity == first.scope.storeIdentity,
+                  current.deviceInstallID == first.scope.deviceInstallID,
+                  current.deviceIdentityHash == first.scope.deviceIdentityHash,
+                  context.container === controller.modelContainer,
+                  Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                    modelContainer: context.container, ownerUserID: current.ownerUserID) else { return false }
+            var descriptor = FetchDescriptor<SyncEventOutboxEntry>(); descriptor.fetchLimit = 101
+            let outbox = try context.fetch(descriptor)
+            guard outbox.count <= 100 else { return false }
+            let events = outbox.filter { $0.domain == "catalog" }
+            guard events.count == 1, let event = events.first,
+                  event.status == .sent, event.eventType == "catalog_changed", event.changedCount == 1,
+                  event.ownerUserID == first.scope.ownerUserID.uuidString.lowercased(),
+                  event.storeId == first.scope.storeIdentity.storeId,
+                  event.localStoreId == first.scope.storeIdentity.localStoreId,
+                  event.syncProtocolVersion == first.scope.storeIdentity.syncProtocolVersion,
+                  event.schemaVersion == first.scope.storeIdentity.schemaVersion,
+                  event.storeEpoch == first.scope.storeIdentity.storeEpoch,
+                  event.sourceDeviceID == first.scope.deviceInstallID,
+                  catalogRemote.eventCount == 1, !catalogRemote.eventRequestKeys.isEmpty,
+                  Set(catalogRemote.eventRequestKeys) == Set([event.clientEventID]) else { return false }
+            let storedRequest = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: event)
+            let expectedIDs = try AutomaticSyncEventOutboxWriter.entityIDs([
+                "supplier_ids": [], "category_ids": [], "product_ids": [first.id]])
+            guard storedRequest.entityIDs == expectedIDs,
+                  !catalogRemote.eventRequests.isEmpty,
+                  catalogRemote.eventRequests.allSatisfy({ $0 == storedRequest }) else { return false }
+            try Task126OwnerStoreGate.revalidateAutomaticScope(current)
+            return true
+        } catch { return false }
     }
 
     private func relatedProductACKReadback() throws -> Bool {
@@ -572,18 +803,30 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         return products.count == 1 && products[0].productName == "Saved before network release"
             && pending.contains { $0.status == .pending && $0.ownerUserID == owner.uuidString.lowercased() }
     }
-    private func terminalReadback() throws -> Bool {
+    private func terminalReadback(observesReopenFailure: Bool = false) throws -> Bool {
         let context = ModelContext(controller.modelContainer)
         let products = try context.fetch(FetchDescriptor<Product>())
         let pending = try context.fetch(FetchDescriptor<LocalPendingChange>())
         let outbox = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
         let prices = try context.fetchCount(FetchDescriptor<ProductPrice>())
         let history = try context.fetchCount(FetchDescriptor<HistoryEntry>())
-        return products.count == 1 && products[0].productName == "Saved before network release"
-            && pending.count == 1 && pending.allSatisfy { $0.status == .acknowledged }
-            && outbox.filter { $0.status == .sent }.count == 1
-            && outbox.allSatisfy { $0.status == .localOnly || $0.status == .sent }
-            && prices == 0 && history == 0
+        let checks: [(String, Bool)] = [
+            ("product-unique", products.count == 1),
+            ("product-name", products.count == 1 && products[0].productName == "Saved before network release"),
+            ("intent-unique", pending.count == 1),
+            ("intent-acknowledged", pending.allSatisfy { $0.status == .acknowledged }),
+            ("sent-unique", outbox.filter { $0.status == .sent }.count == 1),
+            ("outbox-allowed", outbox.allSatisfy { $0.status == .localOnly || $0.status == .sent }),
+            ("price-empty", prices == 0),
+            ("history-empty", history == 0)
+        ]
+        let valid = checks.allSatisfy { $0.1 }
+        if observesReopenFailure && !valid {
+            for (name, passed) in checks {
+                facts.insert("task144.controlled.terminal-\(name).\(passed)")
+            }
+        }
+        return valid
     }
 }
 
@@ -757,6 +1000,18 @@ private nonisolated struct Task144ControlledPage: Encodable {
     let pageLimit: Int; let rows: [RemoteInventoryProductRow]; let nextAfterId: String?; let hasMore: Bool
 }
 
+nonisolated private struct Task144ObservedStoredProductMutation: Codable {
+    struct Call: Codable {
+        struct Arguments: Codable {
+            let id: UUID
+            let payload: SyncAutomaticProductUpdatePayload
+            enum CodingKeys: String, CodingKey { case id = "_0"; case payload = "_1" }
+        }
+        let updateProduct: Arguments
+    }
+    let call: Call
+}
+
 @MainActor
 private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWriting, SyncEventRecording,
     SyncAutomaticIncrementalRemote, ShopScopedIncrementalRPCAuthorizing,
@@ -777,6 +1032,13 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
     var currentCategoryID: UUID? { category?.id }
     private(set) var attemptCount = 0
     private(set) var eventCount = 0
+    var observeProductAttempt: ((UUID, SyncAutomaticProductUpdatePayload, Task126VerifiedOwnerStoreScope, Bool) -> Void)?
+    private(set) var eventRequestObservations: [String] = []
+    private(set) var eventRequestKeys: [String] = []
+    private(set) var eventRequests: [SyncEventRecordRequest] = []
+    private(set) var eventObservationCapped = false
+    var losesFirstCommittedProductResponse = false
+    private(set) var firstProductResponseWasLost = false
     init(initial: RemoteInventoryProductRow, authoritativeScope: ShopSyncRecoveryScope, isEmpty: Bool, allowsRelatedSave: Bool) {
         current = initial; self.authoritativeScope = authoritativeScope; self.isEmpty = isEmpty
         self.allowsRelatedSave = allowsRelatedSave
@@ -805,9 +1067,10 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
     func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow { throw Fault.unexpectedCall }
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] { throw Fault.unexpectedCall }
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
-        _ = try verifiedScope()
+        let scope = try verifiedScope()
         guard !isEmpty, id == current.id else { throw Fault.unexpectedCall }
         attemptCount += 1
+        observeProductAttempt?(id, payload, scope, false)
         if allowsRelatedSave {
             isProductHeld = true
             await withCheckedContinuation { productContinuation = $0 }
@@ -821,6 +1084,11 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
             purchasePrice: payload.purchasePrice ?? current.purchasePrice, retailPrice: payload.retailPrice ?? current.retailPrice,
             supplierID: payload.supplierID ?? current.supplierID, categoryID: payload.categoryID ?? current.categoryID,
             stockQuantity: payload.stockQuantity ?? current.stockQuantity, updatedAt: "2026-07-21T12:01:00.000000Z", deletedAt: payload.deletedAt)
+        if losesFirstCommittedProductResponse, attemptCount == 1 {
+            firstProductResponseWasLost = true
+            throw URLError(.networkConnectionLost)
+        }
+        observeProductAttempt?(id, payload, scope, true)
         return current
     }
     func releaseHeldProduct() {
@@ -833,6 +1101,12 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
         guard !isEmpty, request.domain == "catalog", request.eventType == "catalog_changed", request.changedCount == 1,
               request.shopID == current.shopID, let device = request.sourceDeviceID,
               device == DeviceInstallIDStore().deviceInstallID else { throw Fault.unexpectedCall }
+        if observeProductAttempt != nil, eventRequestObservations.count >= 8 { eventObservationCapped = true }
+        if observeProductAttempt != nil, eventRequestObservations.count < 8 {
+            eventRequestKeys.append(request.clientEventID)
+            eventRequests.append(request)
+            eventRequestObservations.append("key.\(LocalPendingChangeLogicalKey.privacyHash(request.clientEventID)).replayed.\(eventClientIDs[request.clientEventID] != nil)")
+        }
         if let event = eventClientIDs[request.clientEventID] { return .recorded(event) }
         guard events.count < (allowsRelatedSave ? 3 : 1) else { throw Fault.unexpectedCall }
         eventCount += 1

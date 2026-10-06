@@ -1,1193 +1,145 @@
 {
-  "CI37390541718Historical": {
-    "head": "43822986287b96899066ae12f360cd30c588e934",
-    "newHeadCI": "PENDING_PARENT_COMMIT_PUSH",
-    "sourceErrors": 2,
-    "status": "FAIL_BUILD_DEBUG",
-    "subsequentTestAnalyzeSecretScan": "NOT_RUN"
-  },
-  "CI37394390166Historical": {
-    "XCTest": "FAIL",
-    "actual": {
-      "failed": 4,
-      "passed": 1501,
-      "skipped": 36
-    },
-    "analyze": "NOT_RUN",
-    "artifactCount": 0,
-    "debug": "PASS",
-    "head": "639d04ddac4b778e9c566009a2970bb3a3d3bfd0",
-    "rawLogSHA256": "c2609f71d2cedc4195ebb93d3af86fc2acc8b5b5d5f0d512ff72a254101aab65",
-    "run": 37394390166,
-    "secretScan": "NOT_RUN",
-    "status": "FAIL",
-    "uiCause": "UNKNOWN; no original remote AX/PNG; all pre-relaunch main business assertions passed",
-    "uniqueIDs": 1541,
-    "unitAttribution": "Success-only fixture deadline50ms compared with whole MainActor path71ms; production regression and executor/toolchain cause not proven"
-  },
   "branch": "codex/ios-local-availability-20261004",
-  "capturedUTC": "2026-10-06T01:46:30.651725+00:00",
-  "changedSourceOnly": [
-    "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift",
+  "canonicalBuilds09": {
+    "baselinePrimaryOccurrences": 34,
+    "changedSourceNewWarnings": 0,
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-09/receipt.json",
+    "sha256": "fd14aaf1e6c0c207565c92006b6b11eca58d4c5082e0b7ef63d9c20c448197e8",
+    "status": "PASS",
+    "warningComparison": {
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-09/warning-comparison.json",
+      "sha256": "c1099e0060a6e0bb5228315b61c73611832fe4adc7d017485c6ea6e9aecb1dab"
+    }
+  },
+  "capturedUTC": "2026-10-06T04:50:42.259460+00:00",
+  "carryFromApprovedV4": 46,
+  "carryFromHEAD0757": 45,
+  "changedFromHEAD0757": [
     "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift",
     "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift"
   ],
-  "compatibilityFreezeSHA256": "b22f873e5380f37c97adf7c251aff651721df31856d8c72a6b7f66aa9338e0de",
-  "completeSourcePatchSHA256": "04af888ed36d07963c442aee1f3c14389f908a70ca93e32e48bd925aad269ffa",
-  "currentSourceFreezeSHA256": "5f461eed175473b3e43c1b384c79f6de16c681adeaf232b307ef3f8db6d9f11f",
-  "currentSourcePatchSHA256": "04af888ed36d07963c442aee1f3c14389f908a70ca93e32e48bd925aad269ffa",
-  "currentStatus": "SOURCE48_LOCAL_GATES_AND_SIGNED_TEST_PASS_NEW_HEAD_CI_PENDING_UI_CAUSE_UNKNOWN",
-  "finalGates": {
-    "canonicalBuilds": {
-      "newWarnings": 0,
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-05/receipt.json",
-      "primaryWarningBaseline": 34,
-      "sha256": "470756e8fd1c334e663a7a0c2f74bbcaa71cf1da5c90c9bf491d47fded8c4cda",
-      "status": "PASS",
-      "warningComparisonSHA256": "5b2e1e1b07e5163a841a92663163bf6fe31519568ac57378c2f811e53adac9ab"
+  "controlledResponseLossCounterexample": {
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-independent-ack-controlled-loss-root-01/receipt.json",
+    "readback": {
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-independent-ack-controlled-loss-root-01/counterexample-readback.json",
+      "sha256": "d6f273f95652d26b68feee106f2029264fc4a3bf149ff442102e34e434c8f5f4"
     },
-    "full05": {
-      "IDStatusMapAndSkip36IdenticalFull04": true,
-      "UIActualPassed": 14,
+    "scope": "Two real typed identical sealedA requests,presecondACKfalse/CAStrue,only oldoneHTTP false. Not Full06 cause attribution.",
+    "sha256": "6bea1f28bfb4318d87b664e6340e27c43f93ac30e98b30b2e7c7b37ff53e4595"
+  },
+  "currentScopeDelta": {
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-current-scope-oracle-remedy-20261006/v4-to-current-scope.patch",
+    "sha256": "64220c73d6c41e31397fb248cc168eb5370a36768580df298b63bce220f228c5"
+  },
+  "currentScopeInverse": {
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-current-scope-oracle-remedy-20261006/v4-to-current-scope.inverse.patch",
+    "sha256": "370645677ea7e577b6f7323be6644c2f327a57f77b8ada07e0ae4067057ac568"
+  },
+  "currentStatus": "LOCAL_GATES_SIGNED_TEST_PASS_NEW_EXACT_HEAD_CI_PENDING",
+  "exactAutomaticRetryTrigger": "UNKNOWN; permits ordinary deferred resume or safety poll; no manual/private trigger",
+  "existingProductionSafetyPollSeconds": 30,
+  "full09": {
+    "actual": {
+      "failed": 0,
+      "passed": 1508,
+      "skipped": 36
+    },
+    "idComparison": {
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-09/id-status-comparison.json",
+      "sha256": "9d5891dce92f42526b397b00146d2857eca5d7a30ecfee867d04e6210850517c"
+    },
+    "nativeUIPassed": 15,
+    "old1541IDStatusPreserved": true,
+    "onlyNewThreeOriginalCases": [
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testCurrentDurableACKSurvivesOrdinarySameShopRefreshWhileOldWriterLeaseIsRejected()",
+      "AtomicGenerationRecoverySnapshotPullServiceTests/testReopenQualificationCapturedBeforeSameScopeSelectionRefreshMustRestartForCurrentSelection()",
+      "LocalAvailabilityRootUITests/testCurrentProductACKWithIndependentHistorySurvivesImmutableCommittedResponseReplay()"
+    ],
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-09/receipt.json",
+    "same36SkipSet": true,
+    "sha256": "1ee87ae4422e10c5ed65f8ed9a04b06b7a226284fec13e6de1025c7ba3a49e5a",
+    "uniqueIDs": 1544
+  },
+  "headBeforeCorrectiveCommit": "0757b309096be92e895b9cd8d7bb1301bf6d2b42",
+  "historical": {
+    "Full06": {
       "actual": {
-        "failed": 0,
+        "failed": 1,
         "passed": 1505,
         "skipped": 36
       },
-      "currentSource48Match": true,
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-05/receipt.json",
-      "sha256": "dc3ca6af6ef4aab68b2ee1c4a385e52e31c1e3fa63b2d5bde977c3efbd32f318",
-      "uniqueIDs": 1541
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-06/receipt.json",
+      "sha256": "61bb5a17e9731d63c0164f305e3c7cd6f7fcbd31f8aa52c2f1369efe40c2156e"
     },
-    "properSignedTEST": {
-      "artifactFileCount": 23,
-      "binarySHA256": "2795dc0916328b69ce2345ccbe7c38c50420de9140274c86d602c938684b04fa",
-      "effectiveEntitlementsEqualXcodeGenerated": true,
-      "installed": false,
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-proper-test-05/signed-release-attempt01/build-receipt.json",
-      "previousApplicationKeychainIdentityEqual": true,
-      "profileAppliedOnlyToArtifact": true,
-      "profileSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
-      "sha256": "415a6f568c1ff9577872b1760b0df4fdca9216bc797fdef2f2c9d353f264fd48",
-      "status": "PASS",
-      "strictDeepSignaturePass": true
-    },
-    "target5": {
+    "Full07": {
       "actual": {
-        "failed": 0,
-        "passed": 5,
-        "skipped": 0
-      },
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-ci-current-runtime-targeted-red-01/receipt.json",
-      "sha256": "6c6f24a15deba4deb2a03c4fba9104268f0adbcf2a338b24fad5a6f829497646",
-      "sourceContext": "Original target5 before deadline fixture change",
-      "status": "PASS"
-    },
-    "target8": {
-      "actual": {
-        "failed": 0,
-        "passed": 8,
-        "skipped": 0
-      },
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-ci-current-runtime-class-order-02/receipt.json",
-      "sha256": "4aa17d95e4516b1bfa7f0789c9c1e020ea810e8a00ac322fe73b44cab158dd53",
-      "sourceContext": "Class6UI+2unit source UI33e08; afterRun stdout-only readback delta covered by current full05",
-      "status": "PASS"
-    }
-  },
-  "headBeforeCorrectiveCommit": "639d04ddac4b778e9c566009a2970bb3a3d3bfd0",
-  "historicalCompilerCompatibility": {
-    "finalGates": {
-      "canonicalBuilds": {
-        "newWarnings": 0,
-        "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-04/receipt.json",
-        "sha256": "ef7bbb7bc03ee40362650fb0c149bb135cdc19d4bc34a4800ddbb46ccce22490",
-        "status": "PASS",
-        "warningComparisonSHA256": "1a5fe8c854a3db0c708ac2c4b34a22c7578a287d4b9195143ed3523321093b41"
-      },
-      "full04": {
-        "IDStatusMapAndSkip36IdenticalFull03": true,
-        "UIActualPassed": 14,
-        "actual": {
-          "failed": 0,
-          "passed": 1505,
-          "skipped": 36
-        },
-        "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-04/receipt.json",
-        "sha256": "80ddf271a7764f4f4e632bf50c247191aff4f0af1846d94fdfc5051f6db49eed",
-        "uniqueIDs": 1541
-      },
-      "properSignedTEST": {
-        "artifactFileCount": 23,
-        "binarySHA256": "0e188fbed26463893eee82c38ead1e6adc3e7f4145359552ce6e479cc8546e01",
-        "effectiveEntitlementsEqualXcodeGenerated": true,
-        "installed": false,
-        "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-proper-test-04/signed-release-attempt01/build-receipt.json",
-        "previousApplicationKeychainIdentityEqual": true,
-        "profileAppliedOnlyToArtifact": true,
-        "profileSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
-        "sha256": "5378e1351275d190d5d5f1aa7b6d38f4b69f0d1c775e2501a8a1538443e9edb1",
-        "status": "PASS",
-        "strictDeepSignaturePass": true
-      },
-      "target7": {
-        "actual": {
-          "failed": 0,
-          "passed": 7,
-          "skipped": 0
-        },
-        "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-transfer-ci-compatibility-targeted-green-01/receipt.json",
-        "sha256": "48969d127b4564cbd21c2ea5f9f8b740ea49acbda5dc765116513a62b2acad59",
-        "status": "PASS"
-      }
-    },
-    "headBeforeCommit": "43822986287b96899066ae12f360cd30c588e934",
-    "review": "Same existing two reviewers APPROVED bounded compiler compatibility delta; no new general audit",
-    "sourceCount": 47,
-    "sourceFreezeSHA256": "b22f873e5380f37c97adf7c251aff651721df31856d8c72a6b7f66aa9338e0de",
-    "source_sha256": {
-      "iOSMerchandiseControl/ContentView.swift": "eb7f265c61eebd9d3aa1e34234089cbd53dcdd3cb9880d3caff9aee18e1b4726",
-      "iOSMerchandiseControl/DatabaseView.swift": "ff449daf86d389a971111c2f85fa6ea4053279f2ca04de2ba1681cf294f17297",
-      "iOSMerchandiseControl/EditProductView.swift": "7c8d014db94bbad3fdcdbaa3b5db795002e0cecf996d26e5ad0a5836e8aeaddd",
-      "iOSMerchandiseControl/InventoryHomeView.swift": "10af65a02d8558f8627bda01a83d528ded9bee3075260734839cc8b9edd69b7f",
-      "iOSMerchandiseControl/LocalPendingChange.swift": "bb4d7019f48308a3905c4b7cce4703d9efb0a7b782ff2861c140ebe0c8bb75f5",
-      "iOSMerchandiseControl/LocalRootPresentationState.swift": "17fe105164a66555ebc82666837956149ad8f534551f44de14f691bd00d0c38d",
-      "iOSMerchandiseControl/OptionsView.swift": "27e435af3507091ebd3283c8bb29234ca42b041e52c0695ce709bae1d1fca8b1",
-      "iOSMerchandiseControl/ShopDeviceRegistrationService.swift": "e1ecb52dfaee7bb1d30d17524bd74c481be1ed39e8ffad8e3ada0d3b487c1982",
-      "iOSMerchandiseControl/StorefrontAuthoringViews.swift": "21d6d13e69a17a9fec86c950f90d7286d682459700bd13142b55a8aaa1135d32",
-      "iOSMerchandiseControl/SupabaseAuthViewModel.swift": "705f14bfd3d249c98736ff7dcac21a241bb84359841380762cfb44a86a93b29d",
-      "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift": "ee90753e96db11d7fb0261b30291d4a823bff59aae7ff6809dff2838d46caf36",
-      "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift": "36d25ecf91b9d88fb3daa61069ccccd8e8343b1345e92a184c0b479fcb87174b",
-      "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift": "43303e3bb0c5e4f0908ea853b211b2c0380c5ebabe0108abdfb61a41ee98ea68",
-      "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift": "d512017cbe082893e5f4f4ef8bc3d4f317f2e4baac3ff57de3559164d72a45ae",
-      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift": "56e10175873fc7b43f977a113d04662ec1cb9587eef16148e026a77ee07dc613",
-      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift": "9da642922f089ba31d3469de804665a703870617f98bebd8762470a72280a26e",
-      "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift": "4b105958f2a42a82395a4a1f596602e9739e7857fba5d7c82c1b37b71b581148",
-      "iOSMerchandiseControl/Sync/Automatic/Outbox/LocalPendingBusinessAttemptStore.swift": "6ed5acb3b4c9932b36f58a0fbc6cb3de7cbe1ce0739b5794d70284fef1ed190b",
-      "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift": "84897c1bc2498d22f11c894f638b3ec8782ddf76c819388a2a7bb5905c218c3b",
-      "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift": "2446e75db45312926ea093b11bd0a9fc5d696327dd1b654f11f4ea85cc42fbba",
-      "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift": "acb42ef6f2be0beb17153d2e493bfc25b8cd6ea01014c62b26f0e6c72713d3ef",
-      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift": "8dea3f58fe2726cb1958ebf47e9edd9fac158f3a0fd7bdcbf22fd6b8367a7f6b",
-      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift": "dc14f28c9bd77348c7093eb2b59361a887d0fbe507837fdbcacf98a7d3aec421",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift": "b4af4194692f06e5c2ab44ecd62819679d3b1ebcd7549af77a567e60a4cb8d1d",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/AutomaticRecoverySnapshotPullService.swift": "5f7a0de825b16018ec01c52b7d544a409634b81c28b1badbed8d6ae598773f0c",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/LocalCatalogBodyProofStore.swift": "760865fd5060499440266f6d64e6531da0fefeeb845cab6d8742e3d366cf719d",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/SameScopeRecoveryLocalWorkTransfer.swift": "2178f81df281e9783a367d2194bf0cf087966b7330455b8d5c21c9922edbcb2c",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryLedger.swift": "2b9e55f8277bf7618108f58ab44f7e669879edb3dd539c99a6291c3222065862",
-      "iOSMerchandiseControl/Sync/Automatic/Recovery/SyncStoreGeneration.swift": "d7074f6ba033508b05fd43e1da1d96f52d3b0a9dd277cd8ea4b3fcdc499ab9e5",
-      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift": "70eaa3f96a33834cfcbc028afc7d3bbc5c9c3657714721c0444cd7717c736ef6",
-      "iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift": "01435f29b01605e484fa527aa58a60042d2e537129ffc6fa1c6eae6c963d92e7",
-      "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift": "9cd635b92642031d4691cc75dadf45b9f759d19ed1281eb813501481cc4e7f75",
-      "iOSMerchandiseControl/Sync/ShopContext/ShopContext.swift": "e0455a3960b1e4eabd3093d216415e53084f3076e67352404376756ae845e817",
-      "iOSMerchandiseControl/Sync/SyncOrchestrator.swift": "74a253664a0dee9f21a34870e1e77d67acffdb7e611c53bdf633aadf7d253e73",
-      "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift": "b55d86449b9448e4e5cbedf12b272b65d07c66cf31ea453bbf00696891fcd4aa",
-      "iOSMerchandiseControl/en.lproj/Localizable.strings": "9f692b84be9ace6e967e461c25fb81d22c31ccbdfa8e57775b35f3bc7ea82f58",
-      "iOSMerchandiseControl/es.lproj/Localizable.strings": "ae20ca83a440b6d0578dc5c6f8f7be7fb30e87cea091361d220effcff1115489",
-      "iOSMerchandiseControl/iOSMerchandiseControlApp.swift": "df5b3a15d55027586306937c1637cc76306ebd2da15a3853b771094e7e607f88",
-      "iOSMerchandiseControl/it.lproj/Localizable.strings": "4934780b7f2104cf1f050d346b5d2f1d91bab0c2f877a0b3b66b2f4b2ab4ec27",
-      "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings": "227fce953c782ebc4ebb9c2869b4f523200762535c9ca98ae87b3fa706233dfe",
-      "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": "f94566e766230a7ebbdcee4f9dd4fcf15df7404bc04195320fac3d40f40709cc",
-      "iOSMerchandiseControlTests/HistorySessionAutomaticPushServiceTests.swift": "dc987123e2abf942c759df8acf002631a15464cbf75c8713a7e1148a5fcfa629",
-      "iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift": "dd3c15cd7ccee947a6d80912e695466209eb931566179f1bb69208796d071b63",
-      "iOSMerchandiseControlTests/ShopContextTests.swift": "b8b2f6bc7e2593bf38c5cef0820b9b7e24fe97b62d6f3f8b5a5bef4a9ee70fa4",
-      "iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift": "744d5c30e0d45ef1ddc9329336b6695dce98ffcbe212b5aff1f04199b421666c",
-      "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift": "4beaf2ef2ddf2edd0dc80221ba7188ce013843509721bcacad20689d05247ae8",
-      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "5e2bec8ba4c12cea618e8fde4b3f43141bac6529a962ff8752ce27cdfc674330"
-    }
-  },
-  "historicalV3": {
-    "canonicalBuilds03": {
-      "newWarnings": 0,
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-03/receipt.json",
-      "sha256": "76cc42458ccc8cc675648dad5829f75782935866284b35f8f6ca1df8356a6bb2",
-      "status": "PASS",
-      "warningComparisonSHA256": "1a5fe8c854a3db0c708ac2c4b34a22c7578a287d4b9195143ed3523321093b41"
-    },
-    "full03": {
-      "UIActualPassed": 14,
-      "actual": {
-        "failed": 0,
-        "passed": 1505,
+        "failed": 1,
+        "passed": 1506,
         "skipped": 36
       },
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-03/receipt.json",
-      "sha256": "25cc3697f4c1f3c6f78d070e4b54ade137ca1a2b7b98879c431be7e8bbcdddb1",
-      "skip36IdenticalFull02": true,
-      "uniqueIDs": 1541
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-07/receipt.json",
+      "sha256": "8e7f53155425d3aa657963a2c735675f140b4bf4fe53f75974369620bb20491e"
     },
-    "properSignedTEST03Attempt02": {
-      "binarySHA256": "17c0b7aab436822b968f2122b1bed0bd6b138693a4dc4da6ceaf2d884e2ecae5",
-      "effectiveEntitlementsEqualXcodeGenerated": true,
-      "installed": false,
-      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-proper-test-03/signed-release-attempt02/build-receipt.json",
-      "previousApplicationKeychainIdentityEqual": true,
-      "profileAppliedOnlyToArtifact": true,
-      "profileSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
-      "sha256": "b0988d61eaf0c7215c874c701ebad9267b2725eb9a71285daa96807fb2be3163",
-      "status": "PASS",
-      "strictDeepSignaturePass": true
+    "Full08": {
+      "actual": {
+        "failed": 1,
+        "passed": 1506,
+        "skipped": 36
+      },
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-08/receipt.json",
+      "sha256": "f7d2db8686019e61c5c7643ddc418b56cabddfdad7e8c72eddd84809a8d44336"
     }
   },
   "limits": [
-    "Controlled actual SDK/service/file-backed/native UI evidence, not authenticated staging",
-    "Historical full01/02 and proper driver FAIL01 remain preserved; current full03/build/analyze/properTEST gates all PASS on same source47",
-    "Same existing reviewers carry data/UX and review only latest scoped delta; final parent verdict/integration/CI are separate",
-    "Primary459 install/retention/authenticated bidirectional F and performance H remain NOT_RUN; Mac manual-unlock pending",
-    "No Git mutation, install or deployment by this owner; parent performs selective index Task144 only owned3hunks and keeps54 preexisting inserts",
-    "Original CI639d fourFAIL is not declared closed; new exact-head CI required.",
-    "Three original remote UI failures remain UNKNOWN; local Xcode27 target/class/full passes do not establish Xcode26.6 equivalence.",
-    "No product recovery/auth authority patch, no UI budget/oracle relaxation; only positive deadline fixture and closed current on-failure observations."
+    "CI37401201361/head0757 remains historical FAIL; new exact-head CI is PENDING until parent verifies it.",
+    "Full06 two-HTTP cause UNKNOWN; controlled committed-response-loss is a distinct semantic counterexample.",
+    "Full07 failed only the new20s adverse scenario; existing poll30s is unchanged, exact historical start/tick UNKNOWN.",
+    "Full08 denied compound leaf UNKNOWN. One observation-only original selector PASS means NOT_OBSERVED; same-shop ACK/lease witness is separate semantic proof, not retroattribution.",
+    "Private RAM variation/postACK predicate negatives directly NOT_RUN; real sealed A/B/lateACK/foreign/external and Task126 stale-writer controls PASS.",
+    "First direct caller CAS outcome UNKNOWN; exact current durable Product ACK/body and scoped pending History are separate readbacks.",
+    "Local Xcode27.0/27A266a/Swift6.4 is not CI26.6 or authenticated staging. XCTest durations are not performance measurements.",
+    "Primary459 installation/retention, authenticated F/bidirectional TEST and performanceH NOT_RUN; current Mac manual-unlock requirement remains pending.",
+    "No primary input/install, no Git mutations by I; parent sole Git after explicit source/heavy/device/input release."
   ],
-  "nativeFourLanguageEvidence": {
-    "en": {
-      "activation": "PASS",
-      "actualCategoryAndBranch": "UIKitAccessibilityXXXL/SwiftUIaccessibility5",
-      "layoutPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/17FBD295-F9DB-4B56-A2DC-5029453368A0.txt",
-      "layoutSHA256": "8b50f050acff05c991ef7393dfa4b41eb4c512666af61d9e4582f8417650544d",
-      "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/D923196D-AF38-42D3-A9F0-C331900B945E.png",
-      "pngSHA256": "6652d537281cf0334652f174fe58dd2f930f32f416de9322e84ff7f95a12b609",
-      "readback": "account=(32.0, 280.3333435058594, 316.6666564941406, 438.3332824707031); label=Cloud account connected, Signed in as l***@long-account-domain.example.invalid.; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
-    },
-    "es": {
-      "activation": "PASS",
-      "actualCategoryAndBranch": "UIKitAccessibilityXXXL/SwiftUIaccessibility5",
-      "layoutPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/80A2E5A2-49F3-4631-8F84-193AB892344F.txt",
-      "layoutSHA256": "3325eecd166e4b98c5651e92338909a098ce8dfc832a24f86a6642b7322142f1",
-      "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/5D516EEA-C13D-4B13-84F2-6497D37FE33B.png",
-      "pngSHA256": "48d90cc7bcf7f1baec9969c0be6776b0cf1aadbe1e97e120fd5d6bda5f24ffe1",
-      "readback": "account=(32.0, 149.3333282470703, 316.6666564941406, 490.33331298828125); label=Cuenta cloud conectada, Sesi\u00f3n iniciada como l***@long-account-domain.example.invalid.; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
-    },
-    "it": {
-      "activation": "PASS",
-      "actualCategoryAndBranch": "UIKitAccessibilityXXXL/SwiftUIaccessibility5",
-      "layoutPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/DB62F0A7-BD48-4595-886C-32767AF776AD.txt",
-      "layoutSHA256": "c6765ac5441c32438abf6a7f2c59a4a0892580be39ed17364301a987e483a0d7",
-      "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/FD4AA8A4-275C-430B-81C4-D38653508E29.png",
-      "pngSHA256": "e1261178b7c323fd966d3107c3dcc08a9fca7040d699c6b075c4bf676441e779",
-      "readback": "account=(32.0, 262.0, 326.0, 438.33331298828125); label=Account cloud collegato, Accesso come l***@long-account-domain.example.invalid.; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
-    },
-    "zh": {
-      "activation": "PASS",
-      "actualCategoryAndBranch": "UIKitAccessibilityXXXL/SwiftUIaccessibility5",
-      "layoutPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/51B2D2FC-F060-4A12-B306-4BF6D98C9C93.txt",
-      "layoutSHA256": "46898ac1534643321a1313a804c5988d1ba1dd15a91f075c0efde26be83eae0c",
-      "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/D1F8B1EC-D868-41F2-83B7-00C31CCFB8F2.png",
-      "pngSHA256": "d8ad1220c22e37f0fe7fec4b23b3f8e847b6c8effd9337f2d7057305482ca448",
-      "readback": "account=(32.0, 345.6666564941406, 325.6666564941406, 322.3333435058594); label=\u4e91\u8d26\u53f7\u5df2\u8fde\u63a5\u3001\u5df2\u767b\u5f55\u4e3a l***@long-account-domain.example.invalid\u3002; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
-    }
+  "masterPlanningPreserved": true,
+  "old14UIMethodsAndBudgetsByteIdentical": true,
+  "onlyNewReplayACKHorizonSeconds": 40,
+  "originalCI0757": {
+    "newExactHeadCI": "PENDING",
+    "originalReopenGuardOperand": "UNKNOWN",
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-git-integration-v3-01/pr-ci-runtime-failure-attribution-v2.json",
+    "sha256": "c36a616c93fa91f2ca63918887de97bdab0bd8ee9d05e2c10175cc667e1ae0bc",
+    "status": "FAIL"
   },
-  "planningAndMasterUnmodifiedByOwner": true,
-  "productionCount": 36,
+  "productionSwiftCount": 36,
+  "properTEST09": {
+    "artifactFileCount": 23,
+    "binarySHA256": "79931be9fd6f779608e5f2a011e88eee1a0f50cf1f173224416875d5f5df614f",
+    "installed": false,
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-proper-test-09/signed-release-attempt01/build-receipt.json",
+    "profileSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+    "sha256": "bf687605541ab0c6014367dad0c9a7f3aaebc63307f22248354c5c8ca4e9a49b",
+    "status": "PASS"
+  },
   "resourceCount": 4,
-  "review": "Same existing two reviewers APPROVED exact3path fixture/diagnostic delta freeze5f461eed and patch04af888e; no general audit or CI UI cause attribution",
-  "runs": [
-    {
-      "exitCode": 0,
-      "name": "ios-local-core-green-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-core-green-01/receipt.json",
-      "receiptSHA256": "75460cc3a0ecad8e50646c61a0bbe9949111f59c2f90679d3cf67f7460e231c0"
+  "review": "Same existing two reviewers APPROVED immutable10a; no normal production or livewriter change.",
+  "schemaVersion": "ios-local-availability-current-scope-ack-final-v9",
+  "semanticACKLeaseWitness": {
+    "actual": {
+      "failed": 0,
+      "passed": 1,
+      "skipped": 0
     },
-    {
-      "classification": "ACTUAL_TARGETED_GREEN_LOCAL_SAVE_CUTOVER_AND_SHOP_CACHE_NOT_LIVE_UI",
-      "name": "ios-shop-and-local-green-01",
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-shop-and-local-green-01/receipt.json",
-      "receiptSHA256": "c1a38f4dd8a15fa18ab381fb0b6f3716062d080e3bcc6af9336520bfb1351892"
-    },
-    {
-      "exitCode": 0,
-      "name": "ios-durable-replay-green-02",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-durable-replay-green-02/receipt.json",
-      "receiptSHA256": "ff8dcfdc1aa3c5077a9302fa72f2862b72ee65e0df69e1b7f478ef54607bc307"
-    },
-    {
-      "kind": "IOS_ACTUAL_TARGETED_PAGE_RESUME_AND_CUTOVER",
-      "name": "ios-page-resume-green-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-page-resume-green-01/receipt.json",
-      "receiptSHA256": "9e3a029989b4f440995f57fca30301ac2dd0c526f7ecf80b955f4c5c4d32c510",
-      "sourceUnchanged": true
-    },
-    {
-      "kind": "IOS_POSTPUBLICATION_LEASE_ACTUAL_GREEN_RESULT",
-      "name": "ios-recovery-finalization-lease-green-01",
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-recovery-finalization-lease-green-01/receipt.json",
-      "receiptSHA256": "a24949af9aa35f59e5258532dbaac57861fa7fb92f0d9a4279fe2a51a5d3b8cf",
-      "sourceUnchanged": true
-    },
-    {
-      "kind": "IOS_ACTUAL_LOCAL_CATALOG_BODY_QUALIFICATION_GREEN",
-      "name": "ios-local-body-qualification-green-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-body-qualification-green-01/receipt.json",
-      "receiptSHA256": "ad35086302b03907e5fe1915938268116a75f74eee0de1547e84dbdf98ad5dbe",
-      "sourceUnchanged": true
-    },
-    {
-      "kind": "IOS_ACTUAL_ROOT_AND_PRICE_RECEIPT",
-      "name": "ios-real-root-and-price-07",
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-root-and-price-07/receipt.json",
-      "receiptSHA256": "f7b31e0201bdc9e5bbf47eb5ab1e1ef486eb8e09b9b0ee46645e576a075b7594",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 3,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "exitCode": 65,
-      "kind": "IOS_ACTUAL_FILE_BACKED_PREPUSH_PENDING_DEFERRAL_RED",
-      "limits": [
-        "Synthetic authorized transport with real file-backed application engine/domain/repository/state; not authenticated backend runtime",
-        "Production fix not yet applied; no Ready/authority inferred from pending-work deferral"
-      ],
-      "name": "ios-auto-pending-deferral-red-01",
-      "ownedPIDGone": true,
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-auto-pending-deferral-red-01/receipt.json",
-      "receiptSHA256": "dc19e4f9fe5427080104e6fe7ac1af8a31454640dc1f24cb4de6651a53c3aea5",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 4,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "exitCode": 0,
-      "kind": "IOS_ACTUAL_FILE_BACKED_PREPUSH_PENDING_DEFERRAL_GREEN",
-      "limits": [
-        "Actual root terminal/reopen rerun remains NOT_RUN for this patch",
-        "Adjacent existing authority/tampering controls and full canonical still pending",
-        "Synthetic authorized remote+real file-backed pipeline is not authenticated staging"
-      ],
-      "name": "ios-auto-pending-deferral-green-02",
-      "ownedPIDGone": true,
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-auto-pending-deferral-green-02/receipt.json",
-      "receiptSHA256": "09db95ceff96df378fb8826a369b070c3ca6230ee991fd4adb9dd50385925928",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 2,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_ACTUAL_PRICE_HISTORY_SEMANTIC_TAMPER_RED",
-      "limits": [
-        "Controlled isolated file-backed fixtures, not authenticated staging",
-        "Original root19 full PASS retained; explicit post-C focus supplement NOT_RUN",
-        "Empty bootstrap actual RED retained separately; no production fix before this receipt"
-      ],
-      "name": "ios-current-price-history-semantic-red-02",
-      "ownedPIDGone": true,
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-price-history-semantic-red-02/receipt.json",
-      "receiptSHA256": "03c07d19cbf8f6588bfb2fc8fb31cc96b996210290676cebb2c93ae9987d44d9",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 9,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_RESIDUAL_PRICE_HISTORY_AND_EMPTY_PROOF_GREEN9",
-      "limits": [
-        "Controlled isolated file-backed fixtures, not authenticated staging",
-        "Original root19 full PASS retained; explicit post-C focus supplement pending its own actual UI execution"
-      ],
-      "name": "ios-current-price-history-parent-and-empty-green-04",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testAcknowledgedNewPriceThenOwnedParentDeleteRemainsQualifiedAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testAcknowledgedNewPriceThenOwnedParentDeleteRemainsQualifiedAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testCleanCanonicalHistorySemanticTamperCannotQualifyLocalAccessAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testCleanCanonicalHistorySemanticTamperCannotQualifyLocalAccessAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testCleanCanonicalPriceSemanticTamperCannotQualifyLocalAccessAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testCleanCanonicalPriceSemanticTamperCannotQualifyLocalAccessAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testConfirmedDeviceDenialInvalidatesEmptyBootstrapShellProof()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testConfirmedDeviceDenialInvalidatesEmptyBootstrapShellProof()",
-          "result": "Passed"
-        },
-        {
-          "name": "testCorruptAcknowledgedPriceBodyReceiptCannotQualifyAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testCorruptAcknowledgedPriceBodyReceiptCannotQualifyAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testEmptyBootstrapShellProofGrantsNoWriteAuthorityAndRejectsForeignOrNonemptyStore()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testEmptyBootstrapShellProofGrantsNoWriteAuthorityAndRejectsForeignOrNonemptyStore()",
-          "result": "Passed"
-        },
-        {
-          "name": "testNewHistoryActualAckAndOrdinaryApplyRemainQualifiedAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testNewHistoryActualAckAndOrdinaryApplyRemainQualifiedAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testPendingPriceForNewOwnedLocalProductRemainsQualifiedBeforeCatalogAck()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testPendingPriceForNewOwnedLocalProductRemainsQualifiedBeforeCatalogAck()",
-          "result": "Passed"
-        },
-        {
-          "name": "testRawParentCascadeCannotHideAcknowledgedNewPriceFromQualification()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testRawParentCascadeCannotHideAcknowledgedNewPriceFromQualification()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-price-history-parent-and-empty-green-04/receipt.json",
-      "receiptSHA256": "59420d5ded2228576d62359d4c38d4f67b119e5a110b1e4c7c2a263be34830c8",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_HISTORY_TIMESTAMP_ONLY_ACTUAL_PRODUCT_RED",
-      "limits": [
-        "Controlled isolated file-backed fixtures, not authenticated staging",
-        "Original root19 full PASS retained; explicit post-C focus supplement pending its own actual UI execution"
-      ],
-      "name": "ios-history-timestamp-only-red-01",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testTimestampOnlyValidatedHistoryAdvancePreservesBodyQualificationAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testTimestampOnlyValidatedHistoryAdvancePreservesBodyQualificationAfterReopen()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-history-timestamp-only-red-01/receipt.json",
-      "receiptSHA256": "0f4adc9285f8447835976c0a5477166d778c79d124550b135ab0fa4c4ae9fe15",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "ACTUAL_PRODUCT_RED: prior callback entered/released at real captured checkpoint; expected held continuation fails with scopeChanged before publication",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_ACTUAL_PREVIOUS_SHOP_CALLBACK_ORDER_PRODUCT_RED",
-      "limits": [
-        "Controlled real App/SDK/transport callback scheduling; not authenticated staging",
-        "Original empty/root desired bodies and budgets unchanged"
-      ],
-      "name": "ios-shop-callback-order-red-01",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-shop-callback-order-red-01/receipt.json",
-      "receiptSHA256": "42019b3802bff94da9eecf0d1043a14f05977f25c8699421dc25a69148fb85d1",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 5,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_CALLBACK_TIMESTAMP_EMPTY_AND_REAL_ROOT_FOCUS_VERIFIED",
-      "limits": [
-        "Controlled isolated file-backed real SDK/App/transport fixtures, not authenticated staging",
-        "Four-language large-font Options/email/navigation proof remains pending"
-      ],
-      "name": "ios-shop-callback-and-timestamp-green-02",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testOlderSameFingerprintHistoryEventCannotRollCurrentBodyProofBackward()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testOlderSameFingerprintHistoryEventCannotRollCurrentBodyProofBackward()",
-          "result": "Passed"
-        },
-        {
-          "name": "testTimestampOnlyValidatedHistoryAdvancePreservesBodyQualificationAfterReopen()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testTimestampOnlyValidatedHistoryAdvancePreservesBodyQualificationAfterReopen()",
-          "result": "Passed"
-        },
-        {
-          "name": "testFirstBootstrapWithHeldTransportShowsNavigableHonestEmptyShell()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testFirstBootstrapWithHeldTransportShowsNavigableHonestEmptyShell()",
-          "result": "Passed"
-        },
-        {
-          "name": "testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission()",
-          "result": "Passed"
-        },
-        {
-          "name": "testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-shop-callback-and-timestamp-green-02/receipt.json",
-      "receiptSHA256": "39906eac7c17630b837547dd889b29b53cbbffcafc41a9aa27f691b54aa1bbf8",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 2,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_HISTORY_CUTOVER_MUTATES_SEALED_A_AND_LATER_B_PRODUCT_RED",
-      "limits": [
-        "Actual file-backed guarded Save A, real History push with controlled committed/lost response, Save B, canonical C, cutover and reopen",
-        "Both same-field and different-field cases fail only desired CAS/status and missing original replay/request-count assertions, not a setup or indexing crash",
-        "Terminal A replay/B ACK and no-extra-drain assertions remain pending until correction",
-        "Not authenticated staging"
-      ],
-      "name": "ios-history-original-cutover-red-02",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testSealedHistoryLostAckThenDifferentFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testSealedHistoryLostAckThenDifferentFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "result": "Failed"
-        },
-        {
-          "name": "testSealedHistoryLostAckThenSameFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testSealedHistoryLostAckThenSameFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-history-original-cutover-red-02/receipt.json",
-      "receiptSHA256": "257d3e93ac691d68e2eec6e27a20088d994461911d4555a281c3639778e14ce7",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 6,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_HISTORY_CUTOVER_ORIGINAL_REPLAY_LATER_ACK_AND_NEGATIVES_GREEN",
-      "limits": [
-        "Actual file-backed guarded A/lostACK/B/canonicalC/cutover/reopen; exact A request replay before distinct B terminal ACK, same/different fields, no extra terminal drain",
-        "True external-C conflict refuses replay; foreign-device envelope refuses publication; existing foreign/revoked finalization and original no-cutover History replay remain PASS",
-        "Controlled isolated transport and actual domain services, not authenticated staging",
-        "Four-language native XXXL layout remains separately OPEN"
-      ],
-      "name": "ios-history-original-cutover-green-03",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testExternalHistoryBodyCannotUseOwnSealedAttemptToClearCutoverConflict()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testExternalHistoryBodyCannotUseOwnSealedAttemptToClearCutoverConflict()",
-          "result": "Passed"
-        },
-        {
-          "name": "testForeignDeviceSealedHistoryAttemptCannotExplainCanonicalCutover()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testForeignDeviceSealedHistoryAttemptCannotExplainCanonicalCutover()",
-          "result": "Passed"
-        },
-        {
-          "name": "testPublishedGenerationFinalizationRetainsJournalForForeignOwnerOrConfirmedDeviceDenial()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testPublishedGenerationFinalizationRetainsJournalForForeignOwnerOrConfirmedDeviceDenial()",
-          "result": "Passed"
-        },
-        {
-          "name": "testSealedHistoryLostAckThenDifferentFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testSealedHistoryLostAckThenDifferentFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "result": "Passed"
-        },
-        {
-          "name": "testSealedHistoryLostAckThenSameFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testSealedHistoryLostAckThenSameFieldSaveSurvivesCutoverOriginalReplayAndTerminalAck()",
-          "result": "Passed"
-        },
-        {
-          "name": "testHistoryLostAckThenSecondSaveReopensAndReplaysOriginalRevisionBeforeLaterIntent()",
-          "nodeIdentifier": "HistorySessionAutomaticPushServiceTests/testHistoryLostAckThenSecondSaveReopensAndReplaysOriginalRevisionBeforeLaterIntent()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-history-original-cutover-green-03/receipt.json",
-      "receiptSHA256": "e3f3f9d9a29370294c7e666758b9ce41fb4e87e3dd447e3c323a16474103ee12",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 1,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_DEVICE_LATE_ACTIVE_LOSES_REVOCATION_RETURN_CACHE_REOPEN_RED",
-      "limits": [
-        "Actual SDK URLProtocol HTTP RPC and real ShopDeviceRegistrationService; prior active held, later revoked accepted, obsolete active released",
-        "Late-return authority, durable denial fresh reader, cached status and checkedAt fail on unchanged source; fresh truly new active and cancellation controls reached",
-        "Only known synthetic standard admission keys saved in RAM/restored with equality assertions; no private config/session reads",
-        "Controlled isolated testhost; not authenticated staging"
-      ],
-      "name": "ios-device-late-active-admission-red-02",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testCancelledHeldDeviceStatusCannotClearConfirmedRevocation()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testCancelledHeldDeviceStatusCannotClearConfirmedRevocation()",
-          "result": "Passed"
-        },
-        {
-          "name": "testEarlierActiveDeviceStatusCannotEraseLaterRevocationOrGrantReturnedAuthority()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testEarlierActiveDeviceStatusCannotEraseLaterRevocationOrGrantReturnedAuthority()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-device-late-active-admission-red-02/receipt.json",
-      "receiptSHA256": "757335915b168d7cf720222ab21d4a3917dbd4f9f9c9cb7ea9a803a2748b25b5",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 2,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "PRODUCT_RED",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_DEVICE_CACHE_EXTERNAL_DENIAL_AND_SCOPE_MISMATCH_PRODUCT_RED",
-      "limits": [
-        "Controlled actual SDK/service fixtures on isolated 6B04, not authenticated staging",
-        "Two product failures with eight desired authority assertions; no setup error or crash",
-        "Device cache P2 and native large-font layout remain open; existing root/focus/terminal evidence is separate"
-      ],
-      "name": "ios-device-cache-authority-red-04",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testCachedActiveDeviceStatusCannotOverrideExternalRevocationAndFreshAdmissionCanRestore()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testCachedActiveDeviceStatusCannotOverrideExternalRevocationAndFreshAdmissionCanRestore()",
-          "result": "Failed"
-        },
-        {
-          "name": "testDeviceCacheCannotReuseAuthorityAcrossAccountBindingOrInstallChange()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testDeviceCacheCannotReuseAuthorityAcrossAccountBindingOrInstallChange()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-device-cache-authority-red-04/receipt.json",
-      "receiptSHA256": "f2047bfe5f63871a568ae408a538bb9a1fae6b6eb285076b06a130ac686433e8",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 4,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "TARGETED_GREEN",
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_DEVICE_CACHE_AND_LATE_RESPONSE_AUTHORITY_GREEN",
-      "limits": [
-        "Controlled actual SDK/service isolated fixtures, not authenticated staging",
-        "Native four-language large-font layout remains open; existing root/focus/terminal evidence is separate"
-      ],
-      "name": "ios-device-cache-and-admission-green-05",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testCachedActiveDeviceStatusCannotOverrideExternalRevocationAndFreshAdmissionCanRestore()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testCachedActiveDeviceStatusCannotOverrideExternalRevocationAndFreshAdmissionCanRestore()",
-          "result": "Passed"
-        },
-        {
-          "name": "testCancelledHeldDeviceStatusCannotClearConfirmedRevocation()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testCancelledHeldDeviceStatusCannotClearConfirmedRevocation()",
-          "result": "Passed"
-        },
-        {
-          "name": "testDeviceCacheCannotReuseAuthorityAcrossAccountBindingOrInstallChange()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testDeviceCacheCannotReuseAuthorityAcrossAccountBindingOrInstallChange()",
-          "result": "Passed"
-        },
-        {
-          "name": "testEarlierActiveDeviceStatusCannotEraseLaterRevocationOrGrantReturnedAuthority()",
-          "nodeIdentifier": "SupabaseAuthLifecycleTests/testEarlierActiveDeviceStatusCannotEraseLaterRevocationOrGrantReturnedAuthority()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-device-cache-and-admission-green-05/receipt.json",
-      "receiptSHA256": "28d89e8adb141a6db114c388b12884f78ebc295e76e673e1e1b6d60d41d546e6",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "PRODUCT_RED",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_REPEATED_POSTPUBLICATION_EXACT_SCOPE_REFRESH_PRODUCT_RED",
-      "limits": [
-        "Actual file-backed recovery service on isolated6B04, not authenticated staging",
-        "Both exact-scope postpublication refresh callbacks reached; scopeChanged escaped finalization, one ordinary desired assertion failure",
-        "Original four-locale UI09 overallFAIL retained separately"
-      ],
-      "name": "ios-repeated-postpublication-lease-red-01",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-repeated-postpublication-lease-red-01/receipt.json",
-      "receiptSHA256": "bf90331ea22c3c6c29ff814291ded3fbdeccf83c71756b46b8467b74badc1666",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 7,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "TARGETED_GREEN",
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_REPEATED_EXACT_POSTPUBLICATION_ADMISSION_GREEN",
-      "limits": [
-        "Controlled file-backed actual recovery service on isolated6B04, not authenticated staging",
-        "Bounded repeat applies only to original exact published G/journal/device/tuple; fresh marker/physicalproof path retained",
-        "Native four-locale UI full terminal rerun remains pending"
-      ],
-      "name": "ios-repeated-postpublication-lease-green-02",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testCancellationDuringPagesPreservesOldStoreAndDurableRecoveryJournal()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testCancellationDuringPagesPreservesOldStoreAndDurableRecoveryJournal()",
-          "result": "Passed"
-        },
-        {
-          "name": "testLeaseInvalidatedDuringMarkerPreservesJournalAndNeverActivatesGeneration()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testLeaseInvalidatedDuringMarkerPreservesJournalAndNeverActivatesGeneration()",
-          "result": "Passed"
-        },
-        {
-          "name": "testMarkerFailureKeepsRecoveryJournalAndNeverActivatesGeneration()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testMarkerFailureKeepsRecoveryJournalAndNeverActivatesGeneration()",
-          "result": "Passed"
-        },
-        {
-          "name": "testPublishedGenerationFinalizationRetainsJournalForForeignOwnerOrConfirmedDeviceDenial()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testPublishedGenerationFinalizationRetainsJournalForForeignOwnerOrConfirmedDeviceDenial()",
-          "result": "Passed"
-        },
-        {
-          "name": "testRepeatedPublishedFinalizationRefusesLaterForeignDeviceDenialAndCancellation()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testRepeatedPublishedFinalizationRefusesLaterForeignDeviceDenialAndCancellation()",
-          "result": "Passed"
-        },
-        {
-          "name": "testSameScopeShopRefreshAfterPublicationCompletesOnlyThePublishedGeneration()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testSameScopeShopRefreshAfterPublicationCompletesOnlyThePublishedGeneration()",
-          "result": "Passed"
-        },
-        {
-          "name": "testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration()",
-          "nodeIdentifier": "AtomicGenerationRecoverySnapshotPullServiceTests/testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-repeated-postpublication-lease-green-02/receipt.json",
-      "receiptSHA256": "94791ea08ff32869bd30301177f1b6c969d8232970474d9fc5debe8ef3add4b9",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "ACTUAL_PRODUCT_LAYOUT_RED: UIKit actual accessibilityExtraExtraExtraLarge observed; account minX<0 and saved video22s shows horizontal physical clipping",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_ACTUAL_LARGE_FONT_ACCOUNT_BOUNDARY_FAILURE",
-      "limits": [
-        "Controlled real App/SDK TEST transport, not authenticated staging",
-        "Only en XXXL desired layout reached and failed; other locales NOT_RUN in this attempt"
-      ],
-      "name": "ios-real-options-four-language-large-font-02",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-02/receipt.json",
-      "receiptSHA256": "4050c70259b3451345c0fd95f3b0ab8cf3e7f2959e4480be7fc4b7d9832534b3",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "FOUR_LOCALE_LAYOUT_PASS_POSTPUBLICATION_SECOND_LEASE_PRODUCT_FAILURE",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_REAL_OPTIONS_FOUR_LOCALE_LAYOUT_P_TERMINAL_ZH_FAIL",
-      "limits": [
-        "Controlled isolated actual root/native UI, not authenticated staging",
-        "All four native XXXL layout/category/full heading/masked email/viewport/navigation checks PASS with saved PNG/AX; overall single selector FAIL",
-        "en/it/es activated checkpoints reached PASS; zh fails postpublication scopeChanged with original activated journal and current exact scope accepted"
-      ],
-      "name": "ios-real-options-four-language-large-font-green-09",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-09/receipt.json",
-      "receiptSHA256": "9d7e2b171aebb9258757e0d4e085d793dbfd13e323ed3f123c7f9c47dea204e4",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "SCROLL_POSITION_OVERSHOOT",
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "headUnchanged": true,
-      "kind": "IOS_REAL_OPTIONS_XXXL_ES_SCROLL_OVERSHOOT",
-      "limits": [
-        "Actual native XXXL root en/it layout and activation PASS, es vertical position minY-59 fails before zh",
-        "No account width/text/category failure; desired original viewport bound retained",
-        "DEBUG overlay positioning and drag inertia require fixture-only correction; no new product font/body delta"
-      ],
-      "name": "ios-real-options-four-language-large-font-green-10",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "result": "Failed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-10/receipt.json",
-      "receiptSHA256": "89960ef74fb2a43a15468dbfb10ba839e1a46a76f69feb6e670000acac3421e5",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 1,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "classification": "TARGETED_NATIVE_UI_GREEN",
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "headUnchanged": true,
-      "kind": "IOS_REAL_OPTIONS_FOUR_LOCALE_NATIVE_XXXL_GREEN",
-      "limits": [
-        "Actual controlled root/native UI on isolated6B04, not authenticated staging",
-        "One XCTest method contains four actual locale variants; not four XCTest methods",
-        "Primary459 retention/install/authenticated TEST/performance remain separate NOT_RUN"
-      ],
-      "name": "ios-real-options-four-language-large-font-green-11",
-      "ownedPIDGone": true,
-      "perSelectorStatus": [
-        {
-          "name": "testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "nodeIdentifier": "LocalAvailabilityRootUITests/testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages()",
-          "result": "Passed"
-        }
-      ],
-      "primary459Untouched": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/receipt.json",
-      "receiptSHA256": "bc6380d65ffde2ef42f99215734dc7683f339a86dba163470f6b8943b0754b18",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 6,
-        "passed": 1489,
-        "skipped": 36
-      },
-      "exitCode": 65,
-      "name": "ios-local-availability-canonical-full-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-01/receipt.json",
-      "receiptSHA256": "b731a1294910ed05c11008f26de7edc51cb7ca0e6573ce6ad599591d62af043d",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 5,
-        "passed": 5,
-        "skipped": 0
-      },
-      "exitCode": 65,
-      "name": "ios-canonical-regression-and-review-red-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-canonical-regression-and-review-red-01/receipt.json",
-      "receiptSHA256": "168d177efe4e957987c6c41245ba35e2432050d62229179d7863afc3e04fc9c2",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 9,
-        "skipped": 0
-      },
-      "exitCode": 65,
-      "name": "ios-canonical-regression-and-review-green-02",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-canonical-regression-and-review-green-02/receipt.json",
-      "receiptSHA256": "15a899eab82ec094936182be4b4bff5c1b18cafb3aac0a8355dffc0f6f16e263",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 0,
-        "skipped": 0
-      },
-      "exitCode": 65,
-      "name": "ios-public-save-feedback-red-01",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-public-save-feedback-red-01/receipt.json",
-      "receiptSHA256": "2b2ce65de93ea08ab3f05386717ad4f45dc92a831f3daf39fca658a995fc39d9",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 2,
-        "passed": 1,
-        "skipped": 0
-      },
-      "exitCode": 65,
-      "name": "ios-public-save-feedback-red-02",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-public-save-feedback-red-02/receipt.json",
-      "receiptSHA256": "f6ed2a411d4a384b3d5d8cbb664ff108ab2dadd89b0ae2b3ef505276772c03bd",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 0,
-        "skipped": 0
-      },
-      "exitCode": 65,
-      "name": "ios-public-save-feedback-green-03",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-public-save-feedback-green-03/receipt.json",
-      "receiptSHA256": "687a2915a8affb4b94064baa96443f79c020e9c4ba63ba0654c5f08351f1b6af",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 4,
-        "skipped": 0
-      },
-      "exitCode": 0,
-      "name": "ios-public-save-feedback-green-04",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-public-save-feedback-green-04/receipt.json",
-      "receiptSHA256": "00ef74270126ba875034413eb02cbd808babb678c702c008f6607ea6bad66364",
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 2,
-        "passed": 1497,
-        "skipped": 36
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
-      "headUnchanged": true,
-      "name": "ios-local-availability-canonical-full-02",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-02/receipt.json",
-      "receiptSHA256": "dba6230dff97b30df70538a8c663f131a8a14e1cfe790dec30e059949d3f53c7",
-      "sourceCount": 46,
-      "sourceMapEqualCurrent": false,
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 0,
-        "passed": 9,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 0,
-      "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
-      "headUnchanged": true,
-      "name": "ios-final-feedback-admission-green-13",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-final-feedback-admission-green-13/receipt.json",
-      "receiptSHA256": "3f8cddfac691435f84a1157b87a1c6aca44dbb507bab151a5e782081c7f9d775",
-      "sourceCount": 47,
-      "sourceMapEqualCurrent": true,
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 3,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
-      "headUnchanged": true,
-      "name": "ios-exact-relation-identity-red-09",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-exact-relation-identity-red-09/receipt.json",
-      "receiptSHA256": "7e87b0f99a1fcae8195c8839f51550f4df9adc38322137d0d1dac4198a6176be",
-      "sourceCount": 47,
-      "sourceMapEqualCurrent": false,
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
-      "headUnchanged": true,
-      "name": "ios-pending-journal-auto-resume-red-10",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-pending-journal-auto-resume-red-10/receipt.json",
-      "receiptSHA256": "0ad5106b39a66678bb72e32b8d46a5085f8b6ec8896ca79b3c296b4f87ec3866",
-      "sourceCount": 47,
-      "sourceMapEqualCurrent": false,
-      "sourceUnchanged": true
-    },
-    {
-      "actual": {
-        "failed": 1,
-        "passed": 1,
-        "skipped": 0
-      },
-      "baselinePreserved": true,
-      "destinationShutdown": true,
-      "exitCode": 65,
-      "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
-      "headUnchanged": true,
-      "name": "ios-exact-ack-map-and-resume-readback-12",
-      "ownedPIDGone": true,
-      "receiptPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-exact-ack-map-and-resume-readback-12/receipt.json",
-      "receiptSHA256": "dd762cd11183495a0f3bf5b82442d68c30c44d0fec7c071e3b4eddac92af4bdd",
-      "sourceCount": 47,
-      "sourceMapEqualCurrent": false,
-      "sourceUnchanged": true
-    }
-  ],
-  "schemaVersion": "ios-local-availability-current-ci-runtime-fixture-v5",
-  "sourceByteEqualCompatibilityFreeze": false,
-  "sourceByteEqualCurrentFreeze": true,
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-old-lease-witness-01/receipt.json",
+    "scope": "Real fencedSave/typedCatalogACK/eventACK,ordinary sameSelectedShop save; oldwriterDENIED/currentstrictscopePASS,stabletuple/body/intent/event unchanged. Not historical Full08 leaf attribution.",
+    "sha256": "64a58380080be8a4e2acfe1264048e7178a385dc21d74f0bfb085f972f96d997"
+  },
   "sourceCount": 48,
+  "sourceFreeze": {
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-current-scope-oracle-remedy-20261006/source-freeze-current-scope-v1.json",
+    "sha256": "10a1556016b23e4e37ce75ca6746316de62a606b80d9b27860f5e4c8b42c218a"
+  },
   "source_sha256": {
     "iOSMerchandiseControl/ContentView.swift": "eb7f265c61eebd9d3aa1e34234089cbd53dcdd3cb9880d3caff9aee18e1b4726",
     "iOSMerchandiseControl/DatabaseView.swift": "ff449daf86d389a971111c2f85fa6ea4053279f2ca04de2ba1681cf294f17297",
@@ -1223,47 +175,48 @@
     "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift": "9cd635b92642031d4691cc75dadf45b9f759d19ed1281eb813501481cc4e7f75",
     "iOSMerchandiseControl/Sync/ShopContext/ShopContext.swift": "e0455a3960b1e4eabd3093d216415e53084f3076e67352404376756ae845e817",
     "iOSMerchandiseControl/Sync/SyncOrchestrator.swift": "74a253664a0dee9f21a34870e1e77d67acffdb7e611c53bdf633aadf7d253e73",
-    "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift": "ba78ba81170b225bc2b186a7deb7270a529c3218b4f081d5f3dae8fb47a3fd1a",
+    "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift": "e925fae795c0e07368845a5a2a4d1c8f7456161d5b192a4132772e19ddd53ca3",
     "iOSMerchandiseControl/en.lproj/Localizable.strings": "9f692b84be9ace6e967e461c25fb81d22c31ccbdfa8e57775b35f3bc7ea82f58",
     "iOSMerchandiseControl/es.lproj/Localizable.strings": "ae20ca83a440b6d0578dc5c6f8f7be7fb30e87cea091361d220effcff1115489",
     "iOSMerchandiseControl/iOSMerchandiseControlApp.swift": "df5b3a15d55027586306937c1637cc76306ebd2da15a3853b771094e7e607f88",
     "iOSMerchandiseControl/it.lproj/Localizable.strings": "4934780b7f2104cf1f050d346b5d2f1d91bab0c2f877a0b3b66b2f4b2ab4ec27",
     "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings": "227fce953c782ebc4ebb9c2869b4f523200762535c9ca98ae87b3fa706233dfe",
-    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": "f94566e766230a7ebbdcee4f9dd4fcf15df7404bc04195320fac3d40f40709cc",
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": "c7ed1b081e6287d1c9684fb6c4a0d4fd548bb229e7d64d1105b44b266f31131f",
     "iOSMerchandiseControlTests/HistorySessionAutomaticPushServiceTests.swift": "dc987123e2abf942c759df8acf002631a15464cbf75c8713a7e1148a5fcfa629",
     "iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift": "dd3c15cd7ccee947a6d80912e695466209eb931566179f1bb69208796d071b63",
     "iOSMerchandiseControlTests/ShopContextTests.swift": "b8b2f6bc7e2593bf38c5cef0820b9b7e24fe97b62d6f3f8b5a5bef4a9ee70fa4",
     "iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift": "744d5c30e0d45ef1ddc9329336b6695dce98ffcbe212b5aff1f04199b421666c",
     "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift": "bf6034e06051667796d2e49281ed163c7342b3fe6410613287e70414799b5623",
     "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift": "4beaf2ef2ddf2edd0dc80221ba7188ce013843509721bcacad20689d05247ae8",
-    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "4f277936afb4fe80a35cda0792c3be21e350d64041bfbc944b0e73aec5f67512"
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "6fb92ece3875f0b199b020afa14c2bfc13330e1ae5b9d8acb8fede325c1cbf18"
   },
   "swiftCount": 44,
-  "taskAfterOwnerAppendSHA256": "8815b9798e4fa995704bea7dad520cc4112c7c88943a90900b821e2f34a242f6",
-  "taskBeforeOwnerAppendSHA256": "08321017cb0f82455515e204f230809c20e15251ab3d15ccac87b2f90c7ef3cf",
-  "taskOwnedAppendPatchSHA256": "7a6abd5ac162d3203e926818567c4d50751079060105343ebfc95709db254c2b",
-  "taskOwnedInsertionOperations": 3,
-  "taskOwnedInsertions": 23,
-  "taskPreExistingInsertions": 54,
-  "taskPriorBytesInverseExact": true,
-  "testCount": 8,
-  "toolchainAttribution": {
-    "CIHead": "43822986287b96899066ae12f360cd30c588e934",
-    "CIRun": "37390541718",
-    "capturedUTC": "2026-10-06T00:00:38.140752+00:00",
-    "ciActualXcodePath": "/Applications/Xcode_26.6.app",
-    "ciFailures": [
-      "SameScopeRecoveryLocalWorkTransfer.swift40:28 type-check timeout",
-      "SameScopeRecoveryLocalWorkTransfer.swift46:44 genericT notinferred"
-    ],
-    "ciSwiftBinaryVersion": "NOT_LOGGED_IN_ORIGINAL_BUILD_STEP",
-    "ciSwiftLanguageMode": "5 observed actual compiler argv",
-    "head": "43822986287b96899066ae12f360cd30c588e934",
-    "localSwift": "Apple Swift6.4 swiftlang-6.4.0.34.1 clang-2100.3.34.1",
-    "localXcode": "27.0",
-    "localXcodeBuild": "27A266a",
-    "notAProductRuntimeFailure": true,
-    "sourceBeforeSHA256": "324fa6e4b35e45cb594bf5b2c0801e436abe64b0b32050571c241f5d178e8944"
+  "targeted10": {
+    "actual": {
+      "failed": 0,
+      "passed": 10,
+      "skipped": 0
+    },
+    "additionalNegativeTestFileSHA256": {
+      "iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift": "f959f4a7419c5da4412ded01ea54e82c7a31eaa2d98408d76bd7515d574aa466"
+    },
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-current-scope-targeted-09/receipt.json",
+    "selection": {
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-current-ack-current-scope-oracle-remedy-20261006/targeted10-selection.json",
+      "sha256": "8606d04e4e32c75f8daa790a2adb71da39220be60804a289d4e2993e898e69bb"
+    },
+    "sha256": "785929f0a037ba62b2c29ab7aa1623693e1c3c846bcc368d7a8d27ed815de227"
   },
-  "unchangedCarryFiles": 45
+  "taskAfterOwnerSHA256": "1f1d001aad2355429bc3ff721d99b4cd1a190a3ce5aa2836a38c02b1979990ee",
+  "taskBeforeOwnerSHA256": "8815b9798e4fa995704bea7dad520cc4112c7c88943a90900b821e2f34a242f6",
+  "taskForeignWorkingDiff": {
+    "deletions": 19,
+    "excludedFromCommit": true,
+    "insertions": 73,
+    "netAdditionalLines": 54,
+    "preservedExactBeforeAndAfterOwnedSections": true
+  },
+  "taskInverseExact": true,
+  "taskOwnedSections": 3,
+  "testSwiftCount": 8
 }

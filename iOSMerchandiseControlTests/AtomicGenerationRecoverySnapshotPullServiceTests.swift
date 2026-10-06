@@ -6,6 +6,164 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testCurrentDurableACKSurvivesOrdinarySameShopRefreshWhileOldWriterLeaseIsRejected() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let container = fixture.controller.modelContainer
+        let original = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertNil(original.pendingReplacement)
+        proof.remote.prepareProductForPush(ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0))
+        var receipt: LocalProductSaveReceipt?
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            product.stockQuantity = 1
+            let accumulator = LocalPendingChangeAccumulator(context: context,
+                ownerUserID: fixture.ownerUserID, storeIdentity: original.storeIdentity)
+            let change = try XCTUnwrap(accumulator.recordProductChange(product: product, operation: .update,
+                origin: .manualCatalogSave, changedFields: ["stockQuantity"]))
+            let history = HistoryEntry(id: "ACK_SCOPE_PENDING", timestamp: Date(timeIntervalSince1970: 1_784_635_200),
+                data: [["Item", "Quantity"], ["Independent pending history", "1"]], uid: UUID())
+            context.insert(history)
+            _ = try accumulator.recordHistorySessionChange(entry: history, operation: .create, changedFields: ["data"])
+            try context.save()
+            receipt = LocalProductSaveReceipt(product: product, manifest: manifest,
+                intents: [LocalPendingChangeCASToken(change)])
+        }
+        let saved = try XCTUnwrap(receipt)
+        let pushed = try await Task126OwnerStoreGate.withAutomaticScope(original) {
+            try await CatalogPushService(modelContainer: container, remote: proof.remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(pushed.productUpdates, 1)
+        let registered = try await Task126OwnerStoreGate.withAutomaticScope(original) {
+            try await SyncActivityRegistrationService(modelContainer: container, recorder: proof.remote,
+                defaults: fixture.defaults).registerSyncActivities(ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(registered.summary.registered, 1)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+        XCTAssertEqual(proof.remote.recordRequests.count, 1)
+        let before = ModelContext(container)
+        let changes = try before.fetch(FetchDescriptor<LocalPendingChange>())
+        let productChanges = changes.filter { $0.entityKind == .product }
+        let historyChanges = changes.filter { $0.entityKind == .historySession }
+        XCTAssertEqual(productChanges.count, 1); XCTAssertEqual(historyChanges.count, 1)
+        XCTAssertTrue(saved.isCloudConfirmed(by: productChanges))
+        let product = try XCTUnwrap(before.fetch(FetchDescriptor<Product>()).first)
+        XCTAssertTrue(saved.matches(product, readback: saved.readback(by: productChanges)))
+        XCTAssertEqual(historyChanges.first?.status, .pending)
+        let events = try before.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(events.count, 1)
+        let event = try XCTUnwrap(events.first)
+        XCTAssertEqual(event.status, .sent)
+        let request = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: event)
+        XCTAssertEqual(request, proof.remote.recordRequests.first)
+        XCTAssertEqual(request.entityIDs, try AutomaticSyncEventOutboxWriter.entityIDs([
+            "supplier_ids": [], "category_ids": [], "product_ids": [proof.productID]]))
+        try Task126OwnerStoreGate.revalidateAutomaticScope(original, defaults: fixture.defaults)
+        let snapshot = try completedRecoveryBusinessSnapshot(fixture)
+        let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+        let selected = try XCTUnwrap(selectionStore.selectedShop(accountHash: original.accountHash))
+        // This is the ordinary persisted same-shop API, not a direct lease
+        // primitive or a timing hook. It intentionally retires old writers.
+        XCTAssertTrue(selectionStore.save(selected, accountHash: original.accountHash))
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: original.accountHash), selected)
+        XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(original,
+            defaults: fixture.defaults)) { XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged) }
+        var staleWriterEntered = false
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(original,
+            defaults: fixture.defaults) { staleWriterEntered = true }) {
+            XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged)
+        }
+        XCTAssertFalse(staleWriterEntered)
+        let current = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertNil(current.pendingReplacement)
+        XCTAssertEqual(current.ownerUserID, original.ownerUserID)
+        XCTAssertEqual(current.accountHash, original.accountHash)
+        XCTAssertEqual(current.shopID, original.shopID)
+        XCTAssertEqual(current.storeIdentity, original.storeIdentity)
+        XCTAssertEqual(current.deviceInstallID, original.deviceInstallID)
+        XCTAssertEqual(current.deviceIdentityHash, original.deviceIdentityHash)
+        XCTAssertEqual(current.pendingReplacement, original.pendingReplacement)
+        XCTAssertNotEqual(current.leaseGeneration, original.leaseGeneration)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+        XCTAssertTrue(fixture.controller.modelContainer === container)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), snapshot)
+        let after = ModelContext(fixture.controller.modelContainer)
+        let currentProduct = try XCTUnwrap(after.fetch(FetchDescriptor<Product>()).first)
+        let currentChanges = try after.fetch(FetchDescriptor<LocalPendingChange>())
+        let currentProductChanges = currentChanges.filter { $0.entityKind == .product }
+        let currentHistoryChanges = currentChanges.filter { $0.entityKind == .historySession }
+        XCTAssertTrue(saved.matches(fixture.controller.activeManifest))
+        XCTAssertTrue(saved.isCloudConfirmed(by: currentProductChanges))
+        XCTAssertTrue(saved.matches(currentProduct, readback: saved.readback(by: currentProductChanges)))
+        XCTAssertEqual(currentProductChanges.first?.intendedFingerprintHash,
+            LocalPendingChangeLogicalKey.productFingerprintHash(currentProduct))
+        XCTAssertEqual(currentHistoryChanges.first?.status, .pending)
+        XCTAssertTrue(currentHistoryChanges.allSatisfy { LocalPendingChangeScopeMatcher.matches($0,
+            ownerUserID: current.ownerUserID, accountHash: current.accountHash, storeIdentity: current.storeIdentity) })
+        let currentEvents = try after.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+        XCTAssertEqual(currentEvents.count, 1)
+        let currentEvent = try XCTUnwrap(currentEvents.first)
+        XCTAssertEqual(currentEvent.id, event.id); XCTAssertEqual(currentEvent.status, .sent)
+        XCTAssertEqual(try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: currentEvent), request)
+    }
+
+    func testReopenQualificationCapturedBeforeSameScopeSelectionRefreshMustRestartForCurrentSelection() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "reopen-selection-qualification-order", products: [product], prices: [])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let before = try completedRecoveryBusinessSnapshot(fixture)
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let binding = try XCTUnwrap(bindingStore.currentBinding)
+        let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+        let original = try XCTUnwrap(selectionStore.selectedShop(accountHash: binding.accountHash))
+
+        // init admits the real detached file readback against the old selection.
+        // Do not yield MainActor before refreshing selectedAt: its result cannot
+        // be published before this deterministic same-scope selection change.
+        let reopened = try reopenFixture(fixture)
+        let container = reopened.controller.modelContainer
+        let refreshed = SelectedShop(shopID: original.shopID, code: original.code, name: original.name,
+            role: original.role, status: original.status, selectable: original.selectable,
+            canWrite: original.canWrite, selectedAt: original.selectedAt.addingTimeInterval(1))
+        XCTAssertTrue(selectionStore.save(refreshed, accountHash: binding.accountHash))
+        XCTAssertEqual(bindingStore.currentBinding, binding)
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: binding.accountHash), refreshed)
+        XCTAssertEqual(reopened.controller.activeManifest, manifest)
+
+        let obsoleteQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(obsoleteQualification, "The correctly rejected old selection result is not a corrupt store")
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(reopened), before)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal)
+
+        // The normal qualification API captures the now-current tuple and
+        // validates the same actual file; no body/fingerprint/metadata is reset.
+        reopened.controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
+        let currentQualification = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(currentQualification)
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
+        XCTAssertTrue(reopened.controller.modelContainer === container)
+        XCTAssertEqual(reopened.controller.activeManifest, manifest)
+        XCTAssertEqual(bindingStore.currentBinding, binding)
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: binding.accountHash), refreshed)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(reopened), before)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal)
+        print("TASK144_REOPEN_QUALIFICATION_ORDER old=false current=true same-generation=true same-body=true")
+    }
+
     func testPendingFinalizedRecoveryJournalAutomaticallyResumesForForegroundAndReconnect() async throws {
         for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
             let proof = try await makeRealContinuationProof()
