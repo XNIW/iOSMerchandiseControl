@@ -43,6 +43,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private var completedAutomaticRecoverySummary: SyncRecoverySnapshotPullSummary?
     private let provesShopCallbackOrder = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
     private let provesIndependentPending = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] == "1"
+    private let observesReplayScopeComponents = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_LOSE_FIRST_PRODUCT_RESPONSE"] == "1"
     private var independentPendingInserted = false
     private let provesRelatedSave = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1"
     private var lastAutomaticResult = "not-observed"
@@ -681,8 +682,21 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 "provider-returned.\(observation.providerReturned)", "preceding-ack.\(observation.precedingACK)",
                 "preceding-cas-matches.\(observation.precedingCASMatches)",
                 "same-first-id.\(observation.id == first?.id)", "same-first-body.\(observation.payloadHash == first?.payloadHash)",
-                "same-first-scope.\(scope == first?.scope)", "same-first-sealed-revision.\(token != nil && token == first?.sealedToken)"]
+                "same-first-scope.\(Self.sameStableProductScope(scope, first?.scope))", "same-first-sealed-revision.\(token != nil && token == first?.sealedToken)",
+                "same-first-full-scope.\(scope == first?.scope)"]
             result.append(values.joined(separator: "."))
+            if observesReplayScopeComponents {
+                let components: [String] = ["\(prefix)scope-components.\(index + 1)",
+                    "same-first-owner.\(scope.ownerUserID == first?.scope.ownerUserID)",
+                    "same-first-account.\(scope.accountHash == first?.scope.accountHash)",
+                    "same-first-shop.\(scope.shopID == first?.scope.shopID)",
+                    "same-first-full-store.\(scope.storeIdentity == first?.scope.storeIdentity)",
+                    "same-first-device-install.\(scope.deviceInstallID == first?.scope.deviceInstallID)",
+                    "same-first-device-hash.\(scope.deviceIdentityHash == first?.scope.deviceIdentityHash)",
+                    "same-first-full-pending.\(scope.pendingReplacement == first?.scope.pendingReplacement)",
+                    "same-first-lease.\(scope.leaseGeneration == first?.scope.leaseGeneration)"]
+                result.append(components.joined(separator: "."))
+            }
         }
         result.append(contentsOf: automaticCompletionObservations.enumerated().map { "\(prefix)completion.\($0.offset + 1).\($0.element)" })
         result.append(contentsOf: catalogRemote.eventRequestObservations.map { "\(prefix)event.\($0)" })
@@ -795,6 +809,20 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 historyChange: historyChanges[0], context: context)
     }
 
+    // Compare immutable business identity; each request and the current readback
+    // separately validate their own current automatic writer lease.
+    private static func sameStableProductScope(_ scope: Task126VerifiedOwnerStoreScope,
+        _ reference: Task126VerifiedOwnerStoreScope?) -> Bool {
+        guard let reference else { return false }
+        return scope.ownerUserID == reference.ownerUserID
+            && scope.accountHash == reference.accountHash
+            && scope.shopID == reference.shopID
+            && scope.storeIdentity == reference.storeIdentity
+            && scope.deviceInstallID == reference.deviceInstallID
+            && scope.deviceIdentityHash == reference.deviceIdentityHash
+            && scope.pendingReplacement == reference.pendingReplacement
+    }
+
     private func hasOneImmutableProductAttemptACK(product: Product, change: LocalPendingChange,
         historyChange: LocalPendingChange, context: ModelContext) -> Bool {
         guard change.status == .acknowledged,
@@ -816,7 +844,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
               productHTTPObservations.enumerated().allSatisfy({ entry in
                 let observation = entry.element
                 return observation.sealedBodyCorresponds && observation.id == first.id
-                    && observation.payloadHash == first.payloadHash && observation.scope == first.scope
+                    && observation.payloadHash == first.payloadHash && Self.sameStableProductScope(observation.scope, first.scope)
                     && observation.sealedToken == token && observation.sealedHash == first.sealedHash
                     && (entry.offset == 0 || (observation.precedingACK == "false"
                         && observation.precedingCASMatches == "true"))
