@@ -74,6 +74,9 @@ jobs:
           xcrun simctl bootstatus "$DEVICE_ID" -b
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
+      - name: Record Xcode toolchain
+        run: xcodebuild -version
+
       - name: Build Debug
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
@@ -83,6 +86,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO build
 
       - name: XCTest full suite
+        id: xctest
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
           -scheme iOSMerchandiseControl
@@ -90,6 +94,18 @@ jobs:
           -destination "platform=iOS Simulator,id=$DEVICE_ID"
           -resultBundlePath "$RUNNER_TEMP/ios-merchandise-control-tests.xcresult"
           CODE_SIGNING_ALLOWED=NO test
+
+      - name: Preserve XCTest result bundle
+        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task144-first-leaf-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          include-hidden-files: false
 
       - name: Analyze
         run: >-

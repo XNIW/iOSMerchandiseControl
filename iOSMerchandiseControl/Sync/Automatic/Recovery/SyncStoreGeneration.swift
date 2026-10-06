@@ -1434,6 +1434,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     /// Presentation-only admission for a physically empty first bootstrap.
     /// It grants neither local mutation authority nor cloud readiness.
     func permitsScopedEmptyRoot(ownerUserID: UUID?) -> Bool {
+        #if DEBUG
+        if Task144RootObservation.enabled { return observeScopedEmptyRoot(ownerUserID: ownerUserID) }
+        #endif
         guard let ownerUserID, let proof = emptyRootProof, let repository,
               loadFailureCode == nil, active.manifest == nil, active.container === proof.container,
               proof.scope.ownerUserID == ownerUserID,
@@ -1455,6 +1458,79 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         return true
     }
 
+    #if DEBUG
+    private func observeScopedEmptyRoot(ownerUserID: UUID?) -> Bool {
+        let observation = Task144RootObservation.Evaluation("empty-admission", callsite: "SyncStoreGeneration.permitsScopedEmptyRoot")
+        var result = false
+        defer { observation.finish(result) }
+        guard let owner = observation.optional(ownerUserID, "owner"),
+              let proof = observation.optional(emptyRootProof, "proof"),
+              let repository = observation.optional(repository, "repository"),
+              observation.check(loadFailureCode == nil, "load"),
+              observation.check(active.manifest == nil, "manifest"),
+              observation.check(active.container === proof.container, "container"),
+              observation.check(proof.scope.ownerUserID == owner, "proof-owner"),
+              let current = observation.attempt("capture-current", {
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                      defaults: defaults, allowsPendingReplacement: true)
+              }) else { return false }
+        observation.note("lease-equal", current.leaseGeneration == proof.scope.leaseGeneration)
+        guard observation.check(current.ownerUserID == proof.scope.ownerUserID, "owner-equal"),
+              observation.check(current.accountHash == proof.scope.accountHash, "account-equal"),
+              observation.check(current.shopID == proof.scope.shopID, "shop-equal"),
+              observation.check(current.storeIdentity == proof.scope.storeIdentity, "full-store-equal"),
+              observation.check(current.deviceInstallID == proof.scope.deviceInstallID, "install-equal"),
+              observation.check(current.deviceIdentityHash == proof.scope.deviceIdentityHash, "device-equal"),
+              observation.check(current.pendingReplacement == proof.scope.pendingReplacement, "full-pending-equal"),
+              observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                  accountHash: proof.scope.accountHash, shopID: proof.scope.shopID,
+                  deviceIdentityHash: proof.scope.deviceIdentityHash), "not-denied"),
+              let fence = observation.attempt("physical-fence-read", {
+                  try repository.captureActiveMutationFence(for: active)
+              }),
+              observation.check(fence == proof.fence, "physical-fence-equal"),
+              observation.attempt("current-revalidate", {
+                  try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
+              }) != nil else { return false }
+        result = true
+        return true
+    }
+
+    private func observeEmptyPublicationAllowed(scope: Task126VerifiedOwnerStoreScope,
+        captured: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence,
+        repository: SyncStoreGenerationRepository) throws -> Task126VerifiedOwnerStoreScope? {
+        let observation = Task144RootObservation.Evaluation("qualification-publication", callsite: "SyncStoreGeneration.startEmptyRootQualification.after-await")
+        var result = false
+        defer { observation.finish(result) }
+        guard observation.check(!Task.isCancelled, "not-cancelled"),
+              observation.check(active.container === captured.container, "container"),
+              observation.check(active.manifest == nil, "manifest"),
+              let current = observation.attempt("capture-current", {
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                      defaults: defaults, allowsPendingReplacement: true)
+              }),
+              observation.check(current.ownerUserID == scope.ownerUserID, "owner-equal"),
+              observation.check(current.accountHash == scope.accountHash, "account-equal"),
+              observation.check(current.shopID == scope.shopID, "shop-equal"),
+              observation.check(current.storeIdentity == scope.storeIdentity, "full-store-equal"),
+              observation.check(current.deviceInstallID == scope.deviceInstallID, "install-equal"),
+              observation.check(current.deviceIdentityHash == scope.deviceIdentityHash, "device-equal"),
+              observation.check(current.pendingReplacement == scope.pendingReplacement, "full-pending-equal"),
+              observation.check(!SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(
+                  accountHash: scope.accountHash, shopID: scope.shopID,
+                  deviceIdentityHash: scope.deviceIdentityHash), "not-denied") else { return nil }
+        let currentFence = try observation.required("physical-fence-read", {
+            try repository.captureActiveMutationFence(for: captured)
+        })
+        guard observation.check(currentFence == fence, "physical-fence-equal"),
+              observation.attempt("current-revalidate", {
+                  try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
+              }) != nil else { return nil }
+        result = true
+        return current
+    }
+    #endif
+
     private func startEmptyRootQualification(ownerUserID: UUID?, repository: SyncStoreGenerationRepository) {
         guard loadFailureCode == nil, let ownerUserID,
               AccountBindingStore(defaults: defaults).hasPendingReplacementJournal,
@@ -1462,13 +1538,22 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 defaults: defaults, allowsPendingReplacement: true),
               !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
                 shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash) else {
+            #if DEBUG
+            Task144RootObservation.record("qualification-initial-denied", "result.false.first-failed.UNKNOWN", callsite: "SyncStoreGeneration.startEmptyRootQualification.initial-guard")
+            #endif
             emptyRootProof = nil
             return
         }
         if permitsScopedEmptyRoot(ownerUserID: ownerUserID) { return }
+        #if DEBUG
+        Task144RootObservation.record("qualification-prior-cancel", "cancel-statement.entered", callsite: "SyncStoreGeneration.startEmptyRootQualification")
+        #endif
         localBodyQualificationTask?.cancel()
         emptyRootProof = nil
         let captured = active
+        #if DEBUG
+        Task144RootObservation.record("qualification-start", "task-assignment.entered", callsite: "SyncStoreGeneration.startEmptyRootQualification")
+        #endif
         localBodyQualificationTask = Task { [weak self] in
             let work = Task.detached(priority: .utility) {
                 try Task.checkCancellation()
@@ -1488,7 +1573,26 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 return after
             }
             do {
-                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: {
+                    #if DEBUG
+                    Task144RootObservation.record("qualification-cancel", "work-cancel.entered", callsite: "SyncStoreGeneration.startEmptyRootQualification.on-cancel")
+                    #endif
+                    work.cancel()
+                }
+                #if DEBUG
+                if Task144RootObservation.enabled {
+                    guard let self else {
+                        Task144RootObservation.record("qualification-publication", "result.false.first-failed.self.later.NOT_EVALUATED", callsite: "SyncStoreGeneration.startEmptyRootQualification.after-await")
+                        return false
+                    }
+                    guard let current = try self.observeEmptyPublicationAllowed(scope: scope, captured: captured,
+                        fence: fence, repository: repository) else { return false }
+                    self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
+                    self.localBodyQualificationRevision &+= 1
+                    Task144RootObservation.record("qualification-published", "result.true.revision.\(self.localBodyQualificationRevision)", callsite: "SyncStoreGeneration.startEmptyRootQualification")
+                    return true
+                }
+                #endif
                 guard let self, !Task.isCancelled, self.active.container === captured.container,
                       self.active.manifest == nil,
                       let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
@@ -1507,7 +1611,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
                 self.localBodyQualificationRevision &+= 1
                 return true
-            } catch { return false }
+            } catch {
+                #if DEBUG
+                Task144RootObservation.record("qualification-result", "result.false.error.\(Task144RootObservation.errorCategory(error))", callsite: "SyncStoreGeneration.startEmptyRootQualification.catch")
+                #endif
+                return false
+            }
         }
     }
 
