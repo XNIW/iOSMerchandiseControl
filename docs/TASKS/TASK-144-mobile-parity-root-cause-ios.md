@@ -206,6 +206,25 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 UTC, pubblicazione shell vuota dopo refresh same-scope
+
+**Stato FIX; fonte48 `0af5b5b6`, HEAD `b4c95eb4` precommit.** Mirati8 **8PASS/0FAIL/0SKIP**; full11 senza filtri/nuovi skip,parallelNO: **1548 ID unici,1512PASS/0FAIL/36SKIP identici,15nativeUI PASS**. Tutti1546ID/stati Full10 preservati e soltanto due nuove unità. Debug/Release/Analyze11 PASS;34warning primari legacy negli stessi sei file della baseline originale d379,zero nuovi e zero nelle48 sorgenti. Proper fullTEST11 Release firmato PASS,23file/profilo154a/fresh signer/entitlements effettivi `.app-Simulated.xcent` ed embedded MachO/vecchia identità keychain/strict-deep;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`, **NON INSTALLATO**.
+
+**File propri:** `SyncStoreGeneration.swift`,solo guard finale di `startEmptyRootQualification`: dopo il lavoro off-main cattura autorità CURRENT con pendingreplacement tipizzato,confronta tutti i sette campi(owner/account/shop/intero store/deviceID/hash/intero pending) con l'originale,conserva cancellation/self/container/manifestnil/diniego/full file-family fence e rivalida CURRENT immediatamente prima della pubblicazione senza await. La proof immutabile usa current scope. Scansione fisica nove tabelle e guard prima/dopo invariati;non concede READY/write né riabilita la vecchia Task126 writer lease. `AtomicGenerationRecoverySnapshotPullServiceTests.swift`: positivo RED byteidentico54cc e negativo byteexact7061 della proposta a98,con fresh VALID shop/device diversi prima della pubblicazione. Eliminando i due blocchi restituisce l'intero vecchio Atomic0efd. UI6fb e altri46source invariati. Stessi due reviewer APPROVED STATIC0af5/zero finding.
+
+**Causa/prova distinta:** nel controesempio reale file-backed,ordinarysameSelectedSave tra start e primo await mantiene sette campi/full fence,current authority valida e old scoped writer DENIED;la sola assertion desired `qualified && shell` falliva con entrambi false(RED1). Guard di pubblicazione ora supera questo caso e rifiuta scope fresco diverso. Le tre failure mainCI82ef restano storiche,**cause esatte UNKNOWN**;la singola osservazione originale3PASS è NOT_OBSERVED,non attribuzione. Diagnostica temporanea rimossa con inverse esatto prima della RED. Messaggi SQLite unlink:120 sia in Full10 sia in Full11,attribuzione UNKNOWN;proposta osservativa2504 NONAPPLICATA/NONESeguita,fuori commit;nessuna dichiarazione harmless.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| RED publication e target8 | ESEGUITO |RED1 unica desiredassert;8P0F0S `41c8d2113f16fb66a36ead54d2639fca4710a6307214def9f1d9bd852467eeda` |
+| Full11 non filtrato | ESEGUITO |1548ID/1512P0F36sameS/15UI `466968422cca2b1d26dfffa12a833ded5d6c277e5f344cc932753a303e4fea0f` |
+| Debug/Release/Analyze11 e warning | ESEGUITO |3exit0,originalbaseline34/nuovi0 `971c839cfcaa1165a236e0fd8db1d72fd26cb23e8e72a90182d7c26bba7cb825` |
+| Proper fullTEST11 firmato | ESEGUITO |23file/signature/profile/entitlements/keychainP `7a6e708ff0a751dca300dba50e694098adb41a129b2533afd30b12ac30c02a31` |
+| Planning/preservazione | ESEGUITO |Source48/head/MASTER/Planning/foreignTask preservati;ownedgroups0/6B04Shutdown/baselineP;0input/install primaria |
+| Nuova CI/F/H/primaria | NON ESEGUITO |FollowupPR/exact-head+mainCI PENDING;F/459/H separati,Mac unlock pendente |
+
+Handoff `ios-empty-root-publication-scope-final-handoff-v11-20261006/manifest.json`;parent soloGit dopo rilascio. Stage Controller/Atomic/due portable docs e SOLO3nuovi hunksTask,inversewhole→5fba esatto;foreignTask73add/19del,net54 fuori index. Nessuna nuova dipendenza/schema/API/framework/task/governance.
+
 ### Esecuzione — 2026-10-06 UTC, shell vuota con autorità corrente
 
 **Stato FIX; fonte48 `f0ce09d7`, HEAD7b precommit correttivo.** Mirati6 **6PASS/0FAIL/0SKIP**; full10 senza filtri/nuovi skip,parallelNO: **1546 ID unici,1510PASS/0FAIL/36SKIP preesistenti,15nativeUI PASS**. Tutti1544ID/status Full09 preservati e soltanto due nuove unità. Debug/Release/Analyze10 PASS;34warning primari baseline,zero nuovi nelle48 sorgenti. Proper fullTEST10 Release firmato PASS,23file/profilo154a/fresh signer/effettivo Simulated.xcent/embedded MachO/vecchia identità keychain/strict-deep;binary `97d7d8d409f57c72427359fa237f30f13a28154cd46a17ce0884d56c5501a195`, **NON INSTALLATO**.
@@ -889,6 +908,8 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix 2026-10-06 — pubblicazione empty-root dopo refresh same-scope:** solo guard finale `startEmptyRootQualification` usa scope CURRENT con sette valori completi uguali all'originale,diniego/cancel/container/manifestnil/full physicalfence e fresh finalrevalidation senza await;pubblica proof immutabile current. Scan9/Task126/writer/READY/RPC/UI/timer invariati;oldwriter resta DENIED. Positivo desiredRED54cc immutato e freshvalid foreignshop/device7061 byteexact a98;mirati8/full11/build11/proper11 PASS,review SAME2 APPROVED0af5. MainCI82ef cause esatte UNKNOWN;osservazione3P è NOT_OBSERVED,non causal attribution.
+
 **Fix 2026-10-06 — shell vuota valida durante stesso-scope refresh:** solo guard `permitsScopedEmptyRoot` usa current full authority+sette campi stable/pending esatti,full physicalfence e final currentrevalidation. Old Task126/writer DENIED invariato;nessuna proof/READY/write grant. Due nuoveunit reali includono RED byteidentico e freshvalid foreign-shop/store/device negativa. Mirati6/full10/build10/proper10 PASS,stessi due reviewer f0ce APPROVED. Main CI d918 exactleaf UNKNOWN;original observationPASS NOT_OBSERVED e RED semantico distinto.
 
 **Fix 2026-10-06 — oracolo DEBUG corrente, prodotto normale invariato:** normale qualificazione al reopen dopo refresh; replay typedsealedA esaustivo e preACK, evento Product reale/currentACK+Historypending; finale13righe usa autorità stretta corrente, intera identità stabile e prova body/container, rivalidazione corrente. Vecchi writer stale restano DENIED. Prove reali ordine/ACKlease + nuova solaUI replay40s;14metodi/budget originali intatti. Mirati10/full09/build09/proper09 PASS;stessi due reviewer10a APPROVED. CI0757 e Full06/07/08 restano FAIL storici con limiti UNKNOWN;nessun Ready/count-only/pending-authority shortcut o nuovo skip.
@@ -912,6 +933,8 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — SOURCE48_0af5 / TARGET8_PASS / FULL11_1548IDs_1512P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE11_PASS / SIGNED_FULLTEST11_PASS;task FIX.** HEADb4 precommit;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`/profile154a/23file/signature-effectiveSimulatedxcent-embedded-keychainP,NONINSTALLATO. FollowupPR/exact-head/mainCI PENDING;main82ef storicaFAIL/causeUNKNOWN. Parent soloGit:stage Controller/Atomic/2docs+SOLO3newTaskhunks,inverse→5fba/foreign73add19del net54 fuoriindex;FF/installprimaria solo con freshmainPASS+guard. Ownedrunner/group0,6B04Shutdown/baseline/config preservati;I source/heavy/device/input0 dopo rilascio. F/459/H NOT_RUN,Maclocked nessun bypass.
 
 **CURRENT 2026-10-06 — SOURCE48_f0ce / TARGET6_PASS / FULL10_1546IDs_1510P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE10_PASS / SIGNED_FULLTEST10_PASS; task FIX.** HEAD7b precommit;binary `97d7d8d409f57c72427359fa237f30f13a28154cd46a17ce0884d56c5501a195`/profile154a/23file/signature-effectiveSimulatedxcent-embedded-keychainP,NONINSTALLATO. FollowupPR/exact-head/mainCI PENDING(PR16 giàMERGED);main d918 storicaFAIL/leafUNKNOWN. Parent soloGit:stage Controller/Atomic/2docs+SOLO3newTaskhunks,inverse→1f1d/54foreign fuoriindex;FFprimaria solo dopo freshmainPASS+guard. Ownedrunner/group0,6B04Shutdown,businessbaseline/config preservati;I source/heavy/device/input0 dopo rilascio. F/459/H NOT_RUN,Maclocked nessun bypass.
 

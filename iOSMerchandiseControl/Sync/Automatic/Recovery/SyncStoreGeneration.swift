@@ -1491,11 +1491,20 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard let self, !Task.isCancelled, self.active.container === captured.container,
                       self.active.manifest == nil,
-                      (try? Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: self.defaults)) != nil,
+                      let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                        defaults: self.defaults, allowsPendingReplacement: true),
+                      current.ownerUserID == scope.ownerUserID,
+                      current.accountHash == scope.accountHash,
+                      current.shopID == scope.shopID,
+                      current.storeIdentity == scope.storeIdentity,
+                      current.deviceInstallID == scope.deviceInstallID,
+                      current.deviceIdentityHash == scope.deviceIdentityHash,
+                      current.pendingReplacement == scope.pendingReplacement,
                       !SelectedShopStore(defaults: self.defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
                         shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
-                      try repository.captureActiveMutationFence(for: captured) == fence else { return false }
-                self.emptyRootProof = EmptyRootProof(scope: scope, container: captured.container, fence: fence)
+                      try repository.captureActiveMutationFence(for: captured) == fence,
+                      (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: self.defaults)) != nil else { return false }
+                self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
                 self.localBodyQualificationRevision &+= 1
                 return true
             } catch { return false }
