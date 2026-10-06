@@ -936,7 +936,7 @@ private nonisolated struct Task144ObservedAtomicRecoveryProvider: SyncRecoverySn
 
     func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
         let summary = try await base.recoverFromRemoteSnapshot(ownerUserID: ownerUserID)
-        await observe(ownerUserID, summary)
+        observe(ownerUserID, summary)
         return summary
     }
 }
