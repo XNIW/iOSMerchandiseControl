@@ -16,9 +16,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                                "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.large.rawValue]
         app.launchEnvironment = ["TASK144_LOCAL_AVAILABILITY_FIXTURE": runID,
                                  "TASK131_INITIAL_TAB": "database"]
-        if name.contains("testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission") {
-            app.launchEnvironment["TASK144_ROOT_OBSERVATION"] = "1"
-        }
     }
 
     override func tearDown() {

@@ -7,104 +7,6 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// Temporary opt-in observations. This buffer is not ObservableObject and never
-/// publishes, reads a model/store, submits work or changes an admission result.
-nonisolated final class Task144RootObservation: @unchecked Sendable {
-    static let enabled = ProcessInfo.processInfo.environment["TASK144_ROOT_OBSERVATION"] == "1"
-        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
-    private static let shared = Task144RootObservation()
-    private let lock = NSLock()
-    private var sequence = 0
-    private var events: [String] = []
-    private var lastByKind: [String: String] = [:]
-    private var dropped = 0
-
-    static func record(_ kind: String, _ closedFacts: String, callsite: String = #function) {
-        guard enabled else { return }
-        let buffer = shared
-        buffer.lock.lock()
-        let key = kind + ":" + callsite
-        guard kind.hasPrefix("qualification-") || buffer.lastByKind[key] != closedFacts else { buffer.lock.unlock(); return }
-        buffer.lastByKind[key] = closedFacts
-        buffer.sequence += 1
-        let event = "seq.\(buffer.sequence).uptime.\(ProcessInfo.processInfo.systemUptime).source.\(callsite).\(kind).\(closedFacts)"
-        if buffer.events.count < 128 { buffer.events.append(event) } else { buffer.dropped += 1 }
-        let shouldPrint = buffer.sequence <= 128
-        let firstDrop = buffer.sequence == 129
-        buffer.lock.unlock()
-        // Closed synthetic facts only. Whether app stdout reaches the runner's
-        // raw log is a runtime observation, never an assumed export guarantee.
-        if shouldPrint { print("TASK144_RAM_OBSERVATION \(event)") }
-        else if firstDrop { print("TASK144_RAM_OBSERVATION CAP128;later.NOT_RETAINED") }
-    }
-
-    static func snapshotAtRealRender() -> String {
-        guard enabled else { return "" }
-        let buffer = shared
-        buffer.lock.lock(); defer { buffer.lock.unlock() }
-        return ";task144.observation.cached-at-real-render;dropped.\(buffer.dropped);"
-            + buffer.events.joined(separator: ";")
-    }
-
-    static func errorCategory(_ error: Error) -> String {
-        if let error = error as? Task126OwnerStoreGateError {
-            switch error {
-            case .cancelled: return "cancelled"
-            case .activeAccountMismatch: return "active-account-mismatch"
-            case .shopContextUnavailable: return "shop-context-unavailable"
-            case .bindingMismatch: return "binding-mismatch"
-            case .replacementInterrupted: return "replacement-interrupted"
-            case .scopeChanged: return "scope-changed"
-            case .retiredStoreGeneration: return "retired-generation"
-            case .localModelUnavailable: return "local-model-unavailable"
-            case .localRemoteConflictRequiresReview: return "local-remote-conflict"
-            }
-        }
-        if error is CancellationError { return "cancelled" }
-        if error as? ShopSyncRecoveryContractError == .checkpointChanged { return "checkpoint-changed" }
-        if error is SyncStoreGenerationError { return "generation-error" }
-        return "other"
-    }
-
-    final class Evaluation {
-        private let kind: String
-        private let callsite: String
-        private var operands: [String] = []
-        private var firstFailed = "none"
-        init(_ kind: String, callsite: String) { self.kind = kind; self.callsite = callsite }
-        func check(_ value: Bool, _ name: String) -> Bool {
-            operands.append("\(name).\(value)")
-            if !value && firstFailed == "none" { firstFailed = name }
-            return value
-        }
-        func optional<T>(_ value: T?, _ name: String) -> T? {
-            _ = check(value != nil, name)
-            return value
-        }
-        func attempt<T>(_ name: String, _ operation: () throws -> T) -> T? {
-            do { return optional(try operation(), name) }
-            catch {
-                _ = check(false, name)
-                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
-                return nil
-            }
-        }
-        func required<T>(_ name: String, _ operation: () throws -> T) throws -> T {
-            do { let value = try operation(); _ = check(true, name); return value }
-            catch {
-                _ = check(false, name)
-                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
-                throw error
-            }
-        }
-        func note(_ name: String, _ value: Bool) { operands.append("\(name).\(value)") }
-        func finish(_ result: Bool, branch: String = "guard", firstFalseLabel: String = "first-failed") {
-            Task144RootObservation.record(kind, "result.\(result).branch.\(branch).\(firstFalseLabel).\(firstFailed).later.NOT_EVALUATED;"
-                + operands.joined(separator: ";"), callsite: callsite)
-        }
-    }
-}
-
 /// An explicitly requested, isolated UI-test dependency boundary. The App,
 /// ContentView, editor, recovery service and automatic queue remain production
 /// implementations. No default/private Supabase configuration is loaded.
@@ -981,7 +883,7 @@ private struct Task144ControlledRootControls: View {
                     .padding(8).contentShape(Rectangle())
                     .onLongPressGesture(minimumDuration: 1) { fixture.release() }
                     .accessibilityAddTraits(.isButton)
-                    .accessibilityValue(fixture.automaticReadback + Task144RootObservation.snapshotAtRealRender())
+                    .accessibilityValue(fixture.automaticReadback)
                     .accessibilityIdentifier("\(controlPrefix).release")
             }.font(.caption2)
         }.padding(2).background(.ultraThinMaterial)

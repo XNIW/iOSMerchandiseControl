@@ -206,6 +206,29 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 UTC, guard empty-root durante risoluzione non disponibile e fixture controllata
+
+**Task FIX; nessuna modifica a Planning o criteri.** Il controesempio deterministico usa l'API reale `markResolutionUnresolved`, avvia la qualifica normale nello stesso intervallo e risolve con lo stesso selected shop. Sul controller base il solo assert finale della shell, linea1021, fallisce: **0PASS/1FAIL/0SKIP**, receipt `935ce0a3`, verifica root `fdc614fc`. I controlli originali full7/fence fisico/current scope/old writer negato/container/journal e nove modelli vuoti non segnalano problemi. Questa prova riguarda quel boundary esplicito; la prima causa del failure CI37466894761 resta **UNKNOWN**.
+
+**File e integrazione selettiva:** il primo commit ripristina `ContentView.swift`, `SyncStoreGeneration.swift`, `Task144LocalAvailabilityRootFixture.swift` e `LocalAvailabilityRootUITests.swift` dalla diagnostica temporanea alla base approvata0af; sul Controller aggiunge soltanto il guard iniziale e nel test Atomic esistente le sette righe del controesempio. Il secondo commit contiene soltanto il provider reale della fixture DEBUG approvataV2 e le cinque righe di qualifica nel helper privato zero-reopen. Nessuna nuova API pubblica o dipendenza; helper privati DEBUG soltanto nella fixture; assert e timeout originali conservati. Il Task working foreign `14c11901` resta fuori dallo staging: questa registrazione proviene esclusivamente dal Task HEAD.
+
+**Fix di produzione:** `captureAutomaticScope` usa do/catch. Soltanto `shopContextUnavailable` conserva la candidata `emptyRootProof` dello stesso owner e senza diniego confermato; loadFailure/nil owner/no pending journal/altri errori/diniego la cancellano. L'ammissione della shell richiede ancora scope corrente completo, container/fence fisico e revalidazione. Worker, guard post-await/pubblicazione e autorità writer restano identici.
+
+**Fixture e helper:** il provider è ammesso soltanto dopo start, rilascio trasporto e manifest pubblicato diverso dalla generazione held; il completamento deriva dal vero summary terminale e da tutti i controlli correnti, senza secondo recover manuale. L'osservazione conserva il summary reale prima della qualifica asincrona. Il helper privato awaita la qualifica e richiede la prova corrente prima di restituire la fixture riaperta.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| RED mirato del guard | ESEGUITO | 0P1F0S, solo assert1021; receipt935ce0a3/rootfdc614fc |
+| GREEN8 esistenti su candidato combinato949 | ESEGUITO | 8P0F0S; receipt5ee82154/rootd235c7f2; exact inverse e preservazione48 |
+| Due UI originali con sola fixtureV2 | ESEGUITO | 2P0F0S; receipt6e7283e0/root85935dd6; prova separata dalla combinazione949 |
+| Review stabile stesso contesto dati e UX | ESEGUITO | C conferma APPROVED/0 findings su949; dati1791301901, UX1791301949 |
+| Nuovo full1548 e Debug/Release/Analyze/warning | NON ESEGUITO | PENDING sul nuovo HEAD reale; Full11 storico non certifica questo nuovo guard |
+| Nuovo ProperTEST firmato | NON ESEGUITO | PENDING dopo nuovi full/build/warning; nessun install o lettura configurazione protetta in preparazione |
+| Nuova CI, F autenticato, H reale, primaria | NON ESEGUITO | Gate separati; nessuna chiusura globale inferita da fixture o review |
+
+**Freeze e limiti:** sorgenti finali48 `949d95cbc4c9a09420c1798c519e90adbe86a59644221a4312901504d6ed5e45`; 1548 ID ufficiali e 36 skip identici restano attesi, senza filtri. La sequenza dei due commit normali mantiene MASTER/workflow e tutte le modifiche foreign; nessuna causa storica CI o branch automatico dedotta dai soli risultati PASS.
+
+
 ### Esecuzione — 2026-10-06 UTC, pubblicazione shell vuota dopo refresh same-scope
 
 **Stato FIX; fonte48 `0af5b5b6`, HEAD `b4c95eb4` precommit.** Mirati8 **8PASS/0FAIL/0SKIP**; full11 senza filtri/nuovi skip,parallelNO: **1548 ID unici,1512PASS/0FAIL/36SKIP identici,15nativeUI PASS**. Tutti1546ID/stati Full10 preservati e soltanto due nuove unità. Debug/Release/Analyze11 PASS;34warning primari legacy negli stessi sei file della baseline originale d379,zero nuovi e zero nelle48 sorgenti. Proper fullTEST11 Release firmato PASS,23file/profilo154a/fresh signer/entitlements effettivi `.app-Simulated.xcent` ed embedded MachO/vecchia identità keychain/strict-deep;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`, **NON INSTALLATO**.
@@ -908,6 +931,9 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix 2026-10-06 — candidata empty-root e fixture controllata, fonte finale949:** RED reale0P1F0S/rootfdc614fc prova la perdita dell'ammissione dopo qualifica nell'intervallo unavailable con fisica e full7 invariati. Il guard conserva soltanto la candidata same-owner durante `shopContextUnavailable`; permitsScopedEmptyRoot/fence/full7/revalidate/worker/post-await e writer restano strict. GREEN8/rootd235c7f2 e le review C dati1791301901/UX1791301949 sono PASS/APPROVED; la fixture DEBUGV2 e il helper privato5 righe entrano in un secondo commit separato. Nuovi full/build/warning/ProperTEST e CI sono PENDING; Task FIX invariato, nessun CA marcato DONE.
+
+
 **Fix 2026-10-06 — pubblicazione empty-root dopo refresh same-scope:** solo guard finale `startEmptyRootQualification` usa scope CURRENT con sette valori completi uguali all'originale,diniego/cancel/container/manifestnil/full physicalfence e fresh finalrevalidation senza await;pubblica proof immutabile current. Scan9/Task126/writer/READY/RPC/UI/timer invariati;oldwriter resta DENIED. Positivo desiredRED54cc immutato e freshvalid foreignshop/device7061 byteexact a98;mirati8/full11/build11/proper11 PASS,review SAME2 APPROVED0af5. MainCI82ef cause esatte UNKNOWN;osservazione3P è NOT_OBSERVED,non causal attribution.
 
 **Fix 2026-10-06 — shell vuota valida durante stesso-scope refresh:** solo guard `permitsScopedEmptyRoot` usa current full authority+sette campi stable/pending esatti,full physicalfence e final currentrevalidation. Old Task126/writer DENIED invariato;nessuna proof/READY/write grant. Due nuoveunit reali includono RED byteidentico e freshvalid foreign-shop/store/device negativa. Mirati6/full10/build10/proper10 PASS,stessi due reviewer f0ce APPROVED. Main CI d918 exactleaf UNKNOWN;original observationPASS NOT_OBSERVED e RED semantico distinto.
@@ -933,6 +959,9 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — FINAL_SOURCE48_949 / UNAVAILABLE_QUALIFICATION_RED_CONFIRMED / GREEN8_8P0F0S / SAME2_APPROVED_0 / FINAL_GATES_PENDING; task FIX.** HEAD9945 è il parent dei due commit normali proposti: commit1 ripristina quattro diagnostici e contiene guard+regressione originale7; commit2 contiene fixture DEBUGV2+helper privato5. Task working foreign14c resta identico e fuori indice, MASTER/workflow preservati. Dopo i commit occorre fissare l'HEAD reale nei producer Full11/Build11/ProperTEST11 retargetati, poi un solo full non filtrato con1548 ID/36 stessi skip/parallelNO e i gate dipendenti in ordine. Non avviare CI, merge, install, F/H o nuove prove da questa registrazione; nessuna retroattribuzione CI37466894761. Il presente log non certifica gate ancora PENDING.
+
 
 **CURRENT 2026-10-06 — SOURCE48_0af5 / TARGET8_PASS / FULL11_1548IDs_1512P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE11_PASS / SIGNED_FULLTEST11_PASS;task FIX.** HEADb4 precommit;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`/profile154a/23file/signature-effectiveSimulatedxcent-embedded-keychainP,NONINSTALLATO. FollowupPR/exact-head/mainCI PENDING;main82ef storicaFAIL/causeUNKNOWN. Parent soloGit:stage Controller/Atomic/2docs+SOLO3newTaskhunks,inverse→5fba/foreign73add19del net54 fuoriindex;FF/installprimaria solo con freshmainPASS+guard. Ownedrunner/group0,6B04Shutdown/baseline/config preservati;I source/heavy/device/input0 dopo rilascio. F/459/H NOT_RUN,Maclocked nessun bypass.
 

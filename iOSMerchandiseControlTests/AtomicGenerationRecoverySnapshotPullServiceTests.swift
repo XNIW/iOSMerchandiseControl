@@ -984,6 +984,13 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let selected = try XCTUnwrap(selectionStore.selectedShop(accountHash: original.accountHash))
         // The ordinary persisted selection API intentionally retires writers.
         // It neither changes the selected shop nor writes the SQLite family.
+        // The real shop refresh marks resolution unavailable before its fetch.
+        // A phase-triggered qualification during that interval must stay closed,
+        // then admit only the same physically unchanged scope when it resolves.
+        selectionStore.markResolutionUnresolved(accountHash: original.accountHash)
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
         XCTAssertTrue(selectionStore.save(selected, accountHash: original.accountHash))
         XCTAssertEqual(selectionStore.selectedShop(accountHash: original.accountHash), selected)
         let afterFence = try fenceReader.captureActiveMutationFence(for: fixture.controller.active)
