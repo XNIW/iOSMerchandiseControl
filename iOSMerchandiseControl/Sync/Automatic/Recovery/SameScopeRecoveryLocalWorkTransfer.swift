@@ -37,13 +37,17 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
         let sealedByChangeID = Dictionary(uniqueKeysWithValues: sealedAttempts.map { ($0.id, $0) })
-        let dirtyHistory = #Predicate<HistoryEntry> {
-            $0.localChangeRevision > $0.lastSyncedLocalRevision
-                || ($0.remoteDeletedAt == nil && $0.remotePayloadFingerprint == nil)
+        let absentDeletedAt: Date? = nil
+        let absentPayloadFingerprint: String? = nil
+        let dirtyHistory: Predicate<HistoryEntry> = #Predicate<HistoryEntry> { history in
+            history.localChangeRevision > history.lastSyncedLocalRevision
+                || (history.remoteDeletedAt == absentDeletedAt
+                    && history.remotePayloadFingerprint == absentPayloadFingerprint)
         }
-        var dirtyHistoryProbe = FetchDescriptor<HistoryEntry>(predicate: dirtyHistory)
+        var dirtyHistoryProbe: FetchDescriptor<HistoryEntry> = FetchDescriptor(predicate: dirtyHistory)
         dirtyHistoryProbe.fetchLimit = 1
-        let hasDirtyHistory = !(try source.fetch(dirtyHistoryProbe)).isEmpty
+        let dirtyHistoryRows: [HistoryEntry] = try source.fetch(dirtyHistoryProbe)
+        let hasDirtyHistory = !dirtyHistoryRows.isEmpty
         guard !pending.isEmpty || !outbox.isEmpty || hasDirtyHistory else { return }
         guard Set(pending.map(\.changeID)).count == pending.count else {
             throw SyncStoreGenerationError.activationReadBackFailed

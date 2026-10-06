@@ -1,19 +1,67 @@
 {
-  "approvedDataCarryReportedByParent": {
-    "Atomic": "b4af4194692f06e5c2ab44ecd62819679d3b1ebcd7549af77a567e60a4cb8d1d",
-    "AtomicTests": "changed for bounded regressions; no old-test hash equivalence claimed",
-    "DeviceService": "e1ecb52dfaee7bb1d30d17524bd74c481be1ed39e8ffad8e3ada0d3b487c1982",
-    "DeviceTests": "changed for actual thread/cache regressions; no old-test hash equivalence claimed",
-    "HistoryPush": "4b105958f2a42a82395a4a1f596602e9739e7857fba5d7c82c1b37b71b581148",
-    "HistoryTransfer": "324fa6e4b35e45cb594bf5b2c0801e436abe64b0b32050571c241f5d178e8944",
-    "OutboxDrainer": "70eaa3f96a33834cfcbc028afc7d3bbc5c9c3657714721c0444cd7717c736ef6"
+  "CI37390541718Historical": {
+    "head": "43822986287b96899066ae12f360cd30c588e934",
+    "newHeadCI": "PENDING_PARENT_COMMIT_PUSH",
+    "sourceErrors": 2,
+    "status": "FAIL_BUILD_DEBUG",
+    "subsequentTestAnalyzeSecretScan": "NOT_RUN"
   },
   "branch": "codex/ios-local-availability-20261004",
-  "capturedUTC": "2026-10-05T23:44:51.897752+00:00",
-  "completeSourcePatchSHA256": "2d5d7ac32d793d8e8cdcb13cffffce08cb0cdc94d75732182c3bb2737cee8e38",
-  "currentStatus": "SOURCE47_CANONICAL_AND_SIGNED_TEST_PASS_PARENT_INTEGRATION_PENDING",
+  "capturedUTC": "2026-10-06T00:24:05.201415+00:00",
+  "changedSourceOnly": [
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/SameScopeRecoveryLocalWorkTransfer.swift"
+  ],
+  "compatibilityFreezeSHA256": "b22f873e5380f37c97adf7c251aff651721df31856d8c72a6b7f66aa9338e0de",
+  "completeSourcePatchSHA256": "8353099e155235eab5af90f39ea4430039c4c134e9ceb051c0ce3794abddf76f",
+  "currentSourcePatchSHA256": "ce50479ffb2340c0f45348fa51cd564ec00ededf65c59b7c7d524f0b5043a9fc",
+  "currentStatus": "SOURCE47_LOCAL_GATES_AND_SIGNED_TEST_PASS_PARENT_NEW_HEAD_CI_PENDING",
   "finalGates": {
     "canonicalBuilds": {
+      "newWarnings": 0,
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-04/receipt.json",
+      "sha256": "ef7bbb7bc03ee40362650fb0c149bb135cdc19d4bc34a4800ddbb46ccce22490",
+      "status": "PASS",
+      "warningComparisonSHA256": "1a5fe8c854a3db0c708ac2c4b34a22c7578a287d4b9195143ed3523321093b41"
+    },
+    "full04": {
+      "IDStatusMapAndSkip36IdenticalFull03": true,
+      "UIActualPassed": 14,
+      "actual": {
+        "failed": 0,
+        "passed": 1505,
+        "skipped": 36
+      },
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-full-04/receipt.json",
+      "sha256": "80ddf271a7764f4f4e632bf50c247191aff4f0af1846d94fdfc5051f6db49eed",
+      "uniqueIDs": 1541
+    },
+    "properSignedTEST": {
+      "artifactFileCount": 23,
+      "binarySHA256": "0e188fbed26463893eee82c38ead1e6adc3e7f4145359552ce6e479cc8546e01",
+      "effectiveEntitlementsEqualXcodeGenerated": true,
+      "installed": false,
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-proper-test-04/signed-release-attempt01/build-receipt.json",
+      "previousApplicationKeychainIdentityEqual": true,
+      "profileAppliedOnlyToArtifact": true,
+      "profileSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+      "sha256": "5378e1351275d190d5d5f1aa7b6d38f4b69f0d1c775e2501a8a1538443e9edb1",
+      "status": "PASS",
+      "strictDeepSignaturePass": true
+    },
+    "target7": {
+      "actual": {
+        "failed": 0,
+        "passed": 7,
+        "skipped": 0
+      },
+      "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-transfer-ci-compatibility-targeted-green-01/receipt.json",
+      "sha256": "48969d127b4564cbd21c2ea5f9f8b740ea49acbda5dc765116513a62b2acad59",
+      "status": "PASS"
+    }
+  },
+  "headBeforeCorrectiveCommit": "43822986287b96899066ae12f360cd30c588e934",
+  "historicalV3": {
+    "canonicalBuilds03": {
       "newWarnings": 0,
       "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-local-availability-canonical-builds-03/receipt.json",
       "sha256": "76cc42458ccc8cc675648dad5829f75782935866284b35f8f6ca1df8356a6bb2",
@@ -32,7 +80,7 @@
       "skip36IdenticalFull02": true,
       "uniqueIDs": 1541
     },
-    "properSignedTEST": {
+    "properSignedTEST03Attempt02": {
       "binarySHA256": "17c0b7aab436822b968f2122b1bed0bd6b138693a4dc4da6ceaf2d884e2ecae5",
       "effectiveEntitlementsEqualXcodeGenerated": true,
       "installed": false,
@@ -45,8 +93,6 @@
       "strictDeepSignaturePass": true
     }
   },
-  "freezeV3ManifestSHA256": "505792aa1d8f3d6b27d29f7966280cd1efb594f5a8f6cbe2ef4828ee2db193d9",
-  "head": "433e7dafaa3ebc093082eaf22320f0070c2d40a2",
   "limits": [
     "Controlled actual SDK/service/file-backed/native UI evidence, not authenticated staging",
     "Historical full01/02 and proper driver FAIL01 remain preserved; current full03/build/analyze/properTEST gates all PASS on same source47",
@@ -71,7 +117,7 @@
       "layoutSHA256": "3325eecd166e4b98c5651e92338909a098ce8dfc832a24f86a6642b7322142f1",
       "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/5D516EEA-C13D-4B13-84F2-6497D37FE33B.png",
       "pngSHA256": "48d90cc7bcf7f1baec9969c0be6776b0cf1aadbe1e97e120fd5d6bda5f24ffe1",
-      "readback": "account=(32.0, 149.3333282470703, 316.6666564941406, 490.33331298828125); label=Cuenta cloud conectada, Sesi\u00f3n iniciada como l***@long-account-domain.example.invalid.; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
+      "readback": "account=(32.0, 149.3333282470703, 316.6666564941406, 490.33331298828125); label=Cuenta cloud conectada, Sesión iniciada como l***@long-account-domain.example.invalid.; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
     },
     "it": {
       "activation": "PASS",
@@ -89,13 +135,13 @@
       "layoutSHA256": "46898ac1534643321a1313a804c5988d1ba1dd15a91f075c0efde26be83eae0c",
       "pngPath": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-real-options-four-language-large-font-green-11/attachments/D1F8B1EC-D868-41F2-83B7-00C31CCFB8F2.png",
       "pngSHA256": "d8ad1220c22e37f0fe7fec4b23b3f8e847b6c8effd9337f2d7057305482ca448",
-      "readback": "account=(32.0, 345.6666564941406, 325.6666564941406, 322.3333435058594); label=\u4e91\u8d26\u53f7\u5df2\u8fde\u63a5\u3001\u5df2\u767b\u5f55\u4e3a l***@long-account-domain.example.invalid\u3002; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
+      "readback": "account=(32.0, 345.6666564941406, 325.6666564941406, 322.3333435058594); label=云账号已连接、已登录为 l***@long-account-domain.example.invalid。; navigation=(0.0, 47.0, 390.0, 54.0); tabBar=(0.0, 761.0, 390.0, 83.0)"
     }
   },
   "planningAndMasterUnmodifiedByOwner": true,
-  "preExistingTaskPatchSHA256": "884e387be4a512f937a0d853abf3fb350394a71bfd5e04afa13af66668cf83ac",
   "productionCount": 36,
   "resourceCount": 4,
+  "review": "Same existing two reviewers APPROVED bounded compiler compatibility delta; no new general audit",
   "runs": [
     {
       "exitCode": 0,
@@ -1000,8 +1046,8 @@
       "sourceUnchanged": true
     }
   ],
-  "schemaVersion": "task144-local-availability-final-handoff-v1",
-  "sourceByteEqualFreezeV3": true,
+  "schemaVersion": "ios-local-availability-current-ci-compatibility-v4",
+  "sourceByteEqualCompatibilityFreeze": true,
   "sourceCount": 47,
   "source_sha256": {
     "iOSMerchandiseControl/ContentView.swift": "eb7f265c61eebd9d3aa1e34234089cbd53dcdd3cb9880d3caff9aee18e1b4726",
@@ -1030,7 +1076,7 @@
     "iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift": "b4af4194692f06e5c2ab44ecd62819679d3b1ebcd7549af77a567e60a4cb8d1d",
     "iOSMerchandiseControl/Sync/Automatic/Recovery/AutomaticRecoverySnapshotPullService.swift": "5f7a0de825b16018ec01c52b7d544a409634b81c28b1badbed8d6ae598773f0c",
     "iOSMerchandiseControl/Sync/Automatic/Recovery/LocalCatalogBodyProofStore.swift": "760865fd5060499440266f6d64e6531da0fefeeb845cab6d8742e3d366cf719d",
-    "iOSMerchandiseControl/Sync/Automatic/Recovery/SameScopeRecoveryLocalWorkTransfer.swift": "324fa6e4b35e45cb594bf5b2c0801e436abe64b0b32050571c241f5d178e8944",
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/SameScopeRecoveryLocalWorkTransfer.swift": "2178f81df281e9783a367d2194bf0cf087966b7330455b8d5c21c9922edbcb2c",
     "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryLedger.swift": "2b9e55f8277bf7618108f58ab44f7e669879edb3dd539c99a6291c3222065862",
     "iOSMerchandiseControl/Sync/Automatic/Recovery/SyncStoreGeneration.swift": "d7074f6ba033508b05fd43e1da1d96f52d3b0a9dd277cd8ea4b3fcdc499ab9e5",
     "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift": "70eaa3f96a33834cfcbc028afc7d3bbc5c9c3657714721c0444cd7717c736ef6",
@@ -1053,13 +1099,31 @@
     "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "5e2bec8ba4c12cea618e8fde4b3f43141bac6529a962ff8752ce27cdfc674330"
   },
   "swiftCount": 43,
-  "taskAfterOwnerAppendSHA256": "f01e0d8e81604e5b7e028188d1c76ff56bc5bbd748471dde11d12d63be4fb634",
-  "taskBeforeOwnerAppendSHA256": "f30addf59a03dc6fca83633d9b9044be35d50114ba6377adb78316e8aae9a2e3",
-  "taskOwnedAppendPatchSHA256": "6d03eeedf6f89416e68bdddc4370b83d13924ab3a9967815985548bc5dfc1b73",
+  "taskAfterOwnerAppendSHA256": "08321017cb0f82455515e204f230809c20e15251ab3d15ccac87b2f90c7ef3cf",
+  "taskBeforeOwnerAppendSHA256": "f01e0d8e81604e5b7e028188d1c76ff56bc5bbd748471dde11d12d63be4fb634",
+  "taskOwnedAppendPatchSHA256": "043c1bdd8816c7af797e7694fe9267926133d7f63934ce578e3ef09bc06a879b",
   "taskOwnedInsertionOperations": 3,
-  "taskOwnedInsertions": 64,
+  "taskOwnedInsertions": 23,
   "taskPreExistingInsertions": 54,
   "taskPriorBytesInverseExact": true,
   "testCount": 7,
-  "trackedPatchSHA256": "20f4ca5507d434a079afe9032211524c319d401a94746bdcd16d302bdef1f379"
+  "toolchainAttribution": {
+    "CIHead": "43822986287b96899066ae12f360cd30c588e934",
+    "CIRun": "37390541718",
+    "capturedUTC": "2026-10-06T00:00:38.140752+00:00",
+    "ciActualXcodePath": "/Applications/Xcode_26.6.app",
+    "ciFailures": [
+      "SameScopeRecoveryLocalWorkTransfer.swift40:28 type-check timeout",
+      "SameScopeRecoveryLocalWorkTransfer.swift46:44 genericT notinferred"
+    ],
+    "ciSwiftBinaryVersion": "NOT_LOGGED_IN_ORIGINAL_BUILD_STEP",
+    "ciSwiftLanguageMode": "5 observed actual compiler argv",
+    "head": "43822986287b96899066ae12f360cd30c588e934",
+    "localSwift": "Apple Swift6.4 swiftlang-6.4.0.34.1 clang-2100.3.34.1",
+    "localXcode": "27.0",
+    "localXcodeBuild": "27A266a",
+    "notAProductRuntimeFailure": true,
+    "sourceBeforeSHA256": "324fa6e4b35e45cb594bf5b2c0801e436abe64b0b32050571c241f5d178e8944"
+  },
+  "unchangedCarryFiles": 46
 }

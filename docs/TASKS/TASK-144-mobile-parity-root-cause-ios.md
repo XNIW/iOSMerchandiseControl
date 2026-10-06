@@ -807,11 +807,31 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 
 **Incertezze/Handoff:** i limiti primaria/auth/performance non sono bug attribuiti alla app. Parent N integra solo file owned e questi hunks nuovi, senza `git add .`; freeze e review non provano CI/merge/install futuri. Dopo gate finali, stesso source hash al commit e CI exact-head/main da verificare.
 
+
+### Esecuzione e fix — 2026-10-06 UTC, compatibilità compilazione CI
+
+**Causa verificata:** PR16/head `43822986287b96899066ae12f360cd30c588e934`, CI `37390541718`, Build Debug exit65: soltanto due errori in `SameScopeRecoveryLocalWorkTransfer.swift` (40:28 type-check timeout, 46:44 generic T non inferito). Il log CI indica `/Applications/Xcode_26.6.app` e language mode Swift5; la versione binaria Swift non è registrata. Ambiente locale verificato: Xcode27.0/27A266a, Swift6.4. I gate successivi della CI fallita sono SKIPPED, quindi NON ESEGUITI; i precedenti full03/proper02 restano storici.
+
+**Unico file di produzione modificato:** `Sync/Automatic/Recovery/SameScopeRecoveryLocalWorkTransfer.swift` — tipi espliciti `Date?`, `String?`, `Predicate<HistoryEntry>`, `FetchDescriptor<HistoryEntry>` e `[HistoryEntry]` per ridurre l'inferenza del compilatore. Il filtro OR/AND, `fetchLimit=1`, ordine, guard, scope, identità, sealed A immutabile, pending B e CAS sono invariati. Hash corrente `2178f81df281e9783a367d2194bf0cf087966b7330455b8d5c21c9922edbcb2c`; gli altri46 file del source47 restano byte-identici al v3. Nessun test/timeout/assert modificato, upgrade, dipendenza, schema o configurazione privata.
+
+**Verifiche sul source47 corrente:**
+- Mirati7 PASS/0 FAIL/0 SKIP: Catalog/Price/History cutover e replay A prima di B terminal, controlli History foreign device/external body. Review mirata dei medesimi due reviewer APPROVED, zero finding.
+- Canonical full04 senza filtri/skip aggiunti e parallelismo OFF:1541 ID ufficiali distinti, **1505 PASS/0 FAIL/36 SKIP**, ID→status identico al full03; tutti14 UI PASS. Source47, HEAD, baseline isolata, PID chiuso e destinazione6B04 Shutdown verificati.
+- Build Debug, Release e Analyze PASS. Analyze34 warning primari normalizzati identici alla baseline; zero nuovi pattern e zero warning nei47 sorgenti modificati. Diagnostica runtime QoS invariata, distinta dai warning di compilazione.
+- Proper fullTEST04 Release firmato PASS: profilo8 autorizzato applicato solo al copied Artifact, strict-deep, entitlements Xcode ed identità keychain/application verificati;23 file artifact verificati, binary `0e188fbed26463893eee82c38ead1e6adc3e7f4145359552ce6e479cc8546e01`. Nessuna installazione; source/config/public inputs preservati,0 scritture source/config,0 operazioni device.
+
+**Check obbligatori:** BUILD, STATIC/Analyze, warning nuovi e coerenza con mandato ESEGUITI; regressione completa ed UI controllata ESEGUITI. Le prove A–E/G restano locali controllate; F autenticato, primaria459/install/retention e performance H NON ESEGUITI. TASK resta FIX. [Manifest e ricevute correnti](EVIDENCE/TASK-144/local-availability-20261005/source-and-targeted-evidence.json). Nessuna futura CI, PR o merge dichiarata PASS.
+
+**Preservazione/Handoff:** parent N solo Git; questa lane non muta Git. Nuovi tre hunks Execution/Fix/Handoff: la loro rimozione restituisce `f01e0d8e81604e5b7e028188d1c76ff56bc5bbd748471dde11d12d63be4fb634` esatto;54 insert preesistenti restano fuori index. Nessuna modifica a MASTER/Planning, primaria/config/sessione/459. Tutti i runner/group posseduti chiusi; integrazione exact-head successiva spetta al parent.
+
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
 
 ## Fix
+
+
+Compatibilità CI 2026-10-06: i due errori di inferenza Swift in Transfer sono corretti con soli tipi/intermedi espliciti, semantica invariata e46carry bytes identici. Source47 corrente: mirati7 PASS, full04 **1505 PASS/0 FAIL/36 SKIP** (tutti14 UI), Debug/Release/Analyze e nuovo proper signed fullTEST04 PASS; zero nuovi warning. Review mirata APPROVED. La CI37390541718/head4382 resta FAIL storica, gate a valle NON ESEGUITI; nuova CI dopo commit/push parent ancora NON ESEGUITA. Task FIX, live F/primaria459/H aperti. [Prove correnti](EVIDENCE/TASK-144/local-availability-20261005/README.md).
 
 
 Disponibilità locale 2026-10-05, source47 byte-identico freezev3: cause di accesso/overlay/CAS/replay A/B, body-proof, root/focus/native XXXL e ultimi delta ordinary admission/stop/notify/resume/exact relation ACK chiusi nelle prove controllate GREEN13 e full03 **1505 PASS/0 FAIL/36 SKIP**. Debug/Release/Analyze e proper signed fullTEST PASS sullo stesso source; zero nuovi warning. [Prove correnti](EVIDENCE/TASK-144/local-availability-20261005/README.md). Full01/02 e FAIL01 driver conservati con attribuzioni, mai reinterpretati. Task FIX; F autenticato, primaria459 e H restano NON ESEGUITI. Review equivalente/delta dagli stessi due reviewer e integrazione/CI exact-head spettano al parent; nessuna acceptance futura dichiarata.
@@ -827,6 +847,9 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+
+**CURRENT 2026-10-06 — SOURCE47_COMPILER_COMPAT / TARGET7_PASS / FULL04_1505P_0F_36S / DEBUG_RELEASE_ANALYZE_PASS / SIGNED_FULLTEST04_PASS, task FIX.** Branch `codex/ios-local-availability-20261004`, HEAD4382 prima del commit correttivo; Transfer2178f81d è l'unico delta di produzione,46carry byte-identici al v3. Nuovo Artifact binary `0e188fbed26463893eee82c38ead1e6adc3e7f4145359552ce6e479cc8546e01`, profilo154a/firma/entitlements/keychain PASS, NON INSTALLATO. Final handoff esterno `ios-transfer-ci-compatibility-final-handoff-20261006/manifest.json`; parent solo Git per commit/push PR16 esistente, CI nuova exact-head, merge/mainCI e FF primaria preservando dirty. Stage selettivo: singolo delta Swift,2 portable evidence docs e solo i tre nuovi hunks Task144, inverse→f01e0d8e…;54 insert preesistenti fuori index. Nessun runner/group attivo,6B04 Shutdown, baseline/default.store e primary config/sessione/459 preservati; live F/H e primaria NON ESEGUITI. CI4382 FAIL/full03/proper02 sono snapshot storici, non acceptance della nuova fonte. Questo testo prevale sugli handoff sotto.
 
 
 **CURRENT 2026-10-05 — SOURCE47_FINAL / CANONICAL_FULL03_1505P_0F_36S / DEBUG_RELEASE_ANALYZE_PASS / SIGNED_FULLTEST_PASS, task FIX.** Base433e, branch `codex/ios-local-availability-20261004`;43Swift (36production+7test) +4strings nel [manifest](EVIDENCE/TASK-144/local-availability-20261005/source-and-targeted-evidence.json). Source47 invariato da freezev3 eGREEN13; full03 tutti14 UI PASS compresi root held/Save/draft/focus/C/automatic terminal/reopen e nuovo supplier/category pending→exact ownACK. Build/analyze warning baseline34, zero nuovi; proper8profile/signature/entitlements/keychain PASS, binary `17c0b7aab436822b968f2122b1bed0bd6b138693a4dc4da6ceaf2d884e2ecae5`, Artifact esterno e NON INSTALLATO. Tutti runner/group rilasciati, isolato6B04 Shutdown e baseline default.store preservata; fonte/config primaria e459 non toccati. Parent soloGit:49 file owned code/resources/evidence e patch dei soli tre nuovi hunks Task144;54 insert preesistenti fuori index, inverse dei tre restituisce f30addf… esatto. Nessuna mutazione Git da questa lane e nessun CI/PR/merge futuro dichiarato PASS. F autenticato, install/retention primaria459 e H restano NON ESEGUITI. Handoff finale esterno `ios-local-availability-final-handoff-20261005/manifest.json`; questo testo prevale sugli snapshot sotto.
