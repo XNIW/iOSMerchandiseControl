@@ -206,6 +206,32 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 — editor ripristinato dopo l’aggancio alla finestra
+
+**File modificati:**
+- `iOSMerchandiseControl/DatabaseView.swift` — bridge UIKit privato e passivo per ripristinare una sola volta l’editor della generazione corrente quando il presenter e i suoi parent appartengono alla stessa finestra; stato visivo iniziale ripristinato separatamente.
+- Questo file task — solo nuove evidenze Execution/Fix/Handoff owned, derivate dal blob HEAD; il file worktree preesistente SHA14c119 resta byte-identico.
+
+**Azioni eseguite:**
+1. La prima osservazione originale ha riprodotto UI71: ammissione corrente e fetch univoco validi, poi warning UIKit di presentazione da controller fuori gerarchia finestra. Lo stesso warning è presente nell’originale CI6ff; non attribuisce una causa comune al distinto fallimento UI277. Ipotesi di draft cancellato dal primo diniego falsificata nell’esperimento.
+2. Applicata la sola patch Database approvata dai medesimi reviewer dati/UX, SHA8460acef; file risultante SHA3584c40e. Guardie owner/manifest/scope/local-access, fetch limit2, sheet/dismiss, Save/ACK/CAS invariati. Nessun timer, polling, nuova dipendenza o modello precedente conservato. UI/UX: l’editor torna utilizzabile con draft e focus dopo il cutover (motivo: continuità dell’interazione già prevista dal task).
+3. Il test UI originale completo, senza modificare selector/metodo/timeout, è PASS 1/1 in57.790840s: draft/focus, Cancel, drain, ownACK, filtro/tab e terminate/relaunch con coda vuota. Receipt e72caa31, inverse91e0cc1f, export57efe48b, verifica executor d77ed57d e root706609a6. Screenshot originali prima/dopo conservati.
+4. Dopo inverse canonica, PG assente e simulatore Shutdown, root conserva separatamente la medesima patch di produzione. Commit normale selettivo dei soli Database + nuove sezioni task owned; niente scrittura del task foreign, MASTER o workflow.
+
+**Check obbligatori sul candidato finale:**
+| Check | Stato | Note |
+|---|---|---|
+| Compilazione pertinente / UI originale | ✅ ESEGUITO | Xcode test originale, exit0, 1PASS/0FAIL/0SKIP sul medesimo file Database3584. |
+| Full suite canonica | ❌ NON ESEGUITO | Richiede nuova ricevuta mirata8 e full sul freeze/HEAD finale; i precedenti gate B4 restano storici. |
+| Debug/Release/Analyze e warning nuovi | ❌ NON ESEGUITO | Gate completi sul nuovo source pending; nessuna equivalenza con vecchio Analyze o CI rossa. |
+| Coerenza con planning | ✅ ESEGUITO | Fix minimo di continuità editor dopo recovery, scope/ammissione dati preservati. |
+| Criteri di accettazione | ❌ NON ESEGUITO | B originale PASS; A UI277, CI finale, installazione primaria e accettazione live restano aperti. Task FIX, non DONE. |
+
+**Incertezze:**
+- A: bootstrap.failed.other è compatibile col timeout intenzionale della fixture held; primo diniego concreto del gate ancora da registrare.
+- Nessuna nuova installazione, prova di auth reale, convergenza mobile o prestazione live è implicata dal test fixture.
+
+
 ### Esecuzione — 2026-10-06 UTC, quattro commit normali e Full03 finale
 
 **Task e fase FIX; criteri e stato globale invariati.** Questo aggiornamento parte soltanto dal Task committato `165c92fc`; il working Task foreign `14c11901` resta byte-identico e fuori dallo staging. Le prove controllate locali sono distinte da accettazione live, installazione e chiusura globale.
@@ -961,6 +987,11 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+### Fix — 2026-10-06 — confine di presentazione editor
+
+Candidate source48 approvato4f0ba0a3: solo Database3584 differisce dal B4, altri47 byte-identici. Callback sincrona `viewDidAppear` con controller e parent nella stessa finestra; ammissione fresca e presentationID corrente, tentativo unico per generazione e invalidazione su dismantle. Originale B completo PASS e72c; l’altro fallimento ufficiale UI277 resta distinto. Gate completi finali e nuova CI necessari prima dell’integrazione.
+
+
 **Fix aggiornato 2026-10-06 — fonte48 b4fc7, HEAD nativo c89, Task FIX:** il RED935/rootfdc dimostra il difetto nel controesempio esplicito unavailable/qualifica; il guard di produzione same-owner è chiuso dai GREEN esistenti. Provider/summary terminale e helper zero-reopen sono DEBUG/test; await superfluo e confronto stable7 sono delta privati della fixture. La sola nuova diagnostica full-scope è riordinata dopo sealed-revision per preservare l'assert originale UI169/174. L'ammissione fisica/currentfull7/fence/revalidate e l'autorità degli old writer non sono rilassate. Due UI66fa7c4a, unit8 138b2227, stessi reviewer57e42f12 e Full03 487b7b0a/root e38e8f2e sono prove distinte sul source48 uguale. Full02 FAIL e causa storica UNKNOWN restano immutabili. Build/warning03, Proper03, SQLite e Git/CI: Build/Analyze PASS con 34 warning legacy identici e zero nuovi (6fb1b995/89928698/root657cb45f); Proper firmato PASS, non installato (29b32eb4/rootbece698d); un solo unitario SQLite PASS (425b2c57/root5474e5f1), diagnosi teardown-only falsificata (b25d7043/root2c4ce151/addendum834936d6), worker/private cleanup UNKNOWN e ritenzione primaria BLOCKED manual-unlock; PR/main CI, merge e FF NON ESEGUITO, prova esterna futura PENDING. Nessun CA, Planning, Decisione o stato globale modificato; live/per-record F, H e device primario aperti.
 
 **Fix 2026-10-06 — candidata empty-root e fixture controllata, fonte finale949:** RED reale0P1F0S/rootfdc614fc prova la perdita dell'ammissione dopo qualifica nell'intervallo unavailable con fisica e full7 invariati. Il guard conserva soltanto la candidata same-owner durante `shopContextUnavailable`; permitsScopedEmptyRoot/fence/full7/revalidate/worker/post-await e writer restano strict. GREEN8/rootd235c7f2 e le review C dati1791301901/UX1791301949 sono PASS/APPROVED; la fixture DEBUGV2 e il helper privato5 righe entrano in un secondo commit separato. Nuovi full/build/warning/ProperTEST e CI sono PENDING; Task FIX invariato, nessun CA marcato DONE.
@@ -991,6 +1022,9 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — B_EDITOR_ORIGINAL_UI_PASS / PRODUCTION_PATCH_RETAINED; task FIX, NON DONE.** Root ha verificato receipt e72c/inverse91e/executor d77/root706 e conserva DB3584 con commit normale. Nuovo native HEAD e source freeze sono registrati nel pacchetto esterno `ios-window-attached-editor-production-retention-01`; vecchio freeze4f resta immutabile e non viene rinominato. Successivo owner I: genuine target8 sul nuovo source/freeze, poi full canonico1548 e Debug/Release/Analyze/TEST. A: diagnosi DEBUG circoscritta sui primi operandi effettivi, zero query aggiuntive o autorità indebolita; nessun rilancio cieco della CI originale. Android APK88/sessione/dati conservati, verifica UI primaria ancora bloccata dal canvas non raggiungibile. Nessun merge/CI verde/install/accettazione live dichiarato.
+
 
 **CURRENT 2026-10-06 — QUATTRO_COMMIT_NORMALI / SOURCE48_b4fc7 / NATIVE_HEAD_c89 / UI2_2P0F0S / UNIT8_8P0F0S / FULL03_1548IDs_1512P_0F_36S_15UIP; Task FIX.** Prova sorgente/commit `fab7b97e`, Full03 receipt `487b7b0a`, root `e38e8f2e`. Stato gate successivi: BUILD/ANALYZE03 PASS, baseline34 immutata/zero nuovi (6fb1b995/89928698/root657cb45f); PROPER03 TEST firmato PASS, binary1ef75f21/23file, non installato (29b32eb4/rootbece698d); SQLITE singolo unitario originale 1P0F0S (425b2c57/inverse21c40814/root5474e5f1), diagnostica17record/8warning e teardown-only FALSIFIED (b25d7043/root2c4ce151). Worker/kernel/private cleanup UNKNOWN, primary session/outbox/retention BLOCKED manual-unlock; CI PR/main, merge normale e source-only FF NON ESEGUITO/PENDING al commit documentale. L'esito reale di integrazione verrà vincolato nella receipt esterna finale, senza inventare proofSHA futuri. Il parent può creare un commit normale esclusivamente del Task HEAD con queste tre aggiunte; il Task working foreign14c resta identico e fuori staging. Dopo tale commit, PRHEAD e prova commit/Task devono essere acquisiti realmente e vincolati nei metadati V5; non riusare o rietichettare l'HEAD nativo c89, il proposal head storico da2f o le receipt economiche. Prima di push/CI/merge/FF usare nuove prove native/SQLite e i guard esistenti: sei step CI realmente SUCCESS,1548 stessi ID/stati/36 stessi skip, PR base OID fresco con fetch e albero reviewedb4, due parent nel merge e albero intero uguale al candidato, preservazione10dirty/config/stash/index e FF-only/no-autostash. Snapshot remoto PR18/head9945/base82ef OPEN-UNSTABLE è storico; nessuna sua proprietà vale come prova al futuro merge. Nessun install/azione device, dato/sessione/outbox primario o F/H live viene certificato da source-only FF. Task FIX e richiesta manual-unlock restano aperti; nessun DONE globale.
 

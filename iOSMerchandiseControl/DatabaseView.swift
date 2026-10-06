@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 import Combine
 import UniformTypeIdentifiers
 import xlsxwriter
@@ -1860,6 +1861,7 @@ struct DatabaseView: View {
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
     @State private var mountedPresentationID: String?
+    @State private var editorRestorationAttemptedPresentationID: String?
     @State private var productScrollAnchor: String?
     
     @State private var showScanner = false
@@ -4000,6 +4002,13 @@ struct DatabaseView: View {
         databaseRootSurface
         .navigationTitle(L("database.title"))
         .onAppear { restoreLocalPresentation() }
+        .background {
+            DatabaseEditorRestorationHost(presentationID: generationController.presentationID) { presentationID in
+                restoreLocalPresentation(editorPresentationID: presentationID)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .onChange(of: barcodeFilter) { _, value in
             localPresentation?.update(presentationID: mountedPresentationID) { $0.barcodeFilter = value }
         }
@@ -4364,8 +4373,12 @@ struct DatabaseView: View {
         modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
     }
 
-    private func restoreLocalPresentation() {
+    private func restoreLocalPresentation(editorPresentationID: String? = nil) {
         guard isCurrentModelGeneration else { return }
+        if let editorPresentationID {
+            guard editorPresentationID == generationController.presentationID,
+                  editorRestorationAttemptedPresentationID != editorPresentationID else { return }
+        }
         mountedPresentationID = generationController.presentationID
         guard let values = localPresentation?.admit(
             manifest: generationController.activeManifest,
@@ -4374,15 +4387,21 @@ struct DatabaseView: View {
             localAccessPermitted: Task126OwnerStoreGate.permitsSameScopeLocalAccess(
                 modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
         ) else { return }
-        savedProductReceipt = values.savedProduct
-        savedProductReadback = nil
-        selectedDatabaseSection = DatabaseSection.allCases.first {
-            String(describing: $0) == values.databaseSection
-        } ?? .products
-        barcodeFilter = values.barcodeFilter
-        namedEntityFilter = values.namedEntityFilter
-        storefrontFilter = StorefrontListFilter(rawValue: values.storefrontFilter) ?? .all
-        productScrollAnchor = values.productScrollAnchor
+        if editorPresentationID == nil {
+            savedProductReceipt = values.savedProduct
+            savedProductReadback = nil
+            selectedDatabaseSection = DatabaseSection.allCases.first {
+                String(describing: $0) == values.databaseSection
+            } ?? .products
+            barcodeFilter = values.barcodeFilter
+            namedEntityFilter = values.namedEntityFilter
+            storefrontFilter = StorefrontListFilter(rawValue: values.storefrontFilter) ?? .all
+            productScrollAnchor = values.productScrollAnchor
+            return
+        }
+        // One restoration attempt per mounted generation. An ordinary user
+        // dismissal must not cause its retained editor to reopen on appearance.
+        editorRestorationAttemptedPresentationID = editorPresentationID
         guard let editor = values.editor else { return }
         if editor.baseline == nil {
             pendingBarcodeForNewProduct = editor.originalBarcode
@@ -5600,4 +5619,90 @@ struct DatabaseView: View {
         "categoryName"
     ]
 
+}
+
+/// A passive lifecycle witness for the same Database presenter that owns the
+/// editor sheet. It carries no model, draft, owner or admission authority.
+private struct DatabaseEditorRestorationHost: UIViewControllerRepresentable {
+    let presentationID: String
+    let onAttached: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIViewController(context: Context) -> Controller {
+        context.coordinator.configure(presentationID: presentationID, onAttached: onAttached)
+        let controller = Controller()
+        controller.coordinator = context.coordinator
+        return controller
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        context.coordinator.configure(presentationID: presentationID, onAttached: onAttached)
+    }
+
+    static func dismantleUIViewController(_ controller: Controller, coordinator: Coordinator) {
+        controller.invalidate()
+        coordinator.invalidate()
+    }
+
+    final class Coordinator {
+        private var presentationID: String?
+        private var onAttached: ((String) -> Void)?
+        private var isInvalidated = false
+
+        func configure(presentationID: String, onAttached: @escaping (String) -> Void) {
+            guard !isInvalidated else { return }
+            self.presentationID = presentationID
+            self.onAttached = onAttached
+        }
+
+        func attached() {
+            guard !isInvalidated, let presentationID else { return }
+            onAttached?(presentationID)
+        }
+
+        func invalidate() {
+            isInvalidated = true
+            presentationID = nil
+            onAttached = nil
+        }
+    }
+
+    final class Controller: UIViewController {
+        weak var coordinator: Coordinator?
+        private var isVisible = false
+        private var isInvalidated = false
+
+        override func loadView() {
+            let surface = UIView()
+            surface.backgroundColor = .clear
+            surface.isUserInteractionEnabled = false
+            view = surface
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            isVisible = true
+            guard !isInvalidated,
+                  let window = viewIfLoaded?.window, let parent else { return }
+            var ancestor: UIViewController? = parent
+            while let controller = ancestor {
+                guard controller.viewIfLoaded?.window === window else { return }
+                ancestor = controller.parent
+            }
+            guard isVisible else { return }
+            coordinator?.attached()
+        }
+
+        override func viewDidDisappear(_ animated: Bool) {
+            super.viewDidDisappear(animated)
+            isVisible = false
+        }
+
+        func invalidate() {
+            isInvalidated = true
+            isVisible = false
+            coordinator = nil
+        }
+    }
 }
