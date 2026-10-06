@@ -1076,8 +1076,10 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let vm = makeSemiAutomaticViewModel(
             fake: fake,
             supportsForegroundCloudCheck: true,
-            incrementalPullProvider: incrementalProvider,
-            foregroundIncrementalTimeoutNanoseconds: 50_000_000
+            // This positive checks the terminal outcome, not a 50 ms latency
+            // budget for MainActor work and diagnostic persistence. The real
+            // suspended-provider timeout remains covered separately at 5 ms.
+            incrementalPullProvider: incrementalProvider
         )
 
         let didRun = await vm.startForegroundIncrementalCheckNow(

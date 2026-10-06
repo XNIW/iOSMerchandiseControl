@@ -88,7 +88,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(search.value as? String, "LOCAL-ROOT")
         XCTAssertTrue(app.tabBars.buttons["Database"].isSelected)
         app.terminate(); app.launch()
-        XCTAssertTrue(app.staticTexts["task144.controlled.reopened"].waitForExistence(timeout: 20))
+        let reopened = app.staticTexts["task144.controlled.reopened"].waitForExistence(timeout: 20)
+        if !reopened { captureControlledAutomaticReadback() }
+        XCTAssertTrue(reopened)
         XCTAssertTrue(app.staticTexts["Saved before network release"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["task144.controlled.queue-empty-no-duplicates"].exists)
     }
@@ -186,7 +188,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         for title in ["Options", "History", "Database", "Inventory"] {
             let tab = app.tabBars.buttons[title]
-            XCTAssertTrue(tab.waitForExistence(timeout: 5)); tab.tap()
+            let tabExists = tab.waitForExistence(timeout: 5)
+            if !tabExists { captureControlledAutomaticReadback() }
+            XCTAssertTrue(tabExists); tab.tap()
         }
         app.tabBars.buttons["Database"].tap()
         XCTAssertTrue(app.staticTexts["Preparing your catalog…"].waitForExistence(timeout: 5),
@@ -213,7 +217,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "A previous heartbeat callback must not invalidate fresh recovery admission after its checkpoint")
         for title in ["Options", "History", "Database", "Inventory"] {
             let tab = app.tabBars.buttons[title]
-            XCTAssertTrue(tab.waitForExistence(timeout: 5)); tab.tap()
+            let tabExists = tab.waitForExistence(timeout: 5)
+            if !tabExists { captureControlledAutomaticReadback() }
+            XCTAssertTrue(tabExists); tab.tap()
         }
         XCTAssertFalse(app.staticTexts["Safe local baseline"].exists)
         XCTAssertFalse(app.staticTexts["task144.controlled.activated-and-drained"].exists)
@@ -341,6 +347,23 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let button = app.buttons[identifier]
             return "\(identifier):\(button.exists ? (button.value as? String ?? "no-value") : "absent")"
         }.joined(separator: "\n")
+        let tabs = app.tabBars.buttons.allElementsBoundByIndex.prefix(8).map(\.label).joined(separator: ",")
+        let facts = app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH %@", "task144.controlled."
+        )).allElementsBoundByIndex.prefix(32).map(\.label).joined(separator: ";")
+        let admission = app.progressIndicators.allElementsBoundByIndex.compactMap { $0.value as? String }
+            .first(where: { $0.hasPrefix("task144.controlled.") }) ?? "absent"
+        // CI retains stdout even when no xcresult artifact is published. These
+        // values are only closed facts from this isolated controlled namespace.
+        print("TASK144_CURRENT_FAILURE_READBACK tabs=\(tabs);facts=\(facts);admission=\(admission);\(readback)")
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Task144 current native failure hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Task144 current native failure screenshot"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
         let attachment = XCTAttachment(string: readback)
         attachment.name = "Task144 actual facade categorical result and bounded TEST counts"
         attachment.lifetime = .keepAlways

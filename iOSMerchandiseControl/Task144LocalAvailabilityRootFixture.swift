@@ -617,6 +617,7 @@ struct Task144ControlledRootAdmission<Content: View>: View {
             content()
         } else {
             ProgressView("Preparing controlled local baseline")
+                .accessibilityValue(fixture.facts.sorted().joined(separator: ";"))
         }
     }
 }

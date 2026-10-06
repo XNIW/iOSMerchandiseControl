@@ -206,6 +206,25 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione e fix — 2026-10-06 UTC, fixture CI e diagnostica UI corrente
+
+**Fonte48, HEAD639d prima del nuovo commit, task FIX.** CI37394390166 sullo stesso PR16: Debug PASS, XCTest1541 unici1501PASS/4FAIL/36SKIP; Analyze e secret scan NON ESEGUITI. Una sola esecuzione Task114 fallisce due assertion con deadline fixture50ms ed elapsed71ms; nessuna regressione del timeout prodotto dimostrata. I tre UI falliscono dopo Options→History o soltanto sul marker dopo rilancio; gli allegati remoti non esistono, causa UNKNOWN. Non si deducono perdita del Save, failure del callback o colpa del parallelismo/toolchain.
+
+**File modificati:** `SupabaseManualSyncViewModelTests.swift` usa il default ordinario12s soltanto nel positivo di esito, mantenendo didRun/callCount/completed e il negativo sospeso5ms byte-identico. `LocalAvailabilityRootUITests.swift` conserva assertion e budget5s/20s; in failure raccoglie tabs/facts/admission chiusi nel namespace controllato più AX/PNG correnti. `Task144LocalAvailabilityRootFixture.swift` aggiunge soltanto accessibilityValue categorico alla ProgressView di preparazione DEBUG; nessuna modifica a scope, autorizzazione, Ready, recovery o dati. Gli altri45 file sono byte-identici a HEAD639d.
+
+**Evidenze:** target5 originali5PASS su Xcode27.0; classe nel medesimo ordineCI più due unitari8PASS. Quest'ultima usa UI33e08; segue soltanto stdout diagnostico nel failurehelper, e la fonte finaleUI4f2779 è coperta dal full05. Stessi due reviewer APPROVED sul freeze48 `5f461eed…`/patch `04af888e…`. La CI originaria Xcode26.6 resta FAIL e la causa UI resta non attribuita; non è dichiarata chiusa dalla riproduzione locale.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza |
+|---|---|---|
+| Full XCTest canonico, nessun filtro/nuovo skip | ESEGUITO | full05:1541 unici1505PASS/0FAIL/36SKIP,14 native UI PASS; ID→status/skipset identici full04; receipt `dc3ca6af…` |
+| Debug/Release/Analyze | ESEGUITO |3 comandi exit0,receipt `470756e8…`;34 primary warning baseline,0 nuovi nelle48 sorgenti |
+| Proper fullTEST Release firmato | ESEGUITO |receipt `415a6f56…`,23 file,profilo154a/firma strict-deep/Xcode entitlements/keychain PASS; binary2795dc09,NON INSTALLATO |
+| Planning e preservazione | ESEGUITO |MASTER/Planning intatti,source48/head/baseline invariati,6B04 Shutdown,owned process groups rilasciati;config primaria intatta |
+| CI nuova exact-head e F/H/primaria | NON ESEGUITO |parent soloGit/CI;F autenticato,install/retention primaria459 e H separati,NONE inferiti da fixture |
+
+**Handoff:** pacchetto esterno `ios-ci-current-runtime-final-handoff-20261006/manifest.json`; soltanto3 source delta,2 portable docs e i tre nuovi hunks Task144. Inverse dei tre restituisce08321017… esatto,54 insert foreign intatti. Nessuna mutazione Git/device/input primario da questa lane. Questo blocco prevale sul precedente snapshot47/full04/proper04.
+
 ### Esecuzione R-I08 — V6 tutti gate locali verificati, handoff Git — 2026-10-03 UTC
 
 **File modificati:** solo questo task (Execution/Fix/Handoff) e metadata portabile in `EVIDENCE/TASK-144/ri08-ordinary-sync-state/`. Nessuna modifica app/test/resource/build/SDK/schema; source326ac3b, Atomic98fd, Planning raw6662, statoFIX e Master invariati. Nessun runtime, Git o lettura di payload protetti da docs producer.
@@ -830,6 +849,8 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix CI runtime — 2026-10-06:** il positivo Task114 verifica l'esito con il default ordinario, non una latenza50ms sull'intero MainActor; negativo vero5ms e oracoli di successo intatti. Nessun fix prodotto UI basato su ipotesi: i tre casi originali e il loro ordine di classe passano localmente, con diagnosi corrente su future failure. Full05 e build/analyze/proper05 PASS sulla fonte48; CI639d4FAIL e causa UI UNKNOWN restano storici espliciti. Nessun nuovo skip o timeout UI modificato.
+
 
 Compatibilità CI 2026-10-06: i due errori di inferenza Swift in Transfer sono corretti con soli tipi/intermedi espliciti, semantica invariata e46carry bytes identici. Source47 corrente: mirati7 PASS, full04 **1505 PASS/0 FAIL/36 SKIP** (tutti14 UI), Debug/Release/Analyze e nuovo proper signed fullTEST04 PASS; zero nuovi warning. Review mirata APPROVED. La CI37390541718/head4382 resta FAIL storica, gate a valle NON ESEGUITI; nuova CI dopo commit/push parent ancora NON ESEGUITA. Task FIX, live F/primaria459/H aperti. [Prove correnti](EVIDENCE/TASK-144/local-availability-20261005/README.md).
 
@@ -847,6 +868,8 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**CURRENT 2026-10-06 — SOURCE48_FIXTURE_CI_DIAGNOSTICS / FULL05_1505P_0F_36S / DEBUG_RELEASE_ANALYZE_PASS / SIGNED_FULLTEST05_PASS, task FIX.** HEAD639d prima del nuovo commit;3 delta owned e45 carry esatti. Artifact binary `2795dc0916328b69ce2345ccbe7c38c50420de9140274c86d602c938684b04fa`,23 file/profilo154a/firma/entitlements/keychain PASS,NON INSTALLATO. CI37394390166 resta FAIL1501P4F36S: causa tre UI UNKNOWN, nuova CI exact-head PENDING. Parent soloGit per aggiornare PR16 esistente/CI/merge/mainCI/FF preservando dirty. Stage solo3 source+2docs+tre nuovi hunks Task144 sopraHEAD639d;inverse→08321017… e54 foreign fuori index. Nessun runner/group attivo,6B04 Shutdown/baseline/config primaria preservati;F autenticato,primaria459/H NON ESEGUITI. Pacchetto esterno `ios-ci-current-runtime-final-handoff-20261006/manifest.json`; questo prevale sugli snapshot storici sotto.
 
 
 **CURRENT 2026-10-06 — SOURCE47_COMPILER_COMPAT / TARGET7_PASS / FULL04_1505P_0F_36S / DEBUG_RELEASE_ANALYZE_PASS / SIGNED_FULLTEST04_PASS, task FIX.** Branch `codex/ios-local-availability-20261004`, HEAD4382 prima del commit correttivo; Transfer2178f81d è l'unico delta di produzione,46carry byte-identici al v3. Nuovo Artifact binary `0e188fbed26463893eee82c38ead1e6adc3e7f4145359552ce6e479cc8546e01`, profilo154a/firma/entitlements/keychain PASS, NON INSTALLATO. Final handoff esterno `ios-transfer-ci-compatibility-final-handoff-20261006/manifest.json`; parent solo Git per commit/push PR16 esistente, CI nuova exact-head, merge/mainCI e FF primaria preservando dirty. Stage selettivo: singolo delta Swift,2 portable evidence docs e solo i tre nuovi hunks Task144, inverse→f01e0d8e…;54 insert preesistenti fuori index. Nessun runner/group attivo,6B04 Shutdown, baseline/default.store e primary config/sessione/459 preservati; live F/H e primaria NON ESEGUITI. CI4382 FAIL/full03/proper02 sono snapshot storici, non acceptance della nuova fonte. Questo testo prevale sugli handoff sotto.
