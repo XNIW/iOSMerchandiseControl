@@ -3449,6 +3449,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(AccountBindingStore(defaults: reopened.defaults).currentBinding, binding)
         try assertZeroRecoveryAuthority(reopened, generationID: generationID, stage: "reopened-zero")
         XCTAssertEqual(SyncStateStore(defaults: reopened.defaults, keyPrefix: "ri08.zero").state.lastVerifiedAt, verifiedAt)
+        controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
+        let qualified = await controller.awaitLocalBodyQualification()
+        let hasCurrentBodyProof = Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer)
+        _ = try XCTUnwrap(qualified && hasCurrentBodyProof ? true : nil,
+            "ZERO_SETUP_LOCAL_BODY_UNQUALIFIED qualified=\(qualified);hasCurrentBodyProof=\(hasCurrentBodyProof)")
         return (reopened, checkpoint, generationID, binding, verifiedAt)
     }
 

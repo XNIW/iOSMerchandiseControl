@@ -38,6 +38,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private var hasPreparationStarted = false
     private var hasStarted = false
     private var heldGenerationID: UUID?
+    private var heldRecoveryScope: Task126VerifiedOwnerStoreScope?
+    private var awaitingAutomaticResumeManifest: SyncStoreGenerationManifest?
+    private var completedAutomaticRecoverySummary: SyncRecoverySnapshotPullSummary?
     private let provesShopCallbackOrder = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
     private let provesIndependentPending = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] == "1"
     private var independentPendingInserted = false
@@ -240,6 +243,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
                 }
+                heldRecoveryScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    allowsPendingSameScopeRecovery: true)
                 transport.holdsProducts = true
                 heldGenerationID = controller.activeManifest?.generationID
                 stateStore.updatePhase(.checking)
@@ -248,7 +253,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     do {
                         return try await self.recoveryService().recoverFromRemoteSnapshot(ownerUserID: self.owner)
                     } catch {
-                        self.recordSetupFailure(error, stage: .heldRecovery)
+                        if !self.rememberPublishedShopUnavailability(error) {
+                            self.recordSetupFailure(error, stage: .heldRecovery)
+                        }
                         throw error
                     }
                 }
@@ -262,30 +269,50 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     }
                     try await Task.sleep(for: .milliseconds(100))
                 }
-                let summary = try await recovery.value
-                guard summary.completedRecoveryJournal, controller.activeManifest != nil else {
-                    throw SyncStoreGenerationError.activationReadBackFailed
+                let summary: SyncRecoverySnapshotPullSummary?
+                do { summary = try await recovery.value }
+                catch {
+                    // Only the first actual throw's verified published boundary
+                    // may wait for the ordinary automatic runtime to resume.
+                    guard error as? Task126OwnerStoreGateError == .shopContextUnavailable,
+                          awaitingAutomaticResumeManifest != nil else { throw error }
+                    summary = nil
                 }
-                facts.insert("task144.controlled.activated")
+                if let summary {
+                    guard summary.completedRecoveryJournal, controller.activeManifest != nil else {
+                        throw SyncStoreGenerationError.activationReadBackFailed
+                    }
+                    facts.insert("task144.controlled.activated")
+                }
                 setupStage = .automaticTerminal
                 // No direct push or synthetic ACK here. The real root observes
                 // the resolved shop/local mutation and runs its normal facade.
                 for _ in 0..<300 {
                     refreshAutomaticObservation()
-                    if provesRelatedSave, try relatedMappingPendingReadback() {
-                        facts.insert("task144.controlled.related-mapped-product-pending")
-                    }
-                    if provesRelatedSave, try relatedProductACKReadback() {
-                        facts.insert("task144.controlled.related-save-ack")
-                        return
-                    }
-                    if provesIndependentPending, try productACKWithIndependentPendingReadback() {
-                        facts.insert("task144.controlled.product-ack-other-pending")
-                        return
-                    }
-                    if try terminalReadback(), catalogRemote.attemptCount == 1, catalogRemote.eventCount == 1 {
-                        facts.formUnion(["task144.controlled.activated-and-drained", "task144.controlled.queue-empty-no-duplicates"])
-                        return
+                    let activated: Bool
+                    if summary != nil { activated = true }
+                    else if let returned = completedAutomaticRecoverySummary,
+                            let published = awaitingAutomaticResumeManifest {
+                        activated = automaticRecoveryCompletionIsCurrent(returned, manifest: published)
+                        if activated { facts.insert("task144.controlled.activated") }
+                    } else { activated = false }
+                    if activated {
+                        if summary == nil, emptyBootstrap { return }
+                        if provesRelatedSave, try relatedMappingPendingReadback() {
+                            facts.insert("task144.controlled.related-mapped-product-pending")
+                        }
+                        if provesRelatedSave, try relatedProductACKReadback() {
+                            facts.insert("task144.controlled.related-save-ack")
+                            return
+                        }
+                        if provesIndependentPending, try productACKWithIndependentPendingReadback() {
+                            facts.insert("task144.controlled.product-ack-other-pending")
+                            return
+                        }
+                        if try terminalReadback(), catalogRemote.attemptCount == 1, catalogRemote.eventCount == 1 {
+                            facts.formUnion(["task144.controlled.activated-and-drained", "task144.controlled.queue-empty-no-duplicates"])
+                            return
+                        }
                     }
                     try await Task.sleep(for: .milliseconds(100))
                 }
@@ -320,6 +347,68 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if !callbackHeartbeatCompleted {
             await withCheckedContinuation { callbackCompletionContinuation = $0 }
         }
+    }
+
+    /// TEST-only value observation. This does not authorize, trigger or retry recovery.
+    private func rememberPublishedShopUnavailability(_ error: Error) -> Bool {
+        guard error as? Task126OwnerStoreGateError == .shopContextUnavailable,
+              let scope = heldRecoveryScope, scope.ownerUserID == owner,
+              authViewModel.isSignedIn, authViewModel.localMutationOwnerUserID == scope.ownerUserID,
+              UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == scope.accountHash,
+              let selected = SelectedShopStore().selectedShop(accountHash: scope.accountHash),
+              selected.shopID == scope.shopID, selected.localStoreIdentity == scope.storeIdentity,
+              selected.selectable, selected.status == "active",
+              let device = try? DeviceInstallIDStore().requireDeviceInstallID(),
+              device == scope.deviceInstallID, DeviceInstallIDStore.identityHash(for: device) == scope.deviceIdentityHash,
+              !SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+              let binding = AccountBindingStore().currentBinding,
+              binding.accountHash == scope.accountHash, binding.storeIdentity == scope.storeIdentity,
+              let manifest = controller.activeManifest,
+              manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+              manifest.storeIdentity == scope.storeIdentity, manifest.deviceIdentityHash == scope.deviceIdentityHash,
+              let journal = AccountBindingStore().pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery, journal.phase == .activated,
+              journal.replacement == scope.pendingReplacement, journal.deviceIdentityHash == scope.deviceIdentityHash,
+              journal.generationID == manifest.generationID, journal.checkpointDigest == manifest.checkpoint.checkpointDigest,
+              journal.watermark == manifest.checkpoint.maxEventID, journal.baselineRunID == manifest.baselineRunID else { return false }
+        // Preserve the first throw's actual publication before a future real
+        // automatic completion may clear its journal. No readiness fact is made.
+        awaitingAutomaticResumeManifest = manifest
+        return true
+    }
+
+    private func automaticRecoveryCompletionIsCurrent(
+        _ summary: SyncRecoverySnapshotPullSummary, manifest: SyncStoreGenerationManifest
+    ) -> Bool {
+        guard transport.isReleased, let initial = heldRecoveryScope,
+              summary.completedRecoveryJournal, summary.activatedGenerationID == manifest.generationID,
+              summary.watermarkAfter == manifest.checkpoint.maxEventID,
+              controller.activeManifest == manifest, !AccountBindingStore().hasPendingReplacementJournal,
+              authViewModel.isSignedIn, authViewModel.localMutationOwnerUserID == initial.ownerUserID,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: initial.ownerUserID),
+              current.ownerUserID == initial.ownerUserID, current.accountHash == initial.accountHash,
+              current.shopID == initial.shopID, current.storeIdentity == initial.storeIdentity,
+              current.deviceInstallID == initial.deviceInstallID, current.deviceIdentityHash == initial.deviceIdentityHash,
+              current.pendingReplacement == nil,
+              manifest.accountHash == current.accountHash, manifest.shopID == current.shopID,
+              manifest.storeIdentity == current.storeIdentity, manifest.deviceIdentityHash == current.deviceIdentityHash,
+              (try? Task126OwnerStoreGate.revalidateAutomaticScope(current)) != nil,
+              (try? controller.isActiveRecoveryFinalized(scope: current)) == true,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: current.ownerUserID) else { return false }
+        return true
+    }
+
+    private func observeAutomaticRecoverySummary(ownerUserID: UUID, summary: SyncRecoverySnapshotPullSummary) {
+        guard ownerUserID == owner, summary.completedRecoveryJournal,
+              let manifest = awaitingAutomaticResumeManifest ?? controller.activeManifest,
+              controller.activeManifest == manifest,
+              summary.activatedGenerationID == manifest.generationID,
+              summary.watermarkAfter == manifest.checkpoint.maxEventID else { return }
+        // Retain only the real returned value here. The existing wait loop must
+        // independently admit current scope/body/finalization before any fact.
+        completedAutomaticRecoverySummary = summary
     }
 
     private func recordSetupFailure(_ error: Error, stage: SetupStage) {
@@ -416,12 +505,22 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     func runtime(modelContainer: ModelContainer, stateStore: SyncStateStore) -> any SyncAutomaticRuntimeProviding {
         let lease = controller.captureLease(for: modelContainer)
         let invocationID = UUID()
+        let recoveryProvider: (any SyncRecoverySnapshotPullProviding)?
+        if hasStarted, transport.isReleased, let published = controller.activeManifest,
+           published.generationID != heldGenerationID {
+            // A fresh remounted runtime can resume only after the direct held
+            // recovery published. Preparation and the pre-cutover root keep nil.
+            recoveryProvider = Task144ObservedAtomicRecoveryProvider(base: recoveryService(),
+                observe: { [weak self] ownerUserID, summary in
+                    self?.observeAutomaticRecoverySummary(ownerUserID: ownerUserID, summary: summary)
+                })
+        } else { recoveryProvider = nil }
         let runtime = AutomaticSyncRuntimeFacade(authViewModel: authViewModel,
             catalogPushProvider: CatalogPushService(modelContainer: modelContainer, remote: catalogRemote),
             productPriceProvider: nil, historySessionProvider: nil,
             incrementalPullProvider: SyncEventIncrementalPullService(modelContainer: modelContainer,
                 remote: catalogRemote, storeGenerationController: controller),
-            recoverySnapshotPullProvider: nil,
+            recoverySnapshotPullProvider: recoveryProvider,
             activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: modelContainer, recorder: catalogRemote),
             runAdmissionValidator: { [controller, transport] in
                 guard let lease else { throw SyncStoreGenerationError.staleGenerationLease }
@@ -827,6 +926,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             }
         }
         return valid
+    }
+}
+
+private nonisolated struct Task144ObservedAtomicRecoveryProvider: SyncRecoverySnapshotPullProviding {
+    let base: AtomicGenerationRecoverySnapshotPullService
+    let observe: @MainActor @Sendable (UUID, SyncRecoverySnapshotPullSummary) -> Void
+    nonisolated var publicationMode: SyncRecoverySnapshotPublicationMode { base.publicationMode }
+
+    func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
+        let summary = try await base.recoverFromRemoteSnapshot(ownerUserID: ownerUserID)
+        await observe(ownerUserID, summary)
+        return summary
     }
 }
 
