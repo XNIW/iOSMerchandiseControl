@@ -206,6 +206,36 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-06 — fonte finale42 e controesempio prepubblicazione
+
+**File modificati:**
+- Questo file task — sole sezioni Execution/Fix/Handoff dal blob HEAD; il file worktree preesistente SHA14c119 resta invariato.
+- `docs/TASKS/EVIDENCE/TASK-144/local-availability-20261005/README.md` e `source-and-targeted-evidence.json` — riconciliazione F04: fonte42/gate attuali, vecchio manifest0af5 conservato come storico integrale.
+- Il controllo TEMPV3 di quattro file DEBUG è stato applicato solo per una singola osservazione e rimosso esattamente; nessun nuovo delta di produzione.
+
+**Azioni eseguite:**
+1. Fonte di produzione48 SHA42c992cc, HEAD0a481131, diagnostica080b e Database3584: le otto unità originali genuine PASS8/0/0 (receipt4f1b605d, root3f8ce56a). Full05 canonica senza filtri, nuovi skip o parallelismo:1548ID distinti,1512PASS/0FAIL/36SKIP identici e15UI PASS (receipt2927cd0f, rootappendix54293fe1). Tutti gli ID/stati coincidono con la mappa attesa39befc9b. I precedenti gate su fonti diverse restano storici.
+2. Medesimi due reviewer approvano il witness temporaneo V3 SHA8c7a2019; il producer finale bb3e43e8 preserva il metodo UI originale, tutte8 funzioni canoniche,600s totali inclusi90s cleanup e4 export originali. Nessun secondo start manuale, remount, Retry, trigger owner/fase artificiale o query d’autorità aggiunta. La fase viene osservata nella singola valutazione già esistente del prodotto.
+3. L’unica esecuzione nativa termina1FAIL/0PASS/0SKIP,exit65,26.972322s,receipt37c7819c. Solo UI270 `previous-shop-callback-released` fallisce; UI271 held e il giro tab/UI277 non vengono raggiunti. Non è il RED della navigazione storica CI.
+4. Tutti31 record originali dello stesso PID90264 sono verificati contro stdout1ead0455 e hash di riga: ticket1 corrente/noncancelled fallisce con `shopContextUnavailable`, ma la fase cambia prima del suo terminale. Il contesto normale risolve lo stesso account/shop/store; il successore automatico ticket2 pubblica una prova con full7/fence/revalidate e viene ammesso. Classificazione **NOT_TRAVERSED**, perché il prerequisito fase invariata non è soddisfatto. Trigger parent esatto del successore e causa CI storica restano UNKNOWN; nessun fix A di produzione è giustificato da questo run. Readback indipendente0611be4a, root15/15 c11a2723.
+5. Quattro export ufficiali exit0 chiusi22:43:06.470624Z,receipt80c01d92. Inverse temporanea esatta0d88ab53 chiusa22:45:33.243831Z,receiptff66ad20, entro la deadline originaria22:50:32.083564Z. Tutti48 file WT e HEAD corrispondono alla fonte42; diag080b e fixB conservati. PG assente, simulatore Shutdown, index vuoto, Task foreign14c/MASTER/workflow/config checksum-stat e famiglia default.store preservati. Nessun nuovo runtime dopo il run; Full05 resta pertinente per uguaglianza byte-esatta delle48 sorgenti ripristinate.
+6. Debug/Release/Analyze05 PASS (receiptfd89400f, rootdf13f5b2); comparatore canonico f325:34 warning legacy identici,zero nuovi/changed48/unclassified (20becc28). Scan sensibile canonico e hash dei contratti condivisi PASSa8b4e187. Proper FULL TEST05 Release firmato PASS6e183b5a/rootffe1af43:23 file verificati,binary10cbfa12,profilo154a,fresh signer,entitlements effettivi/embedded/Xcent e vecchia identità keychain conformi,strict/deep PASS. Artefatto NON INSTALLATO. Tutti14 comandi originali exit0;deadline1800/90,rientro executor23:08:16Z,gruppi assenti/6BShutdown/preservazione PASS.
+7. Riepilogo e manifest nativi indicavano ancora fonte0af5/Full11 come attuali: riconciliati con source42 e ricevute correnti, preservando l’intero precedente manifest sotto historicalValidationSource0af5 e gli originali byte-esatti esterni. Snapshot documentale pre-push:CI candidata esatta,merge/mainCI/FF ancora NON ESEGUITI;esiti successivi nel rapporto aggregato esterno,senza commit autoreferenziali.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build | ✅ ESEGUITO | Debug/Release/Analyze05 PASS sulla fonte42; Proper FULL TEST05 firmato PASS,non installato |
+| Static/reviewer | ✅ ESEGUITO | SAME2 approvano la diagnostica e il witness; all48 post-inverse/root15 PASS |
+| Warning nuovi | ✅ ESEGUITO | Comparatore f325:34 warning baseline identici,zero nuovi e zero nelle48 sorgenti modificate |
+| Coerenza planning | ✅ ESEGUITO | Witness circoscritto; no fix senza RED pertinente; logica/autorità/UI originali preservate |
+| Criteri di accettazione | ❌ NON ESEGUITO | FIX; CI/integration, device primario, live/parità/performance rimangono distinti |
+
+**Incertezze:**
+- HistoricalCI A UNKNOWN; test temporaneo NOT_TRAVERSED. I record di uguaglianza non identificano il callsite preciso del successore.
+- Warning SQLite e guard interno del setup recovery non sono dichiarati innocui o causa storica.
+
+
 ### Esecuzione — 2026-10-06 — diagnostica del primo diniego A conservata per CI
 
 **File modificati:**
@@ -1017,6 +1047,9 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix aggiornato — 2026-10-06:** diag080b e editor window-attached3584 sono conservati sul candidato42/HEAD0a48. Genuine8 e Full05 correnti PASS; il singolo witness temporaneo prepubblicazione è NOT_TRAVERSED e completamente rimosso, senza nuovo fix A. Successore automatico osservato; causa CI storica UNKNOWN. Debug/Release/Analyze05/zero nuovi warning e Proper FULL TEST05 PASS; CI esatta e lane esterne restano da chiudere. Stato FIX invariato.
+
+
 **Fix — 2026-10-06, A diagnostica080b:** conservata dopo il PASS originale locale. Solo osservazione DEBUG dei valori già valutati; errore/ordine/short circuit/callee count preservati. B rimane il fix DB3584 già verificato sul test originale; nessuna causa comune A/B dedotta. La source diagnostica e il runner finale restano tracciati nei pacchetti esterni `ios-empty-root-first-denial-observation-offline-20261006` e `ios-empty-root-first-denial-one-ui-run-01`.
 
 
@@ -1055,6 +1088,9 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**Handoff aggiornato — 2026-10-06:** nessun nuovo witness identico o Full05 immutata. Build/Analyze/zero nuovi warning e Proper signed FULL TEST sulla fonte42 restaurata sono PASS; proseguire push normale/CI originale pertinente con080b. Non inferire DONE da fixture locali; Android finestra primaria resta in attesa dell’unica risposta umana, sessione/APK88 invariati. Live F/per-record convergence/H e installazione/ritenzione primaria iOS restano aperti. Non scrivere MASTER o il Task foreign14c; commit documentale del solo blob Task owned e dei due riepiloghi evidence owned,stage selettivo dopo rilascio producer.
+
 
 **CURRENT 2026-10-06 — A_ORIGINAL_LOCAL_PASS_NON_REPRODUCED / DIAGNOSTIC080B_RETAINED / B_DB3584_RETAINED; task FIX, NON DONE.** Unico A originale/source7db: 1P0F0S, nessuna causa CI attribuita. Dopo chiusura export/risorse, normale commit dei quattro soli file diagnostici e log owned, freeze effettivo con HEAD reale, genuine8 e gate completi sullo stesso source, poi CI pertinente. Vecchio Full04/source754 HOLD. Medesimi reviewer verificano terminali; no rerun cieco, inverse automatico, merge/install o PASS live. AndroidAPK88 non reinstallare/reset/logout: attende solo la finestra Running Devices accessibile già richiesta all’utente.
 
