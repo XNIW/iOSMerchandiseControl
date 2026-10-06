@@ -764,6 +764,149 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             defaults: reopened.defaults) { _ in () })
     }
 
+    func testEmptyBootstrapShellSurvivesOrdinarySameShopRefreshWhileOldWriterIsRejected() async throws {
+        let fixture = try makeFixture()
+        let container = fixture.controller.modelContainer
+        let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+        let binding = try XCTUnwrap(bindingStore.currentBinding)
+        XCTAssertTrue(bindingStore.beginSameScopeRecovery(accountHash: binding.accountHash,
+            storeIdentity: binding.storeIdentity, reason: "TEST_EMPTY_SAME_SHOP_REFRESH",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(bindingStore.pendingRecoveryJournal)
+        let context = ModelContext(container); context.autosaveEnabled = false
+        func assertPhysicalEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+            XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+        }
+        try assertPhysicalEmpty(Product.self); try assertPhysicalEmpty(Supplier.self)
+        try assertPhysicalEmpty(ProductCategory.self); try assertPhysicalEmpty(ProductPrice.self)
+        try assertPhysicalEmpty(HistoryEntry.self); try assertPhysicalEmpty(LocalPendingChange.self)
+        try assertPhysicalEmpty(SyncEventOutboxEntry.self); try assertPhysicalEmpty(SupabaseCatalogBaselineRun.self)
+        try assertPhysicalEmpty(SupabaseCatalogBaselineRecord.self)
+        let fenceReader = try SyncStoreGenerationRepository(
+            baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+            defaults: fixture.defaults)
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let qualified = await fixture.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        XCTAssertTrue(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        let original = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        let beforeFence = try fenceReader.captureActiveMutationFence(for: fixture.controller.active)
+        let selectionStore = SelectedShopStore(defaults: fixture.defaults)
+        let selected = try XCTUnwrap(selectionStore.selectedShop(accountHash: original.accountHash))
+        // The ordinary persisted selection API intentionally retires writers.
+        // It neither changes the selected shop nor writes the SQLite family.
+        XCTAssertTrue(selectionStore.save(selected, accountHash: original.accountHash))
+        XCTAssertEqual(selectionStore.selectedShop(accountHash: original.accountHash), selected)
+        let afterFence = try fenceReader.captureActiveMutationFence(for: fixture.controller.active)
+        XCTAssertEqual(afterFence, beforeFence)
+        let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        XCTAssertEqual(current.ownerUserID, original.ownerUserID)
+        XCTAssertEqual(current.accountHash, original.accountHash)
+        XCTAssertEqual(current.shopID, original.shopID)
+        XCTAssertEqual(current.storeIdentity, original.storeIdentity)
+        XCTAssertEqual(current.deviceInstallID, original.deviceInstallID)
+        XCTAssertEqual(current.deviceIdentityHash, original.deviceIdentityHash)
+        XCTAssertEqual(current.pendingReplacement, original.pendingReplacement)
+        XCTAssertNotEqual(current.leaseGeneration, original.leaseGeneration)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+        XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(original,
+            defaults: fixture.defaults)) { XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged) }
+        var staleWriterEntered = false
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(original,
+            defaults: fixture.defaults) { staleWriterEntered = true }) {
+            XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged)
+        }
+        XCTAssertFalse(staleWriterEntered)
+        XCTAssertTrue(fixture.controller.modelContainer === container)
+        XCTAssertNil(fixture.controller.activeManifest)
+        XCTAssertEqual(bindingStore.currentBinding, binding)
+        XCTAssertEqual(bindingStore.pendingRecoveryJournal, journal)
+        XCTAssertTrue(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID),
+            "A current same-scope empty shell remains navigable after ordinary same-shop refresh without Retry or write authority")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        try assertPhysicalEmpty(Product.self); try assertPhysicalEmpty(Supplier.self)
+        try assertPhysicalEmpty(ProductCategory.self); try assertPhysicalEmpty(ProductPrice.self)
+        try assertPhysicalEmpty(HistoryEntry.self); try assertPhysicalEmpty(LocalPendingChange.self)
+        try assertPhysicalEmpty(SyncEventOutboxEntry.self); try assertPhysicalEmpty(SupabaseCatalogBaselineRun.self)
+        try assertPhysicalEmpty(SupabaseCatalogBaselineRecord.self)
+    }
+
+    func testEmptyBootstrapShellRejectsOldProofWhenFreshShopOrDeviceScopeIsValidButDifferent() async throws {
+        for change in ["shop", "device"] {
+            let fixture = try makeFixture()
+            let bindingStore = AccountBindingStore(defaults: fixture.defaults)
+            let binding = try XCTUnwrap(bindingStore.currentBinding)
+            XCTAssertTrue(bindingStore.beginSameScopeRecovery(accountHash: binding.accountHash,
+                storeIdentity: binding.storeIdentity, reason: "TEST_EMPTY_FOREIGN_PROOF",
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            let fenceReader = try SyncStoreGenerationRepository(
+                baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+                legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+                defaults: fixture.defaults)
+            fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+            let qualified = await fixture.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(qualified)
+            XCTAssertTrue(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+            let original = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingReplacement: true)
+            let replacement = try XCTUnwrap(original.pendingReplacement)
+            let beforeFence = try fenceReader.captureActiveMutationFence(for: fixture.controller.active)
+            bindingStore.clearPendingReplacement()
+            var storeIdentity = binding.storeIdentity
+            var deviceInstallID = fixture.deviceInstallID
+            if change == "shop" {
+                let selected = SelectedShop(shopID: UUID(), code: "TEST_OTHER_SHOP", name: "Other scoped shop",
+                    role: "owner", status: "active", selectable: true, canWrite: true)
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).save(selected, accountHash: original.accountHash))
+                storeIdentity = selected.localStoreIdentity
+                XCTAssertTrue(bindingStore.saveBinding(accountHash: original.accountHash, storeIdentity: storeIdentity))
+            } else {
+                // Isolated suite only; the real device store reads this known
+                // identity key and the new journal is admitted for that device.
+                deviceInstallID = UUID().uuidString.lowercased()
+                fixture.defaults.set(deviceInstallID, forKey: "shop.device.install.id")
+                XCTAssertEqual(try DeviceInstallIDStore(defaults: fixture.defaults).requireDeviceInstallID(), deviceInstallID)
+            }
+            XCTAssertTrue(bindingStore.beginSameScopeRecovery(accountHash: original.accountHash,
+                storeIdentity: storeIdentity, reason: "TEST_FRESH_DIFFERENT_SCOPE",
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceInstallID), now: replacement.boundAt))
+            let afterFence = try fenceReader.captureActiveMutationFence(for: fixture.controller.active)
+            XCTAssertEqual(afterFence, beforeFence)
+            let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingReplacement: true)
+            try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+            XCTAssertEqual(current.ownerUserID, original.ownerUserID)
+            XCTAssertEqual(current.accountHash, original.accountHash)
+            if change == "shop" {
+                XCTAssertNotEqual(current.shopID, original.shopID)
+                XCTAssertNotEqual(current.storeIdentity, original.storeIdentity)
+            } else {
+                XCTAssertEqual(current.shopID, original.shopID)
+                XCTAssertEqual(current.storeIdentity, original.storeIdentity)
+                XCTAssertEqual(current.pendingReplacement, original.pendingReplacement)
+                XCTAssertNotEqual(current.deviceInstallID, original.deviceInstallID)
+                XCTAssertNotEqual(current.deviceIdentityHash, original.deviceIdentityHash)
+            }
+            XCTAssertFalse(fixture.controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID),
+                "A valid fresh \(change) scope cannot reuse another scope's physically empty proof")
+            XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: fixture.controller.modelContainer,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+            XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+            XCTAssertNil(fixture.controller.activeManifest)
+        }
+    }
+
     func testEmptyBootstrapShellProofGrantsNoWriteAuthorityAndRejectsForeignOrNonemptyStore() async throws {
         let fixture = try makeFixture()
         let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)

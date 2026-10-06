@@ -1437,10 +1437,21 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         guard let ownerUserID, let proof = emptyRootProof, let repository,
               loadFailureCode == nil, active.manifest == nil, active.container === proof.container,
               proof.scope.ownerUserID == ownerUserID,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true),
+              current.ownerUserID == proof.scope.ownerUserID,
+              current.accountHash == proof.scope.accountHash,
+              current.shopID == proof.scope.shopID,
+              current.storeIdentity == proof.scope.storeIdentity,
+              current.deviceInstallID == proof.scope.deviceInstallID,
+              current.deviceIdentityHash == proof.scope.deviceIdentityHash,
+              current.pendingReplacement == proof.scope.pendingReplacement,
               !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: proof.scope.accountHash,
                 shopID: proof.scope.shopID, deviceIdentityHash: proof.scope.deviceIdentityHash),
-              (try? Task126OwnerStoreGate.revalidateAutomaticScope(proof.scope, defaults: defaults)) != nil,
-              (try? repository.captureActiveMutationFence(for: active)) == proof.fence else { return false }
+              (try? repository.captureActiveMutationFence(for: active)) == proof.fence,
+              (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)) != nil else { return false }
+        // The physically empty presentation proof survives ordinary same-shop
+        // refresh; an old writer still needs its original full lease unchanged.
         return true
     }
 
