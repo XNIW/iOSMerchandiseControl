@@ -666,21 +666,32 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     func invalidateEmptyRootPhysicalFence() {
         guard provesEmptyFenceRequalification, emptyBootstrap,
               !facts.contains("task144.controlled.empty-fence.invalidated") else { return }
+        var stage = "capture-scope"
+        var firstFailedPrerequisite: String?
+        func prerequisite(_ value: Bool, _ name: String) -> Bool {
+            if !value, firstFailedPrerequisite == nil { firstFailedPrerequisite = name }
+            return value
+        }
         do {
             let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
                 allowsPendingReplacement: true)
             let phase = stateStore.state.phase
             let container = controller.modelContainer
             let revision = controller.localBodyQualificationRevision
-            guard facts.contains("task144.controlled.held"), !transport.isReleased,
-                  authViewModel.localMutationOwnerUserID == owner,
-                  controller.activeManifest == nil, revision > 0,
-                  controller.permitsScopedEmptyRoot(ownerUserID: owner),
-                  !Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner),
-                  AccountBindingStore().hasPendingReplacementJournal else {
+            stage = "initial-prerequisites"
+            guard prerequisite(facts.contains("task144.controlled.held"), "held"),
+                  prerequisite(!transport.isReleased, "transport-held"),
+                  prerequisite(authViewModel.localMutationOwnerUserID == owner, "owner"),
+                  prerequisite(controller.activeManifest == nil, "no-manifest"),
+                  prerequisite(revision > 0, "qualification-revision"),
+                  prerequisite(controller.permitsScopedEmptyRoot(ownerUserID: owner), "empty-admission"),
+                  prerequisite(!Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner), "no-local-mutation-grant"),
+                  prerequisite(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
+            stage = "capture-initial-fence"
             let before = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            stage = "initial-file-metadata"
             let values = try ownedLegacyStoreURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey,
                 .contentModificationDateKey])
             guard values.isRegularFile == true, values.isSymbolicLink != true,
@@ -688,8 +699,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 throw SyncStoreGenerationError.activeStoreMissing
             }
             facts.insert("task144.controlled.empty-fence.initially-admitted")
+            stage = "physical-fence-invalidation"
             try FileManager.default.setAttributes([.modificationDate: modificationDate.addingTimeInterval(-60)],
                 ofItemAtPath: ownedLegacyStoreURL.path)
+            stage = "invalidated-fence-readback"
             let after = try ownedRepository.captureActiveMutationFence(for: controller.active)
             guard before != after,
                   let beforeFile = before.files.first(where: { $0.relativePath == ownedLegacyStoreURL.lastPathComponent }),
@@ -725,7 +738,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             facts.insert("task144.controlled.empty-fence.invalidated")
             controller.objectWillChange.send()
         } catch {
-            facts.insert("task144.controlled.empty-fence.failure")
+            var failureFacts: Set<String> = ["task144.controlled.empty-fence.failure",
+                "task144.controlled.empty-fence.failure-stage.\(stage)",
+                "task144.controlled.empty-fence.failure-kind.\(Self.failureKind(error))"]
+            if let firstFailedPrerequisite {
+                failureFacts.insert("task144.controlled.empty-fence.failure-prerequisite.\(firstFailedPrerequisite)")
+            }
+            facts.formUnion(failureFacts)
         }
     }
 

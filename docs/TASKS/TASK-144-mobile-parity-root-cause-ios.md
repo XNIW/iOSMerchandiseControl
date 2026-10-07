@@ -206,6 +206,30 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione e fix — 2026-10-06 America/Santiago (2026-10-07 UTC), discriminante setup empty-fence
+
+**Stato FIX, non DONE.** CI37558310519 al commit033 ha 1549 casi ufficiali:1512PASS/1FAIL/36SKIP invariati; i vecchi1548ID/stati sono identici al full locale e il solo nuovo caso fallisce a UI273. AXPID67326 mostra empty-fence.failure prima di initially-admitted: setup prima dell'iniezione, operando preciso UNKNOWN. Il FAIL originale e il download parziale restano conservati; recupero Range206 dello stesso artifact con SHA API f3913e6ef64623203011c40aa55df94a80dae93a8610674258fc7c36c7484508, CRC/extract e6export ufficiali PASS (receipt8c9e82fb804277d301b067ebec96ab59118cae6da21bbc1dc9b4919461afdf38).
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — SOLO DEBUG: stadio e primo predicato falso, stessi8operandi/ordine/short-circuit e singole valutazioni; catch con categorie chiuse failureKind e una sola mutazione facts. Nessun nuovo accesso dati, qualification, attesa, retry o cambio di assertion/budget.
+- Questo task — solo la presente Execution; foreign preesistente escluso dal commit.
+
+**Azioni/evidenze:**
+1. Il medesimo nuovo caso UI, immutato, passa una volta in28.312993s:1PASS/0FAIL/0SKIP,xcodebuild exit0. Receipt6c43a0265dd13f1592440f883f10e1a2618b7e6f4aae66c1f764e05fa013def0; quattro export ufficiali exit0, verifica23/23PASS, processi assenti e solo6BShutdown.
+2. Classificazione NON_REPRODUCED; primo predicato fallito NOT_OBSERVED. Il delta e il PASS locale NON sono un fix causale del setup storico. La diagnostica conserva il discriminante per un'eventuale ricorrenza reale.
+3. Review readonly del delta9fa47b0262de054b1787c81dcddaef3dc1bfa79020eee697fc85a9a8c9aa3dda: APPROVED,zero finding; nessun cambiamento prodotto o nei16metodi UI. Full finale/CI/integrazione/installazione restano successivi e distinti.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza |
+| --- | --- | --- |
+| Build/test mirato | ESEGUITO | Compilazione e unico UI PASS sul fixture8dbaa285406dcb70b7a69fbff9fa39499db30549f1ced053860ed2f04407bc80. |
+| Analyze/build canonici finali | NON ESEGUITO | Da eseguire sulla versione finale; precedenti033PASS restano storici. |
+| Warning nuovi | NON ESEGUITO | Confronto finale Analyze pendente. |
+| Coerenza planning | ESEGUITO | Diagnostica del solo fixture coinvolto; produzione, scope/fence/authority invariati. |
+| Criteri di accettazione | NON ESEGUITO integralmente | CA07/08/09/10/11/12 e prove esterne aperte; nessun DONE/READY. |
+
+**Handoff:** nuovo CI deve conservare il primo falso se ricorre; non aumentare timeout, saltare/indebolire il test o attribuire una causa da un PASS. Nessun input/install sul primario in questa esecuzione.
+
 ### Esecuzione — 2026-10-07 UTC, nuova qualifica dopo invalidazione fisica della shell vuota
 
 **Stato FIX, non DONE.** Il root ora osserva il passaggio del gate da visibile a nascosto su un `Group` stabile e richiede al controller esistente una nuova qualifica quando manca il manifest attivo. La vecchia proof resta negata fino alla scansione completa e alla pubblicazione validata; nessun nuovo grant READY/write, query nel getter, polling, motore sync o cambiamento dei guard di scope/fence. `SyncStoreGeneration.swift` resta byte-identico.
