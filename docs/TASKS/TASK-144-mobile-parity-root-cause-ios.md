@@ -1258,6 +1258,21 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 
 **Handoff:** proseguire commit/push/PR normali e full locale sullo stesso commit congelato; nuovaCI può avanzare in parallelo. Verifier2e42 invariato, baseline nuova full effettiva prima della qualifica terminale. Riuso Release/Proper/TEST solo per input Release effettivi invariati e con nota esplicita: non nuove build/install sul nuovo commit né prova di sessione. Non rilanciare una full invariata per nascondere un FAIL. Nessun reset/clear/uninstall/forcepush/deploy/store/credenziali; richiesta umana foreground ancora pendente, niente retry CUA senza cambiamento ambiente. Esiti finali successivi nel report corrente, senza commit documentali autoreferenziali.
 
+### Esecuzione — 2026-10-07 UTC, diagnostica del controllo state-update originale
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — solo DEBUG: traccia stdout CAP16 del recognizer esistente e della callback sincrona; nessuno stato osservabile/query/layout/timeout/fact nuovo.
+- Questo blocco Execution — esito ed evidenze; Planning/criteri/MASTER e modifiche straniere preservati.
+
+**Azioni ed evidenze:**
+1. PRCI37600450824 sul7e607 FAIL ufficiale1557=1520PASS/1FAIL/36stessiSKIP,15UI PASS/1FAIL. SoloB/UI59 perde il marker state-updated; tutti1556altri stati identici alla full localePASS. Log/xcresult acquisiti una volta e hash verificato; Analyze/secret scan saltati.
+2. AX/PID79772 ed evento sintetizzato confermano editor/draft/focus/keyboard/held preservati e longpress1.2s al centro del controllo editor. Cinque frame originali stabili, nessun popup/scroll visibile. Intercettazione del gesto e callback-entry UNKNOWN; release/cutover NON_TRAVERSED. Nessuna nuova perdita draft o causa applicativa dimostrata.
+3. Recorder dedicato solo per fixtureUUID valida,16record+segnale cap; PID/uptime/root-editor/stadi. Nessun allargamento del vecchio RAM128. Stesso recognizer/minDuration1/defaultDistance, assert e UIoriginali byte-esatti. Limite: formattazione/stdout sincroni possono perturbare timing; record mancanti/cap/assenza stdout sono NOT_OBSERVED, non prova di mancata entry.
+
+4. Test B originale economico PASS1/0FAIL/0SKIP,58.168384s; receipt06930b8f. Compilazione reale, zero warning nella fixture modificata, preservation/cleanup PASS,6BShutdown e primario non toccato. Quattro export originali exit0; appstdoutSHA7034a08d PID33980 associato al Session/AX originale,9record uncapped: pressingtrue→perform-entry dopo1.0196s→callback→afterfact.present.true→pressingfalse. Collegamento/export su questo PASS dimostrati, failure storica NON RIPRODOTTA. N ha letto/hash verificato ricevuta e9record.
+
+**Check obbligatori:** compilazione pertinente e B originale ESEGUITI; coerenza mandato ESEGUITA; cause B storica UNKNOWN e Analyze/nuova full/CI finali NON ESEGUITI al commit diagnostico. Review tecnica C APPROVED,0finding; stesso reviewer indipendente sul delta effettivo, esito nel report corrente prima di qualsiasi merge; full precedente1521P/0F/36SKIP e Release invariata sono prove storiche, non nuovi gate del delta. Nuova CI diagnostica richiesta dal mandato§3; nessun merge con gate falliti. Stato FIX, runtime autenticato/per-record/prestazioni ancora BLOCKED_EXTERNAL/NOT_RUN nel report corrente.
+
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.

@@ -7,6 +7,24 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+/// Closed observations of the controlled gesture only. No observable state,
+/// store access or view invalidation is introduced while a press is active.
+@MainActor
+private enum Task144ControlGestureObservation {
+    private static var sequence = 0
+
+    static func record(_ stage: String, control: String) {
+        guard ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
+            .flatMap(UUID.init(uuidString:)) != nil, sequence < 17 else { return }
+        sequence += 1
+        if sequence == 17 {
+            print("TASK144_GESTURE_OBSERVATION pid.\(ProcessInfo.processInfo.processIdentifier).CAP16;later.NOT_RETAINED")
+            return
+        }
+        print("TASK144_GESTURE_OBSERVATION seq.\(sequence).uptime.\(ProcessInfo.processInfo.systemUptime).pid.\(ProcessInfo.processInfo.processIdentifier).control.\(control).stage.\(stage)")
+    }
+}
+
 /// Temporary observations scoped to the controlled empty/callback, physical-fence and related-save fixtures. This buffer is not ObservableObject and never
 /// publishes, reads a model/store, submits work or changes an admission result.
 nonisolated final class Task144RootObservation: @unchecked Sendable {
@@ -714,10 +732,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         catalogRemote.releaseHeldProduct()
     }
     func publishCheckingUpdate() {
+        Task144ControlGestureObservation.record("function-entry", control: "state-update")
         cancelEmptyFenceInitialRequest(stage: "cancelled-by-phase-control")
+        Task144ControlGestureObservation.record("after-cancel", control: "state-update")
+        Task144ControlGestureObservation.record("before-failed-update", control: "state-update")
         stateStore.updatePhase(.failed, outcome: .failed)
+        Task144ControlGestureObservation.record("after-failed-update", control: "state-update")
         stateStore.updatePhase(.checking)
+        Task144ControlGestureObservation.record("after-checking-update", control: "state-update")
         facts.insert("task144.controlled.state-updated")
+        Task144ControlGestureObservation.record("after-fact-insert.present.\(facts.contains("task144.controlled.state-updated"))", control: "state-update")
     }
 
     /// Opt-in file metadata drift in this run's synthetic empty store. The
@@ -1411,7 +1435,12 @@ private struct Task144ControlledRootControls: View {
                 }
                 Text("Controlled state update")
                     .padding(8).contentShape(Rectangle())
-                    .onLongPressGesture(minimumDuration: 1) { fixture.publishCheckingUpdate() }
+                    .onLongPressGesture(minimumDuration: 1) {
+                        Task144ControlGestureObservation.record("perform-entry", control: controlPrefix)
+                        fixture.publishCheckingUpdate()
+                    } onPressingChanged: { pressing in
+                        Task144ControlGestureObservation.record("pressing.\(pressing)", control: controlPrefix)
+                    }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityIdentifier("\(controlPrefix).state-update")
                 Text("Release controlled transport")
