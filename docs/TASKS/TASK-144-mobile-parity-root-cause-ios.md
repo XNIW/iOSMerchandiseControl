@@ -206,6 +206,34 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 — Related Save recovery-value diagnostic
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — DEBUG only: abilita il recorder RAM esistente per il fixture RELATED_SAVE e registra ingresso/esito reale di recovery.value, compresi failureKind e categoria tipizzata chiusa, senza query, guardie o timeout nuovi.
+
+**Azioni eseguite:**
+1. Preservati originali CI87/37564466855:1549 ID=1512 PASS/1 FAIL/36 stessi SKIP,unico leaf RelatedSave UI224. PID90502: released e nuova generazione pubblicata; saved intent/relazioni/feedback locale preservati. Activated assente; mapping/ownACK dopo cutover non raggiunti.
+2. Verificato che bootstrap.failed.other nel prefix finale è lo stesso callback della vecchia generazione osservato prima del rilascio,non un errore provato della nuova. Ramo recovery.value corrente UNKNOWN; nessun fix applicativo dedotto. Artefatto originale187102916B/SHA86ec5187db173506b1c1424c92255e23e4ee30132b9ed39c74d28db8737fbd12,6export ufficiali completati.
+3. Cheap originale RelatedSave una volta su diagnosticab753:1 PASS47.392s,receipt13eccc4c49607003f20c8649d168bfd05c23dffa2f65e7c00d44e09090528b04. Stdout ufficialePID64130:before-await→returned.completed-journal.true dopo0.375s,10RAMeventi/noCAP. Nessun ramo threw/ripresaautomatica osservato; fallimento remoto NON_REPRODUCED,nessuna causa risolta dichiarata.
+4. Review indipendente C+reader APPROVED neutralità; rilievo categoria tipizzata aggiunta nella stessa riga diagnostica (fixture finale046135c825b54906a4329d0ea02a1892a927f8de27afbe61d161cf76d2d9a0a9). Compile finale046 PASS/exit0,26.68s; receipt2d05dfeea07f6a6c92748b05e52d7922ea303aaf6b735527f93ecc32fc4a2cfa, verifica24/24 a6aab8610ac72e8351062ce25260ba6f4383230076f6ba29de73d8a0aa52a661. Review finale C APPROVED della sola riga tipizzata. UITest intero a78bbda26cefc460cb6e7414f3e91386bfb72b5ac93358e745b7245590919570 immutato.
+5. Secret scan workflow esistente su14input effettivi PASS,receipt68553ce577e7778b24621105320225e0540ea0eb9b3d1761d2be84de6cf7a172; filtro directory .log/.md/.json/.txt e workflow esplicito,nessuna estensione del perimetro dichiarata.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Compile Debug finale | ESEGUITO | Fonte046 compilata; exit0/BUILD SUCCEEDED, receipt2d05dfee, nessuna UI/full/Release/Proper ripetuta. |
+| Test mirato originale | ESEGUITO | 1 PASS b753; successiva sola aggiunta String tipizzata verificata separatamente in compile046. |
+| Warning nuovi | ESEGUITO | 0 primari/1 metadata AppIntents preesistente/0 non classificati; nessun warning nuovo. |
+| Coerenza con planning | ESEGUITO | Diagnostica del leaf F03 esistente,nessuna modifica di comportamento o guardia applicativa. |
+| Criteri di accettazione globali | NON ESEGUITO chiusura | CI87 FAIL preservato; nuovo CI/integrazione/runtime/performance autenticati pendenti. |
+
+**Incertezze:**
+- Causa originale RelatedSave UI224 UNKNOWN; local PASS non è fix causale né prova backend/live.
+
+**Handoff notes:**
+- Full87 1549/1513P/36S,Debug/Release/Analyze/Proper87 restano prove reali dei rispettivi snapshot. Questo delta interamente DEBUG non li rinomina come nuove esecuzioni; full87 viene riusato solo come comparatore di ID/stati.
+- Nessuna ripetizione full/Release/Proper immutati per il push diagnostico. PR18/merge/install/runtime restano subordinati agli esiti finali reali. TASK144 resta FIX/NON DONE.
+
 ### Esecuzione e fix — 2026-10-06 America/Santiago (2026-10-07 UTC), discriminante setup empty-fence
 
 **Stato FIX, non DONE.** CI37558310519 al commit033 ha 1549 casi ufficiali:1512PASS/1FAIL/36SKIP invariati; i vecchi1548ID/stati sono identici al full locale e il solo nuovo caso fallisce a UI273. AXPID67326 mostra empty-fence.failure prima di initially-admitted: setup prima dell'iniezione, operando preciso UNKNOWN. Il FAIL originale e il download parziale restano conservati; recupero Range206 dello stesso artifact con SHA API f3913e6ef64623203011c40aa55df94a80dae93a8610674258fc7c36c7484508, CRC/extract e6export ufficiali PASS (receipt8c9e82fb804277d301b067ebec96ab59118cae6da21bbc1dc9b4919461afdf38).

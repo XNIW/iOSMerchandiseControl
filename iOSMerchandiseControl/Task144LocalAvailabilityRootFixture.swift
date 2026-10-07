@@ -7,12 +7,13 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// Temporary observations scoped to the unchanged original empty/callback fixture. This buffer is not ObservableObject and never
+/// Temporary observations scoped to the original empty/callback and related-save fixtures. This buffer is not ObservableObject and never
 /// publishes, reads a model/store, submits work or changes an admission result.
 nonisolated final class Task144RootObservation: @unchecked Sendable {
     static let enabled = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
-        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
-        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
+        && ((ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
+             && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1")
+            || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1")
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
     private var sequence = 0
@@ -427,12 +428,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     try await Task.sleep(for: .milliseconds(100))
                 }
                 let summary: SyncRecoverySnapshotPullSummary?
-                do { summary = try await recovery.value }
+                Task144RootObservation.record("fixture-recovery-value", "branch.before-await", callsite: "Task144.startIfNeeded")
+                do {
+                    summary = try await recovery.value
+                    Task144RootObservation.record("fixture-recovery-value", "branch.returned.completed-journal.\(summary?.completedRecoveryJournal == true)", callsite: "Task144.startIfNeeded")
+                }
                 catch {
+                    Task144RootObservation.record("fixture-recovery-value", "branch.threw.kind.\(Self.failureKind(error)).category.\(Task144RootObservation.errorCategory(error))", callsite: "Task144.startIfNeeded")
                     // Only the first actual throw's verified published boundary
                     // may wait for the ordinary automatic runtime to resume.
                     guard error as? Task126OwnerStoreGateError == .shopContextUnavailable,
                           awaitingAutomaticResumeManifest != nil else { throw error }
+                    Task144RootObservation.record("fixture-recovery-value", "branch.automatic-resume-admitted", callsite: "Task144.startIfNeeded")
                     summary = nil
                 }
                 if let summary {
