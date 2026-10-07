@@ -109,6 +109,8 @@ final class SyncOrchestrator: ObservableObject {
     private var isAccountStoreReplacementInProgress = false
     private var foregroundStartedFromRecoveryRequired = false
     private var isStopped = false
+    private var localQualificationSubscription: AnyCancellable?
+    private var localQualificationEventTask: Task<Void, Never>?
     private let foregroundRetryDelay: @Sendable (TimeInterval) async -> Void
     private let maximumForegroundBusyRetryAttempts: Int
 
@@ -141,7 +143,36 @@ final class SyncOrchestrator: ObservableObject {
         self.backgroundScheduler = backgroundScheduler ?? SyncBackgroundTaskScheduler.shared
         self.maximumForegroundBusyRetryAttempts = max(0, maximumForegroundBusyRetryAttempts)
         self.foregroundRetryDelay = foregroundRetryDelay
+        localQualificationSubscription = storeGenerationController?.objectWillChange.sink { [weak self] _ in
+            self?.scheduleLocalQualificationReadback()
+        }
     }
+
+    private func scheduleLocalQualificationReadback() {
+        guard !isStopped, localQualificationEventTask == nil else { return }
+        // @Published sends before mutation. Coalesce the actual publication
+        // and later invalidation events, then inspect only current authority.
+        localQualificationEventTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.localQualificationEventTask = nil
+            guard !Task.isCancelled, !self.isStopped, self.didReachInteractiveUI,
+                  self.currentScenePhase == .active, self.authViewModel.isSignedIn,
+                  let controller = self.storeGenerationController,
+                  let lease = self.storeGenerationLease,
+                  (try? controller.validateLease(lease)) != nil,
+                  let owner = self.authViewModel.localMutationOwnerUserID else { return }
+            controller.requestEmptyRootQualificationAfterPublication(ownerUserID: owner)
+        }
+    }
+
+    #if DEBUG
+    var localQualificationEventTaskForTesting: Task<Void, Never>? { localQualificationEventTask }
+
+    // Observe completion of the already scheduled consumer without issuing an event.
+    func awaitLocalQualificationEventForTesting() async {
+        await localQualificationEventTask?.value
+    }
+    #endif
 
     var rootPresentationState: SyncRootPresentationState {
         Self.makeRootPresentationState(
@@ -202,6 +233,7 @@ final class SyncOrchestrator: ObservableObject {
             reconnectScheduler?.setForeground(true)
             syncAuthPresentationContext()
             guard didReachInteractiveUI else { return }
+            scheduleLocalQualificationReadback()
             updateSyncEventSignalWatcher()
             startSyncEventSafetyLoopIfNeeded()
             submitForegroundTrigger(forceIncremental: true)
@@ -265,6 +297,10 @@ final class SyncOrchestrator: ObservableObject {
 
     func stop() {
         isStopped = true
+        localQualificationSubscription?.cancel()
+        localQualificationSubscription = nil
+        localQualificationEventTask?.cancel()
+        localQualificationEventTask = nil
         cancelForegroundCheck()
         stopSyncEventSafetyLoop()
         reconnectObserver?.cancel()

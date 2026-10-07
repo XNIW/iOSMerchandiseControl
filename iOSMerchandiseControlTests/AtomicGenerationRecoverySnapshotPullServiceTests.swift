@@ -6,6 +6,734 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testEmptyRootActiveCatchupPreservesValidProofAndRejectsStoppedOrForeignAuthority() async throws {
+        for change in ["valid", "stopped", "cancelled", "shop", "device", "journal", "denial"] {
+            let fixture = try makeFixture()
+            let controller = fixture.controller
+            let container = controller.modelContainer
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-negative.\(change)")
+            state.recordRunResult(.recoveryRequired())
+            let phase = state.state.phase
+            let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-active-negative")
+            let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                authoritativeScope: checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+            let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: remote)
+            let activities = ForegroundCloudWorkflowActivityCenter()
+            let lease = try XCTUnwrap(controller.captureLease(for: container))
+            let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+                activityCenter: activities, syncEventSignalWatcher: nil, stateStore: state,
+                storeGenerationController: controller, storeGenerationLease: lease,
+                defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+                backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+            defer { orchestrator.stop() }
+            await orchestrator.bootstrap(scenePhase: .active)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+                storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_ACTIVE_NEGATIVE",
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            let original = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingReplacement: true)
+            let replacement = try XCTUnwrap(original.pendingReplacement)
+            activities.setActive(.editing, true, token: UUID())
+            orchestrator.handleScenePhaseChanged(.inactive)
+            var readbacks = 0
+            controller.localBodyQualificationBeforePublicationForTesting = { readbacks += 1 }
+            defer { controller.localBodyQualificationBeforePublicationForTesting = nil }
+            controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+            let initial = await controller.awaitLocalBodyQualification()
+            XCTAssertTrue(initial)
+            await orchestrator.awaitLocalQualificationEventForTesting()
+            XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+            XCTAssertEqual(readbacks, 1)
+            let revision = controller.localBodyQualificationRevision
+            let presentation = controller.presentationID
+            let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+            let bytes = try Data(contentsOf: url)
+            let modified = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date)
+            if change != "valid" {
+                try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+                controller.objectWillChange.send()
+                await orchestrator.awaitLocalQualificationEventForTesting()
+                XCTAssertFalse(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+            }
+            if change == "denial" {
+                let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "TEST_EXPLICIT_DENIAL", canWrite: false,
+                    serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(denial,
+                    ownerUserID: fixture.ownerUserID, shopID: fixture.shopID, deviceIdentityHash: original.deviceIdentityHash))
+            } else if ["shop", "device", "journal"].contains(change) {
+                binding.clearPendingReplacement()
+                var store = originalBinding.storeIdentity
+                var device = fixture.deviceInstallID
+                if change == "shop" {
+                    let other = SelectedShop(shopID: UUID(), code: "TEST_OTHER", name: "Other scoped shop",
+                        role: "owner", status: "active", selectable: true, canWrite: true)
+                    XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).save(other, accountHash: original.accountHash))
+                    store = other.localStoreIdentity
+                    XCTAssertTrue(binding.saveBinding(accountHash: original.accountHash, storeIdentity: store))
+                } else if change == "device" {
+                    device = UUID().uuidString.lowercased()
+                    fixture.defaults.set(device, forKey: "shop.device.install.id")
+                }
+                XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: original.accountHash, storeIdentity: store,
+                    reason: "TEST_CHANGED_EMPTY_ACTIVE_AUTHORITY", deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device),
+                    now: replacement.boundAt.addingTimeInterval(1)))
+                let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                    defaults: fixture.defaults, allowsPendingReplacement: true)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+                XCTAssertNotEqual(current, original)
+            }
+            if change == "stopped" { orchestrator.stop() }
+            orchestrator.handleScenePhaseChanged(.active)
+            if change == "cancelled" {
+                // Capture the real pending task before stop cancels and clears it.
+                let pending = try XCTUnwrap(orchestrator.localQualificationEventTaskForTesting)
+                orchestrator.stop()
+                XCTAssertTrue(pending.isCancelled)
+                await pending.value
+            } else {
+                await orchestrator.awaitLocalQualificationEventForTesting()
+            }
+            XCTAssertEqual(readbacks, 1)
+            XCTAssertEqual(controller.localBodyQualificationRevision, revision)
+            XCTAssertEqual(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID), change == "valid")
+            XCTAssertTrue(activities.isBusy)
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(state.state.phase, phase)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            XCTAssertTrue(controller.modelContainer === container)
+            XCTAssertEqual(controller.presentationID, presentation)
+            XCTAssertNil(controller.activeManifest)
+            XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+            let context = ModelContext(container); context.autosaveEnabled = false
+            func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+                XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+            }
+            try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+            try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+            try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+            try empty(SupabaseCatalogBaselineRecord.self)
+            print("TASK144_EMPTY_ACTIVE_NEGATIVE case=\(change) readbacks=\(readbacks) revision-delta=\(controller.localBodyQualificationRevision - revision)")
+        }
+    }
+
+    func testEmptyRootPostpublicationEventDiscardedWhileInactiveResumesOnActiveWithCloudHeld() async throws {
+        let fixture = try makeFixture()
+        let controller = fixture.controller
+        let container = controller.modelContainer
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-catchup")
+        state.recordRunResult(.recoveryRequired())
+        let phase = state.state.phase
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-active-catchup")
+        let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            authoritativeScope: checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+        let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: remote)
+        let activities = ForegroundCloudWorkflowActivityCenter()
+        let lease = try XCTUnwrap(controller.captureLease(for: container))
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: activities, syncEventSignalWatcher: nil, stateStore: state,
+            storeGenerationController: controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        await orchestrator.bootstrap(scenePhase: .active)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+            storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_ACTIVE_CATCHUP",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        let activityToken = UUID()
+        activities.setActive(.editing, true, token: activityToken)
+        defer { activities.setActive(.editing, false, token: activityToken) }
+        orchestrator.handleScenePhaseChanged(.inactive)
+        var readbacks = 0
+        controller.localBodyQualificationBeforePublicationForTesting = { readbacks += 1 }
+        defer { controller.localBodyQualificationBeforePublicationForTesting = nil }
+        controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let initialResult = await controller.awaitLocalBodyQualification()
+        XCTAssertTrue(initialResult)
+        await orchestrator.awaitLocalQualificationEventForTesting()
+        XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        XCTAssertEqual(readbacks, 1)
+        let revision = controller.localBodyQualificationRevision
+        let presentation = controller.presentationID
+        let repository = try SyncStoreGenerationRepository(
+            baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+            defaults: fixture.defaults)
+        let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+        let bytes = try Data(contentsOf: url)
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let modified = try XCTUnwrap(attributes[.modificationDate] as? Date)
+        try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+        let stableFence = try repository.captureActiveMutationFence(for: controller.active)
+        XCTAssertFalse(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        controller.objectWillChange.send()
+        // This barrier awaits the actual owned task that rejects inactive events.
+        // It does not create a trigger or a second qualification request.
+        await orchestrator.awaitLocalQualificationEventForTesting()
+        XCTAssertEqual(readbacks, 1)
+        XCTAssertEqual(controller.localBodyQualificationRevision, revision)
+        let admitted = expectation(description: "Normal active lifecycle catches up local proof while cloud stays held")
+        var restored = false
+        let publication = controller.$localBodyQualificationRevision.dropFirst().sink { _ in
+            Task { @MainActor in
+                if !restored, controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID) {
+                    restored = true; admitted.fulfill()
+                }
+            }
+        }
+        defer { publication.cancel() }
+        orchestrator.handleScenePhaseChanged(.active)
+        let outcome = await XCTWaiter.fulfillment(of: [admitted], timeout: 2)
+        XCTAssertTrue(activities.isBusy)
+        XCTAssertTrue(runtime.actions.isEmpty, "Cloud foreground remains deferred by the real editing activity")
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true), scope)
+        XCTAssertEqual(try repository.captureActiveMutationFence(for: controller.active), stableFence)
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+        XCTAssertTrue(controller.modelContainer === container)
+        XCTAssertEqual(controller.presentationID, presentation)
+        XCTAssertNil(controller.activeManifest)
+        let context = ModelContext(container); context.autosaveEnabled = false
+        func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+            XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+        }
+        try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+        try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+        try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+        try empty(SupabaseCatalogBaselineRecord.self)
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        print("TASK144_EMPTY_ACTIVE_CATCHUP controls=true cloud-held=\(activities.isBusy) readbacks=\(readbacks) revision-delta=\(controller.localBodyQualificationRevision - revision) restored=\(restored)")
+        XCTAssertTrue(outcome == .completed && restored && readbacks == 2 && controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID),
+            "A real active transition must renew the discarded empty publication without waiting for cloud work")
+    }
+
+    func testEmptyRootPostpublicationRequestsAreBoundedAndRequireCurrentAuthority() async throws {
+        for change in ["valid", "repeated-fence", "owner", "shop", "device", "journal", "denial"] {
+            let fixture = try makeFixture()
+            let controller = fixture.controller
+            let container = controller.modelContainer
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+                storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_POSTPUBLICATION_BOUNDS",
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            let original = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingReplacement: true)
+            let replacement = try XCTUnwrap(original.pendingReplacement)
+            let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+            let bytes = try Data(contentsOf: url)
+            let modified = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date)
+            let presentation = controller.presentationID
+            var readbacks = 0
+            controller.localBodyQualificationBeforePublicationForTesting = { readbacks += 1 }
+            defer { controller.localBodyQualificationBeforePublicationForTesting = nil }
+            controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+            let initial = await controller.awaitLocalBodyQualification()
+            XCTAssertTrue(initial)
+            XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+            XCTAssertEqual(readbacks, 1)
+            let revision = controller.localBodyQualificationRevision
+            if change != "valid" {
+                try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+            }
+            if change == "denial" {
+                let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "TEST_EXPLICIT_DENIAL", canWrite: false,
+                    serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(denial,
+                    ownerUserID: fixture.ownerUserID, shopID: fixture.shopID, deviceIdentityHash: original.deviceIdentityHash))
+            } else if ["shop", "device", "journal"].contains(change) {
+                binding.clearPendingReplacement()
+                var store = originalBinding.storeIdentity
+                var device = fixture.deviceInstallID
+                if change == "shop" {
+                    let other = SelectedShop(shopID: UUID(), code: "TEST_OTHER", name: "Other scoped shop",
+                        role: "owner", status: "active", selectable: true, canWrite: true)
+                    XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).save(other, accountHash: original.accountHash))
+                    store = other.localStoreIdentity
+                    XCTAssertTrue(binding.saveBinding(accountHash: original.accountHash, storeIdentity: store))
+                } else if change == "device" {
+                    device = UUID().uuidString.lowercased()
+                    fixture.defaults.set(device, forKey: "shop.device.install.id")
+                }
+                XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: original.accountHash, storeIdentity: store,
+                    reason: "TEST_CHANGED_EMPTY_PUBLICATION_AUTHORITY", deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device),
+                    now: replacement.boundAt.addingTimeInterval(1)))
+                let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                    defaults: fixture.defaults, allowsPendingReplacement: true)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+                XCTAssertNotEqual(current, original)
+            }
+            let requestOwner = change == "owner" ? UUID() : fixture.ownerUserID
+            // Direct request contract controls, separate from the positive
+            // test's unchanged real Orchestrator publication consumer.
+            controller.requestEmptyRootQualificationAfterPublication(ownerUserID: requestOwner)
+            controller.requestEmptyRootQualificationAfterPublication(ownerUserID: requestOwner)
+            _ = await controller.awaitLocalBodyQualification()
+            if change == "valid" {
+                XCTAssertEqual(readbacks, 1)
+                XCTAssertEqual(controller.localBodyQualificationRevision, revision)
+                XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+                // A valid publication consumes no successor budget: a later
+                // actual invalidation still receives its one fresh readback.
+                try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+                controller.requestEmptyRootQualificationAfterPublication(ownerUserID: fixture.ownerUserID)
+                controller.requestEmptyRootQualificationAfterPublication(ownerUserID: fixture.ownerUserID)
+                _ = await controller.awaitLocalBodyQualification()
+            }
+            if change == "repeated-fence" {
+                XCTAssertEqual(readbacks, 2)
+                XCTAssertEqual(controller.localBodyQualificationRevision, revision + 1)
+                XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+                try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(4)], ofItemAtPath: url.path)
+                controller.requestEmptyRootQualificationAfterPublication(ownerUserID: fixture.ownerUserID)
+                controller.requestEmptyRootQualificationAfterPublication(ownerUserID: fixture.ownerUserID)
+                _ = await controller.awaitLocalBodyQualification()
+            }
+            let consumedOneSuccessor = change == "valid" || change == "repeated-fence"
+            XCTAssertEqual(readbacks, consumedOneSuccessor ? 2 : 1,
+                "Valid publication, duplicates and changed authority must not perform extra readbacks")
+            XCTAssertEqual(controller.localBodyQualificationRevision, revision + (consumedOneSuccessor ? 1 : 0))
+            XCTAssertEqual(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID), change == "valid")
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            XCTAssertTrue(controller.modelContainer === container)
+            XCTAssertEqual(controller.presentationID, presentation)
+            XCTAssertNil(controller.activeManifest)
+            XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+            let context = ModelContext(container); context.autosaveEnabled = false
+            func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+                XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+            }
+            try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+            try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+            try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+            try empty(SupabaseCatalogBaselineRecord.self)
+            print("TASK144_EMPTY_POSTPUBLICATION_NEGATIVE case=\(change) readbacks=\(readbacks) revision-delta=\(controller.localBodyQualificationRevision - revision)")
+        }
+    }
+
+    func testEmptyRootQualificationResumesAfterPostpublicationFenceChangeWhileRootRemainsHidden() async throws {
+        let fixture = try makeFixture()
+        let controller = fixture.controller
+        let container = controller.modelContainer
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        _ = try XCTUnwrap(selection.selectedShop(accountHash: originalBinding.accountHash))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-postpublication-fence")
+        state.recordRunResult(.recoveryRequired())
+        let phase = state.state.phase
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-postpublication-fence")
+        let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            authoritativeScope: checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+        let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: remote)
+        let lease = try XCTUnwrap(controller.captureLease(for: container))
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        // Mount the ordinary active lifecycle before a journal exists, so its
+        // normal recovery-required decision cannot start a competing download.
+        await orchestrator.bootstrap(scenePhase: .active)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+            storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_POSTPUBLICATION_FENCE",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        let repository = try SyncStoreGenerationRepository(
+            baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+            defaults: fixture.defaults)
+        let context = ModelContext(container); context.autosaveEnabled = false
+        func assertAllNineEmpty() throws {
+            func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+                XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+            }
+            try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+            try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+            try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+            try empty(SupabaseCatalogBaselineRecord.self)
+        }
+        try assertAllNineEmpty()
+        controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let initiallyQualified = await controller.awaitLocalBodyQualification()
+        XCTAssertTrue(initiallyQualified)
+        XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        let presentation = controller.presentationID
+        let revision = controller.localBodyQualificationRevision
+        let entered = expectation(description: "New empty readback is held while the root is already hidden")
+        let gate = Task144ManifestQualificationGate(entered: entered)
+        var completedReadbacks = 0
+        controller.localBodyQualificationBeforePublicationForTesting = {
+            completedReadbacks += 1
+            if completedReadbacks == 1 { await gate.wait() }
+        }
+        defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
+        let admitted = expectation(description: "Fresh empty admission returns through a bounded automatic successor")
+        var hidden = false
+        var hiddenTransitions = 0
+        var restored = false
+        var injected = false
+        var injectionCount = 0
+        var injectionError: Error?
+        var firstPublicationAdmitted = false
+        let injectedEvent = expectation(description: "Actual first publication admits before the one fixture-style drift")
+        let consumerBoundary = expectation(description: "The already hidden consumer waits for publication delivery")
+        let consumerGate = Task144ManifestQualificationGate(entered: consumerBoundary)
+        let publicationDelivery = Task144ManifestQualificationGate(
+            entered: XCTestExpectation(description: "Real publication is delivered to the deferred consumer"))
+        defer { consumerGate.release(); publicationDelivery.release() }
+        // Mirror ContentView's real observed false-to-true hidden transition.
+        // The publisher is the same one sent by the physical-fence fixture;
+        // no second test call starts qualification after this transition.
+        let lifecycle = controller.objectWillChange.sink {
+            Task { @MainActor in
+                // Deterministically coalesce the first publication and the
+                // fixture's synchronous metadata injection before this render.
+                if hidden, completedReadbacks == 1, !injected {
+                    publicationDelivery.release()
+                    await consumerGate.wait()
+                }
+                let next = !controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID)
+                guard next != hidden else { return }
+                hidden = next
+                if next {
+                    hiddenTransitions += 1
+                    controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+                } else if !restored {
+                    restored = true; admitted.fulfill()
+                }
+            }
+        }
+        defer { lifecycle.cancel() }
+        let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+        let bytes = try Data(contentsOf: url)
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let modified = try XCTUnwrap(attributes[.modificationDate] as? Date)
+        let initialFence = try repository.captureActiveMutationFence(for: controller.active)
+        try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+        XCTAssertFalse(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        // This is the fixture's existing observable invalidation event, not a
+        // qualification, recovery, Retry or phase/context change.
+        controller.objectWillChange.send()
+        await fulfillment(of: [entered], timeout: 2)
+        XCTAssertTrue(hidden)
+        XCTAssertEqual(hiddenTransitions, 1)
+        XCTAssertEqual(completedReadbacks, 1)
+        let readbackFence = try repository.captureActiveMutationFence(for: controller.active)
+        XCTAssertNotEqual(readbackFence, initialFence)
+        let publication = controller.$localBodyQualificationRevision.dropFirst().sink { published in
+            Task { @MainActor in
+                guard !injected, published == revision + 1,
+                      controller.localBodyQualificationRevision == published else { return }
+                await publicationDelivery.wait()
+                firstPublicationAdmitted = controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID)
+                do {
+                    try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(4)],
+                        ofItemAtPath: url.path)
+                    injectionCount += 1
+                } catch { injectionError = error }
+                injected = true
+                // This is the fixture's real observable post-injection event.
+                controller.objectWillChange.send()
+                consumerGate.release()
+                injectedEvent.fulfill()
+            }
+        }
+        defer { publication.cancel() }
+        gate.release()
+        let firstResult = await controller.awaitLocalBodyQualification()
+        await fulfillment(of: [injectedEvent, consumerBoundary], timeout: 2)
+        let outcome = await XCTWaiter.fulfillment(of: [admitted], timeout: 2)
+        XCTAssertTrue(firstResult)
+        XCTAssertTrue(firstPublicationAdmitted)
+        XCTAssertNil(injectionError)
+        XCTAssertEqual(injectionCount, 1)
+        XCTAssertLessThanOrEqual(completedReadbacks, 2)
+        let stableFence = try repository.captureActiveMutationFence(for: controller.active)
+        XCTAssertNotEqual(stableFence, readbackFence)
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+        XCTAssertEqual(stableFence.files.map(\.relativePath), readbackFence.files.map(\.relativePath))
+        XCTAssertEqual(stableFence.files.map(\.fileSize), readbackFence.files.map(\.fileSize))
+        XCTAssertEqual(stableFence.files.map(\.systemFileNumber), readbackFence.files.map(\.systemFileNumber))
+        XCTAssertEqual(hiddenTransitions, 1, "An already hidden root supplies no second hidden transition")
+        XCTAssertEqual(try repository.captureActiveMutationFence(for: controller.active), stableFence)
+        XCTAssertEqual(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true), scope)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertEqual(controller.presentationID, presentation)
+        XCTAssertTrue(controller.modelContainer === container)
+        XCTAssertNil(controller.activeManifest)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        try assertAllNineEmpty()
+        print("TASK144_EMPTY_POSTPUBLICATION_FENCE controls=true injected=\(injectionCount) first-publication-admitted=\(firstPublicationAdmitted) initially-admitted=\(initiallyQualified) hidden-transitions=\(hiddenTransitions) first-result=\(firstResult) readbacks=\(completedReadbacks) revision-delta=\(controller.localBodyQualificationRevision - revision) restored=\(restored)")
+        XCTAssertTrue(outcome == .completed && restored && completedReadbacks == 2 && controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID),
+            "An empty proof invalidated after publication must requalify automatically even when the root remains hidden")
+    }
+
+
+    func testEmptyRootQualificationResumesAfterPhysicalFenceDriftsWhileAlreadyHidden() async throws {
+        let fixture = try makeFixture()
+        let controller = fixture.controller
+        let container = controller.modelContainer
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        let originalShop = try XCTUnwrap(selection.selectedShop(accountHash: originalBinding.accountHash))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-hidden-fence")
+        state.recordRunResult(.recoveryRequired())
+        let phase = state.state.phase
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-hidden-fence")
+        let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            authoritativeScope: checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+        let runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: remote)
+        let lease = try XCTUnwrap(controller.captureLease(for: container))
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        // Mount the ordinary active lifecycle before a journal exists, so its
+        // normal recovery-required decision cannot start a competing download.
+        await orchestrator.bootstrap(scenePhase: .active)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+            storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_HIDDEN_FENCE",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        let repository = try SyncStoreGenerationRepository(
+            baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+            defaults: fixture.defaults)
+        let context = ModelContext(container); context.autosaveEnabled = false
+        func assertAllNineEmpty() throws {
+            func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+                XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+            }
+            try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+            try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+            try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+            try empty(SupabaseCatalogBaselineRecord.self)
+        }
+        try assertAllNineEmpty()
+        controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let initiallyQualified = await controller.awaitLocalBodyQualification()
+        XCTAssertTrue(initiallyQualified)
+        XCTAssertTrue(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        let presentation = controller.presentationID
+        let revision = controller.localBodyQualificationRevision
+        let entered = expectation(description: "New empty readback is held while the root is already hidden")
+        let gate = Task144ManifestQualificationGate(entered: entered)
+        var completedReadbacks = 0
+        controller.localBodyQualificationBeforePublicationForTesting = {
+            completedReadbacks += 1
+            if completedReadbacks == 1 { await gate.wait() }
+        }
+        defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
+        let admitted = expectation(description: "Fresh empty admission returns through a bounded automatic successor")
+        var hidden = false
+        var hiddenTransitions = 0
+        var restored = false
+        // Mirror ContentView's real observed false-to-true hidden transition.
+        // The publisher is the same one sent by the physical-fence fixture;
+        // no second test call starts qualification after this transition.
+        let lifecycle = controller.objectWillChange.sink {
+            Task { @MainActor in
+                let next = !controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID)
+                guard next != hidden else { return }
+                hidden = next
+                if next {
+                    hiddenTransitions += 1
+                    controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+                } else if !restored {
+                    restored = true; admitted.fulfill()
+                }
+            }
+        }
+        defer { lifecycle.cancel() }
+        let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+        let bytes = try Data(contentsOf: url)
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let modified = try XCTUnwrap(attributes[.modificationDate] as? Date)
+        let initialFence = try repository.captureActiveMutationFence(for: controller.active)
+        try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(2)], ofItemAtPath: url.path)
+        XCTAssertFalse(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+        // This is the fixture's existing observable invalidation event, not a
+        // qualification, recovery, Retry or phase/context change.
+        controller.objectWillChange.send()
+        await fulfillment(of: [entered], timeout: 2)
+        XCTAssertTrue(hidden)
+        XCTAssertEqual(hiddenTransitions, 1)
+        XCTAssertEqual(completedReadbacks, 1)
+        let readbackFence = try repository.captureActiveMutationFence(for: controller.active)
+        XCTAssertNotEqual(readbackFence, initialFence)
+        try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(4)], ofItemAtPath: url.path)
+        let stableFence = try repository.captureActiveMutationFence(for: controller.active)
+        XCTAssertNotEqual(stableFence, readbackFence)
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+        XCTAssertEqual(stableFence.files.map(\.relativePath), readbackFence.files.map(\.relativePath))
+        XCTAssertEqual(stableFence.files.map(\.fileSize), readbackFence.files.map(\.fileSize))
+        XCTAssertEqual(stableFence.files.map(\.systemFileNumber), readbackFence.files.map(\.systemFileNumber))
+        XCTAssertEqual(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true), scope)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: fixture.defaults)
+        XCTAssertEqual(selection.selectedShop(accountHash: scope.accountHash), originalShop)
+        XCTAssertEqual(binding.currentBinding, originalBinding)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(controller.presentationID, presentation)
+        XCTAssertTrue(controller.modelContainer === container)
+        XCTAssertNil(controller.activeManifest)
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        gate.release()
+        let firstResult = await controller.awaitLocalBodyQualification()
+        let outcome = await XCTWaiter.fulfillment(of: [admitted], timeout: 2)
+        XCTAssertEqual(completedReadbacks, 2, "Fresh admission requires exactly one bounded second nine-entity readback")
+        XCTAssertEqual(hiddenTransitions, 1, "An already hidden root supplies no second hidden transition")
+        XCTAssertEqual(try repository.captureActiveMutationFence(for: controller.active), stableFence)
+        XCTAssertEqual(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true), scope)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(state.state.phase, phase)
+        XCTAssertEqual(controller.presentationID, presentation)
+        XCTAssertTrue(controller.modelContainer === container)
+        XCTAssertNil(controller.activeManifest)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+        try assertAllNineEmpty()
+        print("TASK144_EMPTY_HIDDEN_FENCE controls=true initially-admitted=\(initiallyQualified) hidden-transitions=\(hiddenTransitions) first-result=\(firstResult) readbacks=\(completedReadbacks) revision-delta=\(controller.localBodyQualificationRevision - revision) restored=\(restored)")
+        XCTAssertTrue(outcome == .completed && restored && controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID),
+            "An empty worker rejected after physical drift must requalify automatically while the root is already hidden")
+    }
+
+    func testEmptyRootPhysicalRetryStaysBoundedAndRejectsChangedCurrentAuthority() async throws {
+        for change in ["repeated-fence", "shop", "device", "journal", "denial"] {
+            let fixture = try makeFixture()
+            let controller = fixture.controller
+            let container = controller.modelContainer
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: originalBinding.accountHash,
+                storeIdentity: originalBinding.storeIdentity, reason: "TEST_EMPTY_RETRY_DENIAL",
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            let original = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingReplacement: true)
+            let replacement = try XCTUnwrap(original.pendingReplacement)
+            let revision = controller.localBodyQualificationRevision
+            let presentation = controller.presentationID
+            let url = fixture.temporaryRoot.appendingPathComponent("legacy-default.store")
+            let bytes = try Data(contentsOf: url)
+            let date = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date)
+            let entered = expectation(description: "Current empty readback reaches the controlled authority boundary")
+            let gate = Task144ManifestQualificationGate(entered: entered)
+            var readbacks = 0
+            var metadataError: Error?
+            controller.localBodyQualificationBeforePublicationForTesting = {
+                readbacks += 1
+                if change == "repeated-fence" {
+                    do {
+                        try FileManager.default.setAttributes([.modificationDate: date.addingTimeInterval(Double(readbacks * 2))],
+                            ofItemAtPath: url.path)
+                    } catch { metadataError = error }
+                }
+                if readbacks == 1 { await gate.wait() }
+            }
+            defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
+            controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+            await fulfillment(of: [entered], timeout: 2)
+            XCTAssertEqual(readbacks, 1)
+            if change == "denial" {
+                let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "TEST_EXPLICIT_DENIAL", canWrite: false,
+                    serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(denial,
+                    ownerUserID: fixture.ownerUserID, shopID: fixture.shopID, deviceIdentityHash: original.deviceIdentityHash))
+            } else if change != "repeated-fence" {
+                binding.clearPendingReplacement()
+                var store = originalBinding.storeIdentity
+                var device = fixture.deviceInstallID
+                if change == "shop" {
+                    let other = SelectedShop(shopID: UUID(), code: "TEST_OTHER", name: "Other scoped shop",
+                        role: "owner", status: "active", selectable: true, canWrite: true)
+                    XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).save(other, accountHash: original.accountHash))
+                    store = other.localStoreIdentity
+                    XCTAssertTrue(binding.saveBinding(accountHash: original.accountHash, storeIdentity: store))
+                } else if change == "device" {
+                    device = UUID().uuidString.lowercased()
+                    fixture.defaults.set(device, forKey: "shop.device.install.id")
+                }
+                XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: original.accountHash, storeIdentity: store,
+                    reason: "TEST_CHANGED_EMPTY_AUTHORITY", deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device),
+                    now: replacement.boundAt.addingTimeInterval(1)))
+                let current = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                    defaults: fixture.defaults, allowsPendingReplacement: true)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: fixture.defaults)
+                XCTAssertNotEqual(current, original)
+                // A valid new authority must still not authorize this held old readback.
+            }
+            gate.release()
+            let result = await controller.awaitLocalBodyQualification()
+            XCTAssertFalse(result)
+            XCTAssertNil(metadataError)
+            XCTAssertEqual(readbacks, change == "repeated-fence" ? 2 : 1,
+                "Permanent changed authority must stop; only physical drift may consume one fresh readback")
+            XCTAssertEqual(controller.localBodyQualificationRevision, revision)
+            XCTAssertFalse(controller.permitsScopedEmptyRoot(ownerUserID: fixture.ownerUserID))
+            XCTAssertTrue(controller.modelContainer === container)
+            XCTAssertEqual(controller.presentationID, presentation)
+            XCTAssertNil(controller.activeManifest)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { _ in () })
+            let context = ModelContext(container); context.autosaveEnabled = false
+            func empty<Model: PersistentModel>(_ type: Model.Type) throws {
+                XCTAssertEqual(try context.fetchCount(FetchDescriptor<Model>()), 0)
+            }
+            try empty(Product.self); try empty(Supplier.self); try empty(ProductCategory.self)
+            try empty(ProductPrice.self); try empty(HistoryEntry.self); try empty(LocalPendingChange.self)
+            try empty(SyncEventOutboxEntry.self); try empty(SupabaseCatalogBaselineRun.self)
+            try empty(SupabaseCatalogBaselineRecord.self)
+            print("TASK144_EMPTY_PHYSICAL_NEGATIVE case=\(change) result=\(result) readbacks=\(readbacks) revision-unchanged=\(controller.localBodyQualificationRevision == revision)")
+        }
+    }
+
     func testEmptyBootstrapQualificationPublishesAfterSameShopRefreshBeforeItsFirstAwait() async throws {
         let fixture = try makeFixture()
         let container = fixture.controller.modelContainer

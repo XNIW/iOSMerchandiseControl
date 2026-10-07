@@ -1302,11 +1302,29 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 
 **Check obbligatori:** compilazione pertinente e B originale ESEGUITI; coerenza mandato ESEGUITA; cause B storica UNKNOWN e Analyze/nuova full/CI finali NON ESEGUITI al commit diagnostico. Review tecnica C APPROVED,0finding; stesso reviewer indipendente sul delta effettivo, esito nel report corrente prima di qualsiasi merge; full precedente1521P/0F/36SKIP e Release invariata sono prove storiche, non nuovi gate del delta. Nuova CI diagnostica richiesta dal mandato§3; nessun merge con gate falliti. Stato FIX, runtime autenticato/per-record/prestazioni ancora BLOCKED_EXTERNAL/NOT_RUN nel report corrente.
 
+### Esecuzione — 2026-10-07 UTC, ripresa locale bounded della root vuota
+
+**File modificati:** `SyncStoreGeneration.swift`, `SyncOrchestrator.swift` e `AtomicGenerationRecoverySnapshotPullServiceTests.swift`; nessun cambiamento a Database/EditProduct/LocalRootPresentation, fixture DEBUG, UI originali o dipendenze. Fonte finale48 nel freeze esterno `ios-empty-root-inactive-event-active-catchup-fix-20261007-01/source-freeze-final-v2.json`, SHA34904f161cebd6e696950c6609ff65aabf34bcfa933ac37d77537730eb94ba07;45carry invariati rispetto alla precedente fonte c193.
+
+**Azioni ed evidenze:**
+1. Worker empty: RED file-backed ba9f3db2 su drift fisico durante il readback già hidden; massimo due readback completi, ciascuno preceduto da tutti i controlli correnti. Shop/owner/device/journal/cancellazione/revoca/container non diventano retry fisici. La prova GREEN richiede esattamente due readback dopo i nove fetch, senza ribasare il vecchio fence.
+2. Postpublication: RED e62135c8 dimostra prima pubblicazione valida, una sola mutazione metadata, root ancora hidden e nessun successore. Lo stesso test GREEN082afaf3 produce due readback e riammissione. Nuova sottoscrizione owned Orchestrator a objectWillChange, coalescing MainActor e massimo un successore corrente; eventi validi/inammissibili non consumano il budget. Nessun getter con side effect, polling, Retry o trigger cloud.
+3. Inactive→active: RED50e7511c dopo evento realmente scartato mentre inactive; stesso metodo GREEN6d6b0acd dopo una sola chiamata al consumer locale nel vero handler active. Editing busy DEFERISCE il cloud: non è un RPC già in-flight. Barrier DEBUG attende/cattura soltanto il Task owned esistente. Stop prima di active, cancellazione del Task reale già queued, scope/device/journal esteri validi e revoca sono controlli negativi; nessuna seconda qualificazione manuale.
+4. Mirati18 PASS/0FAIL/0SKIP, receipt11b7b09aa5ba3a79486b9d89216209e3c5a25c57041530ece24e1b47c19f6919, tutti125 metodi Atomic precedenti,5 contratti fixture e helper preservati byte-esatti; quattro metodi aggiunti rispetto a c193. Nessun warning nei sorgenti cambiati. Full finale: 1569 actual =1533PASS/0FAIL/36 stessiSKIP, tutte16UI PASS; receipte72021c718e2722d728c36818dc99a675c517682abb3604e5f15043cc5b3c6be. Debug/Release/Analyze: PASS Debug/Release/Analyze;34warning legacy esatti,0nuovi/changed/unclassified; receiptd042cfd1609bee2e1666e1e85dfb77cd419ba4b31352a5381731c0b7aff581cf; confronto warning83198cf0d580ed8f9b7143130f436e548981ff3b0411cbab0c75ea28f3e9e638. Secret scan/shared contracts: PASS, receiptc8e631e4138ca7e5a85412c6ea95e6b8691842e2d673e03413c0e21d19111054.
+
+**Check obbligatori:** full e gate appena indicati sono esiti actual, non prove live. Proper TEST firmato è NON ESEGUITO al congelamento di questa append; il solo esito terminale successivo sarà nella receipt esterna `ios-empty-root-postpublication-active-catchup-final-proper-test-guard-01/signed-release-attempt01/build-receipt.json`, mai inferito. Primaria459, installazione, sessione autenticata, F/H e performance restano separati e NON ESEGUITI da questa lane. Il witness usa controller/Orchestrator reali in unità controllata, non un root SwiftUI montato.
+
+**Incertezze:** CI3c originale ufficiale1563=1526P/1F/36S resta storica FAIL/UI278. ZIP/log/AX/stdout acquisiti una volta; causa dell'operazione fisica iniziale resta UNKNOWN, senza promuovere i nuovi witness a causa CI o prova backend. Task resta FIX; Planning, criteri e MASTER invariati.
+
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
 
 ## Fix
+
+### Fix — 2026-10-07 UTC, empty worker e consumer locale dopo publication/active
+
+RED→GREEN controllati separano il readback fisico in-flight dal drift successivo alla pubblicazione e dall'evento scartato in inactive. Retry worker massimo2; consumer Orchestrator coalesced con un solo successore, lease/owner/autorità correnti e stop/cancel. Al ritorno active il consumer locale viene richiesto prima del foreground cloud, che può restare deferred. Prova/fence/scope/writer DENY e test UI originali preservati. Review finale stesso reviewer APPROVED senza rilievi sul freeze34904;18 mirati actualPASS. Le prove unit/lifecycle non equivalgono a accettazione SwiftUI/live o attribuzione retroattiva del primo drift CI.
 
 ### Fix — 2026-10-07 UTC, body-proof con provenienza stabile e autorità fresca
 
@@ -1353,6 +1371,10 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+### Handoff corrente — 2026-10-07 UTC, fonte48_34904 / empty qualification bounded
+
+Questo blocco prevale sugli snapshot preparatori sotto:18 mirati PASS, 1569 actual =1533PASS/0FAIL/36 stessiSKIP, tutte16UI PASS, Debug/Release/Analyze e scans PASS Debug/Release/Analyze;34warning legacy esatti,0nuovi/changed/unclassified. Proper successivo qualificabile solo dalla receipt actual indicata nella Execution; non installato da questa lane. Staging selettivo soltanto tre sorgenti e questi tre inserimenti Task; rimuovendoli si riottengono working precedente c1c029ff con le286 righe straniere e HEAD Task885e4781 byte-esatti, conservando le286 righe straniere. Commit/push/PR20/CI exact-SHA successivi restano da verificare: nessun merge/main/sourceFF/install o DONE è dedotto dai gate locali. Parent possiede merge/primaria; F/H/sessione/SQLite/live conservano i propri limiti ed esiti distinti.
 
 ### Handoff corrente — 2026-10-07 UTC, SOURCE48_337c / tutti gate locali finali PASS
 
