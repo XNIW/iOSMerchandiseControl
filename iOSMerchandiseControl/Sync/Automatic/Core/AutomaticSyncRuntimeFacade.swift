@@ -90,7 +90,7 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
         }
         let pendingRecovery = AccountBindingStore(defaults: defaults).pendingRecoveryJournal
         if let pendingRecovery,
-           !action.allowsPendingRecoveryAdmission(mode: pendingRecovery.mode) {
+           !action.allowsPendingRecoveryAdmission(mode: pendingRecovery.mode, source: source) {
             return .recoveryRequired(didWork: false)
         }
         var scope: Task126VerifiedOwnerStoreScope
@@ -217,17 +217,21 @@ private extension SyncAction {
 
     /// A destructive account/shop replacement may only execute recovery work.
     /// A same-scope journal may first drain its own pending writes, but only in
-    /// the coordinator's exact push-then-recover sequence. This keeps the
+    /// the coordinator's exact push-then-recover sequence, or push-then-bootstrap
+    /// for an admitted automatic foreground/reconnect resume. This keeps the
     /// durable latch fail-closed without creating a retry deadlock.
     nonisolated func allowsPendingRecoveryAdmission(
-        mode: AccountRecoveryJournalMode
+        mode: AccountRecoveryJournalMode,
+        source: SyncAutomaticTriggerSource
     ) -> Bool {
         switch mode {
         case .accountOrShopReplacement:
             return isRecoveryOnlyAdmission
         case .sameScopeRecovery:
             if isRecoveryOnlyAdmission { return true }
-            return self == .sequence([.pushPending, .requestRecovery])
+            if self == .sequence([.pushPending, .requestRecovery]) { return true }
+            return (source == .rootForeground || source == .networkReconnect)
+                && self == .sequence([.pushPending, .bootstrap])
         }
     }
 }

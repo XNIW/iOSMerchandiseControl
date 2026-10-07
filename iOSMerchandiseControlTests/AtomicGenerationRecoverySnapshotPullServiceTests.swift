@@ -347,6 +347,111 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         print("TASK144_REOPEN_QUALIFICATION_ORDER old=false current=true same-generation=true same-body=true")
     }
 
+    func testPendingFinalizedRecoveryWithRealCatalogACKAutomaticallyResumesForForegroundAndReconnect() async throws {
+        for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
+            let setup = try await makePendingAutomaticSequenceFixture()
+            let proof = setup.proof
+            let fixture = proof.fixture
+            let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+                storeIdentity: manifest.storeIdentity, reason: "actual-pending-catalog-auto-resume",
+                deviceIdentityHash: proof.scope.deviceIdentityHash))
+            var scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryStaging(accountHash: scope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                generationID: manifest.generationID, scope: scope))
+            scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryVerified(accountHash: scope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                generationID: manifest.generationID, checkpointDigest: manifest.checkpoint.checkpointDigest,
+                watermark: try XCTUnwrap(manifest.checkpoint.maxEventID),
+                baselineRunID: manifest.baselineRunID, scope: scope))
+            let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+            XCTAssertEqual(journal.mode, .sameScopeRecovery)
+            XCTAssertEqual(journal.generationID, manifest.generationID)
+            XCTAssertTrue(proof.stateStore.recoveryJournalIsPending)
+            proof.stateStore.recordRunResult(.recoveryRequired())
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            XCTAssertTrue(auth.viewModel.isSignedIn)
+            let decisionProvider = completedRecoveryDecisionProvider(fixture)
+            let snapshot = await decisionProvider.makeSnapshot(triggerSource: source,
+                isAuthenticated: auth.viewModel.isSignedIn, ownerUserID: fixture.ownerUserID,
+                isSyncBusy: false)
+            XCTAssertTrue(snapshot.accountBindingMatches)
+            XCTAssertTrue(snapshot.isNetworkAvailable)
+            XCTAssertFalse(snapshot.hasStateReadFailure)
+            XCTAssertTrue(snapshot.requiresBootstrap)
+            XCTAssertTrue(snapshot.preservesPendingBeforeRecovery)
+            XCTAssertEqual(snapshot.pendingLocalChanges.pendingCatalogChangeCount, 1)
+            XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .sequence([.pushPending, .bootstrap]))
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [proof.checkpoint], productRows: [ordinaryContinuationProduct(
+                    fixture: fixture, id: proof.productID, stock: 0)])
+            let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
+                remote: proof.remote, defaults: fixture.defaults, storeGenerationController: fixture.controller)
+            let facade = AutomaticSyncRuntimeFacade(
+                authViewModel: auth.viewModel,
+                catalogPushProvider: CatalogPushService(modelContainer: fixture.controller.modelContainer,
+                    remote: proof.remote, defaults: fixture.defaults),
+                productPriceProvider: nil, historySessionProvider: nil, incrementalPullProvider: pull,
+                recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+                activityRegistrationProvider: SyncActivityRegistrationService(
+                    modelContainer: fixture.controller.modelContainer, recorder: proof.remote,
+                    defaults: fixture.defaults),
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+                defaults: fixture.defaults,
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } })
+            for deniedSource in [SyncAutomaticTriggerSource.foregroundPoll, .releaseCard] {
+                let denied = await facade.run(action: .sequence([.pushPending, .bootstrap]), source: deniedSource)
+                XCTAssertEqual(denied.status, .recoveryRequired)
+            }
+            for deniedAction in [SyncAction.pushPending, .sequence([.bootstrap, .pushPending]),
+                                 .sequence([.pushPending, .bootstrap, .bootstrap])] {
+                let denied = await facade.run(action: deniedAction, source: source)
+                XCTAssertEqual(denied.status, .recoveryRequired)
+            }
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+            XCTAssertEqual(proof.remote.recordRequests.count, 0)
+            let runtime = RI08ObservedRealRuntime(facade: facade)
+            let finished = expectation(description: "Same-scope automatic resume finishes after actual Catalog ACK")
+            runtime.expectedCompletions = [finished]
+            let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth,
+                runtime: runtime, lease: lease, decisionProvider: decisionProvider)
+            defer { orchestrator.stop() }
+            orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+            await fulfillment(of: [finished], timeout: 2)
+            XCTAssertEqual(runtime.results.count, 1)
+            XCTAssertEqual(runtime.sources, [source])
+            let result = try XCTUnwrap(runtime.results.first)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+            XCTAssertEqual(proof.remote.recordRequests.count, 1)
+            let context = ModelContext(fixture.controller.modelContainer)
+            let changes = try context.fetch(FetchDescriptor<LocalPendingChange>()).filter { $0.changeID == setup.changeID }
+            XCTAssertEqual(changes.count, 1)
+            XCTAssertEqual(changes.first?.status, .acknowledged)
+            let events = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+            XCTAssertEqual(events.count, 1)
+            XCTAssertEqual(events.first?.status, .sent)
+            XCTAssertEqual(binding.currentBinding, originalBinding)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, manifest.generationID)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
+            XCTAssertEqual(transport.counts().checkpoints, 0)
+            XCTAssertEqual(transport.counts().pages, 0)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+            let automaticRequestDenied = fixture.defaults.string(
+                forKey: "sync.runtime.automatic.recovery.requestedReason") == "automatic_recovery_request"
+            print("TASK144_PENDING_AUTO_RESUME source.\(source.rawValue).normalized-request.\(runtime.actions == [.sequence([.pushPending, .requestRecovery])]).push-ack.\(changes.first?.status == .acknowledged).outbox-sent.\(events.first?.status == .sent).automatic-request-denied.\(automaticRequestDenied).journal-completed.\(binding.pendingRecoveryJournal == nil).verified.\(result.verifiedConvergence)")
+            XCTAssertTrue(result.status == .success && result.verifiedConvergence && binding.pendingRecoveryJournal == nil,
+                "An admitted same-scope automatic resume must finish the same generation after real pending-work ACK")
+        }
+    }
+
     func testPendingFinalizedRecoveryJournalAutomaticallyResumesForForegroundAndReconnect() async throws {
         for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
             let proof = try await makeRealContinuationProof()

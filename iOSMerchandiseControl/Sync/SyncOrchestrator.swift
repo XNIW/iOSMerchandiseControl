@@ -376,7 +376,9 @@ final class SyncOrchestrator: ObservableObject {
                 completeForegroundTask()
                 return
             }
-            let action = isRecoveryRetry
+            // Explicit retry normalization requires release-card authority.
+            // An admitted automatic resume retains its gated bootstrap plan.
+            let action = isExplicitRecoveryRetry
                 ? Self.explicitRecoveryAction(afterGates: decidedAction)
                 : decidedAction
             stateStore.recordDecision(trigger: source.syncTrigger, action: action)

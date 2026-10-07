@@ -206,6 +206,38 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 — Automatic resume con Catalog pending dopo finalizzazione
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` — conserva il piano bootstrap già ammesso per la ripresa automatica; normalizza requestRecovery solo per il retry esplicito.
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift` — ammette solo la sequenza esatta pushPending→bootstrap per rootForeground/networkReconnect e journal same-scope; le altre azioni e sorgenti restano negate.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — un test con CatalogPush reale, ACK/outbox e finalizzazione file-backed, due sorgenti e controlli negativi prima della ripresa; tutti i114 metodi originali byte-identici.
+- Questo file — solo nuova evidenza Execution; modifiche preesistenti preservate e non incluse nel commit.
+
+**Azioni eseguite:**
+1. Riprodotto un difetto applicativo distinto dal FAIL storico CI87: dopo il vero ACK Catalog, il piano automatico veniva normalizzato a requestRecovery, che Engine correttamente nega fuori releaseCard; journal aperto e verified false. RED ufficiale1 FAIL/0 PASS/0 SKIP, unico assert finale per entrambe le sorgenti; setup, scope, generazione, watermark41, ACK e outbox superati. Receipt fdf9b06878f3436b856d0de49231ef8532a6d5ca597e3719e53b6e6ead9e77a5; verifica22/22 4ae3c80bd21cf826791ee192e0014bb0ff02c3b2ec93a622eb73b3818cfb88f4.
+2. Applicato il minimo fix in due file; stessa identica prima regressione ora1 PASS/0 FAIL/0 SKIP. Receipt93f3c64166f2841712e54641aecf58c7b57cc7017a4d2c0bbcfa4b6c687d8655; verifica25/25 85a76dcbf3b818bcfc8e5d93eded0b7cbd82680bd18f7eb147ee1972b0b73619. Per entrambe le sorgenti: ACK/outbox true, journal completato, verified true; nessuna nuova richiesta checkpoint/page.
+3. Aggiunti nello stesso nuovo metodo controlli negativi sulla facade reale: foregroundPoll/releaseCard, push isolato, sequenza inversa o duplicata e zero chiamate remote prima della positiva. Mirati finali10 PASS/0 FAIL/0 SKIP, receipt4a2cfe476bfd801d687be8e3b43b28ae494679efdeae89e537a813874af3f597; verifica29/29 3a8bc161b21641ee1940405aa953f838b8fe816853d903f4e5f5e1fb5b212eb3.
+4. Review indipendente C e reader APPROVED, compreso delta negativo finale: nessun finding. Engine, guard releaseCard, scope/device/lease, cancellazione, budget e Task119 invariati. Nessuna dipendenza/API pubblica/schema/UI cambiata.
+5. CI ba28/37571272683 precedente PASS1549=1513 PASS/36 stessi SKIP/16UI PASS e bundle originale acquisito (receipt f8ff28507da95aa640f387ef43fc0d696911245bf2ba43fa9647ba0f906b38e9). È prova dello snapshot precedente; non copre questo fix. RelatedSave recovery.value returned.completed-journal.true, FAIL87 NON_REPRODUCED, causa storica UNKNOWN.
+
+**Check obbligatori — snapshot prima del commit/push e dei gate finali paralleli:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug/Release, Analyze e Proper TEST finali | NON ESEGUITO, PENDING | Nuovo delta produzione: esecuzioni finali necessarie sul candidato congelato dopo commit. Proper87 non riusato come copertura. |
+| Mirati finali | ESEGUITO | 10 PASS/0 FAIL/0 SKIP; processi terminati, simulatore isolato Shutdown, dati baseline preservati. |
+| Warning nuovi nei mirati | ESEGUITO | 0 primari/1 metadata AppIntents preesistente/0 non classificati. Gate finali ancora PENDING. |
+| Full canonico e nuova CI standard | NON ESEGUITO, PENDING | Attesi1550 ID, tutti1549 precedenti invariati più una nuova unità; gli esiti saranno registrati nelle ricevute finali effettive. |
+| Coerenza con planning | ESEGUITO | CA07/10/11, ripresa automatica same-scope con pending; minimo fix causale dopo RED reale. |
+| Criteri globali e chiusura | NON ESEGUITO | Merge/mainCI/install/runtime e gate live/performance restano separati; TASK144 FIX/NON DONE. |
+
+**Incertezze:**
+- Nessuna attribuzione causale al FAIL storico CI87/RelatedSave; questo difetto ha un RED indipendente. Fixture controllata non equivale a backend autenticato o convergenza bidirezionale reale.
+
+**Handoff notes:**
+- Commit/push selettivo ordinario autorizzato; nuova CI standard in parallelo a full/build/Analyze/Proper locali, sorgenti e Task congelati dopo commit. Merge solo con esiti finali reali verdi, poi mainCI e aggiornamento TEST preservativo autorizzato. Nessun reset o modifica production.
+- Ricevute complete nel pacchetto parent `evidence/native-local-availability-20261004/ios-automatic-resume-pending-catalog-*`; questo log è lo snapshot pre-gate e non dichiara futuri PASS.
+
 ### Esecuzione — 2026-10-07 — Related Save recovery-value diagnostic
 
 **File modificati:**
