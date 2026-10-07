@@ -229,6 +229,11 @@ final class SyncOrchestrator: ObservableObject {
         Task126OwnerStoreGate.invalidateAutomaticScopeLease()
         cancelForegroundCheck()
         updateSyncEventSignalWatcher()
+        if let controller = storeGenerationController, let lease = storeGenerationLease,
+           (try? controller.validateLease(lease)) != nil,
+           let owner = authViewModel.localMutationOwnerUserID {
+            controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: owner)
+        }
         guard didReachInteractiveUI,
               currentScenePhase == .active,
               authViewModel.isSignedIn else { return }
