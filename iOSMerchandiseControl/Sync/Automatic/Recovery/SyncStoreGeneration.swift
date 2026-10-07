@@ -1287,8 +1287,13 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private let defaults: UserDefaults
     private var presentationBoundaryObserver: ((String) -> Void)?
     private var localBodyQualificationTask: Task<Bool, Never>?
+    private var manifestQualificationID: UUID?
+    private var manifestQualificationRequested = false
+    private var manifestQualificationOwner: UUID?
     #if DEBUG
     private var rootQualificationObservationTicket: UInt64 = 0
+    // Tests hold the real detached readback before its existing publication guards.
+    var localBodyQualificationBeforePublicationForTesting: (@MainActor () async -> Void)?
     #endif
     private struct EmptyRootProof {
         let scope: Task126VerifiedOwnerStoreScope
@@ -1296,6 +1301,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let fence: SyncStoreActiveMutationFence
     }
     private var emptyRootProof: EmptyRootProof?
+    private var emptyPublicationSuccessorBudget = 0
 
     var modelContainer: ModelContainer { active.container }
     var activeManifest: SyncStoreGenerationManifest? { active.manifest }
@@ -1373,6 +1379,47 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         Task126OwnerStoreGate.registerActiveGenerationContainer(ephemeralContainer)
     }
 
+    /// A genuine shop-context event may arrive before the current readback
+    /// finishes. Coalesce it into one successor instead of cancelling/restarting
+    /// a scan on every render, or losing readiness while the root stays hidden.
+    func requestLocalBodyQualificationAfterShopContextChange(ownerUserID: UUID) {
+        guard active.manifest != nil,
+              !Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container) else { return }
+        manifestQualificationOwner = ownerUserID
+        if manifestQualificationID != nil {
+            manifestQualificationRequested = true
+        } else {
+            startLocalBodyQualification(ownerUserID: ownerUserID)
+        }
+    }
+
+    private func finishManifestQualification(_ identity: UUID, published: Bool, cancelled: Bool) {
+        guard manifestQualificationID == identity else { return }
+        manifestQualificationID = nil
+        localBodyQualificationRevision &+= 1
+        let retry = manifestQualificationRequested && !published && !cancelled
+        let owner = manifestQualificationOwner
+        manifestQualificationRequested = false
+        if retry, let owner {
+            startLocalBodyQualification(ownerUserID: owner)
+        }
+    }
+
+    /// A publication and a later physical invalidation can coalesce into one
+    /// hidden render. Only an actual fresh invalidation consumes this request.
+    func requestEmptyRootQualificationAfterPublication(ownerUserID: UUID) {
+        guard emptyPublicationSuccessorBudget > 0, localBodyQualificationRevision > 0,
+              active.manifest == nil, let repository, let proof = emptyRootProof,
+              proof.scope.ownerUserID == ownerUserID, active.container === proof.container,
+              permitsEmptyQualificationReadback(scope: proof.scope, captured: active),
+              let currentFence = try? repository.captureActiveMutationFence(for: active),
+              currentFence != proof.fence else { return }
+        // A successor does not reset the budget of its initiating lifecycle
+        // request. Duplicate notifications cannot create an unbounded chain.
+        emptyPublicationSuccessorBudget -= 1
+        startEmptyRootQualification(ownerUserID: ownerUserID, repository: repository)
+    }
+
     /// Full current catalog readback is deliberately outside MainActor. The
     /// result cannot authorize another scope, changed file or newer generation.
     func startLocalBodyQualification(ownerUserID: UUID? = nil) {
@@ -1383,6 +1430,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             return
         }
         guard let manifest = active.manifest else {
+            emptyPublicationSuccessorBudget = 1
             #if DEBUG
             Task144RootObservation.record("body-start", "branch.empty-root-dispatch", callsite: "SyncStoreGeneration.startLocalBodyQualification")
             #endif
@@ -1407,16 +1455,24 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 guard let container else { return nil }
                 return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
             })
-        let expectedBinding = AccountBindingStore(defaults: defaults).currentBinding
+        let bindingStore = AccountBindingStore(defaults: defaults)
+        let expectedBinding = bindingStore.currentBinding
+        let expectedJournal = bindingStore.pendingRecoveryJournal
+        let expectedPendingJournal = bindingStore.hasPendingReplacementJournal
         let expectedShop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: manifest.accountHash)
         let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
+        let identity = UUID()
+        manifestQualificationID = identity
+        manifestQualificationRequested = false
+        manifestQualificationOwner = ownerUserID
         #if DEBUG
         if Task144RootObservation.enabled { rootQualificationObservationTicket &+= 1 }
         #endif
         localBodyQualificationTask = Task { [weak self] in
+            var published = false
+            defer { self?.finishManifestQualification(identity, published: published, cancelled: Task.isCancelled) }
             for _ in 0..<2 {
                 guard !Task.isCancelled else { return false }
-                let generation = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
                 let work = Task.detached(priority: .utility) {
                     try Task.checkCancellation()
                     let before = try repository.captureActiveMutationFence(for: captured)
@@ -1428,27 +1484,62 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 }
                 do {
                     let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
-                    guard let self, !Task.isCancelled, self.active.container === container,
-                          self.active.manifest == manifest,
-                          AccountBindingStore(defaults: self.defaults).currentBinding == expectedBinding,
-                          SelectedShopStore(defaults: self.defaults).selectedShop(accountHash: manifest.accountHash) == expectedShop,
-                          (try? DeviceInstallIDStore(defaults: self.defaults).requireDeviceInstallID()) == device,
-                          expectedBinding?.accountHash == manifest.accountHash,
-                          expectedBinding?.storeIdentity == manifest.storeIdentity,
-                          expectedShop?.shopID == manifest.shopID,
-                          expectedShop?.localStoreIdentity == manifest.storeIdentity,
-                          device.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash else { return false }
-                    if Task126OwnerStoreGate.acceptLocalBodyProof(container: container, generation: generation, fence: fence) {
-                        self.localBodyQualificationRevision &+= 1
+                    #if DEBUG
+                    await self?.localBodyQualificationBeforePublicationForTesting?()
+                    #endif
+                    guard let self, !Task.isCancelled, self.manifestQualificationID == identity else { return false }
+                    // The validated archive has stable provenance. Renewed
+                    // selectedAt/name and writer leases are not its identity.
+                    // Re-read authorization and publish under the same lease
+                    // lock, so an old async writer gains no renewed authority.
+                    published = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence) {
+                        let selectedStore = SelectedShopStore(defaults: self.defaults)
+                        let currentBinding = AccountBindingStore(defaults: self.defaults)
+                        let currentJournal = currentBinding.pendingRecoveryJournal
+                        guard !Task.isCancelled, self.active.container === container,
+                              self.active.manifest == manifest,
+                              self.defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == manifest.accountHash,
+                              ownerUserID.map(AccountBindingStore.accountHash(for:)).map({ $0 == manifest.accountHash }) ?? true,
+                              currentBinding.currentBinding == expectedBinding,
+                              currentBinding.hasPendingReplacementJournal == expectedPendingJournal,
+                              // Journal progress describes staging, not this active archive.
+                              // Its exact replacement binding (including boundAt), mode
+                              // and device must remain the same recovery authority.
+                              currentJournal?.replacement == expectedJournal?.replacement,
+                              currentJournal?.mode == expectedJournal?.mode,
+                              currentJournal?.deviceIdentityHash == expectedJournal?.deviceIdentityHash,
+                              expectedBinding?.accountHash == manifest.accountHash,
+                              expectedBinding?.storeIdentity == manifest.storeIdentity,
+                              selectedStore.isResolutionReady(accountHash: manifest.accountHash),
+                              let currentShop = selectedStore.selectedShop(accountHash: manifest.accountHash),
+                              ownerUserID != nil || currentShop == expectedShop,
+                              currentShop.shopID == expectedShop?.shopID,
+                              currentShop.shopID == manifest.shopID,
+                              currentShop.localStoreIdentity == manifest.storeIdentity,
+                              currentShop.role == expectedShop?.role,
+                              currentShop.status == expectedShop?.status,
+                              currentShop.canWrite == expectedShop?.canWrite,
+                              LinkedShop(shopID: currentShop.shopID, code: currentShop.code, name: currentShop.name,
+                                role: currentShop.role, status: currentShop.status,
+                                selectable: currentShop.selectable, canWrite: currentShop.canWrite).isValidSelection,
+                              (try? DeviceInstallIDStore(defaults: self.defaults).requireDeviceInstallID()) == device,
+                              device.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash,
+                              (ownerUserID == nil || !selectedStore.hasConfirmedDeviceDenial(accountHash: manifest.accountHash,
+                                shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash)) else { return false }
+                        if expectedPendingJournal {
+                            guard let journal = currentJournal, journal.mode == .sameScopeRecovery,
+                                  journal.replacement.accountHash == manifest.accountHash,
+                                  journal.replacement.storeIdentity == manifest.storeIdentity,
+                                  journal.deviceIdentityHash == manifest.deviceIdentityHash else { return false }
+                        }
                         return true
                     }
+                    if published { return true }
                 } catch {
                     if error as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
-                    self?.localBodyQualificationRevision &+= 1
                     return false
                 }
             }
-            self?.localBodyQualificationRevision &+= 1
             return false
         }
     }
@@ -1477,6 +1568,26 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
               (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)) != nil else { return false }
         // The physically empty presentation proof survives ordinary same-shop
         // refresh; an old writer still needs its original full lease unchanged.
+        return true
+    }
+
+    private func permitsEmptyQualificationReadback(scope: Task126VerifiedOwnerStoreScope,
+        captured: SyncStoreActiveGeneration) -> Bool {
+        guard !Task.isCancelled, loadFailureCode == nil,
+              active.container === captured.container, active.manifest == nil,
+              AccountBindingStore(defaults: defaults).hasPendingReplacementJournal,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true),
+              current.ownerUserID == scope.ownerUserID,
+              current.accountHash == scope.accountHash,
+              current.shopID == scope.shopID,
+              current.storeIdentity == scope.storeIdentity,
+              current.deviceInstallID == scope.deviceInstallID,
+              current.deviceIdentityHash == scope.deviceIdentityHash,
+              current.pendingReplacement == scope.pendingReplacement,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+              (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)) != nil else { return false }
         return true
     }
 
@@ -1544,10 +1655,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let currentFence = try observation.required("physical-fence-read", {
             try repository.captureActiveMutationFence(for: captured)
         })
-        guard observation.check(currentFence == fence, "physical-fence-equal"),
-              observation.attempt("current-revalidate", {
-                  try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
-              }) != nil else { return nil }
+        guard observation.check(currentFence == fence, "physical-fence-equal") else {
+            throw ShopSyncRecoveryContractError.checkpointChanged
+        }
+        guard observation.attempt("current-revalidate", {
+            try Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: defaults)
+        }) != nil else { return nil }
         result = true
         return current
     }
@@ -1611,57 +1724,63 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     "ticket.\(ticket);result.\(completion);controller-present.\(self != nil);ticket-current.\(self.map { $0.rootQualificationObservationTicket == ticket } ?? false);revision-changed.\(self.map { $0.localBodyQualificationRevision != revisionAtStart } ?? false)",
                     callsite: "SyncStoreGeneration.startEmptyRootQualification")
             }
-            let work = Task.detached(priority: .utility) {
-                var stage = "check-cancellation"
-                do {
-                try Task.checkCancellation()
-                stage = "physical-fence-before"
-                let before = try repository.captureActiveMutationFence(for: captured)
-                stage = "existing-nine-empty-fetches"
-                let context = ModelContext(captured.container); context.autosaveEnabled = false
-                func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+            for _ in 0..<2 {
+                guard self?.permitsEmptyQualificationReadback(scope: scope, captured: captured) == true else { return false }
+                let work = Task.detached(priority: .utility) {
+                    var stage = "check-cancellation"
+                    do {
                     try Task.checkCancellation()
-                    var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
-                    guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                    stage = "physical-fence-before"
+                    let before = try repository.captureActiveMutationFence(for: captured)
+                    stage = "existing-nine-empty-fetches"
+                    let context = ModelContext(captured.container); context.autosaveEnabled = false
+                    func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+                        try Task.checkCancellation()
+                        var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
+                        guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                    }
+                    try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
+                    try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
+                    try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
+                    try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
+                    stage = "physical-fence-after"
+                    let after = try repository.captureActiveMutationFence(for: captured)
+                    stage = "physical-fence-equality"
+                    guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                    return after
+                    } catch {
+                        Task144RootObservation.record("empty-worker-error", "ticket.\(ticket);stage.\(stage);error.\(Task144RootObservation.errorCategory(error))",
+                            callsite: "SyncStoreGeneration.startEmptyRootQualification.worker")
+                        throw error
+                    }
                 }
-                try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
-                try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
-                try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
-                try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
-                stage = "physical-fence-after"
-                let after = try repository.captureActiveMutationFence(for: captured)
-                stage = "physical-fence-equality"
-                guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
-                return after
+                do {
+                    let fence = try await withTaskCancellationHandler { try await work.value } onCancel: {
+                        Task144RootObservation.record("empty-worker-cancel", "ticket.\(ticket);existing-cancel-handler.entered",
+                            callsite: "SyncStoreGeneration.startEmptyRootQualification.on-cancel")
+                        work.cancel()
+                    }
+                    await self?.localBodyQualificationBeforePublicationForTesting?()
+                    guard let self else {
+                        completion = "self-absent"
+                        return false
+                    }
+                    guard let current = try self.observeEmptyPublicationAllowed(scope: scope, captured: captured,
+                        fence: fence, repository: repository, ticket: ticket) else {
+                        completion = "after-await-guard-denied"
+                        return false
+                    }
+                    self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
+                    self.localBodyQualificationRevision &+= 1
+                    completion = "published"
+                    return true
                 } catch {
-                    Task144RootObservation.record("empty-worker-error", "ticket.\(ticket);stage.\(stage);error.\(Task144RootObservation.errorCategory(error))",
-                        callsite: "SyncStoreGeneration.startEmptyRootQualification.worker")
-                    throw error
-                }
-            }
-            do {
-                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: {
-                    Task144RootObservation.record("empty-worker-cancel", "ticket.\(ticket);existing-cancel-handler.entered",
-                        callsite: "SyncStoreGeneration.startEmptyRootQualification.on-cancel")
-                    work.cancel()
-                }
-                guard let self else {
-                    completion = "self-absent"
+                    completion = Task144RootObservation.errorCategory(error)
+                    if error as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
                     return false
                 }
-                guard let current = try self.observeEmptyPublicationAllowed(scope: scope, captured: captured,
-                    fence: fence, repository: repository, ticket: ticket) else {
-                    completion = "after-await-guard-denied"
-                    return false
-                }
-                self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
-                self.localBodyQualificationRevision &+= 1
-                completion = "published"
-                return true
-            } catch {
-                completion = Task144RootObservation.errorCategory(error)
-                return false
             }
+            return false
         }
         accepted = true
     }
@@ -1708,44 +1827,58 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         emptyRootProof = nil
         let captured = active
         localBodyQualificationTask = Task { [weak self] in
-            let work = Task.detached(priority: .utility) {
-                try Task.checkCancellation()
-                let before = try repository.captureActiveMutationFence(for: captured)
-                let context = ModelContext(captured.container); context.autosaveEnabled = false
-                func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+            // Retry only a changed physical readback, with the same captured
+            // scope and every current publication guard evaluated afresh.
+            for _ in 0..<2 {
+                guard self?.permitsEmptyQualificationReadback(scope: scope, captured: captured) == true else { return false }
+                let work = Task.detached(priority: .utility) {
                     try Task.checkCancellation()
-                    var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
-                    guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                    let before = try repository.captureActiveMutationFence(for: captured)
+                    let context = ModelContext(captured.container); context.autosaveEnabled = false
+                    func requireEmpty<Model: PersistentModel>(_ type: Model.Type) throws {
+                        try Task.checkCancellation()
+                        var descriptor = FetchDescriptor<Model>(); descriptor.fetchLimit = 1
+                        guard try context.fetch(descriptor).isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                    }
+                    try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
+                    try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
+                    try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
+                    try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
+                    let after = try repository.captureActiveMutationFence(for: captured)
+                    guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                    return after
                 }
-                try requireEmpty(Product.self); try requireEmpty(Supplier.self); try requireEmpty(ProductCategory.self)
-                try requireEmpty(ProductPrice.self); try requireEmpty(HistoryEntry.self)
-                try requireEmpty(LocalPendingChange.self); try requireEmpty(SyncEventOutboxEntry.self)
-                try requireEmpty(SupabaseCatalogBaselineRun.self); try requireEmpty(SupabaseCatalogBaselineRecord.self)
-                let after = try repository.captureActiveMutationFence(for: captured)
-                guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
-                return after
+                do {
+                    let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    #if DEBUG
+                    await self?.localBodyQualificationBeforePublicationForTesting?()
+                    #endif
+                    guard let self, !Task.isCancelled, self.active.container === captured.container,
+                          self.active.manifest == nil,
+                          let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                            defaults: self.defaults, allowsPendingReplacement: true),
+                          current.ownerUserID == scope.ownerUserID,
+                          current.accountHash == scope.accountHash,
+                          current.shopID == scope.shopID,
+                          current.storeIdentity == scope.storeIdentity,
+                          current.deviceInstallID == scope.deviceInstallID,
+                          current.deviceIdentityHash == scope.deviceIdentityHash,
+                          current.pendingReplacement == scope.pendingReplacement,
+                          !SelectedShopStore(defaults: self.defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                            shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash) else { return false }
+                    guard try repository.captureActiveMutationFence(for: captured) == fence else {
+                        throw ShopSyncRecoveryContractError.checkpointChanged
+                    }
+                    guard (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: self.defaults)) != nil else { return false }
+                    self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
+                    self.localBodyQualificationRevision &+= 1
+                    return true
+                } catch {
+                    if error as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
+                    return false
+                }
             }
-            do {
-                let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
-                guard let self, !Task.isCancelled, self.active.container === captured.container,
-                      self.active.manifest == nil,
-                      let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
-                        defaults: self.defaults, allowsPendingReplacement: true),
-                      current.ownerUserID == scope.ownerUserID,
-                      current.accountHash == scope.accountHash,
-                      current.shopID == scope.shopID,
-                      current.storeIdentity == scope.storeIdentity,
-                      current.deviceInstallID == scope.deviceInstallID,
-                      current.deviceIdentityHash == scope.deviceIdentityHash,
-                      current.pendingReplacement == scope.pendingReplacement,
-                      !SelectedShopStore(defaults: self.defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
-                        shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
-                      try repository.captureActiveMutationFence(for: captured) == fence,
-                      (try? Task126OwnerStoreGate.revalidateAutomaticScope(current, defaults: self.defaults)) != nil else { return false }
-                self.emptyRootProof = EmptyRootProof(scope: current, container: captured.container, fence: fence)
-                self.localBodyQualificationRevision &+= 1
-                return true
-            } catch { return false }
+            return false
         }
     }
 
@@ -1883,6 +2016,10 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 Task144RootObservation.record("empty-task-invalidation", "branch.activation-cancel", callsite: "SyncStoreGeneration.activate")
             }
             #endif
+            manifestQualificationID = nil
+            manifestQualificationRequested = false
+            manifestQualificationOwner = nil
+            emptyPublicationSuccessorBudget = 0
             localBodyQualificationTask?.cancel()
             localBodyQualificationTask = nil
             // Never roll back to the retired container after the durable

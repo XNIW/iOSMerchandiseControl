@@ -660,6 +660,17 @@ nonisolated enum Task126OwnerStoreGate {
         }
     }
 
+    /// A readback may outlive a same-provenance resolver refresh. Current
+    /// authorization and the unchanged physical fence are checked atomically;
+    /// no captured writer scope or retired container lease is renewed.
+    static func acceptLocalBodyProof(container: ModelContainer, fence: SyncStoreActiveMutationFence,
+                                     validatingCurrentAuthority: () -> Bool) -> Bool {
+        leaseStore.withCurrentLease { _ in
+            guard validatingCurrentAuthority() else { return false }
+            return leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence)
+        }
+    }
+
     static func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer) {
         leaseStore.finishAcceptedLocalWriteWithLeaseHeld(container)
     }
