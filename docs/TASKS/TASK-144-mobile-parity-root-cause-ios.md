@@ -206,6 +206,34 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 UTC, nuova qualifica dopo invalidazione fisica della shell vuota
+
+**Stato FIX, non DONE.** Il root ora osserva il passaggio del gate da visibile a nascosto su un `Group` stabile e richiede al controller esistente una nuova qualifica quando manca il manifest attivo. La vecchia proof resta negata fino alla scansione completa e alla pubblicazione validata; nessun nuovo grant READY/write, query nel getter, polling, motore sync o cambiamento dei guard di scope/fence. `SyncStoreGeneration.swift` resta byte-identico.
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — osservatore lifecycle stabile della perdita di ammissione; UI/UX: ripristina la shell locale solo dopo nuova prova valida, senza Retry manuale.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — variante DEBUG opt-in su store sintetico: cambia realmente la mtime del solo legacy.store, verifica diniego della vecchia proof e nuovo revision/admission senza cambiare scope, fase, container o autorità.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — un nuovo caso; tutte le asserzioni, gli helper, l'ordine e i budget precedenti restano identici.
+- Questo task — solo la presente voce Execution; modifiche preesistenti escluse dal commit.
+
+**Azioni/evidenze:**
+1. Originale campagna finita A: 1 FAIL/4 PASS. Nel FAIL, qualifica iniziale ammessa, fence fisico cambiato e successore non osservato; nei PASS4/5 un successore ripristina l'ammissione. Il writer storico e il membro preciso del fence restano UNKNOWN.
+2. RED reale con produzione precedente e stessi nuovi fixture/test: 0 PASS/1 FAIL, unica assertion nuova di riqualifica; receipt `ff6127c6f39ef3963c80907813573c814e3d73867628aba03433c795a8b72147`.
+3. Primo GREEN: NOT_RUN infrastrutturale, runner Simulator occupato prima del caso. Dopo boot/status del solo simulatore sintetico, GREEN attempt02: 1 PASS/0 FAIL/0 SKIP, receipt `a38cd4760a76d04ede858dd3a66da5c2cd53794c5b3f695bd249110440a33597`.
+4. Regressioni adiacenti: 10 PASS/0 FAIL/0 SKIP, inclusi otto unit test negativi/scope/revoca, A originale e B originale editor/cutover; receipt `d0cf4424166281b9444f53f3507529619f94756bb52d75da942d61d4e35d359d`.
+5. Review indipendente degli stessi Data/UX: APPROVED con limiti sul freeze `d7cffc1b8e42ca68fb83c51bbb38160db1bac6d83df662383b48a1fa92ae2bce` e patch `8f9d1707d3ff122a3b565a0a8b7dee02d0843f2a947a4c6a96621dadf5e1a942`; nessun finding bloccante.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Compilazione e test mirati | ESEGUITO | RED reale, GREEN1 e adiacenti10; processi propri assenti e simulatore sintetico Shutdown. |
+| Gate canonico completo / Debug / Release / Analyze sul nuovo delta | NON ESEGUITO | Da eseguire dopo decisione batch sul nuovo B70 originale CI; i gate precedenti non certificano questo delta. |
+| Warning nuovi | NON ESEGUITO | Conteggio canonico finale ancora pendente. |
+| Coerenza con planning e preservazione | ESEGUITO | Controller/45carry originali, MASTER, dati/config primari e Task foreign preservati; nessun input/install sul primario iOS. |
+| Criteri di accettazione globali | NON ESEGUITO | CA-07 live, CA-09 finale, CA-10 full/CI e integrazione/runtime restano aperti e separati. |
+
+**Incertezze / handoff:** il trigger richiede un nuovo edge visibile→nascosto; fallimento già hidden senza altro edge non coperto. La nuova CI standard al precedente HEAD1bd è 1511 PASS/1 FAIL/36 SKIP: B fallisce alla riga70 su activated, prima del presenter editor. Il B locale PASS non chiude quel FAIL; originali in acquisizione, causa esatta UNKNOWN. Nessun full/push automatico prima della decisione su B; normale commit selettivo A autorizzato. Nessuna chiusura globale, merge, distribuzione o convergenza live inferita.
+
 ### Esecuzione — 2026-10-07 — campagna A finita nella CI esistente
 
 **File modificati:**

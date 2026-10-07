@@ -180,6 +180,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private let shopFetcher: Task144ControlledShopFetcher
     private let session: URLSession
     private let emptyBootstrap: Bool
+    let provesEmptyFenceRequalification = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"
+    private let ownedRepository: SyncStoreGenerationRepository
+    private let ownedLegacyStoreURL: URL
+    private var emptyFenceQualificationSubscription: AnyCancellable?
     private var task: Task<Void, Never>?
     private var preparationTask: Task<Void, Never>?
     private var hasPreparationStarted = false
@@ -245,6 +249,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let repository = try SyncStoreGenerationRepository(
             baseDirectory: root.appendingPathComponent("generation-root", isDirectory: true),
             legacyDefaultStoreURL: root.appendingPathComponent("legacy.store"))
+        ownedRepository = repository
+        ownedLegacyStoreURL = root.appendingPathComponent("legacy.store")
         let linkedShop = LinkedShop(shopID: shop, code: "TASK144", name: "Controlled local root",
             role: "owner", status: "active", selectable: true, canWrite: true)
         let hash = AccountBindingStore.accountHash(for: owner)
@@ -653,6 +659,74 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         stateStore.updatePhase(.failed, outcome: .failed)
         stateStore.updatePhase(.checking)
         facts.insert("task144.controlled.state-updated")
+    }
+
+    /// Opt-in file metadata drift in this run's synthetic empty store. The
+    /// production view must schedule its own successor qualification.
+    func invalidateEmptyRootPhysicalFence() {
+        guard provesEmptyFenceRequalification, emptyBootstrap,
+              !facts.contains("task144.controlled.empty-fence.invalidated") else { return }
+        do {
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                allowsPendingReplacement: true)
+            let phase = stateStore.state.phase
+            let container = controller.modelContainer
+            let revision = controller.localBodyQualificationRevision
+            guard facts.contains("task144.controlled.held"), !transport.isReleased,
+                  authViewModel.localMutationOwnerUserID == owner,
+                  controller.activeManifest == nil, revision > 0,
+                  controller.permitsScopedEmptyRoot(ownerUserID: owner),
+                  !Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner),
+                  AccountBindingStore().hasPendingReplacementJournal else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            let before = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            let values = try ownedLegacyStoreURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey,
+                .contentModificationDateKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true,
+                  let modificationDate = values.contentModificationDate else {
+                throw SyncStoreGenerationError.activeStoreMissing
+            }
+            facts.insert("task144.controlled.empty-fence.initially-admitted")
+            try FileManager.default.setAttributes([.modificationDate: modificationDate.addingTimeInterval(-60)],
+                ofItemAtPath: ownedLegacyStoreURL.path)
+            let after = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            guard before != after,
+                  let beforeFile = before.files.first(where: { $0.relativePath == ownedLegacyStoreURL.lastPathComponent }),
+                  let afterFile = after.files.first(where: { $0.relativePath == ownedLegacyStoreURL.lastPathComponent }),
+                  beforeFile.modificationTimeBits != afterFile.modificationTimeBits,
+                  controller.modelContainer === container,
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    allowsPendingReplacement: true) == scope,
+                  stateStore.state.phase == phase,
+                  !controller.permitsScopedEmptyRoot(ownerUserID: owner) else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            // @Published emits from willSet. Hop to MainActor asynchronously so
+            // both the revision and its proof have completed publication.
+            emptyFenceQualificationSubscription = controller.$localBodyQualificationRevision.dropFirst().sink { [weak self] published in
+                Task { @MainActor [weak self] in
+                    guard let self, published != revision,
+                          self.controller.localBodyQualificationRevision == published,
+                          self.controller.modelContainer === container,
+                          self.controller.activeManifest == nil,
+                          self.authViewModel.localMutationOwnerUserID == self.owner,
+                          self.stateStore.state.phase == phase,
+                          !self.transport.isReleased,
+                          (try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: self.owner,
+                            allowsPendingReplacement: true)) == scope,
+                          self.controller.permitsScopedEmptyRoot(ownerUserID: self.owner),
+                          !Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: self.owner),
+                          AccountBindingStore().hasPendingReplacementJournal else { return }
+                    self.facts.insert("task144.controlled.empty-fence.requalified")
+                    self.emptyFenceQualificationSubscription = nil
+                }
+            }
+            facts.insert("task144.controlled.empty-fence.invalidated")
+            controller.objectWillChange.send()
+        } catch {
+            facts.insert("task144.controlled.empty-fence.failure")
+        }
     }
 
     func runtime(modelContainer: ModelContainer, stateStore: SyncStateStore) -> any SyncAutomaticRuntimeProviding {
@@ -1165,6 +1239,13 @@ private struct Task144ControlledRootControls: View {
                 Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
             }
             HStack {
+                if fixture.provesEmptyFenceRequalification {
+                    Text("Change controlled empty store fence")
+                        .padding(8).contentShape(Rectangle())
+                        .onLongPressGesture(minimumDuration: 1) { fixture.invalidateEmptyRootPhysicalFence() }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityIdentifier("\(controlPrefix).empty-fence.invalidate")
+                }
                 Text("Controlled state update")
                     .padding(8).contentShape(Rectangle())
                     .onLongPressGesture(minimumDuration: 1) { fixture.publishCheckingUpdate() }

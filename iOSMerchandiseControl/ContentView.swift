@@ -222,47 +222,55 @@ struct ContentView: View {
             syncStoreGenerationController: syncStoreGenerationController,
             shopDeviceRegistrationService: shopDeviceRegistrationService
         ) { syncOrchestrator in
-            if hidesBusinessDataForPendingRecovery {
-                SyncReplacementPrivacyGate(
-                    state: syncStateStore.state,
-                    isSignedIn: supabaseAuthViewModel.isSignedIn,
-                    canSignIn: supabaseAuthViewModel.canSignIn,
-                    isBusy: supabaseAuthViewModel.isTransitioning
-                        || syncOrchestrator.rootPresentationState.kind == .checking
-                        || corruptJournalReplacementTask != nil,
-                    requiresManualReview: requiresManualRecoveryReview,
-                    signIn: supabaseAuthViewModel.signInWithGoogle,
-                    retry: syncOrchestrator.retryPendingRecoveryRootAction,
-                    review: { isCorruptJournalReviewPresented = true }
-                )
-                .accountSyncDecisionDialog(
-                    isPresented: $isCorruptJournalReviewPresented,
-                    decision: Self.interruptedRecoveryDecision,
-                    isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
-                    onChoose: { choice in
-                        switch choice {
-                        case .discardLocalAndBind:
-                            beginCorruptJournalReplacement(using: syncOrchestrator)
-                        default:
-                            // Cancel/back/keep-local deliberately leave the raw
-                            // latch, database, binding and network untouched.
-                            isCorruptJournalReviewPresented = false
-                        }
-                    }
-                )
-                .alert(
-                    L("options.accountDecision.error.title"),
-                    isPresented: Binding(
-                        get: { corruptJournalReplacementError != nil },
-                        set: { if !$0 { corruptJournalReplacementError = nil } }
+            let hidesBusinessData = hidesBusinessDataForPendingRecovery
+            Group {
+                if hidesBusinessData {
+                    SyncReplacementPrivacyGate(
+                        state: syncStateStore.state,
+                        isSignedIn: supabaseAuthViewModel.isSignedIn,
+                        canSignIn: supabaseAuthViewModel.canSignIn,
+                        isBusy: supabaseAuthViewModel.isTransitioning
+                            || syncOrchestrator.rootPresentationState.kind == .checking
+                            || corruptJournalReplacementTask != nil,
+                        requiresManualReview: requiresManualRecoveryReview,
+                        signIn: supabaseAuthViewModel.signInWithGoogle,
+                        retry: syncOrchestrator.retryPendingRecoveryRootAction,
+                        review: { isCorruptJournalReviewPresented = true }
                     )
-                ) {
-                    Button(L("common.ok"), role: .cancel) {}
-                } message: {
-                    Text(corruptJournalReplacementError ?? "")
+                    .accountSyncDecisionDialog(
+                        isPresented: $isCorruptJournalReviewPresented,
+                        decision: Self.interruptedRecoveryDecision,
+                        isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
+                        onChoose: { choice in
+                            switch choice {
+                            case .discardLocalAndBind:
+                                beginCorruptJournalReplacement(using: syncOrchestrator)
+                            default:
+                                // Cancel/back/keep-local deliberately leave the raw
+                                // latch, database, binding and network untouched.
+                                isCorruptJournalReviewPresented = false
+                            }
+                        }
+                    )
+                    .alert(
+                        L("options.accountDecision.error.title"),
+                        isPresented: Binding(
+                            get: { corruptJournalReplacementError != nil },
+                            set: { if !$0 { corruptJournalReplacementError = nil } }
+                        )
+                    ) {
+                        Button(L("common.ok"), role: .cancel) {}
+                    } message: {
+                        Text(corruptJournalReplacementError ?? "")
+                    }
+                } else {
+                    tabContent(syncOrchestrator: syncOrchestrator)
                 }
-            } else {
-                tabContent(syncOrchestrator: syncOrchestrator)
+            }
+            .onChange(of: hidesBusinessData) { _, hidden in
+                if hidden, syncStoreGenerationController.activeManifest == nil {
+                    syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+                }
             }
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)

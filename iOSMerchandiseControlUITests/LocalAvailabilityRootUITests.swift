@@ -262,6 +262,31 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "Complete the isolated empty recovery before leaving its namespace")
     }
 
+    func testEmptyBootstrapRequalifiesAfterPhysicalFenceChangeWithoutScopeOrPhaseChange() {
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] = "1"
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] = "1"
+        app.launch()
+        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.tabBars.buttons["Database"].waitForExistence(timeout: 5),
+                      "The real root must render its admitted empty shell before file drift")
+        app.buttons["task144.controlled.empty-fence.invalidate"].press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["task144.controlled.empty-fence.initially-admitted"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["task144.controlled.empty-fence.invalidated"].waitForExistence(timeout: 5),
+                      "The isolated legacy store fence must really change and deny the old proof")
+        let requalified = app.staticTexts["task144.controlled.empty-fence.requalified"].waitForExistence(timeout: 10)
+        if !requalified { captureControlledAutomaticReadback() }
+        XCTAssertTrue(requalified, "A new qualification revision with fresh admission must arrive without Retry or scope/phase change")
+        for title in ["Options", "History", "Database", "Inventory"] {
+            let tab = app.tabBars.buttons[title]
+            XCTAssertTrue(tab.waitForExistence(timeout: 5)); tab.tap()
+        }
+        XCTAssertFalse(app.staticTexts["Safe local baseline"].exists)
+        XCTAssertFalse(app.staticTexts["task144.controlled.activated-and-drained"].exists)
+        assertHeldBoundary()
+        app.buttons["task144.controlled.release"].press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
+    }
+
     func testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission() {
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] = "1"
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] = "1"
