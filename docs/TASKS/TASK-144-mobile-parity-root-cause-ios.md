@@ -206,6 +206,31 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 — campagna A finita nella CI esistente
+
+**File modificati:**
+- `.github/workflows/ios-product-images-ci.yml` — input manuale booleano per cinque esecuzioni isolate del test A originale, con ambiente dichiarato, log/exit/xcresult separati e verifica ufficiale di un solo ID per esecuzione; default PR/main/full e budget75 minuti invariati.
+- Questo task, soltanto Execution — log derivato dal blob HEAD; working copy foreign14c preservata.
+
+**Azioni eseguite:**
+1. CI originale37545350645 sul checkout effettivo325afcc conclusa PASS:1548ID/stati/moduli esatti al Full05,1512PASS/0FAIL/36SKIP,15UI PASS. Analyze/secret/contracts PASS; non è una correzione causale A.
+2. Nuovo mandato umano b2af921d, sezioni4/7/8: cinque esecuzioni A predefinite in macos26-arm64/Xcode26.6-build17F113/iPhone16e-iOS26.2, senza retry-until-green; stessi test/asserzioni/fixture/launch. Review indipendente del delta dal coordinatore; nessuna nuova infrastruttura o suite locale completa duplicata.
+3. YAML, sintassi Bash e Python verificati; tutti gli step originari equivalenti salvo selezione manuale full/campagna. Checker provato sui veri export storici: singolo A accettato, Full1548 rifiutato come singolo A. Sono controlli statici del workflow, non nuove esecuzioni dell'app.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/test native | ESEGUITO sul source42 immutato | Genuine8/Full05/Build05 e CI37545350645 riusati; nessuna modifica alle48 fonti o input pubblici native. |
+| Static workflow | ESEGUITO | YAML/Bash/Python e diff-check PASS; default PR/main/full, step originali, timeout e asserzioni preservati. |
+| Warning nuovi | ESEGUITO sul source42 |34legacy/0nuovi nei gate locali; delta workflow non modifica codice app. |
+| Coerenza con mandato | ESEGUITO | Cinque A originali isolate, tutti gli esiti conservati e aggregato FAIL su skip/missing/infrastruttura; nessun fix A dichiarato. |
+| Campagna/runtime finali | NON ESEGUITO in questo snapshot pre-push | Risultati effettivi successivi nel riepilogo corrente del coordinatore e originali esterni; merge HOLD fino ai gate richiesti. |
+
+**Handoff notes:**
+- Stato FIX / NON DONE. Full05 immutato rimane valido sulle stesse48 fonti; la campagna non sostituisce la CI PR/main o il collaudo autenticato.
+- Il writer nativo resta N; il coordinatore01a113a4 possiede i due documenti centrali. Nessun private config, database, sessione, primary install o input business è modificato da questo commit.
+
+
 ### Esecuzione — 2026-10-06 — fonte finale42 e controesempio prepubblicazione
 
 **File modificati:**
