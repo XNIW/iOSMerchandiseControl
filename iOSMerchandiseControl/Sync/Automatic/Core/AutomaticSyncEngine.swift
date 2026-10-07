@@ -62,6 +62,8 @@ actor AutomaticSyncEngine {
         let cancellationToken = await cancellationPolicy.makeToken()
         recordAttempt(source: source)
         var didRun = false
+        let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect)
+            && action == .sequence([.pushPending, .bootstrap])
         var verifiedConvergence = false
         var continuationReceipt: SyncIncrementalContinuationReceipt?
         var compatibleDrains = true
@@ -171,7 +173,8 @@ actor AutomaticSyncEngine {
                         ownerUserID: ownerUserID,
                         source: source,
                         cancellationToken: cancellationToken,
-                        replacementTarget: replacementTarget
+                        replacementTarget: replacementTarget,
+                        requiresPendingSameScopeRecovery: isAutomaticRecoveryResumePlan && step == .bootstrap
                     )
                     didRun = recovery.didWork || didRun
                     verifiedConvergence = recovery.verifiedConvergence
@@ -211,6 +214,18 @@ actor AutomaticSyncEngine {
             recordDiagnostic("lastOutcome", "cancelled")
             return await complete(.cancelled())
         } catch {
+            // A completed journal retires this resume plan. Re-enter the
+            // existing bounded scheduler so the next decision uses current
+            // pending work and continuation proof; never start a fresh full.
+            if isAutomaticRecoveryResumePlan, !bindingStore.hasPendingReplacementJournal,
+               error as? Task126OwnerStoreGateError == .scopeChanged
+                || error as? AtomicGenerationRecoveryError == .journalTransitionRejected {
+                do { try await cancellationPolicy.checkCancellation(token: cancellationToken) }
+                catch { return await complete(.cancelled()) }
+                recordDiagnostic("lastOutcome", "stale_recovery_resume_replan")
+                return await complete(SyncAutomaticRunResult(status: .scheduledRetry, didWork: didRun,
+                    scheduledRetryAfter: 0))
+            }
             let safeError = safeErrorDescription(error)
             recordDiagnostic("lastOutcome", "failed")
             recordDiagnostic("lastError", safeError)
@@ -382,7 +397,8 @@ actor AutomaticSyncEngine {
         ownerUserID: UUID,
         source _: SyncAutomaticTriggerSource,
         cancellationToken: Int,
-        replacementTarget: ReplacementRecoveryTarget?
+        replacementTarget: ReplacementRecoveryTarget?,
+        requiresPendingSameScopeRecovery: Bool = false
     ) async throws -> (didWork: Bool, verifiedConvergence: Bool) {
         guard let recoverySnapshotPullProvider else {
             recordDiagnostic("recovery.lastOutcome", "blocked_missing_provider")
@@ -399,6 +415,11 @@ actor AutomaticSyncEngine {
             allowsPendingReplacement: replacementTarget != nil
                 || bindingStore.hasPendingReplacementJournal
         )
+        guard !requiresPendingSameScopeRecovery
+            || (recoveryScope.pendingReplacement != nil
+                && bindingStore.pendingRecoveryJournal?.mode == .sameScopeRecovery) else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
         let recoveryWatermarkScope = WatermarkStore.Scope(
             accountHash: recoveryScope.accountHash,
             storeIdentity: recoveryScope.storeIdentity

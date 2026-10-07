@@ -452,6 +452,269 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         }
     }
 
+    func testCompletedJournalBeforeAutomaticPushDoesNotRunStaleBootstrapOrReplaceSavedCatalog() async throws {
+        @MainActor final class CompletingRuntime: SyncAutomaticRuntimeProviding {
+            let underlying: RI08ObservedRealRuntime
+            let beforeRun: @MainActor () async throws -> Void
+            let isTerminal: @MainActor (SyncAutomaticRunResult) -> Bool
+            let finished: XCTestExpectation
+            private(set) var finalizationFailed = false
+            private var fulfilled = false
+            init(underlying: RI08ObservedRealRuntime, finished: XCTestExpectation,
+                 isTerminal: @escaping @MainActor (SyncAutomaticRunResult) -> Bool,
+                 beforeRun: @escaping @MainActor () async throws -> Void) {
+                self.underlying = underlying; self.finished = finished
+                self.isTerminal = isTerminal; self.beforeRun = beforeRun
+            }
+            var isRunning: Bool { underlying.isRunning }
+            func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+                do { try await beforeRun() }
+                catch { finalizationFailed = true; return .failed(errorCode: "test_finalizer_failed") }
+                let result = await underlying.run(action: action, source: source)
+                if !fulfilled, isTerminal(result) { fulfilled = true; finished.fulfill() }
+                return result
+            }
+            func cancel() { underlying.cancel() }
+            func cancelAndWait() async { await underlying.cancelAndWait() }
+            func resumeAfterStoreReplacement() async { await underlying.resumeAfterStoreReplacement() }
+        }
+
+        for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
+            let setup = try await makePendingAutomaticSequenceFixture()
+            let proof = setup.proof
+            let fixture = proof.fixture
+            let originalContainer = fixture.controller.modelContainer
+            let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+                storeIdentity: manifest.storeIdentity, reason: "completed-journal-stale-bootstrap",
+                deviceIdentityHash: proof.scope.deviceIdentityHash))
+            var pendingScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryStaging(accountHash: pendingScope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: pendingScope.deviceIdentityHash,
+                generationID: manifest.generationID, scope: pendingScope))
+            pendingScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            XCTAssertTrue(binding.recordPendingRecoveryVerified(accountHash: pendingScope.accountHash,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: pendingScope.deviceIdentityHash,
+                generationID: manifest.generationID, checkpointDigest: manifest.checkpoint.checkpointDigest,
+                watermark: try XCTUnwrap(manifest.checkpoint.maxEventID),
+                baselineRunID: manifest.baselineRunID, scope: pendingScope))
+            pendingScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+            let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+            XCTAssertEqual(journal.mode, .sameScopeRecovery)
+            XCTAssertEqual(journal.generationID, manifest.generationID)
+            proof.stateStore.recordRunResult(.recoveryRequired())
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            let decisionProvider = completedRecoveryDecisionProvider(fixture)
+            let snapshot = await decisionProvider.makeSnapshot(triggerSource: source,
+                isAuthenticated: auth.viewModel.isSignedIn, ownerUserID: fixture.ownerUserID, isSyncBusy: false)
+            XCTAssertTrue(snapshot.accountBindingMatches && snapshot.isNetworkAvailable && !snapshot.hasStateReadFailure)
+            XCTAssertTrue(snapshot.requiresBootstrap && snapshot.preservesPendingBeforeRecovery)
+            XCTAssertEqual(snapshot.pendingLocalChanges.pendingCatalogChangeCount, 1)
+            XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .sequence([.pushPending, .bootstrap]))
+
+            let finalizerTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [proof.checkpoint])
+            let finalizer = makeService(fixture: fixture, transport: finalizerTransport)
+            // If the stale bootstrap executes, its server snapshot is coherent
+            // with the real stock=1 Catalog ACK and the real self event 42.
+            let acknowledgedProduct = ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 1)
+            let acknowledgedCheckpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 42,
+                seed: "completed-journal-after-real-ack", products: [acknowledgedProduct], prices: [])
+            let staleTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [acknowledgedCheckpoint, acknowledgedCheckpoint, acknowledgedCheckpoint],
+                productRows: [acknowledgedProduct])
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: originalContainer))
+            let pull = SyncEventIncrementalPullService(modelContainer: originalContainer,
+                remote: proof.remote, defaults: fixture.defaults, storeGenerationController: fixture.controller)
+            let facade = AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+                catalogPushProvider: CatalogPushService(modelContainer: originalContainer,
+                    remote: proof.remote, defaults: fixture.defaults),
+                productPriceProvider: nil, historySessionProvider: nil, incrementalPullProvider: pull,
+                recoverySnapshotPullProvider: makeService(fixture: fixture, transport: staleTransport),
+                activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: originalContainer,
+                    recorder: proof.remote, defaults: fixture.defaults),
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+                defaults: fixture.defaults,
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } })
+            let observed = RI08ObservedRealRuntime(facade: facade)
+            let finished = expectation(description: "The real automatic plan finishes after prior journal completion")
+            var completion: SyncRecoverySnapshotPullSummary?
+            let runtime = CompletingRuntime(underlying: observed, finished: finished, isTerminal: { result in
+                (result.status == .success || result.status == .noWork)
+                    && proof.remote.catalogPushCallCount == 1 && proof.remote.recordRequests.count == 1
+            }) {
+                guard completion == nil else { return }
+                // The orchestrator has already selected its pending-journal
+                // plan. Complete the actual finalized G1 before the facade
+                // captures fresh writer authority; never resurrect old scope.
+                XCTAssertEqual(binding.pendingRecoveryJournal?.generationID, manifest.generationID)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(pendingScope, defaults: fixture.defaults)
+                completion = try await finalizer.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTAssertTrue(completion?.completedRecoveryJournal == true)
+                XCTAssertTrue(completion?.hasPendingLocalWork == true)
+                XCTAssertEqual(completion?.activatedGenerationID, manifest.generationID)
+                XCTAssertNil(binding.pendingRecoveryJournal)
+                let fresh = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                    defaults: fixture.defaults)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(fresh, defaults: fixture.defaults)
+                XCTAssertEqual(fresh.ownerUserID, pendingScope.ownerUserID)
+                XCTAssertEqual(fresh.accountHash, pendingScope.accountHash)
+                XCTAssertEqual(fresh.shopID, pendingScope.shopID)
+                XCTAssertEqual(fresh.storeIdentity, pendingScope.storeIdentity)
+                XCTAssertEqual(fresh.deviceInstallID, pendingScope.deviceInstallID)
+                XCTAssertEqual(fresh.deviceIdentityHash, pendingScope.deviceIdentityHash)
+                XCTAssertNil(fresh.pendingReplacement)
+                XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(pendingScope,
+                    defaults: fixture.defaults)) { XCTAssertEqual($0 as? Task126OwnerStoreGateError, .scopeChanged) }
+                XCTAssertTrue(fixture.controller.modelContainer === originalContainer)
+                XCTAssertEqual(finalizerTransport.counts().checkpoints, 0)
+                XCTAssertEqual(finalizerTransport.counts().pages, 0)
+                XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+                XCTAssertEqual(proof.remote.recordRequests.count, 0)
+            }
+            let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+                activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+                stateStore: proof.stateStore, storeGenerationController: fixture.controller,
+                storeGenerationLease: lease, defaults: fixture.defaults, decisionInputProvider: decisionProvider,
+                backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+            defer { orchestrator.stop() }
+            orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+            await fulfillment(of: [finished], timeout: 2)
+
+            // Read the original file-backed container with a fresh context:
+            // a replacement cannot conceal whether real ACK/outbox succeeded.
+            let originalReadback = ModelContext(originalContainer); originalReadback.autosaveEnabled = false
+            let changes = try originalReadback.fetch(FetchDescriptor<LocalPendingChange>())
+                .filter { $0.changeID == setup.changeID }
+            let events = try originalReadback.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+                .filter { $0.domain == "catalog" }
+            let productID = proof.productID
+            let saved = try XCTUnwrap(originalReadback.fetch(FetchDescriptor<Product>(
+                predicate: #Predicate { $0.remoteID == productID })).first)
+            let controls = !runtime.finalizationFailed && completion?.completedRecoveryJournal == true
+                && completion?.hasPendingLocalWork == true && completion?.activatedGenerationID == manifest.generationID
+                && observed.actions.first == .sequence([.pushPending, .bootstrap]) && observed.sources.first == source
+                && observed.results.count >= 1 && (observed.results.last?.status == .success || observed.results.last?.status == .noWork)
+                && proof.remote.catalogPushCallCount == 1
+                && proof.remote.recordRequests.count == 1 && proof.remote.acknowledgedSelfEvent?.id == 42
+                && changes.count == 1 && changes.first?.status == .acknowledged
+                && events.count == 1 && events.first?.status == .sent && saved.stockQuantity == 1
+                && finalizerTransport.counts().checkpoints == 0 && finalizerTransport.counts().pages == 0
+            guard controls else { XCTFail("NOT_TRAVERSED: real journal completion, automatic plan, Catalog ACK and sent outbox are required"); return }
+            XCTAssertEqual(binding.currentBinding, originalBinding)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+            let activeReadback = ModelContext(fixture.controller.modelContainer); activeReadback.autosaveEnabled = false
+            let activeProduct = try XCTUnwrap(activeReadback.fetch(FetchDescriptor<Product>(
+                predicate: #Predicate { $0.remoteID == productID })).first)
+            XCTAssertEqual(LocalPendingChangeLogicalKey.productFingerprintHash(activeProduct),
+                LocalPendingChangeLogicalKey.productFingerprintHash(saved), "The coherent remote ACK must preserve the saved body")
+            let noExtraRecovery = staleTransport.counts().checkpoints == 0 && staleTransport.counts().pages == 0
+                && fixture.controller.activeManifest?.generationID == manifest.generationID
+                && fixture.controller.modelContainer === originalContainer
+            print("TASK144_COMPLETED_JOURNAL_PLAN source.\(source.rawValue).controls.true.actual-ack.true.outbox-sent.true.prior-journal-completed.true.snapshot-checkpoints.\(staleTransport.counts().checkpoints).snapshot-pages.\(staleTransport.counts().pages).same-generation.\(fixture.controller.activeManifest?.generationID == manifest.generationID).runtime-success.\(observed.results.first?.status == .success)")
+            XCTAssertTrue(noExtraRecovery, "A completed same-scope journal must not make its stale automatic plan download another snapshot or replace the saved Catalog generation")
+        }
+    }
+
+    func testAtomicProviderRejectsAlreadyAdmittedPendingScopeAfterRealJournalCompletion() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let fixture = proof.fixture
+        let originalContainer = fixture.controller.modelContainer
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        let savedBusiness = try completedRecoveryBusinessSnapshot(fixture)
+        let originalWatermark = ordinaryWatermark(fixture: fixture)
+        XCTAssertTrue(try fixture.controller.isActiveRecoveryFinalized(scope: proof.scope))
+        XCTAssertNil(binding.pendingRecoveryJournal)
+
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+            storeIdentity: manifest.storeIdentity, reason: "post-entry-completed-journal",
+            deviceIdentityHash: proof.scope.deviceIdentityHash))
+        var scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+        XCTAssertTrue(binding.recordPendingRecoveryStaging(accountHash: scope.accountHash,
+            storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+            generationID: manifest.generationID, scope: scope))
+        scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+        XCTAssertTrue(binding.recordPendingRecoveryVerified(accountHash: scope.accountHash,
+            storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+            generationID: manifest.generationID, checkpointDigest: manifest.checkpoint.checkpointDigest,
+            watermark: try XCTUnwrap(manifest.checkpoint.maxEventID),
+            baselineRunID: manifest.baselineRunID, scope: scope))
+        let admitted = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        XCTAssertEqual(journal.mode, .sameScopeRecovery)
+        XCTAssertEqual(journal.phase, .verified)
+        XCTAssertEqual(journal.generationID, manifest.generationID)
+        XCTAssertNotNil(admitted.pendingReplacement)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(admitted, defaults: fixture.defaults)
+
+        let finalizerTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint])
+        let finalizer = makeService(fixture: fixture, transport: finalizerTransport)
+        let staleTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint], productRows: [ordinaryContinuationProduct(
+                fixture: fixture, id: proof.productID, stock: 0)])
+        let staleProvider = makeService(fixture: fixture, transport: staleTransport)
+
+        try await Task126OwnerStoreGate.withAutomaticScope(admitted) {
+            XCTAssertEqual(Task126OwnerStoreGate.currentAutomaticScope, admitted)
+            // Only the real Atomic service completes the verified journal of
+            // already-finalized file-backed G1. No test calls journal completion.
+            let completed = try await finalizer.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTAssertTrue(completed.completedRecoveryJournal)
+            XCTAssertTrue(completed.hasPendingLocalWork)
+            XCTAssertEqual(completed.activatedGenerationID, manifest.generationID)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertEqual(finalizerTransport.counts().checkpoints, 0)
+            XCTAssertEqual(finalizerTransport.counts().pages, 0)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), savedBusiness)
+            XCTAssertEqual(Task126OwnerStoreGate.currentAutomaticScope, admitted,
+                "Journal completion must not replace this invocation's admitted TaskLocal")
+            XCTAssertNotNil(Task126OwnerStoreGate.currentAutomaticScope?.pendingReplacement)
+
+            // Emulate provider entry after the engine's admission boundary,
+            // keeping its OLD pending TaskLocal, with no new scope wrapping.
+            do {
+                _ = try await staleProvider.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTFail("A completed journal must not let an admitted pending invocation start another recovery")
+            } catch {
+                XCTAssertEqual(error as? Task126OwnerStoreGateError, .scopeChanged)
+            }
+        }
+
+        XCTAssertEqual(staleTransport.counts().checkpoints, 0)
+        XCTAssertEqual(staleTransport.counts().pages, 0)
+        XCTAssertNil(binding.pendingRecoveryJournal, "No replacement journal may be created")
+        XCTAssertEqual(binding.currentBinding, originalBinding)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        XCTAssertTrue(fixture.controller.modelContainer === originalContainer)
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), originalWatermark)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), savedBusiness)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+        XCTAssertEqual(proof.remote.recordRequests.count, 0)
+        let context = ModelContext(originalContainer); context.autosaveEnabled = false
+        let productID = proof.productID
+        let saved = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(
+            predicate: #Predicate { $0.remoteID == productID })).first)
+        XCTAssertEqual(saved.stockQuantity, 1)
+        let pending = try context.fetch(FetchDescriptor<LocalPendingChange>())
+            .filter { $0.changeID == setup.changeID }
+        XCTAssertEqual(pending.count, 1)
+        XCTAssertEqual(pending.first?.status, .pending)
+    }
+
     func testPendingFinalizedRecoveryJournalAutomaticallyResumesForForegroundAndReconnect() async throws {
         for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
             let proof = try await makeRealContinuationProof()

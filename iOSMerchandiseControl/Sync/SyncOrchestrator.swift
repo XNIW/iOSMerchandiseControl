@@ -463,7 +463,7 @@ final class SyncOrchestrator: ObservableObject {
             if result.status == .busy || result.status == .scheduledRetry {
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                 var requestedDelay = result.scheduledRetryAfter ?? 2
-                if let automaticRecoveryIdentity {
+                if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending {
                     requestedDelay = stateStore.extendAutomaticRecoveryAttemptCooldown(
                         identity: automaticRecoveryIdentity,
                         requestedDelay: requestedDelay

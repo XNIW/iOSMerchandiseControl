@@ -7,12 +7,13 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// Temporary observations scoped to the original empty/callback and related-save fixtures. This buffer is not ObservableObject and never
+/// Temporary observations scoped to the controlled empty/callback, physical-fence and related-save fixtures. This buffer is not ObservableObject and never
 /// publishes, reads a model/store, submits work or changes an admission result.
 nonisolated final class Task144RootObservation: @unchecked Sendable {
     static let enabled = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
         && ((ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
-             && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1")
+             && (ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
+                 || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"))
             || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1")
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
@@ -295,6 +296,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             authStorage: storage, session: session, autoRefreshToken: false,
             authRegistry: SupabaseAuthClientRegistry())
         authViewModel = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: provider))
+        transport.remoteSnapshot = { [catalogRemote] in catalogRemote.recoverySnapshot }
         transport.onHeld = { [weak self] in
             self?.facts.insert("task144.controlled.held")
             Task144RootObservation.record("fixture-boundary", "branch.existing-transport-on-held", callsite: "Task144.onHeld")
@@ -1325,6 +1327,7 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
     private(set) var isReleased = false
     var onHeld: (() -> Void)?
     var checkpointBoundary: (() async -> Void)?
+    var remoteSnapshot: (() -> Task144ControlledRemoteSnapshot)?
     private var continuation: CheckedContinuation<Void, Never>?
     init(owner: UUID, shop: UUID, device: String, product: RemoteInventoryProductRow?) throws {
         self.owner = owner; self.product = product
@@ -1358,13 +1361,41 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
     }
     func release() { isReleased = true; continuation?.resume(); continuation = nil }
     func authenticatedUserID() async throws -> UUID { owner }
+    // Both recovery RPCs and ordinary Catalog writes describe one controlled
+    // server. A later recovery must not resurrect the pre-ACK baseline.
+    private func currentSnapshot() throws -> (Task144ControlledRemoteSnapshot, ShopSyncRecoveryCheckpoint) {
+        let snapshot = remoteSnapshot?() ?? .init(product: product, supplier: nil, category: nil, eventMaxID: 41)
+        func digest(_ rows: [ShopSyncRecoveryLedgerRecord], identity: Bool = false) throws -> ShopSyncRecoveryEntityDigest {
+            var accumulator = ShopSyncRecoveryDigestAccumulator(hasIdentity: identity)
+            for row in rows {
+                try accumulator.append(orderingID: row.orderingID, idLine: row.idLine, versionLine: row.versionLine,
+                    identityLine: row.identityLine, isTombstone: row.isTombstone)
+            }
+            return accumulator.finalize()
+        }
+        let suppliers = try digest(snapshot.supplier.map { [try ShopSyncRecoveryRowContract.supplier($0, checkpoint: baseline)] } ?? [])
+        let categories = try digest(snapshot.category.map { [try ShopSyncRecoveryRowContract.category($0, checkpoint: baseline)] } ?? [])
+        let products = try digest(snapshot.product.map { [try ShopSyncRecoveryRowContract.product($0, checkpoint: baseline)] } ?? [], identity: true)
+        let catalog = ShopSyncRecoveryCatalogDigest(suppliers: suppliers, categories: categories, products: products,
+            digest: ShopSyncRecoveryCanonical.sha256(suppliers.versionDigest + "\n" + categories.versionDigest + "\n" + products.versionDigest))
+        let unchanged = catalog == baseline.catalog && snapshot.eventMaxID == 41
+        let checkpoint = ShopSyncRecoveryCheckpoint(schemaVersion: baseline.schemaVersion, shopId: baseline.shopId,
+            scope: baseline.scope, syncEvents: .init(maxId: String(snapshot.eventMaxID), verifiedBaselineId: "0",
+                requiresFullRecovery: true, domainMaxIds: .init(catalog: String(snapshot.eventMaxID),
+                    prices: baseline.syncEvents.domainMaxIds.prices, history: baseline.syncEvents.domainMaxIds.history)),
+            catalog: catalog, prices: baseline.prices, history: baseline.history, images: baseline.images,
+            integrity: baseline.integrity, checkpointDigest: unchanged ? baseline.checkpointDigest
+                : ShopSyncRecoveryCanonical.sha256("task144-controlled-root\n" + String(snapshot.eventMaxID) + "\n" + catalog.digest))
+        return (snapshot, checkpoint)
+    }
     func checkpoint(_ parameters: ShopSyncRecoveryCheckpointParameters) async throws -> Data {
         await checkpointBoundary?()
-        return try JSONEncoder().encode(ShopSyncRecoveryCheckpoint(schemaVersion: baseline.schemaVersion, shopId: baseline.shopId,
-            scope: baseline.scope, syncEvents: .init(maxId: "41", verifiedBaselineId: parameters.verifiedBaselineID,
-                requiresFullRecovery: true, domainMaxIds: baseline.syncEvents.domainMaxIds), catalog: baseline.catalog,
-            prices: baseline.prices, history: baseline.history, images: baseline.images, integrity: baseline.integrity,
-            checkpointDigest: baseline.checkpointDigest))
+        let (_, current) = try currentSnapshot()
+        return try JSONEncoder().encode(ShopSyncRecoveryCheckpoint(schemaVersion: current.schemaVersion, shopId: current.shopId,
+            scope: current.scope, syncEvents: .init(maxId: current.syncEvents.maxId, verifiedBaselineId: parameters.verifiedBaselineID,
+                requiresFullRecovery: true, domainMaxIds: current.syncEvents.domainMaxIds), catalog: current.catalog,
+            prices: current.prices, history: current.history, images: current.images, integrity: current.integrity,
+            checkpointDigest: current.checkpointDigest))
     }
     func page(_ parameters: ShopSyncRecoveryPageParameters) async throws -> Data {
         guard let domain = ShopSyncRecoveryDomain(rawValue: parameters.domain) else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
@@ -1373,29 +1404,47 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
             await withCheckedContinuation { continuation = $0 }
             try Task.checkCancellation()
         }
-        return try JSONEncoder().encode(Task144ControlledPage(schemaVersion: "shop-sync-recovery-page-v1",
-            shopId: parameters.shopID, scope: baseline.scope, domain: domain,
-            snapshotEventMaxId: parameters.expectedEventMaxID, currentScopeEventMaxId: parameters.expectedEventMaxID,
-            baselineDomainEventMaxId: parameters.expectedDomainEventMaxID, pageDomainEventMaxId: parameters.expectedDomainEventMaxID,
-            domainScope: domain == .history ? baseline.scope.historyKind : baseline.scope.kind,
-            pageLimit: parameters.limit, rows: domain == .products ? product.map { [$0] } ?? [] : [], nextAfterId: nil, hasMore: false))
+        let (snapshot, current) = try currentSnapshot()
+        func encode<Row: Encodable>(_ rows: [Row]) throws -> Data {
+            try JSONEncoder().encode(Task144ControlledPage(schemaVersion: "shop-sync-recovery-page-v1",
+                shopId: parameters.shopID, scope: current.scope, domain: domain,
+                snapshotEventMaxId: parameters.expectedEventMaxID, currentScopeEventMaxId: current.syncEvents.maxId,
+                baselineDomainEventMaxId: parameters.expectedDomainEventMaxID,
+                pageDomainEventMaxId: current.syncEvents.domainMaxID(for: domain),
+                domainScope: domain == .history ? current.scope.historyKind : current.scope.kind,
+                pageLimit: parameters.limit, rows: rows, nextAfterId: nil, hasMore: false))
+        }
+        switch domain {
+        case .suppliers: return try encode(snapshot.supplier.map { [$0] } ?? [])
+        case .categories: return try encode(snapshot.category.map { [$0] } ?? [])
+        case .products: return try encode(snapshot.product.map { [$0] } ?? [])
+        case .prices, .history, .images: return try encode([RemoteInventoryProductRow]())
+        }
     }
     func marker(_ parameters: ShopSyncConvergenceMarkerParameters) async throws -> Data {
-        try JSONEncoder().encode(ShopSyncRecoveryConvergenceMarker(schemaVersion: "shop-sync-convergence-marker-v1",
-            status: "ready", shopId: baseline.shopId, scope: baseline.scope,
-            syncEvents: .init(maxId: "41", verifiedBaselineId: parameters.verifiedBaselineID, requiresFullRecovery: false,
-                domainMaxIds: baseline.syncEvents.domainMaxIds), catalog: baseline.catalog, prices: baseline.prices,
-            history: baseline.history, images: baseline.images, integrity: .init(totalViolationCount: 0),
-            checkpointDigest: baseline.checkpointDigest, serverNoWorkEligible: true,
+        let (_, current) = try currentSnapshot()
+        return try JSONEncoder().encode(ShopSyncRecoveryConvergenceMarker(schemaVersion: "shop-sync-convergence-marker-v1",
+            status: "ready", shopId: current.shopId, scope: current.scope,
+            syncEvents: .init(maxId: current.syncEvents.maxId, verifiedBaselineId: parameters.verifiedBaselineID, requiresFullRecovery: false,
+                domainMaxIds: current.syncEvents.domainMaxIds), catalog: current.catalog, prices: current.prices,
+            history: current.history, images: current.images, integrity: .init(totalViolationCount: 0),
+            checkpointDigest: current.checkpointDigest, serverNoWorkEligible: true,
             markerDigest: ShopSyncRecoveryCanonical.sha256("task144-controlled-marker")))
     }
     func eventPage(_ parameters: ShopSyncEventPageParameters) async throws -> Data { throw ShopSyncRecoveryContractError.fullRecoveryRequired }
 }
-private nonisolated struct Task144ControlledPage: Encodable {
+private nonisolated struct Task144ControlledPage<Row: Encodable>: Encodable {
     let schemaVersion: String; let shopId: UUID; let scope: ShopSyncRecoveryScope; let domain: ShopSyncRecoveryDomain
     let snapshotEventMaxId: String; let currentScopeEventMaxId: String
     let baselineDomainEventMaxId: String; let pageDomainEventMaxId: String; let domainScope: String
-    let pageLimit: Int; let rows: [RemoteInventoryProductRow]; let nextAfterId: String?; let hasMore: Bool
+    let pageLimit: Int; let rows: [Row]; let nextAfterId: String?; let hasMore: Bool
+}
+
+private nonisolated struct Task144ControlledRemoteSnapshot {
+    let product: RemoteInventoryProductRow?
+    let supplier: RemoteInventorySupplierRow?
+    let category: RemoteInventoryCategoryRow?
+    let eventMaxID: Int64
 }
 
 nonisolated private struct Task144ObservedStoredProductMutation: Codable {
@@ -1428,6 +1477,10 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
     private(set) var isProductHeld = false
     var currentSupplierID: UUID? { supplier?.id }
     var currentCategoryID: UUID? { category?.id }
+    var recoverySnapshot: Task144ControlledRemoteSnapshot {
+        .init(product: isEmpty ? nil : current, supplier: supplier, category: category,
+            eventMaxID: events.last?.id ?? 41)
+    }
     private(set) var attemptCount = 0
     private(set) var eventCount = 0
     var observeProductAttempt: ((UUID, SyncAutomaticProductUpdatePayload, Task126VerifiedOwnerStoreScope, Bool) -> Void)?

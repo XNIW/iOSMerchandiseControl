@@ -206,6 +206,43 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 — Piano automatico scaduto dopo chiusura journal e fixture backend coerente
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift` — ricontrolla il journal same-scope al bootstrap della sola sequenza automatica pushPending→bootstrap; piano scaduto rientra nello scheduler bounded per una decisione fresca, senza nuova prova/READY.
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — un provider già ammesso con TaskLocal pending può soltanto riprendere quel journal; scope scaduto non autorizza creazione di un nuovo journal.
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` — una condizione evita di estendere il cooldown del journal automatico dopo la sua chiusura; budget e controlli del normale scheduler restano invariati.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — solo DEBUG: checkpoint/pagine/digest derivano dallo stesso catalogo ACK e dagli eventi reali del transport controllato; opt-in recorder esistente anche per EmptyFence. Hold/release, assert UI e timeout invariati.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — due nuove unità file-backed; tutti i115 metodi originali e helper preservati byte-esatti,117 metodi totali.
+- Questo file — sola nuova Execution propria; ogni modifica preesistente preservata e fuori dal commit.
+
+**Azioni eseguite:**
+1. Riprodotto P2 indipendente: dopo scelta del piano e completamento reale del journal G1, foreground/reconnect eseguono comunque due checkpoint e sei pagine e pubblicano G2. ACK, outbox e corpo salvato sono verificati: nessuna perdita dati o causa backend autenticata dichiarata. RED ufficiale0 PASS/1 FAIL/0 SKIP, receipt `f115328eaef04c86da870ea1411ec6aea227d691e1ded246f98e37031662f7fc`. Assert622 è il core causale; preservazione binding610 è effetto collaterale compatibile della nuova generazione.
+2. Prima patch compila ma il medesimo test non termina entro i2s originali: NOT_TRAVERSED, receipt `7c29dccf009b3e269b3b2d27bc4419b6df28002ace9cbd459529cc0cbcfac47f`. Nessun assert/timeout cambiato. Dopo la sola condizione sul cooldown ancora pendente, stesso identico test75f3/method0e508b GREEN1 PASS/0 FAIL/0 SKIP0,586s, receipt `69b6ec1f0593814ebc869cd802fd73d064a0db0e266791b9ab26fa4174bf7834`. Entrambi i trigger: zero checkpoint/pagine aggiuntivi, stessa generazione, ACK/outbox preservati; primo risultato scheduledRetry e success/noWork terminale richiesto dall'oracolo invariato.
+3. Nuovo negativo provider post-admission conserva l'OLD TaskLocal durante completamento tramite vero Atomic service; la successiva chiamata fallisce scopeChanged prima di checkpoint/pagine/nuovo journal, lasciando G1, binding, watermark, Save e pending invariati. Mirati finali14 PASS/0 FAIL/0 SKIP, receipt `3aaf053f23513aaf48023895758368ab85e351c31f80ec609655fc706181a0e6`: comprende fresh full, resume pendente con/senza Catalog, retry manuale consentito, automatic requestRecovery negato, scope/lease/cancellazione e decisione replacement. Quest'ultima non è un'esecuzione diretta di facade replacement+push.
+4. Review indipendente C e stesso reader APPROVED senza finding sui3file produttivi; review fixture93500 separata APPROVED senza finding. Nessuna nuova dipendenza/API pubblica/schema/migrazione/guard authorization indebolito.
+5. UI originali: RelatedSave con sola fixture coerente e produzione970 invariata1 PASS/0 FAIL/0 SKIP47,24s, receipt `349ec6a9b8fda5bb05b35f46119b87eb9a6e9a107d1e7cd011419ad97d7e654c`; EmptyFence sul prodotto corrente1 PASS/0 FAIL/0 SKIP26,46s, receipt `94bc05309c0b34a3b62a76a447c237b3f3961b6d72878a58b62f7af9c909df50`. Recorder corrente osserva fence cambiata→diniego→nuova qualifica→riammissione. Storici CI970 UI273/236 e CI87 UI224 conservati; nessuna causa storica attribuita retroattivamente.
+6. Controparte Android letta: rilettura journal, CAS prima staging e retry solo sullo stesso journal impediscono staticamente la ricreazione osservata iOS; interleaving preciso NOT_TESTED, nessun nuovo test/PASS Android inventato. Nota esterna `android-counterpart-readonly.md`, SHA `a96029f9c6b11496a298d61f8e13627e1513c78ff2b86d8460f9596ac184fee4`.
+
+**Check obbligatori — snapshot prima del commit e dei gate finali:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug/Release, Analyze e Proper TEST finali | NON ESEGUITO, PENDING | Nuovo delta produzione: richieste esecuzioni finali sul candidato congelato. Proper970 non riusato come copertura. |
+| Mirati finali | ESEGUITO | 14 PASS/0 FAIL/0 SKIP su source48 finale; nuovo guard e regressione causale inclusi. |
+| Warning nuovi | ESEGUITO nei mirati; finale PENDING | Nessun warning Swift nei tre file cambiati nel log mirato; confronto canonico finale da eseguire. |
+| Full canonico e CI standard | NON ESEGUITO, PENDING | Attesi1552ID unici:1550 precedenti più due nuove unità,36skip invariati; i risultati saranno registrati nelle ricevute finali effettive. |
+| Coerenza con planning | ESEGUITO | CA07/09/10/11: eliminazione full superfluo dopo RED, preservando conservazione dati e ammissione fresca. |
+| Criteri globali/chiusura | NON ESEGUITO | CA07 autenticato/08integrale/09performance/10finale/11integrazione/12chiusura restano aperti secondo il report parent; task FIX/NON DONE. |
+
+**Incertezze:**
+- I due UI PASS correnti non provano la causa dei distinti FAIL storici. Correzione fake backend e difetto del piano scaduto sono prove separate.
+- Nessuna convergence per record Android↔iOS, distribuzione o target3s live dedotta dai test controllati. UI primaria Android bloccata; runtime/sessione primaria iOS da qualificare.
+
+**Handoff notes:**
+- Commit/push selettivo ordinario autorizzato; nuova CI standard e full locale sullo stesso candidato possono procedere in parallelo. Poi build/Analyze/ProperTEST finali. Nessun merge prima di review ed esiti effettivi verdi.
+- Dopo merge normale: mainCI, fast-forward preservativo della primaria e install/runtime con nuovo artefatto e nuova prova dati. Nessun reset, uninstall, clear, forcepush o deploy produzione.
+- Pacchetto parent `evidence/native-local-availability-20261004/ios-completed-journal-stale-bootstrap-*`; questa Execution è PRE-FINAL-GATES e non dichiara futuri PASS.
+
 ### Esecuzione — 2026-10-07 — Automatic resume con Catalog pending dopo finalizzazione
 
 **File modificati:**
