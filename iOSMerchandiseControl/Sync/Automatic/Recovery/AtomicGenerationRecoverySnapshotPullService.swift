@@ -648,6 +648,14 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         ownerUserID: UUID
     ) async throws -> Task126VerifiedOwnerStoreScope {
         let bindingStore = AccountBindingStore(defaults: defaultsBox.value)
+        if let admitted = Task126OwnerStoreGate.currentAutomaticScope, admitted.pendingReplacement != nil {
+            // A provider admitted to resume a journal cannot turn its
+            // concurrent completion into permission to create another one.
+            try revalidate(admitted, ownerUserID: ownerUserID)
+            let scope = try captureRecoveryScope(ownerUserID: ownerUserID)
+            try validateJournal(scope: scope)
+            return scope
+        }
         if bindingStore.hasPendingReplacementJournal {
             let scope = try captureRecoveryScope(ownerUserID: ownerUserID)
             try validateJournal(scope: scope)

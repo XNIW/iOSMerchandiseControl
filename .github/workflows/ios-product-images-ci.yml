@@ -15,6 +15,12 @@ on:
       - "iOSMerchandiseControl/**"
       - "iOSMerchandiseControlTests/**"
   workflow_dispatch:
+    inputs:
+      task144_a_campaign:
+        description: "Run five isolated executions of the original TASK-144 A test"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -74,6 +80,9 @@ jobs:
           xcrun simctl bootstatus "$DEVICE_ID" -b
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
+      - name: Record Xcode toolchain
+        run: xcodebuild -version
+
       - name: Build Debug
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
@@ -83,6 +92,8 @@ jobs:
           CODE_SIGNING_ALLOWED=NO build
 
       - name: XCTest full suite
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.task144_a_campaign != true }}
+        id: xctest
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
           -scheme iOSMerchandiseControl
@@ -90,6 +101,130 @@ jobs:
           -destination "platform=iOS Simulator,id=$DEVICE_ID"
           -resultBundlePath "$RUNNER_TEMP/ios-merchandise-control-tests.xcresult"
           CODE_SIGNING_ALLOWED=NO test
+
+      - name: XCTest A fixed campaign
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true }}
+        id: a_campaign
+        run: |
+          CAMPAIGN_DIR="$RUNNER_TEMP/task144-a-campaign"
+          mkdir -p "$CAMPAIGN_DIR"
+          python3 - "$CAMPAIGN_DIR/environment.json" <<'PY'
+          import json, os, subprocess, sys
+          from pathlib import Path
+          read = lambda *args: subprocess.check_output(args, text=True).strip()
+          toolchain = read('xcodebuild', '-version').splitlines()
+          devices = json.loads(read('xcrun', 'simctl', 'list', 'devices', 'available', '--json'))
+          selected = [(runtime, device) for runtime, rows in devices['devices'].items()
+                      for device in rows if device['udid'] == os.environ['DEVICE_ID']]
+          environment = {'head': read('git', 'rev-parse', 'HEAD'), 'toolchain': toolchain,
+                         'macOS': read('sw_vers', '-productVersion'),
+                         'architecture': read('uname', '-m'), 'selectedDestination': selected}
+          Path(sys.argv[1]).write_text(json.dumps(environment, indent=2) + '\n')
+          assert toolchain == ['Xcode 26.6', 'Build version 17F113']
+          assert environment['macOS'].startswith('26.') and environment['architecture'] == 'arm64'
+          assert len(selected) == 1 and selected[0][0] == 'com.apple.CoreSimulator.SimRuntime.iOS-26-2'
+          assert selected[0][1]['name'] == 'iPhone 16e' and selected[0][1]['state'] == 'Booted'
+          PY
+          campaign_status=0
+          for iteration in 1 2 3 4 5; do
+            printf 'TASK144_A_CAMPAIGN_ITERATION=%s\n' "$iteration"
+            set +e
+            xcodebuild -project iOSMerchandiseControl.xcodeproj \
+              -scheme iOSMerchandiseControl \
+              -configuration Debug \
+              -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+              -resultBundlePath "$CAMPAIGN_DIR/iteration-$iteration.xcresult" \
+              -only-testing:iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission \
+              CODE_SIGNING_ALLOWED=NO test \
+              2>&1 | tee "$CAMPAIGN_DIR/iteration-$iteration.log"
+            command_statuses=("${PIPESTATUS[@]}")
+            iteration_status=${command_statuses[0]}
+            set -e
+            printf '%s\n' "$iteration_status" > "$CAMPAIGN_DIR/iteration-$iteration.exit-code"
+            printf '%s\n' "${command_statuses[1]}" > "$CAMPAIGN_DIR/iteration-$iteration.log-exit-code"
+            if [ "$iteration_status" -ne 0 ] || [ "${command_statuses[1]}" -ne 0 ]; then
+              campaign_status=1
+            fi
+          done
+          for iteration in 1 2 3 4 5; do
+            result_prefix="$CAMPAIGN_DIR/iteration-$iteration"
+            set +e
+            xcrun xcresulttool get test-results summary --path "$result_prefix.xcresult" \
+              > "$result_prefix.summary.json" 2> "$result_prefix.summary.stderr"
+            summary_status=$?
+            xcrun xcresulttool get test-results tests --path "$result_prefix.xcresult" \
+              > "$result_prefix.tests.json" 2> "$result_prefix.tests.stderr"
+            tests_status=$?
+            python3 - "$result_prefix" "$summary_status" "$tests_status" <<'PY'
+          import json, sys
+          from pathlib import Path
+          prefix, summary_exit, tests_exit = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+          expected = 'LocalAvailabilityRootUITests/testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission()'
+          result = {'status': 'FAIL', 'summaryExit': summary_exit, 'testsExit': tests_exit}
+          try:
+              assert summary_exit == tests_exit == 0
+              summary = json.loads(Path(prefix + '.summary.json').read_text())
+              tests = json.loads(Path(prefix + '.tests.json').read_text())
+              cases = []
+              def walk(value, module=None):
+                  if isinstance(value, dict):
+                      if value.get('nodeType') == 'UI test bundle':
+                          module = value.get('name')
+                      if value.get('nodeType') == 'Test Case':
+                          cases.append({'id': value['nodeIdentifier'], 'result': value['result'], 'module': module})
+                      for child in value.values():
+                          walk(child, module)
+                  elif isinstance(value, list):
+                      for child in value:
+                          walk(child, module)
+              walk(tests)
+              result['cases'] = cases
+              result['counts'] = {key: summary[key] for key in ['totalTestCount', 'passedTests', 'failedTests', 'skippedTests']}
+              result['xcodeExit'] = int(Path(prefix + '.exit-code').read_text())
+              result['logExit'] = int(Path(prefix + '.log-exit-code').read_text())
+              assert len(cases) == 1 and cases[0]['id'] == expected
+              assert cases[0]['module'] == 'iOSMerchandiseControlUITests' and cases[0]['result'] in {'Passed', 'Failed'}
+              assert result['counts'] == {'totalTestCount': 1, 'passedTests': int(cases[0]['result'] == 'Passed'),
+                                          'failedTests': int(cases[0]['result'] == 'Failed'), 'skippedTests': 0}
+              assert cases[0]['result'] == 'Passed' and result['xcodeExit'] == result['logExit'] == 0
+              result['status'] = 'PASS'
+          except (AssertionError, KeyError, ValueError, OSError) as error:
+              result['verificationError'] = type(error).__name__
+          Path(prefix + '.verification.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result))
+          sys.exit(0 if result['status'] == 'PASS' else 1)
+          PY
+            verification_status=$?
+            set -e
+            if [ "$verification_status" -ne 0 ]; then
+              campaign_status=1
+            fi
+          done
+          exit "$campaign_status"
+
+      - name: Preserve XCTest result bundle
+        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task144-first-leaf-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          include-hidden-files: false
+
+      - name: Preserve A campaign results
+        if: ${{ !cancelled() && (steps.a_campaign.outcome == 'success' || steps.a_campaign.outcome == 'failure') }}
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task144-a-campaign-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/task144-a-campaign
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          include-hidden-files: false
 
       - name: Analyze
         run: >-

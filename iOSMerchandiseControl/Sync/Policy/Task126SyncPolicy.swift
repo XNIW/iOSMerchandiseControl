@@ -281,7 +281,14 @@ nonisolated enum Task126OwnerStoreGate {
         allowsPendingReplacement: Bool = false,
         allowsPendingSameScopeRecovery: Bool = false
     ) throws -> Task126VerifiedOwnerStoreScope {
-        try leaseStore.withCurrentLease { leaseGeneration in
+        #if DEBUG
+        if Task144RootObservation.enabled {
+            return try observeCaptureAutomaticScope(ownerUserID: ownerUserID, defaults: defaults,
+                allowsPendingReplacement: allowsPendingReplacement,
+                allowsPendingSameScopeRecovery: allowsPendingSameScopeRecovery)
+        }
+        #endif
+        return try leaseStore.withCurrentLease { leaseGeneration in
             guard !Task.isCancelled else {
                 throw Task126OwnerStoreGateError.cancelled
             }
@@ -350,6 +357,93 @@ nonisolated enum Task126OwnerStoreGate {
         }
     }
 
+    #if DEBUG
+    private static func observeCaptureAutomaticScope(
+        ownerUserID: UUID,
+        defaults: UserDefaults = .standard,
+        allowsPendingReplacement: Bool = false,
+        allowsPendingSameScopeRecovery: Bool = false
+    ) throws -> Task126VerifiedOwnerStoreScope {
+        let observation = Task144RootObservation.Evaluation("scope-capture-denied", callsite: "Task126.captureAutomaticScope")
+        do {
+        return try leaseStore.withCurrentLease { leaseGeneration in
+            guard observation.check(!Task.isCancelled, "not-cancelled") else {
+                throw Task126OwnerStoreGateError.cancelled
+            }
+
+            let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+            guard observation.check(defaults.string(forKey: activeAccountKey) == accountHash, "active-account") else {
+                throw Task126OwnerStoreGateError.activeAccountMismatch
+            }
+
+            let selectedShopStore = SelectedShopStore(defaults: defaults)
+            guard observation.check(selectedShopStore.isResolutionReady(accountHash: accountHash), "resolution-ready"),
+                  let selectedShop = observation.optional(selectedShopStore.selectedShop(accountHash: accountHash), "selected-shop"),
+                  observation.check(selectedShop.selectable, "selected-shop-selectable"),
+                  observation.check(!blockedShopStatuses.contains(
+                    selectedShop.status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                  ), "selected-shop-status-allowed") else {
+                throw Task126OwnerStoreGateError.shopContextUnavailable
+            }
+
+            let storeIdentity = selectedShop.localStoreIdentity
+            let bindingStore = AccountBindingStore(defaults: defaults)
+            let deviceInstallID = try observation.required("device-install", {
+                try DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
+            })
+            let deviceIdentityHash = DeviceInstallIDStore.identityHash(for: deviceInstallID)
+
+            let pendingReplacement: AccountBinding?
+            if bindingStore.hasPendingReplacementJournal {
+                observation.note("pending-journal-present", true)
+                guard let recovery = observation.optional(bindingStore.pendingRecoveryJournal, "recovery-journal"),
+                      observation.check((allowsPendingReplacement
+                        || (allowsPendingSameScopeRecovery
+                            && recovery.mode == .sameScopeRecovery)), "pending-mode-allowed"),
+                      let replacement = observation.optional(bindingStore.pendingReplacement, "pending-replacement"),
+                      observation.check(replacement.accountHash == accountHash, "replacement-account"),
+                      observation.check(replacement.storeIdentity == storeIdentity, "replacement-store"),
+                      observation.check(recovery.replacement == replacement, "journal-replacement"),
+                      observation.check(recovery.deviceIdentityHash == deviceIdentityHash, "journal-device") else {
+                    throw Task126OwnerStoreGateError.replacementInterrupted
+                }
+                if recovery.mode == .sameScopeRecovery {
+                    guard let binding = observation.optional(bindingStore.currentBinding, "current-binding"),
+                          observation.check(binding.accountHash == accountHash, "binding-account"),
+                          observation.check(binding.storeIdentity == storeIdentity, "binding-store") else {
+                        throw Task126OwnerStoreGateError.bindingMismatch
+                    }
+                }
+                pendingReplacement = replacement
+            } else {
+                observation.note("pending-journal-present", false)
+                guard let binding = observation.optional(bindingStore.currentBinding, "current-binding"),
+                      observation.check(binding.accountHash == accountHash, "binding-account"),
+                      observation.check(binding.storeIdentity == storeIdentity, "binding-store") else {
+                    throw Task126OwnerStoreGateError.bindingMismatch
+                }
+                pendingReplacement = nil
+            }
+
+            return Task126VerifiedOwnerStoreScope(
+                ownerUserID: ownerUserID,
+                accountHash: accountHash,
+                shopID: selectedShop.shopID,
+                storeIdentity: storeIdentity,
+                deviceInstallID: deviceInstallID,
+                deviceIdentityHash: deviceIdentityHash,
+                pendingReplacement: pendingReplacement,
+                leaseGeneration: leaseGeneration
+            )
+        }
+        } catch {
+            observation.finish(false, branch: Task144RootObservation.errorCategory(error))
+            throw error
+        }
+    }
+
+    #endif
+
     /// Re-reads every mutable identity component. A change while an async
     /// remote call is suspended invalidates the captured scope before another
     /// remote mutation or local commit can occur.
@@ -358,6 +452,9 @@ nonisolated enum Task126OwnerStoreGate {
         defaults: UserDefaults = .standard
     ) throws {
         guard !Task.isCancelled else {
+            #if DEBUG
+            Task144RootObservation.record("scope-revalidate-denied", "first-failed.not-cancelled;error.Task126OwnerStoreGateError.cancelled;later.NOT_EVALUATED", callsite: "Task126.revalidateAutomaticScope")
+            #endif
             throw Task126OwnerStoreGateError.cancelled
         }
         let current = try captureAutomaticScope(
@@ -366,6 +463,9 @@ nonisolated enum Task126OwnerStoreGate {
             allowsPendingReplacement: expected.pendingReplacement != nil
         )
         guard current == expected else {
+            #if DEBUG
+            Task144RootObservation.record("scope-revalidate-denied", "first-failed.full-current-scope-equality;error.Task126OwnerStoreGateError.scopeChanged", callsite: "Task126.revalidateAutomaticScope")
+            #endif
             throw Task126OwnerStoreGateError.scopeChanged
         }
     }

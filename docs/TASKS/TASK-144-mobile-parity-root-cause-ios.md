@@ -206,6 +206,338 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-07 — Piano automatico scaduto dopo chiusura journal e fixture backend coerente
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift` — ricontrolla il journal same-scope al bootstrap della sola sequenza automatica pushPending→bootstrap; piano scaduto rientra nello scheduler bounded per una decisione fresca, senza nuova prova/READY.
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — un provider già ammesso con TaskLocal pending può soltanto riprendere quel journal; scope scaduto non autorizza creazione di un nuovo journal.
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` — una condizione evita di estendere il cooldown del journal automatico dopo la sua chiusura; budget e controlli del normale scheduler restano invariati.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — solo DEBUG: checkpoint/pagine/digest derivano dallo stesso catalogo ACK e dagli eventi reali del transport controllato; opt-in recorder esistente anche per EmptyFence. Hold/release, assert UI e timeout invariati.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — due nuove unità file-backed; tutti i115 metodi originali e helper preservati byte-esatti,117 metodi totali.
+- Questo file — sola nuova Execution propria; ogni modifica preesistente preservata e fuori dal commit.
+
+**Azioni eseguite:**
+1. Riprodotto P2 indipendente: dopo scelta del piano e completamento reale del journal G1, foreground/reconnect eseguono comunque due checkpoint e sei pagine e pubblicano G2. ACK, outbox e corpo salvato sono verificati: nessuna perdita dati o causa backend autenticata dichiarata. RED ufficiale0 PASS/1 FAIL/0 SKIP, receipt `f115328eaef04c86da870ea1411ec6aea227d691e1ded246f98e37031662f7fc`. Assert622 è il core causale; preservazione binding610 è effetto collaterale compatibile della nuova generazione.
+2. Prima patch compila ma il medesimo test non termina entro i2s originali: NOT_TRAVERSED, receipt `7c29dccf009b3e269b3b2d27bc4419b6df28002ace9cbd459529cc0cbcfac47f`. Nessun assert/timeout cambiato. Dopo la sola condizione sul cooldown ancora pendente, stesso identico test75f3/method0e508b GREEN1 PASS/0 FAIL/0 SKIP0,586s, receipt `69b6ec1f0593814ebc869cd802fd73d064a0db0e266791b9ab26fa4174bf7834`. Entrambi i trigger: zero checkpoint/pagine aggiuntivi, stessa generazione, ACK/outbox preservati; primo risultato scheduledRetry e success/noWork terminale richiesto dall'oracolo invariato.
+3. Nuovo negativo provider post-admission conserva l'OLD TaskLocal durante completamento tramite vero Atomic service; la successiva chiamata fallisce scopeChanged prima di checkpoint/pagine/nuovo journal, lasciando G1, binding, watermark, Save e pending invariati. Mirati finali14 PASS/0 FAIL/0 SKIP, receipt `3aaf053f23513aaf48023895758368ab85e351c31f80ec609655fc706181a0e6`: comprende fresh full, resume pendente con/senza Catalog, retry manuale consentito, automatic requestRecovery negato, scope/lease/cancellazione e decisione replacement. Quest'ultima non è un'esecuzione diretta di facade replacement+push.
+4. Review indipendente C e stesso reader APPROVED senza finding sui3file produttivi; review fixture93500 separata APPROVED senza finding. Nessuna nuova dipendenza/API pubblica/schema/migrazione/guard authorization indebolito.
+5. UI originali: RelatedSave con sola fixture coerente e produzione970 invariata1 PASS/0 FAIL/0 SKIP47,24s, receipt `349ec6a9b8fda5bb05b35f46119b87eb9a6e9a107d1e7cd011419ad97d7e654c`; EmptyFence sul prodotto corrente1 PASS/0 FAIL/0 SKIP26,46s, receipt `94bc05309c0b34a3b62a76a447c237b3f3961b6d72878a58b62f7af9c909df50`. Recorder corrente osserva fence cambiata→diniego→nuova qualifica→riammissione. Storici CI970 UI273/236 e CI87 UI224 conservati; nessuna causa storica attribuita retroattivamente.
+6. Controparte Android letta: rilettura journal, CAS prima staging e retry solo sullo stesso journal impediscono staticamente la ricreazione osservata iOS; interleaving preciso NOT_TESTED, nessun nuovo test/PASS Android inventato. Nota esterna `android-counterpart-readonly.md`, SHA `a96029f9c6b11496a298d61f8e13627e1513c78ff2b86d8460f9596ac184fee4`.
+
+**Check obbligatori — snapshot prima del commit e dei gate finali:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug/Release, Analyze e Proper TEST finali | NON ESEGUITO, PENDING | Nuovo delta produzione: richieste esecuzioni finali sul candidato congelato. Proper970 non riusato come copertura. |
+| Mirati finali | ESEGUITO | 14 PASS/0 FAIL/0 SKIP su source48 finale; nuovo guard e regressione causale inclusi. |
+| Warning nuovi | ESEGUITO nei mirati; finale PENDING | Nessun warning Swift nei tre file cambiati nel log mirato; confronto canonico finale da eseguire. |
+| Full canonico e CI standard | NON ESEGUITO, PENDING | Attesi1552ID unici:1550 precedenti più due nuove unità,36skip invariati; i risultati saranno registrati nelle ricevute finali effettive. |
+| Coerenza con planning | ESEGUITO | CA07/09/10/11: eliminazione full superfluo dopo RED, preservando conservazione dati e ammissione fresca. |
+| Criteri globali/chiusura | NON ESEGUITO | CA07 autenticato/08integrale/09performance/10finale/11integrazione/12chiusura restano aperti secondo il report parent; task FIX/NON DONE. |
+
+**Incertezze:**
+- I due UI PASS correnti non provano la causa dei distinti FAIL storici. Correzione fake backend e difetto del piano scaduto sono prove separate.
+- Nessuna convergence per record Android↔iOS, distribuzione o target3s live dedotta dai test controllati. UI primaria Android bloccata; runtime/sessione primaria iOS da qualificare.
+
+**Handoff notes:**
+- Commit/push selettivo ordinario autorizzato; nuova CI standard e full locale sullo stesso candidato possono procedere in parallelo. Poi build/Analyze/ProperTEST finali. Nessun merge prima di review ed esiti effettivi verdi.
+- Dopo merge normale: mainCI, fast-forward preservativo della primaria e install/runtime con nuovo artefatto e nuova prova dati. Nessun reset, uninstall, clear, forcepush o deploy produzione.
+- Pacchetto parent `evidence/native-local-availability-20261004/ios-completed-journal-stale-bootstrap-*`; questa Execution è PRE-FINAL-GATES e non dichiara futuri PASS.
+
+### Esecuzione — 2026-10-07 — Automatic resume con Catalog pending dopo finalizzazione
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` — conserva il piano bootstrap già ammesso per la ripresa automatica; normalizza requestRecovery solo per il retry esplicito.
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift` — ammette solo la sequenza esatta pushPending→bootstrap per rootForeground/networkReconnect e journal same-scope; le altre azioni e sorgenti restano negate.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — un test con CatalogPush reale, ACK/outbox e finalizzazione file-backed, due sorgenti e controlli negativi prima della ripresa; tutti i114 metodi originali byte-identici.
+- Questo file — solo nuova evidenza Execution; modifiche preesistenti preservate e non incluse nel commit.
+
+**Azioni eseguite:**
+1. Riprodotto un difetto applicativo distinto dal FAIL storico CI87: dopo il vero ACK Catalog, il piano automatico veniva normalizzato a requestRecovery, che Engine correttamente nega fuori releaseCard; journal aperto e verified false. RED ufficiale1 FAIL/0 PASS/0 SKIP, unico assert finale per entrambe le sorgenti; setup, scope, generazione, watermark41, ACK e outbox superati. Receipt fdf9b06878f3436b856d0de49231ef8532a6d5ca597e3719e53b6e6ead9e77a5; verifica22/22 4ae3c80bd21cf826791ee192e0014bb0ff02c3b2ec93a622eb73b3818cfb88f4.
+2. Applicato il minimo fix in due file; stessa identica prima regressione ora1 PASS/0 FAIL/0 SKIP. Receipt93f3c64166f2841712e54641aecf58c7b57cc7017a4d2c0bbcfa4b6c687d8655; verifica25/25 85a76dcbf3b818bcfc8e5d93eded0b7cbd82680bd18f7eb147ee1972b0b73619. Per entrambe le sorgenti: ACK/outbox true, journal completato, verified true; nessuna nuova richiesta checkpoint/page.
+3. Aggiunti nello stesso nuovo metodo controlli negativi sulla facade reale: foregroundPoll/releaseCard, push isolato, sequenza inversa o duplicata e zero chiamate remote prima della positiva. Mirati finali10 PASS/0 FAIL/0 SKIP, receipt4a2cfe476bfd801d687be8e3b43b28ae494679efdeae89e537a813874af3f597; verifica29/29 3a8bc161b21641ee1940405aa953f838b8fe816853d903f4e5f5e1fb5b212eb3.
+4. Review indipendente C e reader APPROVED, compreso delta negativo finale: nessun finding. Engine, guard releaseCard, scope/device/lease, cancellazione, budget e Task119 invariati. Nessuna dipendenza/API pubblica/schema/UI cambiata.
+5. CI ba28/37571272683 precedente PASS1549=1513 PASS/36 stessi SKIP/16UI PASS e bundle originale acquisito (receipt f8ff28507da95aa640f387ef43fc0d696911245bf2ba43fa9647ba0f906b38e9). È prova dello snapshot precedente; non copre questo fix. RelatedSave recovery.value returned.completed-journal.true, FAIL87 NON_REPRODUCED, causa storica UNKNOWN.
+
+**Check obbligatori — snapshot prima del commit/push e dei gate finali paralleli:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug/Release, Analyze e Proper TEST finali | NON ESEGUITO, PENDING | Nuovo delta produzione: esecuzioni finali necessarie sul candidato congelato dopo commit. Proper87 non riusato come copertura. |
+| Mirati finali | ESEGUITO | 10 PASS/0 FAIL/0 SKIP; processi terminati, simulatore isolato Shutdown, dati baseline preservati. |
+| Warning nuovi nei mirati | ESEGUITO | 0 primari/1 metadata AppIntents preesistente/0 non classificati. Gate finali ancora PENDING. |
+| Full canonico e nuova CI standard | NON ESEGUITO, PENDING | Attesi1550 ID, tutti1549 precedenti invariati più una nuova unità; gli esiti saranno registrati nelle ricevute finali effettive. |
+| Coerenza con planning | ESEGUITO | CA07/10/11, ripresa automatica same-scope con pending; minimo fix causale dopo RED reale. |
+| Criteri globali e chiusura | NON ESEGUITO | Merge/mainCI/install/runtime e gate live/performance restano separati; TASK144 FIX/NON DONE. |
+
+**Incertezze:**
+- Nessuna attribuzione causale al FAIL storico CI87/RelatedSave; questo difetto ha un RED indipendente. Fixture controllata non equivale a backend autenticato o convergenza bidirezionale reale.
+
+**Handoff notes:**
+- Commit/push selettivo ordinario autorizzato; nuova CI standard in parallelo a full/build/Analyze/Proper locali, sorgenti e Task congelati dopo commit. Merge solo con esiti finali reali verdi, poi mainCI e aggiornamento TEST preservativo autorizzato. Nessun reset o modifica production.
+- Ricevute complete nel pacchetto parent `evidence/native-local-availability-20261004/ios-automatic-resume-pending-catalog-*`; questo log è lo snapshot pre-gate e non dichiara futuri PASS.
+
+### Esecuzione — 2026-10-07 — Related Save recovery-value diagnostic
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — DEBUG only: abilita il recorder RAM esistente per il fixture RELATED_SAVE e registra ingresso/esito reale di recovery.value, compresi failureKind e categoria tipizzata chiusa, senza query, guardie o timeout nuovi.
+
+**Azioni eseguite:**
+1. Preservati originali CI87/37564466855:1549 ID=1512 PASS/1 FAIL/36 stessi SKIP,unico leaf RelatedSave UI224. PID90502: released e nuova generazione pubblicata; saved intent/relazioni/feedback locale preservati. Activated assente; mapping/ownACK dopo cutover non raggiunti.
+2. Verificato che bootstrap.failed.other nel prefix finale è lo stesso callback della vecchia generazione osservato prima del rilascio,non un errore provato della nuova. Ramo recovery.value corrente UNKNOWN; nessun fix applicativo dedotto. Artefatto originale187102916B/SHA86ec5187db173506b1c1424c92255e23e4ee30132b9ed39c74d28db8737fbd12,6export ufficiali completati.
+3. Cheap originale RelatedSave una volta su diagnosticab753:1 PASS47.392s,receipt13eccc4c49607003f20c8649d168bfd05c23dffa2f65e7c00d44e09090528b04. Stdout ufficialePID64130:before-await→returned.completed-journal.true dopo0.375s,10RAMeventi/noCAP. Nessun ramo threw/ripresaautomatica osservato; fallimento remoto NON_REPRODUCED,nessuna causa risolta dichiarata.
+4. Review indipendente C+reader APPROVED neutralità; rilievo categoria tipizzata aggiunta nella stessa riga diagnostica (fixture finale046135c825b54906a4329d0ea02a1892a927f8de27afbe61d161cf76d2d9a0a9). Compile finale046 PASS/exit0,26.68s; receipt2d05dfeea07f6a6c92748b05e52d7922ea303aaf6b735527f93ecc32fc4a2cfa, verifica24/24 a6aab8610ac72e8351062ce25260ba6f4383230076f6ba29de73d8a0aa52a661. Review finale C APPROVED della sola riga tipizzata. UITest intero a78bbda26cefc460cb6e7414f3e91386bfb72b5ac93358e745b7245590919570 immutato.
+5. Secret scan workflow esistente su14input effettivi PASS,receipt68553ce577e7778b24621105320225e0540ea0eb9b3d1761d2be84de6cf7a172; filtro directory .log/.md/.json/.txt e workflow esplicito,nessuna estensione del perimetro dichiarata.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Compile Debug finale | ESEGUITO | Fonte046 compilata; exit0/BUILD SUCCEEDED, receipt2d05dfee, nessuna UI/full/Release/Proper ripetuta. |
+| Test mirato originale | ESEGUITO | 1 PASS b753; successiva sola aggiunta String tipizzata verificata separatamente in compile046. |
+| Warning nuovi | ESEGUITO | 0 primari/1 metadata AppIntents preesistente/0 non classificati; nessun warning nuovo. |
+| Coerenza con planning | ESEGUITO | Diagnostica del leaf F03 esistente,nessuna modifica di comportamento o guardia applicativa. |
+| Criteri di accettazione globali | NON ESEGUITO chiusura | CI87 FAIL preservato; nuovo CI/integrazione/runtime/performance autenticati pendenti. |
+
+**Incertezze:**
+- Causa originale RelatedSave UI224 UNKNOWN; local PASS non è fix causale né prova backend/live.
+
+**Handoff notes:**
+- Full87 1549/1513P/36S,Debug/Release/Analyze/Proper87 restano prove reali dei rispettivi snapshot. Questo delta interamente DEBUG non li rinomina come nuove esecuzioni; full87 viene riusato solo come comparatore di ID/stati.
+- Nessuna ripetizione full/Release/Proper immutati per il push diagnostico. PR18/merge/install/runtime restano subordinati agli esiti finali reali. TASK144 resta FIX/NON DONE.
+
+### Esecuzione e fix — 2026-10-06 America/Santiago (2026-10-07 UTC), discriminante setup empty-fence
+
+**Stato FIX, non DONE.** CI37558310519 al commit033 ha 1549 casi ufficiali:1512PASS/1FAIL/36SKIP invariati; i vecchi1548ID/stati sono identici al full locale e il solo nuovo caso fallisce a UI273. AXPID67326 mostra empty-fence.failure prima di initially-admitted: setup prima dell'iniezione, operando preciso UNKNOWN. Il FAIL originale e il download parziale restano conservati; recupero Range206 dello stesso artifact con SHA API f3913e6ef64623203011c40aa55df94a80dae93a8610674258fc7c36c7484508, CRC/extract e6export ufficiali PASS (receipt8c9e82fb804277d301b067ebec96ab59118cae6da21bbc1dc9b4919461afdf38).
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — SOLO DEBUG: stadio e primo predicato falso, stessi8operandi/ordine/short-circuit e singole valutazioni; catch con categorie chiuse failureKind e una sola mutazione facts. Nessun nuovo accesso dati, qualification, attesa, retry o cambio di assertion/budget.
+- Questo task — solo la presente Execution; foreign preesistente escluso dal commit.
+
+**Azioni/evidenze:**
+1. Il medesimo nuovo caso UI, immutato, passa una volta in28.312993s:1PASS/0FAIL/0SKIP,xcodebuild exit0. Receipt6c43a0265dd13f1592440f883f10e1a2618b7e6f4aae66c1f764e05fa013def0; quattro export ufficiali exit0, verifica23/23PASS, processi assenti e solo6BShutdown.
+2. Classificazione NON_REPRODUCED; primo predicato fallito NOT_OBSERVED. Il delta e il PASS locale NON sono un fix causale del setup storico. La diagnostica conserva il discriminante per un'eventuale ricorrenza reale.
+3. Review readonly del delta9fa47b0262de054b1787c81dcddaef3dc1bfa79020eee697fc85a9a8c9aa3dda: APPROVED,zero finding; nessun cambiamento prodotto o nei16metodi UI. Full finale/CI/integrazione/installazione restano successivi e distinti.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza |
+| --- | --- | --- |
+| Build/test mirato | ESEGUITO | Compilazione e unico UI PASS sul fixture8dbaa285406dcb70b7a69fbff9fa39499db30549f1ced053860ed2f04407bc80. |
+| Analyze/build canonici finali | NON ESEGUITO | Da eseguire sulla versione finale; precedenti033PASS restano storici. |
+| Warning nuovi | NON ESEGUITO | Confronto finale Analyze pendente. |
+| Coerenza planning | ESEGUITO | Diagnostica del solo fixture coinvolto; produzione, scope/fence/authority invariati. |
+| Criteri di accettazione | NON ESEGUITO integralmente | CA07/08/09/10/11/12 e prove esterne aperte; nessun DONE/READY. |
+
+**Handoff:** nuovo CI deve conservare il primo falso se ricorre; non aumentare timeout, saltare/indebolire il test o attribuire una causa da un PASS. Nessun input/install sul primario in questa esecuzione.
+
+### Esecuzione — 2026-10-07 UTC, nuova qualifica dopo invalidazione fisica della shell vuota
+
+**Stato FIX, non DONE.** Il root ora osserva il passaggio del gate da visibile a nascosto su un `Group` stabile e richiede al controller esistente una nuova qualifica quando manca il manifest attivo. La vecchia proof resta negata fino alla scansione completa e alla pubblicazione validata; nessun nuovo grant READY/write, query nel getter, polling, motore sync o cambiamento dei guard di scope/fence. `SyncStoreGeneration.swift` resta byte-identico.
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — osservatore lifecycle stabile della perdita di ammissione; UI/UX: ripristina la shell locale solo dopo nuova prova valida, senza Retry manuale.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — variante DEBUG opt-in su store sintetico: cambia realmente la mtime del solo legacy.store, verifica diniego della vecchia proof e nuovo revision/admission senza cambiare scope, fase, container o autorità.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — un nuovo caso; tutte le asserzioni, gli helper, l'ordine e i budget precedenti restano identici.
+- Questo task — solo la presente voce Execution; modifiche preesistenti escluse dal commit.
+
+**Azioni/evidenze:**
+1. Originale campagna finita A: 1 FAIL/4 PASS. Nel FAIL, qualifica iniziale ammessa, fence fisico cambiato e successore non osservato; nei PASS4/5 un successore ripristina l'ammissione. Il writer storico e il membro preciso del fence restano UNKNOWN.
+2. RED reale con produzione precedente e stessi nuovi fixture/test: 0 PASS/1 FAIL, unica assertion nuova di riqualifica; receipt `ff6127c6f39ef3963c80907813573c814e3d73867628aba03433c795a8b72147`.
+3. Primo GREEN: NOT_RUN infrastrutturale, runner Simulator occupato prima del caso. Dopo boot/status del solo simulatore sintetico, GREEN attempt02: 1 PASS/0 FAIL/0 SKIP, receipt `a38cd4760a76d04ede858dd3a66da5c2cd53794c5b3f695bd249110440a33597`.
+4. Regressioni adiacenti: 10 PASS/0 FAIL/0 SKIP, inclusi otto unit test negativi/scope/revoca, A originale e B originale editor/cutover; receipt `d0cf4424166281b9444f53f3507529619f94756bb52d75da942d61d4e35d359d`.
+5. Review indipendente degli stessi Data/UX: APPROVED con limiti sul freeze `d7cffc1b8e42ca68fb83c51bbb38160db1bac6d83df662383b48a1fa92ae2bce` e patch `8f9d1707d3ff122a3b565a0a8b7dee02d0843f2a947a4c6a96621dadf5e1a942`; nessun finding bloccante.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Compilazione e test mirati | ESEGUITO | RED reale, GREEN1 e adiacenti10; processi propri assenti e simulatore sintetico Shutdown. |
+| Gate canonico completo / Debug / Release / Analyze sul nuovo delta | NON ESEGUITO | Da eseguire dopo decisione batch sul nuovo B70 originale CI; i gate precedenti non certificano questo delta. |
+| Warning nuovi | NON ESEGUITO | Conteggio canonico finale ancora pendente. |
+| Coerenza con planning e preservazione | ESEGUITO | Controller/45carry originali, MASTER, dati/config primari e Task foreign preservati; nessun input/install sul primario iOS. |
+| Criteri di accettazione globali | NON ESEGUITO | CA-07 live, CA-09 finale, CA-10 full/CI e integrazione/runtime restano aperti e separati. |
+
+**Incertezze / handoff:** il trigger richiede un nuovo edge visibile→nascosto; fallimento già hidden senza altro edge non coperto. La nuova CI standard al precedente HEAD1bd è 1511 PASS/1 FAIL/36 SKIP: B fallisce alla riga70 su activated, prima del presenter editor. Il B locale PASS non chiude quel FAIL; originali in acquisizione, causa esatta UNKNOWN. Nessun full/push automatico prima della decisione su B; normale commit selettivo A autorizzato. Nessuna chiusura globale, merge, distribuzione o convergenza live inferita.
+
+### Esecuzione — 2026-10-07 — campagna A finita nella CI esistente
+
+**File modificati:**
+- `.github/workflows/ios-product-images-ci.yml` — input manuale booleano per cinque esecuzioni isolate del test A originale, con ambiente dichiarato, log/exit/xcresult separati e verifica ufficiale di un solo ID per esecuzione; default PR/main/full e budget75 minuti invariati.
+- Questo task, soltanto Execution — log derivato dal blob HEAD; working copy foreign14c preservata.
+
+**Azioni eseguite:**
+1. CI originale37545350645 sul checkout effettivo325afcc conclusa PASS:1548ID/stati/moduli esatti al Full05,1512PASS/0FAIL/36SKIP,15UI PASS. Analyze/secret/contracts PASS; non è una correzione causale A.
+2. Nuovo mandato umano b2af921d, sezioni4/7/8: cinque esecuzioni A predefinite in macos26-arm64/Xcode26.6-build17F113/iPhone16e-iOS26.2, senza retry-until-green; stessi test/asserzioni/fixture/launch. Review indipendente del delta dal coordinatore; nessuna nuova infrastruttura o suite locale completa duplicata.
+3. YAML, sintassi Bash e Python verificati; tutti gli step originari equivalenti salvo selezione manuale full/campagna. Checker provato sui veri export storici: singolo A accettato, Full1548 rifiutato come singolo A. Sono controlli statici del workflow, non nuove esecuzioni dell'app.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/test native | ESEGUITO sul source42 immutato | Genuine8/Full05/Build05 e CI37545350645 riusati; nessuna modifica alle48 fonti o input pubblici native. |
+| Static workflow | ESEGUITO | YAML/Bash/Python e diff-check PASS; default PR/main/full, step originali, timeout e asserzioni preservati. |
+| Warning nuovi | ESEGUITO sul source42 |34legacy/0nuovi nei gate locali; delta workflow non modifica codice app. |
+| Coerenza con mandato | ESEGUITO | Cinque A originali isolate, tutti gli esiti conservati e aggregato FAIL su skip/missing/infrastruttura; nessun fix A dichiarato. |
+| Campagna/runtime finali | NON ESEGUITO in questo snapshot pre-push | Risultati effettivi successivi nel riepilogo corrente del coordinatore e originali esterni; merge HOLD fino ai gate richiesti. |
+
+**Handoff notes:**
+- Stato FIX / NON DONE. Full05 immutato rimane valido sulle stesse48 fonti; la campagna non sostituisce la CI PR/main o il collaudo autenticato.
+- Il writer nativo resta N; il coordinatore01a113a4 possiede i due documenti centrali. Nessun private config, database, sessione, primary install o input business è modificato da questo commit.
+
+
+### Esecuzione — 2026-10-06 — fonte finale42 e controesempio prepubblicazione
+
+**File modificati:**
+- Questo file task — sole sezioni Execution/Fix/Handoff dal blob HEAD; il file worktree preesistente SHA14c119 resta invariato.
+- `docs/TASKS/EVIDENCE/TASK-144/local-availability-20261005/README.md` e `source-and-targeted-evidence.json` — riconciliazione F04: fonte42/gate attuali, vecchio manifest0af5 conservato come storico integrale.
+- Il controllo TEMPV3 di quattro file DEBUG è stato applicato solo per una singola osservazione e rimosso esattamente; nessun nuovo delta di produzione.
+
+**Azioni eseguite:**
+1. Fonte di produzione48 SHA42c992cc, HEAD0a481131, diagnostica080b e Database3584: le otto unità originali genuine PASS8/0/0 (receipt4f1b605d, root3f8ce56a). Full05 canonica senza filtri, nuovi skip o parallelismo:1548ID distinti,1512PASS/0FAIL/36SKIP identici e15UI PASS (receipt2927cd0f, rootappendix54293fe1). Tutti gli ID/stati coincidono con la mappa attesa39befc9b. I precedenti gate su fonti diverse restano storici.
+2. Medesimi due reviewer approvano il witness temporaneo V3 SHA8c7a2019; il producer finale bb3e43e8 preserva il metodo UI originale, tutte8 funzioni canoniche,600s totali inclusi90s cleanup e4 export originali. Nessun secondo start manuale, remount, Retry, trigger owner/fase artificiale o query d’autorità aggiunta. La fase viene osservata nella singola valutazione già esistente del prodotto.
+3. L’unica esecuzione nativa termina1FAIL/0PASS/0SKIP,exit65,26.972322s,receipt37c7819c. Solo UI270 `previous-shop-callback-released` fallisce; UI271 held e il giro tab/UI277 non vengono raggiunti. Non è il RED della navigazione storica CI.
+4. Tutti31 record originali dello stesso PID90264 sono verificati contro stdout1ead0455 e hash di riga: ticket1 corrente/noncancelled fallisce con `shopContextUnavailable`, ma la fase cambia prima del suo terminale. Il contesto normale risolve lo stesso account/shop/store; il successore automatico ticket2 pubblica una prova con full7/fence/revalidate e viene ammesso. Classificazione **NOT_TRAVERSED**, perché il prerequisito fase invariata non è soddisfatto. Trigger parent esatto del successore e causa CI storica restano UNKNOWN; nessun fix A di produzione è giustificato da questo run. Readback indipendente0611be4a, root15/15 c11a2723.
+5. Quattro export ufficiali exit0 chiusi22:43:06.470624Z,receipt80c01d92. Inverse temporanea esatta0d88ab53 chiusa22:45:33.243831Z,receiptff66ad20, entro la deadline originaria22:50:32.083564Z. Tutti48 file WT e HEAD corrispondono alla fonte42; diag080b e fixB conservati. PG assente, simulatore Shutdown, index vuoto, Task foreign14c/MASTER/workflow/config checksum-stat e famiglia default.store preservati. Nessun nuovo runtime dopo il run; Full05 resta pertinente per uguaglianza byte-esatta delle48 sorgenti ripristinate.
+6. Debug/Release/Analyze05 PASS (receiptfd89400f, rootdf13f5b2); comparatore canonico f325:34 warning legacy identici,zero nuovi/changed48/unclassified (20becc28). Scan sensibile canonico e hash dei contratti condivisi PASSa8b4e187. Proper FULL TEST05 Release firmato PASS6e183b5a/rootffe1af43:23 file verificati,binary10cbfa12,profilo154a,fresh signer,entitlements effettivi/embedded/Xcent e vecchia identità keychain conformi,strict/deep PASS. Artefatto NON INSTALLATO. Tutti14 comandi originali exit0;deadline1800/90,rientro executor23:08:16Z,gruppi assenti/6BShutdown/preservazione PASS.
+7. Riepilogo e manifest nativi indicavano ancora fonte0af5/Full11 come attuali: riconciliati con source42 e ricevute correnti, preservando l’intero precedente manifest sotto historicalValidationSource0af5 e gli originali byte-esatti esterni. Snapshot documentale pre-push:CI candidata esatta,merge/mainCI/FF ancora NON ESEGUITI;esiti successivi nel rapporto aggregato esterno,senza commit autoreferenziali.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build | ✅ ESEGUITO | Debug/Release/Analyze05 PASS sulla fonte42; Proper FULL TEST05 firmato PASS,non installato |
+| Static/reviewer | ✅ ESEGUITO | SAME2 approvano la diagnostica e il witness; all48 post-inverse/root15 PASS |
+| Warning nuovi | ✅ ESEGUITO | Comparatore f325:34 warning baseline identici,zero nuovi e zero nelle48 sorgenti modificate |
+| Coerenza planning | ✅ ESEGUITO | Witness circoscritto; no fix senza RED pertinente; logica/autorità/UI originali preservate |
+| Criteri di accettazione | ❌ NON ESEGUITO | FIX; CI/integration, device primario, live/parità/performance rimangono distinti |
+
+**Incertezze:**
+- HistoricalCI A UNKNOWN; test temporaneo NOT_TRAVERSED. I record di uguaglianza non identificano il callsite preciso del successore.
+- Warning SQLite e guard interno del setup recovery non sono dichiarati innocui o causa storica.
+
+
+### Esecuzione — 2026-10-06 — diagnostica del primo diniego A conservata per CI
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — osservazione DEBUG dei soli operandi già valutati e del ramo che nasconde la root.
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/SyncStoreGeneration.swift` — osservazione DEBUG dell’ammissione vuota, ticket corrente, completamento/pubblicazione e classe/caso di errore prima della sanitizzazione.
+- `iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift` — osservazione DEBUG delle guardie di capture/revalidate realmente valutate, con gli stessi errori e short circuit.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — recorder RAM esistente con PID e limiti invariati; ancore del callback held/previous. Nessun payload, identificativo di business o descrizione libera di errore.
+- Questo file task — sole evidenze owned Execution/Fix/Handoff dal blob HEAD; il file worktree preesistente SHA14c119 rimane invariato.
+
+**Azioni eseguite:**
+1. Entrambi i medesimi reviewer dati/UX hanno approvato il freeze080b senza finding. Root ha verificato le copie forward/inverse, applicato selettivamente quattro file (receipt5ded), preservato DB3584 e gli altri44 file. Run freeze effettivo7db; nessuna modifica a test originali114/6fb, guardie d’autorità, query, scritture SQLite, navigation o dipendenze.
+2. Un’unica compilazione ed esecuzione del test originale `testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission` sul runner finale2c2/source7db: 1 PASS, 0 FAIL, 0 SKIP, 21.465908s, exit0, receiptfac64f78. Deadline unica600s comprensiva90s cleanup; rilascio del gruppo21:47:19.494429Z. Il risultato locale è NON_REPRODUCED e non attribuisce la causa del precedente fallimento CI6ff.
+3. Tutti i quattro export ufficiali sono exit0 entro la deadline originale (receipte50a). Verifica root18/18 PASS975038ed ed executor22/22 PASS7b0c45b5: source48, HEAD75ff, Task14c, MASTER/workflow/index/status, config86a67 checksum/stat e tre file default.store preservati; PG77206 assente e simulatore6B Shutdown.
+4. Diagnostica conservata esatta per ambiente/toolchain/ordine CI pertinente. Nessun inverse automatico su PASS. CAP128, dedup o assenza di un marker pertinente sono NOT_OBSERVED; startup proof-absent, timeout held intenzionale e ticket non corrente non costituiscono da soli la causa corrente.
+5. Le otto regressioni genuine sono PASS sul precedente freeze produzione754/HEAD75ff (receiptf807/root724). I gate completi sulla revisione comprensiva della diagnostica sono ancora da eseguire; il precedente Full04 è sospeso perché lega source754. AndroidAPK88/sessione/dati preservati; interazione primaria ancora bloccata dalla finestra Running Devices non raggiungibile.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build | ✅ ESEGUITO | Compilazione del singolo test originaleA/source7db PASS; Debug/Release/Analyze completi sulla revisione finale successiva NON ESEGUITI |
+| Static / reviewer | ✅ ESEGUITO | Medesimi due reviewer approvano080b; root20 sourcechecks e24 producerchecks PASS_STATIC |
+| Warning nuovi | ❌ NON ESEGUITO | Comparatore canonico Debug/Release/Analyze deve verificare la revisione finale; nessun PASS precedente riclassificato |
+| Coerenza planning | ✅ ESEGUITO | Diagnosi circoscritta di A; autorità e assert originali preservati |
+| Criteri di accettazione | ❌ NON ESEGUITO | Task FIX; gate finali, CI esatta, installazione primaria, live/parità e performance restano separatamente aperti |
+
+**Incertezze:**
+- Causa storica di A ancora UNKNOWN. Nessun nuovo fix di produzione A giustificato dal PASS locale.
+- I warning SQLite storici non sono dichiarati innocui o causali senza prova pertinente.
+
+
+### Esecuzione — 2026-10-06 — editor ripristinato dopo l’aggancio alla finestra
+
+**File modificati:**
+- `iOSMerchandiseControl/DatabaseView.swift` — bridge UIKit privato e passivo per ripristinare una sola volta l’editor della generazione corrente quando il presenter e i suoi parent appartengono alla stessa finestra; stato visivo iniziale ripristinato separatamente.
+- Questo file task — solo nuove evidenze Execution/Fix/Handoff owned, derivate dal blob HEAD; il file worktree preesistente SHA14c119 resta byte-identico.
+
+**Azioni eseguite:**
+1. La prima osservazione originale ha riprodotto UI71: ammissione corrente e fetch univoco validi, poi warning UIKit di presentazione da controller fuori gerarchia finestra. Lo stesso warning è presente nell’originale CI6ff; non attribuisce una causa comune al distinto fallimento UI277. Ipotesi di draft cancellato dal primo diniego falsificata nell’esperimento.
+2. Applicata la sola patch Database approvata dai medesimi reviewer dati/UX, SHA8460acef; file risultante SHA3584c40e. Guardie owner/manifest/scope/local-access, fetch limit2, sheet/dismiss, Save/ACK/CAS invariati. Nessun timer, polling, nuova dipendenza o modello precedente conservato. UI/UX: l’editor torna utilizzabile con draft e focus dopo il cutover (motivo: continuità dell’interazione già prevista dal task).
+3. Il test UI originale completo, senza modificare selector/metodo/timeout, è PASS 1/1 in57.790840s: draft/focus, Cancel, drain, ownACK, filtro/tab e terminate/relaunch con coda vuota. Receipt e72caa31, inverse91e0cc1f, export57efe48b, verifica executor d77ed57d e root706609a6. Screenshot originali prima/dopo conservati.
+4. Dopo inverse canonica, PG assente e simulatore Shutdown, root conserva separatamente la medesima patch di produzione. Commit normale selettivo dei soli Database + nuove sezioni task owned; niente scrittura del task foreign, MASTER o workflow.
+
+**Check obbligatori sul candidato finale:**
+| Check | Stato | Note |
+|---|---|---|
+| Compilazione pertinente / UI originale | ✅ ESEGUITO | Xcode test originale, exit0, 1PASS/0FAIL/0SKIP sul medesimo file Database3584. |
+| Full suite canonica | ❌ NON ESEGUITO | Richiede nuova ricevuta mirata8 e full sul freeze/HEAD finale; i precedenti gate B4 restano storici. |
+| Debug/Release/Analyze e warning nuovi | ❌ NON ESEGUITO | Gate completi sul nuovo source pending; nessuna equivalenza con vecchio Analyze o CI rossa. |
+| Coerenza con planning | ✅ ESEGUITO | Fix minimo di continuità editor dopo recovery, scope/ammissione dati preservati. |
+| Criteri di accettazione | ❌ NON ESEGUITO | B originale PASS; A UI277, CI finale, installazione primaria e accettazione live restano aperti. Task FIX, non DONE. |
+
+**Incertezze:**
+- A: bootstrap.failed.other è compatibile col timeout intenzionale della fixture held; primo diniego concreto del gate ancora da registrare.
+- Nessuna nuova installazione, prova di auth reale, convergenza mobile o prestazione live è implicata dal test fixture.
+
+
+### Esecuzione — 2026-10-06 UTC, quattro commit normali e Full03 finale
+
+**Task e fase FIX; criteri e stato globale invariati.** Questo aggiornamento parte soltanto dal Task committato `165c92fc`; il working Task foreign `14c11901` resta byte-identico e fuori dallo staging. Le prove controllate locali sono distinte da accettazione live, installazione e chiusura globale.
+
+**Commit normali effettivi:**
+1. `1a0cc662` — ripristino dei quattro file diagnostici alla base approvata; guard di produzione che conserva la candidata empty-root same-owner soltanto durante `shopContextUnavailable`, più sette righe nel test originale. RED reale `935ce0a3`/root `fdc614fc`: 0P1F0S, solo assert finale1021; tutti i controlli originali fisici/full7/autorità/old-writer/container/journal restano validi.
+2. `8f869c06` — provider reale della fixture DEBUG controllata e cinque righe nel helper privato di qualifica zero-reopen. Il terminale deriva dal summary reale e dai controlli correnti, senza recover manuale aggiuntivo o READY sintetico.
+3. `da2f42f9` — sola rimozione dell'await superfluo nel callback DEBUG isolato al MainActor; le due nuove occorrenze warning rilevate nei gate01 restano documentate, senza sostituire la baseline legacy34.
+4. `c89add54` — helper privato DEBUG che confronta i sette campi stabili nei due punti della fixture, escludendo soltanto `currentRunLease`; autorità corrente e guard ACK/CAS/sealed-event restano strict. La diagnostica additiva full-scope segue sealed-revision, conservando la sottostringa originale e l'assert UI169/174. Nessun corpo di test, timeout, nuovo test, dipendenza o API pubblica modificato da questo delta.
+
+**Fonte e provenienza:** aggregate reale `fab7b97e`, source48 esattamente uguale a `b4fc7db0.proposedSource48SHA256`, fixture `321e1813`, HEAD nativo reale `c89add54`. Il freeze di proposta conserva il suo head storico `da2f42f9`; le receipt native mantengono il loro HEAD effettivo. La stessa coppia reviewer dati/UX ha approvato il candidato, prova `57e42f12`; non si aggiunge una catena di review.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| GREEN8 candidato combinato949 e GREEN8 fonte1d7 | ESEGUITO | 8P0F0S separati; receipt5ee82154/rootd235c7f2 e receipt45da5f5a/root8111d02d |
+| Due UI originali normal-response/lost-response sul candidato finale b4fc7 | ESEGUITO | 2P0F0S, receipt66fa7c4a; test/assert originali invariati, inverse esatta verso1d7 |
+| Otto unitari originali sul medesimo candidato b4fc7 | ESEGUITO | 8P0F0S, receipt138b2227; inverse esatta, non rietichettata con HEADc89 |
+| Full03 finale non filtrato su HEADc89/sourceb4fc7 | ESEGUITO | 1548 ID esatti,1512P/0F/36 stessi SKIP/15 UI PASS; receipt487b7b0a/root e38e8f2e, map39befc9b, preservazione/cleanup/deadline verificati |
+| Debug/Release/Analyze03 e warning baseline34 | ESEGUITO | Tre build PASS; receipt6fb1b995/root657cb45f/executor562a103f, pre-warning1a32219e e confronto89928698: 34 legacy identici, zero nuovi e zero warning nei source48 modificati; preservazione e deadline verificate |
+| Proper03 TEST firmato e preservazione config/keychain | ESEGUITO | receipt29b32eb4/rootbece698d/executorcbea581b; 23 file, binary1ef75f21, firma/entitlement effettivi e preservazione keychain/profile/config/input verificati; terminale18:23:06 UTC, non installato |
+| Singolo unitario SQLite originale e osservazione diagnostica controllata | ESEGUITO | 1P0F0S, receipt425b2c57/inverse21c40814/root5474e5f1/executor3ca58000; 17 record e 8 warning; source48 finale ripristinato, HEADc89/protected/index/baseline preservati, PG residui vuoti e destinazione Shutdown; entry600s inclusi90s cleanup, release18:26:20 UTC |
+| Worker/cleanup SQLite, sessione/outbox e ritenzione su iOS primario | NON ESEGUIBILE | Worker/kernel/private cleanup UNKNOWN; ipotesi teardown-only a522c38e falsificata nel run controllato. Il device primario e la sua ritenzione/sessione/outbox restano BLOCKED dal manual-unlock; il PASS unitario non qualifica questi esiti |
+| PR18, CI PR/main, merge normale e source-only FF | NON ESEGUITO | PENDING al momento di questo log: acquisire il vero PRHEAD dopo il commit documentale, i run CI PR/main terminali, il merge normale e la FF primaria. La futura receipt di integrazione esterna costituirà la prova finale; nessun hash/esito futuro è inventato |
+
+**Diagnosi SQLite del solo run controllato:** reportb25d7043/freeze d5b98f30, root readback2c4ce151 e addendum834936d6. Tre warning dello stesso PID47318 e dello stesso archivio ritirato ricadono tra `repository.bestEffortCleanup` seq5→6, prima del teardown seq16; gli altri cinque tra teardown16→17 sull'archivio attivo corrente. Il container ritirato registrato è ancora vivo ai campioni di confine. L'ipotesi preregistrata teardown-only a522c38e è **FALSIFIED**. Il source guard `SyncStoreGeneration.swift`779/783/1026–1056 esclude la generazione attiva e il journal resumable ammissibile, limita le eliminazioni e usa `try? removeItem`; non verifica i container aperti o la vita dei worker. Il valore privato resumable non è direttamente osservato e i campioni non sono atomici né completi per tutti i container runtime. Kernel/worker/private cleanup restano UNKNOWN; nessuna prova di innocuità, corruzione o ritenzione primaria. Gli otto warning runtime SQLite sono distinti dai 34 warning legacy di compilazione/Analyze. Nessuna attribuzione retroattiva al vecchio UI147 o alla CI.
+
+**Storico conservato:** Full01 sul949 passa i test, ma la comparazione warning36 contro34 fallisce per i due await superflui DEBUG. Full02/source1d7/HEADda2f resta FAIL reale:1511P/1F/36S, receipt `a9710051`, originale replay UI147; la componente responsabile di quel failure resta UNKNOWN. La probe diagnostica `833009a7` passa ma i suoi otto campi sono NOT_EXPORTED, quindi non prova una causa lease-only storica. Il successivo2UI01 FAIL di sola presentazione UI169/174 è distinto: la diagnostica additiva rompeva la sottostringa originale; il candidato v2 corregge esclusivamente l'ordine e conserva tutti gli assert.
+
+**Limiti:** F autenticato/per-record su Android/iOS/Admin/Mini, H su dataset reale, installazione/ritenzione su device primario e flussi live restano aperti. Il blocco manual-unlock corrente non viene aggirato. Il futuro log documentale non cambia source48, MASTER, workflow, configurazioni protette o input pubblici di compilazione; nessuna receipt o verifica locale vale come DONE globale.
+
+### Esecuzione — 2026-10-06 UTC, guard empty-root durante risoluzione non disponibile e fixture controllata
+
+**Task FIX; nessuna modifica a Planning o criteri.** Il controesempio deterministico usa l'API reale `markResolutionUnresolved`, avvia la qualifica normale nello stesso intervallo e risolve con lo stesso selected shop. Sul controller base il solo assert finale della shell, linea1021, fallisce: **0PASS/1FAIL/0SKIP**, receipt `935ce0a3`, verifica root `fdc614fc`. I controlli originali full7/fence fisico/current scope/old writer negato/container/journal e nove modelli vuoti non segnalano problemi. Questa prova riguarda quel boundary esplicito; la prima causa del failure CI37466894761 resta **UNKNOWN**.
+
+**File e integrazione selettiva:** il primo commit ripristina `ContentView.swift`, `SyncStoreGeneration.swift`, `Task144LocalAvailabilityRootFixture.swift` e `LocalAvailabilityRootUITests.swift` dalla diagnostica temporanea alla base approvata0af; sul Controller aggiunge soltanto il guard iniziale e nel test Atomic esistente le sette righe del controesempio. Il secondo commit contiene soltanto il provider reale della fixture DEBUG approvataV2 e le cinque righe di qualifica nel helper privato zero-reopen. Nessuna nuova API pubblica o dipendenza; helper privati DEBUG soltanto nella fixture; assert e timeout originali conservati. Il Task working foreign `14c11901` resta fuori dallo staging: questa registrazione proviene esclusivamente dal Task HEAD.
+
+**Fix di produzione:** `captureAutomaticScope` usa do/catch. Soltanto `shopContextUnavailable` conserva la candidata `emptyRootProof` dello stesso owner e senza diniego confermato; loadFailure/nil owner/no pending journal/altri errori/diniego la cancellano. L'ammissione della shell richiede ancora scope corrente completo, container/fence fisico e revalidazione. Worker, guard post-await/pubblicazione e autorità writer restano identici.
+
+**Fixture e helper:** il provider è ammesso soltanto dopo start, rilascio trasporto e manifest pubblicato diverso dalla generazione held; il completamento deriva dal vero summary terminale e da tutti i controlli correnti, senza secondo recover manuale. L'osservazione conserva il summary reale prima della qualifica asincrona. Il helper privato awaita la qualifica e richiede la prova corrente prima di restituire la fixture riaperta.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| RED mirato del guard | ESEGUITO | 0P1F0S, solo assert1021; receipt935ce0a3/rootfdc614fc |
+| GREEN8 esistenti su candidato combinato949 | ESEGUITO | 8P0F0S; receipt5ee82154/rootd235c7f2; exact inverse e preservazione48 |
+| Due UI originali con sola fixtureV2 | ESEGUITO | 2P0F0S; receipt6e7283e0/root85935dd6; prova separata dalla combinazione949 |
+| Review stabile stesso contesto dati e UX | ESEGUITO | C conferma APPROVED/0 findings su949; dati1791301901, UX1791301949 |
+| Nuovo full1548 e Debug/Release/Analyze/warning | NON ESEGUITO | PENDING sul nuovo HEAD reale; Full11 storico non certifica questo nuovo guard |
+| Nuovo ProperTEST firmato | NON ESEGUITO | PENDING dopo nuovi full/build/warning; nessun install o lettura configurazione protetta in preparazione |
+| Nuova CI, F autenticato, H reale, primaria | NON ESEGUITO | Gate separati; nessuna chiusura globale inferita da fixture o review |
+
+**Freeze e limiti:** sorgenti finali48 `949d95cbc4c9a09420c1798c519e90adbe86a59644221a4312901504d6ed5e45`; 1548 ID ufficiali e 36 skip identici restano attesi, senza filtri. La sequenza dei due commit normali mantiene MASTER/workflow e tutte le modifiche foreign; nessuna causa storica CI o branch automatico dedotta dai soli risultati PASS.
+
+
+### Esecuzione — 2026-10-06 UTC, pubblicazione shell vuota dopo refresh same-scope
+
+**Stato FIX; fonte48 `0af5b5b6`, HEAD `b4c95eb4` precommit.** Mirati8 **8PASS/0FAIL/0SKIP**; full11 senza filtri/nuovi skip,parallelNO: **1548 ID unici,1512PASS/0FAIL/36SKIP identici,15nativeUI PASS**. Tutti1546ID/stati Full10 preservati e soltanto due nuove unità. Debug/Release/Analyze11 PASS;34warning primari legacy negli stessi sei file della baseline originale d379,zero nuovi e zero nelle48 sorgenti. Proper fullTEST11 Release firmato PASS,23file/profilo154a/fresh signer/entitlements effettivi `.app-Simulated.xcent` ed embedded MachO/vecchia identità keychain/strict-deep;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`, **NON INSTALLATO**.
+
+**File propri:** `SyncStoreGeneration.swift`,solo guard finale di `startEmptyRootQualification`: dopo il lavoro off-main cattura autorità CURRENT con pendingreplacement tipizzato,confronta tutti i sette campi(owner/account/shop/intero store/deviceID/hash/intero pending) con l'originale,conserva cancellation/self/container/manifestnil/diniego/full file-family fence e rivalida CURRENT immediatamente prima della pubblicazione senza await. La proof immutabile usa current scope. Scansione fisica nove tabelle e guard prima/dopo invariati;non concede READY/write né riabilita la vecchia Task126 writer lease. `AtomicGenerationRecoverySnapshotPullServiceTests.swift`: positivo RED byteidentico54cc e negativo byteexact7061 della proposta a98,con fresh VALID shop/device diversi prima della pubblicazione. Eliminando i due blocchi restituisce l'intero vecchio Atomic0efd. UI6fb e altri46source invariati. Stessi due reviewer APPROVED STATIC0af5/zero finding.
+
+**Causa/prova distinta:** nel controesempio reale file-backed,ordinarysameSelectedSave tra start e primo await mantiene sette campi/full fence,current authority valida e old scoped writer DENIED;la sola assertion desired `qualified && shell` falliva con entrambi false(RED1). Guard di pubblicazione ora supera questo caso e rifiuta scope fresco diverso. Le tre failure mainCI82ef restano storiche,**cause esatte UNKNOWN**;la singola osservazione originale3PASS è NOT_OBSERVED,non attribuzione. Diagnostica temporanea rimossa con inverse esatto prima della RED. Messaggi SQLite unlink:120 sia in Full10 sia in Full11,attribuzione UNKNOWN;proposta osservativa2504 NONAPPLICATA/NONESeguita,fuori commit;nessuna dichiarazione harmless.
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| RED publication e target8 | ESEGUITO |RED1 unica desiredassert;8P0F0S `41c8d2113f16fb66a36ead54d2639fca4710a6307214def9f1d9bd852467eeda` |
+| Full11 non filtrato | ESEGUITO |1548ID/1512P0F36sameS/15UI `466968422cca2b1d26dfffa12a833ded5d6c277e5f344cc932753a303e4fea0f` |
+| Debug/Release/Analyze11 e warning | ESEGUITO |3exit0,originalbaseline34/nuovi0 `971c839cfcaa1165a236e0fd8db1d72fd26cb23e8e72a90182d7c26bba7cb825` |
+| Proper fullTEST11 firmato | ESEGUITO |23file/signature/profile/entitlements/keychainP `7a6e708ff0a751dca300dba50e694098adb41a129b2533afd30b12ac30c02a31` |
+| Planning/preservazione | ESEGUITO |Source48/head/MASTER/Planning/foreignTask preservati;ownedgroups0/6B04Shutdown/baselineP;0input/install primaria |
+| Nuova CI/F/H/primaria | NON ESEGUITO |FollowupPR/exact-head+mainCI PENDING;F/459/H separati,Mac unlock pendente |
+
+Handoff `ios-empty-root-publication-scope-final-handoff-v11-20261006/manifest.json`;parent soloGit dopo rilascio. Stage Controller/Atomic/due portable docs e SOLO3nuovi hunksTask,inversewhole→5fba esatto;foreignTask73add/19del,net54 fuori index. Nessuna nuova dipendenza/schema/API/framework/task/governance.
+
 ### Esecuzione — 2026-10-06 UTC, shell vuota con autorità corrente
 
 **Stato FIX; fonte48 `f0ce09d7`, HEAD7b precommit correttivo.** Mirati6 **6PASS/0FAIL/0SKIP**; full10 senza filtri/nuovi skip,parallelNO: **1546 ID unici,1510PASS/0FAIL/36SKIP preesistenti,15nativeUI PASS**. Tutti1544ID/status Full09 preservati e soltanto due nuove unità. Debug/Release/Analyze10 PASS;34warning primari baseline,zero nuovi nelle48 sorgenti. Proper fullTEST10 Release firmato PASS,23file/profilo154a/fresh signer/effettivo Simulated.xcent/embedded MachO/vecchia identità keychain/strict-deep;binary `97d7d8d409f57c72427359fa237f30f13a28154cd46a17ce0884d56c5501a195`, **NON INSTALLATO**.
@@ -889,6 +1221,24 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+**Fix aggiornato — 2026-10-06:** diag080b e editor window-attached3584 sono conservati sul candidato42/HEAD0a48. Genuine8 e Full05 correnti PASS; il singolo witness temporaneo prepubblicazione è NOT_TRAVERSED e completamente rimosso, senza nuovo fix A. Successore automatico osservato; causa CI storica UNKNOWN. Debug/Release/Analyze05/zero nuovi warning e Proper FULL TEST05 PASS; CI esatta e lane esterne restano da chiudere. Stato FIX invariato.
+
+
+**Fix — 2026-10-06, A diagnostica080b:** conservata dopo il PASS originale locale. Solo osservazione DEBUG dei valori già valutati; errore/ordine/short circuit/callee count preservati. B rimane il fix DB3584 già verificato sul test originale; nessuna causa comune A/B dedotta. La source diagnostica e il runner finale restano tracciati nei pacchetti esterni `ios-empty-root-first-denial-observation-offline-20261006` e `ios-empty-root-first-denial-one-ui-run-01`.
+
+
+### Fix — 2026-10-06 — confine di presentazione editor
+
+Candidate source48 approvato4f0ba0a3: solo Database3584 differisce dal B4, altri47 byte-identici. Callback sincrona `viewDidAppear` con controller e parent nella stessa finestra; ammissione fresca e presentationID corrente, tentativo unico per generazione e invalidazione su dismantle. Originale B completo PASS e72c; l’altro fallimento ufficiale UI277 resta distinto. Gate completi finali e nuova CI necessari prima dell’integrazione.
+
+
+**Fix aggiornato 2026-10-06 — fonte48 b4fc7, HEAD nativo c89, Task FIX:** il RED935/rootfdc dimostra il difetto nel controesempio esplicito unavailable/qualifica; il guard di produzione same-owner è chiuso dai GREEN esistenti. Provider/summary terminale e helper zero-reopen sono DEBUG/test; await superfluo e confronto stable7 sono delta privati della fixture. La sola nuova diagnostica full-scope è riordinata dopo sealed-revision per preservare l'assert originale UI169/174. L'ammissione fisica/currentfull7/fence/revalidate e l'autorità degli old writer non sono rilassate. Due UI66fa7c4a, unit8 138b2227, stessi reviewer57e42f12 e Full03 487b7b0a/root e38e8f2e sono prove distinte sul source48 uguale. Full02 FAIL e causa storica UNKNOWN restano immutabili. Build/warning03, Proper03, SQLite e Git/CI: Build/Analyze PASS con 34 warning legacy identici e zero nuovi (6fb1b995/89928698/root657cb45f); Proper firmato PASS, non installato (29b32eb4/rootbece698d); un solo unitario SQLite PASS (425b2c57/root5474e5f1), diagnosi teardown-only falsificata (b25d7043/root2c4ce151/addendum834936d6), worker/private cleanup UNKNOWN e ritenzione primaria BLOCKED manual-unlock; PR/main CI, merge e FF NON ESEGUITO, prova esterna futura PENDING. Nessun CA, Planning, Decisione o stato globale modificato; live/per-record F, H e device primario aperti.
+
+**Fix 2026-10-06 — candidata empty-root e fixture controllata, fonte finale949:** RED reale0P1F0S/rootfdc614fc prova la perdita dell'ammissione dopo qualifica nell'intervallo unavailable con fisica e full7 invariati. Il guard conserva soltanto la candidata same-owner durante `shopContextUnavailable`; permitsScopedEmptyRoot/fence/full7/revalidate/worker/post-await e writer restano strict. GREEN8/rootd235c7f2 e le review C dati1791301901/UX1791301949 sono PASS/APPROVED; la fixture DEBUGV2 e il helper privato5 righe entrano in un secondo commit separato. Nuovi full/build/warning/ProperTEST e CI sono PENDING; Task FIX invariato, nessun CA marcato DONE.
+
+
+**Fix 2026-10-06 — pubblicazione empty-root dopo refresh same-scope:** solo guard finale `startEmptyRootQualification` usa scope CURRENT con sette valori completi uguali all'originale,diniego/cancel/container/manifestnil/full physicalfence e fresh finalrevalidation senza await;pubblica proof immutabile current. Scan9/Task126/writer/READY/RPC/UI/timer invariati;oldwriter resta DENIED. Positivo desiredRED54cc immutato e freshvalid foreignshop/device7061 byteexact a98;mirati8/full11/build11/proper11 PASS,review SAME2 APPROVED0af5. MainCI82ef cause esatte UNKNOWN;osservazione3P è NOT_OBSERVED,non causal attribution.
+
 **Fix 2026-10-06 — shell vuota valida durante stesso-scope refresh:** solo guard `permitsScopedEmptyRoot` usa current full authority+sette campi stable/pending esatti,full physicalfence e final currentrevalidation. Old Task126/writer DENIED invariato;nessuna proof/READY/write grant. Due nuoveunit reali includono RED byteidentico e freshvalid foreign-shop/store/device negativa. Mirati6/full10/build10/proper10 PASS,stessi due reviewer f0ce APPROVED. Main CI d918 exactleaf UNKNOWN;original observationPASS NOT_OBSERVED e RED semantico distinto.
 
 **Fix 2026-10-06 — oracolo DEBUG corrente, prodotto normale invariato:** normale qualificazione al reopen dopo refresh; replay typedsealedA esaustivo e preACK, evento Product reale/currentACK+Historypending; finale13righe usa autorità stretta corrente, intera identità stabile e prova body/container, rivalidazione corrente. Vecchi writer stale restano DENIED. Prove reali ordine/ACKlease + nuova solaUI replay40s;14metodi/budget originali intatti. Mirati10/full09/build09/proper09 PASS;stessi due reviewer10a APPROVED. CI0757 e Full06/07/08 restano FAIL storici con limiti UNKNOWN;nessun Ready/count-only/pending-authority shortcut o nuovo skip.
@@ -912,6 +1262,22 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+**Handoff aggiornato — 2026-10-06:** nessun nuovo witness identico o Full05 immutata. Build/Analyze/zero nuovi warning e Proper signed FULL TEST sulla fonte42 restaurata sono PASS; proseguire push normale/CI originale pertinente con080b. Non inferire DONE da fixture locali; Android finestra primaria resta in attesa dell’unica risposta umana, sessione/APK88 invariati. Live F/per-record convergence/H e installazione/ritenzione primaria iOS restano aperti. Non scrivere MASTER o il Task foreign14c; commit documentale del solo blob Task owned e dei due riepiloghi evidence owned,stage selettivo dopo rilascio producer.
+
+
+**CURRENT 2026-10-06 — A_ORIGINAL_LOCAL_PASS_NON_REPRODUCED / DIAGNOSTIC080B_RETAINED / B_DB3584_RETAINED; task FIX, NON DONE.** Unico A originale/source7db: 1P0F0S, nessuna causa CI attribuita. Dopo chiusura export/risorse, normale commit dei quattro soli file diagnostici e log owned, freeze effettivo con HEAD reale, genuine8 e gate completi sullo stesso source, poi CI pertinente. Vecchio Full04/source754 HOLD. Medesimi reviewer verificano terminali; no rerun cieco, inverse automatico, merge/install o PASS live. AndroidAPK88 non reinstallare/reset/logout: attende solo la finestra Running Devices accessibile già richiesta all’utente.
+
+
+**CURRENT 2026-10-06 — B_EDITOR_ORIGINAL_UI_PASS / PRODUCTION_PATCH_RETAINED; task FIX, NON DONE.** Root ha verificato receipt e72c/inverse91e/executor d77/root706 e conserva DB3584 con commit normale. Nuovo native HEAD e source freeze sono registrati nel pacchetto esterno `ios-window-attached-editor-production-retention-01`; vecchio freeze4f resta immutabile e non viene rinominato. Successivo owner I: genuine target8 sul nuovo source/freeze, poi full canonico1548 e Debug/Release/Analyze/TEST. A: diagnosi DEBUG circoscritta sui primi operandi effettivi, zero query aggiuntive o autorità indebolita; nessun rilancio cieco della CI originale. Android APK88/sessione/dati conservati, verifica UI primaria ancora bloccata dal canvas non raggiungibile. Nessun merge/CI verde/install/accettazione live dichiarato.
+
+
+**CURRENT 2026-10-06 — QUATTRO_COMMIT_NORMALI / SOURCE48_b4fc7 / NATIVE_HEAD_c89 / UI2_2P0F0S / UNIT8_8P0F0S / FULL03_1548IDs_1512P_0F_36S_15UIP; Task FIX.** Prova sorgente/commit `fab7b97e`, Full03 receipt `487b7b0a`, root `e38e8f2e`. Stato gate successivi: BUILD/ANALYZE03 PASS, baseline34 immutata/zero nuovi (6fb1b995/89928698/root657cb45f); PROPER03 TEST firmato PASS, binary1ef75f21/23file, non installato (29b32eb4/rootbece698d); SQLITE singolo unitario originale 1P0F0S (425b2c57/inverse21c40814/root5474e5f1), diagnostica17record/8warning e teardown-only FALSIFIED (b25d7043/root2c4ce151). Worker/kernel/private cleanup UNKNOWN, primary session/outbox/retention BLOCKED manual-unlock; CI PR/main, merge normale e source-only FF NON ESEGUITO/PENDING al commit documentale. L'esito reale di integrazione verrà vincolato nella receipt esterna finale, senza inventare proofSHA futuri. Il parent può creare un commit normale esclusivamente del Task HEAD con queste tre aggiunte; il Task working foreign14c resta identico e fuori staging. Dopo tale commit, PRHEAD e prova commit/Task devono essere acquisiti realmente e vincolati nei metadati V5; non riusare o rietichettare l'HEAD nativo c89, il proposal head storico da2f o le receipt economiche. Prima di push/CI/merge/FF usare nuove prove native/SQLite e i guard esistenti: sei step CI realmente SUCCESS,1548 stessi ID/stati/36 stessi skip, PR base OID fresco con fetch e albero reviewedb4, due parent nel merge e albero intero uguale al candidato, preservazione10dirty/config/stash/index e FF-only/no-autostash. Snapshot remoto PR18/head9945/base82ef OPEN-UNSTABLE è storico; nessuna sua proprietà vale come prova al futuro merge. Nessun install/azione device, dato/sessione/outbox primario o F/H live viene certificato da source-only FF. Task FIX e richiesta manual-unlock restano aperti; nessun DONE globale.
+
+**CURRENT 2026-10-06 — FINAL_SOURCE48_949 / UNAVAILABLE_QUALIFICATION_RED_CONFIRMED / GREEN8_8P0F0S / SAME2_APPROVED_0 / FINAL_GATES_PENDING; task FIX.** HEAD9945 è il parent dei due commit normali proposti: commit1 ripristina quattro diagnostici e contiene guard+regressione originale7; commit2 contiene fixture DEBUGV2+helper privato5. Task working foreign14c resta identico e fuori indice, MASTER/workflow preservati. Dopo i commit occorre fissare l'HEAD reale nei producer Full11/Build11/ProperTEST11 retargetati, poi un solo full non filtrato con1548 ID/36 stessi skip/parallelNO e i gate dipendenti in ordine. Non avviare CI, merge, install, F/H o nuove prove da questa registrazione; nessuna retroattribuzione CI37466894761. Il presente log non certifica gate ancora PENDING.
+
+
+**CURRENT 2026-10-06 — SOURCE48_0af5 / TARGET8_PASS / FULL11_1548IDs_1512P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE11_PASS / SIGNED_FULLTEST11_PASS;task FIX.** HEADb4 precommit;binary `12561c48248fa8180c759bcdd8c1618b9402a266c099e611d86920d72c94e702`/profile154a/23file/signature-effectiveSimulatedxcent-embedded-keychainP,NONINSTALLATO. FollowupPR/exact-head/mainCI PENDING;main82ef storicaFAIL/causeUNKNOWN. Parent soloGit:stage Controller/Atomic/2docs+SOLO3newTaskhunks,inverse→5fba/foreign73add19del net54 fuoriindex;FF/installprimaria solo con freshmainPASS+guard. Ownedrunner/group0,6B04Shutdown/baseline/config preservati;I source/heavy/device/input0 dopo rilascio. F/459/H NOT_RUN,Maclocked nessun bypass.
 
 **CURRENT 2026-10-06 — SOURCE48_f0ce / TARGET6_PASS / FULL10_1546IDs_1510P_0F_36S_15UI / DEBUG_RELEASE_ANALYZE10_PASS / SIGNED_FULLTEST10_PASS; task FIX.** HEAD7b precommit;binary `97d7d8d409f57c72427359fa237f30f13a28154cd46a17ce0884d56c5501a195`/profile154a/23file/signature-effectiveSimulatedxcent-embedded-keychainP,NONINSTALLATO. FollowupPR/exact-head/mainCI PENDING(PR16 giàMERGED);main d918 storicaFAIL/leafUNKNOWN. Parent soloGit:stage Controller/Atomic/2docs+SOLO3newTaskhunks,inverse→1f1d/54foreign fuoriindex;FFprimaria solo dopo freshmainPASS+guard. Ownedrunner/group0,6B04Shutdown,businessbaseline/config preservati;I source/heavy/device/input0 dopo rilascio. F/459/H NOT_RUN,Maclocked nessun bypass.
 

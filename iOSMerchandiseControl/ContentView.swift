@@ -222,47 +222,55 @@ struct ContentView: View {
             syncStoreGenerationController: syncStoreGenerationController,
             shopDeviceRegistrationService: shopDeviceRegistrationService
         ) { syncOrchestrator in
-            if hidesBusinessDataForPendingRecovery {
-                SyncReplacementPrivacyGate(
-                    state: syncStateStore.state,
-                    isSignedIn: supabaseAuthViewModel.isSignedIn,
-                    canSignIn: supabaseAuthViewModel.canSignIn,
-                    isBusy: supabaseAuthViewModel.isTransitioning
-                        || syncOrchestrator.rootPresentationState.kind == .checking
-                        || corruptJournalReplacementTask != nil,
-                    requiresManualReview: requiresManualRecoveryReview,
-                    signIn: supabaseAuthViewModel.signInWithGoogle,
-                    retry: syncOrchestrator.retryPendingRecoveryRootAction,
-                    review: { isCorruptJournalReviewPresented = true }
-                )
-                .accountSyncDecisionDialog(
-                    isPresented: $isCorruptJournalReviewPresented,
-                    decision: Self.interruptedRecoveryDecision,
-                    isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
-                    onChoose: { choice in
-                        switch choice {
-                        case .discardLocalAndBind:
-                            beginCorruptJournalReplacement(using: syncOrchestrator)
-                        default:
-                            // Cancel/back/keep-local deliberately leave the raw
-                            // latch, database, binding and network untouched.
-                            isCorruptJournalReviewPresented = false
-                        }
-                    }
-                )
-                .alert(
-                    L("options.accountDecision.error.title"),
-                    isPresented: Binding(
-                        get: { corruptJournalReplacementError != nil },
-                        set: { if !$0 { corruptJournalReplacementError = nil } }
+            let hidesBusinessData = hidesBusinessDataForPendingRecovery
+            Group {
+                if hidesBusinessData {
+                    SyncReplacementPrivacyGate(
+                        state: syncStateStore.state,
+                        isSignedIn: supabaseAuthViewModel.isSignedIn,
+                        canSignIn: supabaseAuthViewModel.canSignIn,
+                        isBusy: supabaseAuthViewModel.isTransitioning
+                            || syncOrchestrator.rootPresentationState.kind == .checking
+                            || corruptJournalReplacementTask != nil,
+                        requiresManualReview: requiresManualRecoveryReview,
+                        signIn: supabaseAuthViewModel.signInWithGoogle,
+                        retry: syncOrchestrator.retryPendingRecoveryRootAction,
+                        review: { isCorruptJournalReviewPresented = true }
                     )
-                ) {
-                    Button(L("common.ok"), role: .cancel) {}
-                } message: {
-                    Text(corruptJournalReplacementError ?? "")
+                    .accountSyncDecisionDialog(
+                        isPresented: $isCorruptJournalReviewPresented,
+                        decision: Self.interruptedRecoveryDecision,
+                        isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
+                        onChoose: { choice in
+                            switch choice {
+                            case .discardLocalAndBind:
+                                beginCorruptJournalReplacement(using: syncOrchestrator)
+                            default:
+                                // Cancel/back/keep-local deliberately leave the raw
+                                // latch, database, binding and network untouched.
+                                isCorruptJournalReviewPresented = false
+                            }
+                        }
+                    )
+                    .alert(
+                        L("options.accountDecision.error.title"),
+                        isPresented: Binding(
+                            get: { corruptJournalReplacementError != nil },
+                            set: { if !$0 { corruptJournalReplacementError = nil } }
+                        )
+                    ) {
+                        Button(L("common.ok"), role: .cancel) {}
+                    } message: {
+                        Text(corruptJournalReplacementError ?? "")
+                    }
+                } else {
+                    tabContent(syncOrchestrator: syncOrchestrator)
                 }
-            } else {
-                tabContent(syncOrchestrator: syncOrchestrator)
+            }
+            .onChange(of: hidesBusinessData) { _, hidden in
+                if hidden, syncStoreGenerationController.activeManifest == nil {
+                    syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+                }
             }
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
@@ -321,6 +329,9 @@ struct ContentView: View {
     }
 
     private var hidesBusinessDataForPendingRecovery: Bool {
+        #if DEBUG
+        if Task144RootObservation.enabled { return observeTask144RootPrivacyChoice() }
+        #endif
         _ = localAuthorizationRevision
         if let owner = supabaseAuthViewModel.sessionInfo?.userID,
            let shop = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)),
@@ -344,6 +355,45 @@ struct ContentView: View {
                 ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
             )
     }
+
+    #if DEBUG
+    private func observeTask144RootPrivacyChoice() -> Bool {
+        let observation = Task144RootObservation.Evaluation("root-privacy", callsite: "ContentView.hidesBusinessDataForPendingRecovery")
+        var hidden = false
+        var branch = "NOT_SELECTED"
+        defer { observation.finish(hidden, branch: branch, firstFalseLabel: "first-false-branch-condition") }
+        _ = localAuthorizationRevision
+        if let owner = observation.optional(supabaseAuthViewModel.sessionInfo?.userID, "owner"),
+           let shop = observation.optional(SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)), "selected-shop"),
+           let device = observation.attempt("device", { try DeviceInstallIDStore().requireDeviceInstallID() }),
+           observation.check(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: AccountBindingStore.accountHash(for: owner),
+             shopID: shop.shopID, deviceIdentityHash: DeviceInstallIDStore.identityHash(for: device)), "confirmed-denial") {
+            branch = "confirmed-device-denial"; hidden = true
+            return true
+        }
+        if observation.check(syncStoreGenerationController.activeManifest != nil, "active-manifest-present") {
+            branch = "active-local-access"
+            hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "existing-local-access")
+            return hidden
+        }
+        if observation.check(syncStoreGenerationController.permitsScopedEmptyRoot(
+            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID), "scoped-empty-admitted") {
+            branch = "scoped-empty"; hidden = false
+            return false
+        }
+        if observation.check(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") {
+            branch = "pending-local-access"
+            hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: modelContext.container,
+                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "fallback-local-access")
+            return hidden
+        }
+        branch = "no-pending-journal"; hidden = false
+        return false
+    }
+    #endif
 
     private var hasUndecodableRecoveryJournal: Bool {
         let store = AccountBindingStore()

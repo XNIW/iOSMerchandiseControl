@@ -7,6 +7,155 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+/// Temporary observations scoped to the controlled empty/callback, physical-fence and related-save fixtures. This buffer is not ObservableObject and never
+/// publishes, reads a model/store, submits work or changes an admission result.
+nonisolated final class Task144RootObservation: @unchecked Sendable {
+    static let enabled = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
+        && ((ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
+             && (ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
+                 || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"))
+            || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1")
+    private static let shared = Task144RootObservation()
+    private let lock = NSLock()
+    private var sequence = 0
+    private var events: [String] = []
+    private var lastByKind: [String: String] = [:]
+    private var dropped = 0
+
+    static func record(_ kind: String, _ closedFacts: String, callsite: String = #function) {
+        guard enabled else { return }
+        let buffer = shared
+        buffer.lock.lock()
+        let key = kind + ":" + callsite
+        guard kind.hasPrefix("qualification-") || buffer.lastByKind[key] != closedFacts else { buffer.lock.unlock(); return }
+        buffer.lastByKind[key] = closedFacts
+        buffer.sequence += 1
+        let event = "seq.\(buffer.sequence).uptime.\(ProcessInfo.processInfo.systemUptime).pid.\(ProcessInfo.processInfo.processIdentifier).source.\(callsite).\(kind).\(closedFacts)"
+        if buffer.events.count < 128 { buffer.events.append(event) } else { buffer.dropped += 1 }
+        let shouldPrint = buffer.sequence <= 128
+        let firstDrop = buffer.sequence == 129
+        buffer.lock.unlock()
+        // Closed synthetic facts only. Whether app stdout reaches the runner's
+        // raw log is a runtime observation, never an assumed export guarantee.
+        if shouldPrint { print("TASK144_RAM_OBSERVATION \(event)") }
+        else if firstDrop { print("TASK144_RAM_OBSERVATION CAP128;later.NOT_RETAINED") }
+    }
+
+    static func snapshotAtRealRender() -> String {
+        guard enabled else { return "" }
+        let buffer = shared
+        buffer.lock.lock(); defer { buffer.lock.unlock() }
+        return ";task144.observation.cached-at-real-render;dropped.\(buffer.dropped);"
+            + buffer.events.joined(separator: ";")
+    }
+
+    static func errorCategory(_ error: Error) -> String {
+        if let error = error as? Task126OwnerStoreGateError {
+            switch error {
+            case .cancelled: return "Task126OwnerStoreGateError.cancelled"
+            case .activeAccountMismatch: return "Task126OwnerStoreGateError.activeAccountMismatch"
+            case .shopContextUnavailable: return "Task126OwnerStoreGateError.shopContextUnavailable"
+            case .bindingMismatch: return "Task126OwnerStoreGateError.bindingMismatch"
+            case .replacementInterrupted: return "Task126OwnerStoreGateError.replacementInterrupted"
+            case .scopeChanged: return "Task126OwnerStoreGateError.scopeChanged"
+            case .retiredStoreGeneration: return "Task126OwnerStoreGateError.retiredStoreGeneration"
+            case .localModelUnavailable: return "Task126OwnerStoreGateError.localModelUnavailable"
+            case .localRemoteConflictRequiresReview: return "Task126OwnerStoreGateError.localRemoteConflictRequiresReview"
+            }
+        }
+        if error is CancellationError { return "CancellationError" }
+        if let error = error as? SyncStoreGenerationError {
+            switch error {
+            case .baseDirectoryUnavailable: return "SyncStoreGenerationError.baseDirectoryUnavailable"
+            case .invalidManifest: return "SyncStoreGenerationError.invalidManifest"
+            case .activeStoreMissing: return "SyncStoreGenerationError.activeStoreMissing"
+            case .stagingAlreadyOpen: return "SyncStoreGenerationError.stagingAlreadyOpen"
+            case .stagingScopeChanged: return "SyncStoreGenerationError.stagingScopeChanged"
+            case .stagingStoreMissing: return "SyncStoreGenerationError.stagingStoreMissing"
+            case .activationReadBackFailed: return "SyncStoreGenerationError.activationReadBackFailed"
+            case .cleanupRequiresRelaunch: return "SyncStoreGenerationError.cleanupRequiresRelaunch"
+            case .unavailable: return "SyncStoreGenerationError.unavailable"
+            case .staleGenerationLease: return "SyncStoreGenerationError.staleGenerationLease"
+            case .generationResourceBudgetExceeded: return "SyncStoreGenerationError.generationResourceBudgetExceeded"
+            case .insufficientRecoveryDiskCapacity: return "SyncStoreGenerationError.insufficientRecoveryDiskCapacity"
+            case .defaultsConfigurationMismatch: return "SyncStoreGenerationError.defaultsConfigurationMismatch"
+            case .stagingChangedAfterVerification: return "SyncStoreGenerationError.stagingChangedAfterVerification"
+            }
+        }
+        if let error = error as? ShopSyncRecoveryContractError {
+            switch error {
+            case .checkpointChanged: return "ShopSyncRecoveryContractError.checkpointChanged"
+            case .authenticationChanged: return "ShopSyncRecoveryContractError.authenticationChanged"
+            case .invalidCheckpoint: return "ShopSyncRecoveryContractError.invalidCheckpoint"
+            case .invalidPage: return "ShopSyncRecoveryContractError.invalidPage"
+            case .nonCanonicalTimestamp: return "ShopSyncRecoveryContractError.nonCanonicalTimestamp"
+            case .nonMonotonicOrDuplicateID: return "ShopSyncRecoveryContractError.nonMonotonicOrDuplicateID"
+            case .rowOutsideScope: return "ShopSyncRecoveryContractError.rowOutsideScope"
+            case .digestMismatch: return "ShopSyncRecoveryContractError.digestMismatch"
+            case .countMismatch: return "ShopSyncRecoveryContractError.countMismatch"
+            case .invalidCursor: return "ShopSyncRecoveryContractError.invalidCursor"
+            case .scopeFenceMissing: return "ShopSyncRecoveryContractError.scopeFenceMissing"
+            case .markerNotVerified: return "ShopSyncRecoveryContractError.markerNotVerified"
+            case .fullRecoveryRequired: return "ShopSyncRecoveryContractError.fullRecoveryRequired"
+            case .relationViolation: return "ShopSyncRecoveryContractError.relationViolation"
+            case .pageBudgetExceeded: return "ShopSyncRecoveryContractError.pageBudgetExceeded"
+            case .invalidImageMetadata: return "ShopSyncRecoveryContractError.invalidImageMetadata"
+            case .persistedLedgerInvalid: return "ShopSyncRecoveryContractError.persistedLedgerInvalid"
+            case .resourceBudgetExceeded: return "ShopSyncRecoveryContractError.resourceBudgetExceeded"
+            case .totalResourceBudgetExceeded: return "ShopSyncRecoveryContractError.totalResourceBudgetExceeded"
+            }
+        }
+        if let error = error as? DeviceInstallIDStoreError {
+            switch error {
+            case .durableStorageUnavailable: return "DeviceInstallIDStoreError.durableStorageUnavailable"
+            case .invalidDurableIdentity: return "DeviceInstallIDStoreError.invalidDurableIdentity"
+            }
+        }
+        if let error = error as? URLError {
+            return error.code == .timedOut ? "URLError.timedOut" : "URLError.other"
+        }
+        return "other"
+    }
+
+    final class Evaluation {
+        private let kind: String
+        private let callsite: String
+        private var operands: [String] = []
+        private var firstFailed = "none"
+        init(_ kind: String, callsite: String) { self.kind = kind; self.callsite = callsite }
+        func check(_ value: Bool, _ name: String) -> Bool {
+            operands.append("\(name).\(value)")
+            if !value && firstFailed == "none" { firstFailed = name }
+            return value
+        }
+        func optional<T>(_ value: T?, _ name: String) -> T? {
+            _ = check(value != nil, name)
+            return value
+        }
+        func attempt<T>(_ name: String, _ operation: () throws -> T) -> T? {
+            do { return optional(try operation(), name) }
+            catch {
+                _ = check(false, name)
+                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
+                return nil
+            }
+        }
+        func required<T>(_ name: String, _ operation: () throws -> T) throws -> T {
+            do { let value = try operation(); _ = check(true, name); return value }
+            catch {
+                _ = check(false, name)
+                operands.append("\(name)-error.\(Task144RootObservation.errorCategory(error))")
+                throw error
+            }
+        }
+        func note(_ name: String, _ value: Bool) { operands.append("\(name).\(value)") }
+        func finish(_ result: Bool, branch: String = "guard", firstFalseLabel: String = "first-failed") {
+            Task144RootObservation.record(kind, "result.\(result).branch.\(branch).\(firstFalseLabel).\(firstFailed).later.NOT_EVALUATED;"
+                + operands.joined(separator: ";"), callsite: callsite)
+        }
+    }
+}
+
 /// An explicitly requested, isolated UI-test dependency boundary. The App,
 /// ContentView, editor, recovery service and automatic queue remain production
 /// implementations. No default/private Supabase configuration is loaded.
@@ -33,13 +182,21 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private let shopFetcher: Task144ControlledShopFetcher
     private let session: URLSession
     private let emptyBootstrap: Bool
+    let provesEmptyFenceRequalification = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"
+    private let ownedRepository: SyncStoreGenerationRepository
+    private let ownedLegacyStoreURL: URL
+    private var emptyFenceQualificationSubscription: AnyCancellable?
     private var task: Task<Void, Never>?
     private var preparationTask: Task<Void, Never>?
     private var hasPreparationStarted = false
     private var hasStarted = false
     private var heldGenerationID: UUID?
+    private var heldRecoveryScope: Task126VerifiedOwnerStoreScope?
+    private var awaitingAutomaticResumeManifest: SyncStoreGenerationManifest?
+    private var completedAutomaticRecoverySummary: SyncRecoverySnapshotPullSummary?
     private let provesShopCallbackOrder = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
     private let provesIndependentPending = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] == "1"
+    private let observesReplayScopeComponents = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_LOSE_FIRST_PRODUCT_RESPONSE"] == "1"
     private var independentPendingInserted = false
     private let provesRelatedSave = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1"
     private var lastAutomaticResult = "not-observed"
@@ -94,6 +251,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let repository = try SyncStoreGenerationRepository(
             baseDirectory: root.appendingPathComponent("generation-root", isDirectory: true),
             legacyDefaultStoreURL: root.appendingPathComponent("legacy.store"))
+        ownedRepository = repository
+        ownedLegacyStoreURL = root.appendingPathComponent("legacy.store")
         let linkedShop = LinkedShop(shopID: shop, code: "TASK144", name: "Controlled local root",
             role: "owner", status: "active", selectable: true, canWrite: true)
         let hash = AccountBindingStore.accountHash(for: owner)
@@ -137,7 +296,11 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             authStorage: storage, session: session, autoRefreshToken: false,
             authRegistry: SupabaseAuthClientRegistry())
         authViewModel = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: provider))
-        transport.onHeld = { [weak self] in self?.facts.insert("task144.controlled.held") }
+        transport.remoteSnapshot = { [catalogRemote] in catalogRemote.recoverySnapshot }
+        transport.onHeld = { [weak self] in
+            self?.facts.insert("task144.controlled.held")
+            Task144RootObservation.record("fixture-boundary", "branch.existing-transport-on-held", callsite: "Task144.onHeld")
+        }
         transport.checkpointBoundary = { [weak self] in await self?.releasePreviousShopCallbackAtCheckpoint() }
         if provesIndependentPending {
             // Explicit opt-in controlled counterexample: commit the first
@@ -240,6 +403,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
                 }
+                heldRecoveryScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    allowsPendingSameScopeRecovery: true)
                 transport.holdsProducts = true
                 heldGenerationID = controller.activeManifest?.generationID
                 stateStore.updatePhase(.checking)
@@ -248,7 +413,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     do {
                         return try await self.recoveryService().recoverFromRemoteSnapshot(ownerUserID: self.owner)
                     } catch {
-                        self.recordSetupFailure(error, stage: .heldRecovery)
+                        if !self.rememberPublishedShopUnavailability(error) {
+                            self.recordSetupFailure(error, stage: .heldRecovery)
+                        }
                         throw error
                     }
                 }
@@ -262,30 +429,56 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     }
                     try await Task.sleep(for: .milliseconds(100))
                 }
-                let summary = try await recovery.value
-                guard summary.completedRecoveryJournal, controller.activeManifest != nil else {
-                    throw SyncStoreGenerationError.activationReadBackFailed
+                let summary: SyncRecoverySnapshotPullSummary?
+                Task144RootObservation.record("fixture-recovery-value", "branch.before-await", callsite: "Task144.startIfNeeded")
+                do {
+                    summary = try await recovery.value
+                    Task144RootObservation.record("fixture-recovery-value", "branch.returned.completed-journal.\(summary?.completedRecoveryJournal == true)", callsite: "Task144.startIfNeeded")
                 }
-                facts.insert("task144.controlled.activated")
+                catch {
+                    Task144RootObservation.record("fixture-recovery-value", "branch.threw.kind.\(Self.failureKind(error)).category.\(Task144RootObservation.errorCategory(error))", callsite: "Task144.startIfNeeded")
+                    // Only the first actual throw's verified published boundary
+                    // may wait for the ordinary automatic runtime to resume.
+                    guard error as? Task126OwnerStoreGateError == .shopContextUnavailable,
+                          awaitingAutomaticResumeManifest != nil else { throw error }
+                    Task144RootObservation.record("fixture-recovery-value", "branch.automatic-resume-admitted", callsite: "Task144.startIfNeeded")
+                    summary = nil
+                }
+                if let summary {
+                    guard summary.completedRecoveryJournal, controller.activeManifest != nil else {
+                        throw SyncStoreGenerationError.activationReadBackFailed
+                    }
+                    facts.insert("task144.controlled.activated")
+                }
                 setupStage = .automaticTerminal
                 // No direct push or synthetic ACK here. The real root observes
                 // the resolved shop/local mutation and runs its normal facade.
                 for _ in 0..<300 {
                     refreshAutomaticObservation()
-                    if provesRelatedSave, try relatedMappingPendingReadback() {
-                        facts.insert("task144.controlled.related-mapped-product-pending")
-                    }
-                    if provesRelatedSave, try relatedProductACKReadback() {
-                        facts.insert("task144.controlled.related-save-ack")
-                        return
-                    }
-                    if provesIndependentPending, try productACKWithIndependentPendingReadback() {
-                        facts.insert("task144.controlled.product-ack-other-pending")
-                        return
-                    }
-                    if try terminalReadback(), catalogRemote.attemptCount == 1, catalogRemote.eventCount == 1 {
-                        facts.formUnion(["task144.controlled.activated-and-drained", "task144.controlled.queue-empty-no-duplicates"])
-                        return
+                    let activated: Bool
+                    if summary != nil { activated = true }
+                    else if let returned = completedAutomaticRecoverySummary,
+                            let published = awaitingAutomaticResumeManifest {
+                        activated = automaticRecoveryCompletionIsCurrent(returned, manifest: published)
+                        if activated { facts.insert("task144.controlled.activated") }
+                    } else { activated = false }
+                    if activated {
+                        if summary == nil, emptyBootstrap { return }
+                        if provesRelatedSave, try relatedMappingPendingReadback() {
+                            facts.insert("task144.controlled.related-mapped-product-pending")
+                        }
+                        if provesRelatedSave, try relatedProductACKReadback() {
+                            facts.insert("task144.controlled.related-save-ack")
+                            return
+                        }
+                        if provesIndependentPending, try productACKWithIndependentPendingReadback() {
+                            facts.insert("task144.controlled.product-ack-other-pending")
+                            return
+                        }
+                        if try terminalReadback(), catalogRemote.attemptCount == 1, catalogRemote.eventCount == 1 {
+                            facts.formUnion(["task144.controlled.activated-and-drained", "task144.controlled.queue-empty-no-duplicates"])
+                            return
+                        }
                     }
                     try await Task.sleep(for: .milliseconds(100))
                 }
@@ -302,8 +495,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard provesShopCallbackOrder, !callbackHeartbeatEntered else { return false }
         callbackHeartbeatEntered = true
         facts.insert("task144.controlled.previous-shop-callback-entered")
+        Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-entered", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
         await withCheckedContinuation { callbackHeartbeatContinuation = $0 }
         facts.insert("task144.controlled.previous-shop-callback-released")
+        Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-released", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
         return true
     }
 
@@ -320,6 +515,68 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if !callbackHeartbeatCompleted {
             await withCheckedContinuation { callbackCompletionContinuation = $0 }
         }
+    }
+
+    /// TEST-only value observation. This does not authorize, trigger or retry recovery.
+    private func rememberPublishedShopUnavailability(_ error: Error) -> Bool {
+        guard error as? Task126OwnerStoreGateError == .shopContextUnavailable,
+              let scope = heldRecoveryScope, scope.ownerUserID == owner,
+              authViewModel.isSignedIn, authViewModel.localMutationOwnerUserID == scope.ownerUserID,
+              UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == scope.accountHash,
+              let selected = SelectedShopStore().selectedShop(accountHash: scope.accountHash),
+              selected.shopID == scope.shopID, selected.localStoreIdentity == scope.storeIdentity,
+              selected.selectable, selected.status == "active",
+              let device = try? DeviceInstallIDStore().requireDeviceInstallID(),
+              device == scope.deviceInstallID, DeviceInstallIDStore.identityHash(for: device) == scope.deviceIdentityHash,
+              !SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+              let binding = AccountBindingStore().currentBinding,
+              binding.accountHash == scope.accountHash, binding.storeIdentity == scope.storeIdentity,
+              let manifest = controller.activeManifest,
+              manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+              manifest.storeIdentity == scope.storeIdentity, manifest.deviceIdentityHash == scope.deviceIdentityHash,
+              let journal = AccountBindingStore().pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery, journal.phase == .activated,
+              journal.replacement == scope.pendingReplacement, journal.deviceIdentityHash == scope.deviceIdentityHash,
+              journal.generationID == manifest.generationID, journal.checkpointDigest == manifest.checkpoint.checkpointDigest,
+              journal.watermark == manifest.checkpoint.maxEventID, journal.baselineRunID == manifest.baselineRunID else { return false }
+        // Preserve the first throw's actual publication before a future real
+        // automatic completion may clear its journal. No readiness fact is made.
+        awaitingAutomaticResumeManifest = manifest
+        return true
+    }
+
+    private func automaticRecoveryCompletionIsCurrent(
+        _ summary: SyncRecoverySnapshotPullSummary, manifest: SyncStoreGenerationManifest
+    ) -> Bool {
+        guard transport.isReleased, let initial = heldRecoveryScope,
+              summary.completedRecoveryJournal, summary.activatedGenerationID == manifest.generationID,
+              summary.watermarkAfter == manifest.checkpoint.maxEventID,
+              controller.activeManifest == manifest, !AccountBindingStore().hasPendingReplacementJournal,
+              authViewModel.isSignedIn, authViewModel.localMutationOwnerUserID == initial.ownerUserID,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: initial.ownerUserID),
+              current.ownerUserID == initial.ownerUserID, current.accountHash == initial.accountHash,
+              current.shopID == initial.shopID, current.storeIdentity == initial.storeIdentity,
+              current.deviceInstallID == initial.deviceInstallID, current.deviceIdentityHash == initial.deviceIdentityHash,
+              current.pendingReplacement == nil,
+              manifest.accountHash == current.accountHash, manifest.shopID == current.shopID,
+              manifest.storeIdentity == current.storeIdentity, manifest.deviceIdentityHash == current.deviceIdentityHash,
+              (try? Task126OwnerStoreGate.revalidateAutomaticScope(current)) != nil,
+              (try? controller.isActiveRecoveryFinalized(scope: current)) == true,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: current.ownerUserID) else { return false }
+        return true
+    }
+
+    private func observeAutomaticRecoverySummary(ownerUserID: UUID, summary: SyncRecoverySnapshotPullSummary) {
+        guard ownerUserID == owner, summary.completedRecoveryJournal,
+              let manifest = awaitingAutomaticResumeManifest ?? controller.activeManifest,
+              controller.activeManifest == manifest,
+              summary.activatedGenerationID == manifest.generationID,
+              summary.watermarkAfter == manifest.checkpoint.maxEventID else { return }
+        // Retain only the real returned value here. The existing wait loop must
+        // independently admit current scope/body/finalization before any fact.
+        completedAutomaticRecoverySummary = summary
     }
 
     private func recordSetupFailure(_ error: Error, stage: SetupStage) {
@@ -413,15 +670,112 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         facts.insert("task144.controlled.state-updated")
     }
 
+    /// Opt-in file metadata drift in this run's synthetic empty store. The
+    /// production view must schedule its own successor qualification.
+    func invalidateEmptyRootPhysicalFence() {
+        guard provesEmptyFenceRequalification, emptyBootstrap,
+              !facts.contains("task144.controlled.empty-fence.invalidated") else { return }
+        var stage = "capture-scope"
+        var firstFailedPrerequisite: String?
+        func prerequisite(_ value: Bool, _ name: String) -> Bool {
+            if !value, firstFailedPrerequisite == nil { firstFailedPrerequisite = name }
+            return value
+        }
+        do {
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                allowsPendingReplacement: true)
+            let phase = stateStore.state.phase
+            let container = controller.modelContainer
+            let revision = controller.localBodyQualificationRevision
+            stage = "initial-prerequisites"
+            guard prerequisite(facts.contains("task144.controlled.held"), "held"),
+                  prerequisite(!transport.isReleased, "transport-held"),
+                  prerequisite(authViewModel.localMutationOwnerUserID == owner, "owner"),
+                  prerequisite(controller.activeManifest == nil, "no-manifest"),
+                  prerequisite(revision > 0, "qualification-revision"),
+                  prerequisite(controller.permitsScopedEmptyRoot(ownerUserID: owner), "empty-admission"),
+                  prerequisite(!Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner), "no-local-mutation-grant"),
+                  prerequisite(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            stage = "capture-initial-fence"
+            let before = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            stage = "initial-file-metadata"
+            let values = try ownedLegacyStoreURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey,
+                .contentModificationDateKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true,
+                  let modificationDate = values.contentModificationDate else {
+                throw SyncStoreGenerationError.activeStoreMissing
+            }
+            facts.insert("task144.controlled.empty-fence.initially-admitted")
+            stage = "physical-fence-invalidation"
+            try FileManager.default.setAttributes([.modificationDate: modificationDate.addingTimeInterval(-60)],
+                ofItemAtPath: ownedLegacyStoreURL.path)
+            stage = "invalidated-fence-readback"
+            let after = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            guard before != after,
+                  let beforeFile = before.files.first(where: { $0.relativePath == ownedLegacyStoreURL.lastPathComponent }),
+                  let afterFile = after.files.first(where: { $0.relativePath == ownedLegacyStoreURL.lastPathComponent }),
+                  beforeFile.modificationTimeBits != afterFile.modificationTimeBits,
+                  controller.modelContainer === container,
+                  try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    allowsPendingReplacement: true) == scope,
+                  stateStore.state.phase == phase,
+                  !controller.permitsScopedEmptyRoot(ownerUserID: owner) else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            // @Published emits from willSet. Hop to MainActor asynchronously so
+            // both the revision and its proof have completed publication.
+            emptyFenceQualificationSubscription = controller.$localBodyQualificationRevision.dropFirst().sink { [weak self] published in
+                Task { @MainActor [weak self] in
+                    guard let self, published != revision,
+                          self.controller.localBodyQualificationRevision == published,
+                          self.controller.modelContainer === container,
+                          self.controller.activeManifest == nil,
+                          self.authViewModel.localMutationOwnerUserID == self.owner,
+                          self.stateStore.state.phase == phase,
+                          !self.transport.isReleased,
+                          (try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: self.owner,
+                            allowsPendingReplacement: true)) == scope,
+                          self.controller.permitsScopedEmptyRoot(ownerUserID: self.owner),
+                          !Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: self.owner),
+                          AccountBindingStore().hasPendingReplacementJournal else { return }
+                    self.facts.insert("task144.controlled.empty-fence.requalified")
+                    self.emptyFenceQualificationSubscription = nil
+                }
+            }
+            facts.insert("task144.controlled.empty-fence.invalidated")
+            controller.objectWillChange.send()
+        } catch {
+            var failureFacts: Set<String> = ["task144.controlled.empty-fence.failure",
+                "task144.controlled.empty-fence.failure-stage.\(stage)",
+                "task144.controlled.empty-fence.failure-kind.\(Self.failureKind(error))"]
+            if let firstFailedPrerequisite {
+                failureFacts.insert("task144.controlled.empty-fence.failure-prerequisite.\(firstFailedPrerequisite)")
+            }
+            facts.formUnion(failureFacts)
+        }
+    }
+
     func runtime(modelContainer: ModelContainer, stateStore: SyncStateStore) -> any SyncAutomaticRuntimeProviding {
         let lease = controller.captureLease(for: modelContainer)
         let invocationID = UUID()
+        let recoveryProvider: (any SyncRecoverySnapshotPullProviding)?
+        if hasStarted, transport.isReleased, let published = controller.activeManifest,
+           published.generationID != heldGenerationID {
+            // A fresh remounted runtime can resume only after the direct held
+            // recovery published. Preparation and the pre-cutover root keep nil.
+            recoveryProvider = Task144ObservedAtomicRecoveryProvider(base: recoveryService(),
+                observe: { [weak self] ownerUserID, summary in
+                    self?.observeAutomaticRecoverySummary(ownerUserID: ownerUserID, summary: summary)
+                })
+        } else { recoveryProvider = nil }
         let runtime = AutomaticSyncRuntimeFacade(authViewModel: authViewModel,
             catalogPushProvider: CatalogPushService(modelContainer: modelContainer, remote: catalogRemote),
             productPriceProvider: nil, historySessionProvider: nil,
             incrementalPullProvider: SyncEventIncrementalPullService(modelContainer: modelContainer,
                 remote: catalogRemote, storeGenerationController: controller),
-            recoverySnapshotPullProvider: nil,
+            recoverySnapshotPullProvider: recoveryProvider,
             activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: modelContainer, recorder: catalogRemote),
             runAdmissionValidator: { [controller, transport] in
                 guard let lease else { throw SyncStoreGenerationError.staleGenerationLease }
@@ -582,8 +936,21 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 "provider-returned.\(observation.providerReturned)", "preceding-ack.\(observation.precedingACK)",
                 "preceding-cas-matches.\(observation.precedingCASMatches)",
                 "same-first-id.\(observation.id == first?.id)", "same-first-body.\(observation.payloadHash == first?.payloadHash)",
-                "same-first-scope.\(scope == first?.scope)", "same-first-sealed-revision.\(token != nil && token == first?.sealedToken)"]
+                "same-first-scope.\(Self.sameStableProductScope(scope, first?.scope))", "same-first-sealed-revision.\(token != nil && token == first?.sealedToken)",
+                "same-first-full-scope.\(scope == first?.scope)"]
             result.append(values.joined(separator: "."))
+            if observesReplayScopeComponents {
+                let components: [String] = ["\(prefix)scope-components.\(index + 1)",
+                    "same-first-owner.\(scope.ownerUserID == first?.scope.ownerUserID)",
+                    "same-first-account.\(scope.accountHash == first?.scope.accountHash)",
+                    "same-first-shop.\(scope.shopID == first?.scope.shopID)",
+                    "same-first-full-store.\(scope.storeIdentity == first?.scope.storeIdentity)",
+                    "same-first-device-install.\(scope.deviceInstallID == first?.scope.deviceInstallID)",
+                    "same-first-device-hash.\(scope.deviceIdentityHash == first?.scope.deviceIdentityHash)",
+                    "same-first-full-pending.\(scope.pendingReplacement == first?.scope.pendingReplacement)",
+                    "same-first-lease.\(scope.leaseGeneration == first?.scope.leaseGeneration)"]
+                result.append(components.joined(separator: "."))
+            }
         }
         result.append(contentsOf: automaticCompletionObservations.enumerated().map { "\(prefix)completion.\($0.offset + 1).\($0.element)" })
         result.append(contentsOf: catalogRemote.eventRequestObservations.map { "\(prefix)event.\($0)" })
@@ -696,6 +1063,20 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 historyChange: historyChanges[0], context: context)
     }
 
+    // Compare immutable business identity; each request and the current readback
+    // separately validate their own current automatic writer lease.
+    private static func sameStableProductScope(_ scope: Task126VerifiedOwnerStoreScope,
+        _ reference: Task126VerifiedOwnerStoreScope?) -> Bool {
+        guard let reference else { return false }
+        return scope.ownerUserID == reference.ownerUserID
+            && scope.accountHash == reference.accountHash
+            && scope.shopID == reference.shopID
+            && scope.storeIdentity == reference.storeIdentity
+            && scope.deviceInstallID == reference.deviceInstallID
+            && scope.deviceIdentityHash == reference.deviceIdentityHash
+            && scope.pendingReplacement == reference.pendingReplacement
+    }
+
     private func hasOneImmutableProductAttemptACK(product: Product, change: LocalPendingChange,
         historyChange: LocalPendingChange, context: ModelContext) -> Bool {
         guard change.status == .acknowledged,
@@ -717,7 +1098,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
               productHTTPObservations.enumerated().allSatisfy({ entry in
                 let observation = entry.element
                 return observation.sealedBodyCorresponds && observation.id == first.id
-                    && observation.payloadHash == first.payloadHash && observation.scope == first.scope
+                    && observation.payloadHash == first.payloadHash && Self.sameStableProductScope(observation.scope, first.scope)
                     && observation.sealedToken == token && observation.sealedHash == first.sealedHash
                     && (entry.offset == 0 || (observation.precedingACK == "false"
                         && observation.precedingCASMatches == "true"))
@@ -830,6 +1211,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }
 }
 
+private nonisolated struct Task144ObservedAtomicRecoveryProvider: SyncRecoverySnapshotPullProviding {
+    let base: AtomicGenerationRecoverySnapshotPullService
+    let observe: @MainActor @Sendable (UUID, SyncRecoverySnapshotPullSummary) -> Void
+    nonisolated var publicationMode: SyncRecoverySnapshotPublicationMode { base.publicationMode }
+
+    func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
+        let summary = try await base.recoverFromRemoteSnapshot(ownerUserID: ownerUserID)
+        observe(ownerUserID, summary)
+        return summary
+    }
+}
+
 @MainActor
 private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProviding {
     private let runtime: any SyncAutomaticRuntimeProviding
@@ -874,6 +1267,13 @@ private struct Task144ControlledRootControls: View {
                 Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
             }
             HStack {
+                if fixture.provesEmptyFenceRequalification {
+                    Text("Change controlled empty store fence")
+                        .padding(8).contentShape(Rectangle())
+                        .onLongPressGesture(minimumDuration: 1) { fixture.invalidateEmptyRootPhysicalFence() }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityIdentifier("\(controlPrefix).empty-fence.invalidate")
+                }
                 Text("Controlled state update")
                     .padding(8).contentShape(Rectangle())
                     .onLongPressGesture(minimumDuration: 1) { fixture.publishCheckingUpdate() }
@@ -927,6 +1327,7 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
     private(set) var isReleased = false
     var onHeld: (() -> Void)?
     var checkpointBoundary: (() async -> Void)?
+    var remoteSnapshot: (() -> Task144ControlledRemoteSnapshot)?
     private var continuation: CheckedContinuation<Void, Never>?
     init(owner: UUID, shop: UUID, device: String, product: RemoteInventoryProductRow?) throws {
         self.owner = owner; self.product = product
@@ -960,13 +1361,41 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
     }
     func release() { isReleased = true; continuation?.resume(); continuation = nil }
     func authenticatedUserID() async throws -> UUID { owner }
+    // Both recovery RPCs and ordinary Catalog writes describe one controlled
+    // server. A later recovery must not resurrect the pre-ACK baseline.
+    private func currentSnapshot() throws -> (Task144ControlledRemoteSnapshot, ShopSyncRecoveryCheckpoint) {
+        let snapshot = remoteSnapshot?() ?? .init(product: product, supplier: nil, category: nil, eventMaxID: 41)
+        func digest(_ rows: [ShopSyncRecoveryLedgerRecord], identity: Bool = false) throws -> ShopSyncRecoveryEntityDigest {
+            var accumulator = ShopSyncRecoveryDigestAccumulator(hasIdentity: identity)
+            for row in rows {
+                try accumulator.append(orderingID: row.orderingID, idLine: row.idLine, versionLine: row.versionLine,
+                    identityLine: row.identityLine, isTombstone: row.isTombstone)
+            }
+            return accumulator.finalize()
+        }
+        let suppliers = try digest(snapshot.supplier.map { [try ShopSyncRecoveryRowContract.supplier($0, checkpoint: baseline)] } ?? [])
+        let categories = try digest(snapshot.category.map { [try ShopSyncRecoveryRowContract.category($0, checkpoint: baseline)] } ?? [])
+        let products = try digest(snapshot.product.map { [try ShopSyncRecoveryRowContract.product($0, checkpoint: baseline)] } ?? [], identity: true)
+        let catalog = ShopSyncRecoveryCatalogDigest(suppliers: suppliers, categories: categories, products: products,
+            digest: ShopSyncRecoveryCanonical.sha256(suppliers.versionDigest + "\n" + categories.versionDigest + "\n" + products.versionDigest))
+        let unchanged = catalog == baseline.catalog && snapshot.eventMaxID == 41
+        let checkpoint = ShopSyncRecoveryCheckpoint(schemaVersion: baseline.schemaVersion, shopId: baseline.shopId,
+            scope: baseline.scope, syncEvents: .init(maxId: String(snapshot.eventMaxID), verifiedBaselineId: "0",
+                requiresFullRecovery: true, domainMaxIds: .init(catalog: String(snapshot.eventMaxID),
+                    prices: baseline.syncEvents.domainMaxIds.prices, history: baseline.syncEvents.domainMaxIds.history)),
+            catalog: catalog, prices: baseline.prices, history: baseline.history, images: baseline.images,
+            integrity: baseline.integrity, checkpointDigest: unchanged ? baseline.checkpointDigest
+                : ShopSyncRecoveryCanonical.sha256("task144-controlled-root\n" + String(snapshot.eventMaxID) + "\n" + catalog.digest))
+        return (snapshot, checkpoint)
+    }
     func checkpoint(_ parameters: ShopSyncRecoveryCheckpointParameters) async throws -> Data {
         await checkpointBoundary?()
-        return try JSONEncoder().encode(ShopSyncRecoveryCheckpoint(schemaVersion: baseline.schemaVersion, shopId: baseline.shopId,
-            scope: baseline.scope, syncEvents: .init(maxId: "41", verifiedBaselineId: parameters.verifiedBaselineID,
-                requiresFullRecovery: true, domainMaxIds: baseline.syncEvents.domainMaxIds), catalog: baseline.catalog,
-            prices: baseline.prices, history: baseline.history, images: baseline.images, integrity: baseline.integrity,
-            checkpointDigest: baseline.checkpointDigest))
+        let (_, current) = try currentSnapshot()
+        return try JSONEncoder().encode(ShopSyncRecoveryCheckpoint(schemaVersion: current.schemaVersion, shopId: current.shopId,
+            scope: current.scope, syncEvents: .init(maxId: current.syncEvents.maxId, verifiedBaselineId: parameters.verifiedBaselineID,
+                requiresFullRecovery: true, domainMaxIds: current.syncEvents.domainMaxIds), catalog: current.catalog,
+            prices: current.prices, history: current.history, images: current.images, integrity: current.integrity,
+            checkpointDigest: current.checkpointDigest))
     }
     func page(_ parameters: ShopSyncRecoveryPageParameters) async throws -> Data {
         guard let domain = ShopSyncRecoveryDomain(rawValue: parameters.domain) else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
@@ -975,29 +1404,47 @@ private final class Task144ControlledRecoveryTransport: ShopSyncRecoveryRPCTrans
             await withCheckedContinuation { continuation = $0 }
             try Task.checkCancellation()
         }
-        return try JSONEncoder().encode(Task144ControlledPage(schemaVersion: "shop-sync-recovery-page-v1",
-            shopId: parameters.shopID, scope: baseline.scope, domain: domain,
-            snapshotEventMaxId: parameters.expectedEventMaxID, currentScopeEventMaxId: parameters.expectedEventMaxID,
-            baselineDomainEventMaxId: parameters.expectedDomainEventMaxID, pageDomainEventMaxId: parameters.expectedDomainEventMaxID,
-            domainScope: domain == .history ? baseline.scope.historyKind : baseline.scope.kind,
-            pageLimit: parameters.limit, rows: domain == .products ? product.map { [$0] } ?? [] : [], nextAfterId: nil, hasMore: false))
+        let (snapshot, current) = try currentSnapshot()
+        func encode<Row: Encodable>(_ rows: [Row]) throws -> Data {
+            try JSONEncoder().encode(Task144ControlledPage(schemaVersion: "shop-sync-recovery-page-v1",
+                shopId: parameters.shopID, scope: current.scope, domain: domain,
+                snapshotEventMaxId: parameters.expectedEventMaxID, currentScopeEventMaxId: current.syncEvents.maxId,
+                baselineDomainEventMaxId: parameters.expectedDomainEventMaxID,
+                pageDomainEventMaxId: current.syncEvents.domainMaxID(for: domain),
+                domainScope: domain == .history ? current.scope.historyKind : current.scope.kind,
+                pageLimit: parameters.limit, rows: rows, nextAfterId: nil, hasMore: false))
+        }
+        switch domain {
+        case .suppliers: return try encode(snapshot.supplier.map { [$0] } ?? [])
+        case .categories: return try encode(snapshot.category.map { [$0] } ?? [])
+        case .products: return try encode(snapshot.product.map { [$0] } ?? [])
+        case .prices, .history, .images: return try encode([RemoteInventoryProductRow]())
+        }
     }
     func marker(_ parameters: ShopSyncConvergenceMarkerParameters) async throws -> Data {
-        try JSONEncoder().encode(ShopSyncRecoveryConvergenceMarker(schemaVersion: "shop-sync-convergence-marker-v1",
-            status: "ready", shopId: baseline.shopId, scope: baseline.scope,
-            syncEvents: .init(maxId: "41", verifiedBaselineId: parameters.verifiedBaselineID, requiresFullRecovery: false,
-                domainMaxIds: baseline.syncEvents.domainMaxIds), catalog: baseline.catalog, prices: baseline.prices,
-            history: baseline.history, images: baseline.images, integrity: .init(totalViolationCount: 0),
-            checkpointDigest: baseline.checkpointDigest, serverNoWorkEligible: true,
+        let (_, current) = try currentSnapshot()
+        return try JSONEncoder().encode(ShopSyncRecoveryConvergenceMarker(schemaVersion: "shop-sync-convergence-marker-v1",
+            status: "ready", shopId: current.shopId, scope: current.scope,
+            syncEvents: .init(maxId: current.syncEvents.maxId, verifiedBaselineId: parameters.verifiedBaselineID, requiresFullRecovery: false,
+                domainMaxIds: current.syncEvents.domainMaxIds), catalog: current.catalog, prices: current.prices,
+            history: current.history, images: current.images, integrity: .init(totalViolationCount: 0),
+            checkpointDigest: current.checkpointDigest, serverNoWorkEligible: true,
             markerDigest: ShopSyncRecoveryCanonical.sha256("task144-controlled-marker")))
     }
     func eventPage(_ parameters: ShopSyncEventPageParameters) async throws -> Data { throw ShopSyncRecoveryContractError.fullRecoveryRequired }
 }
-private nonisolated struct Task144ControlledPage: Encodable {
+private nonisolated struct Task144ControlledPage<Row: Encodable>: Encodable {
     let schemaVersion: String; let shopId: UUID; let scope: ShopSyncRecoveryScope; let domain: ShopSyncRecoveryDomain
     let snapshotEventMaxId: String; let currentScopeEventMaxId: String
     let baselineDomainEventMaxId: String; let pageDomainEventMaxId: String; let domainScope: String
-    let pageLimit: Int; let rows: [RemoteInventoryProductRow]; let nextAfterId: String?; let hasMore: Bool
+    let pageLimit: Int; let rows: [Row]; let nextAfterId: String?; let hasMore: Bool
+}
+
+private nonisolated struct Task144ControlledRemoteSnapshot {
+    let product: RemoteInventoryProductRow?
+    let supplier: RemoteInventorySupplierRow?
+    let category: RemoteInventoryCategoryRow?
+    let eventMaxID: Int64
 }
 
 nonisolated private struct Task144ObservedStoredProductMutation: Codable {
@@ -1030,6 +1477,10 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
     private(set) var isProductHeld = false
     var currentSupplierID: UUID? { supplier?.id }
     var currentCategoryID: UUID? { category?.id }
+    var recoverySnapshot: Task144ControlledRemoteSnapshot {
+        .init(product: isEmpty ? nil : current, supplier: supplier, category: category,
+            eventMaxID: events.last?.id ?? 41)
+    }
     private(set) var attemptCount = 0
     private(set) var eventCount = 0
     var observeProductAttempt: ((UUID, SyncAutomaticProductUpdatePayload, Task126VerifiedOwnerStoreScope, Bool) -> Void)?
