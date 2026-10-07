@@ -156,6 +156,44 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     }
 }
 
+/// A fixture request consumes only a fresh revision after an observed denial.
+/// Its deadline never moves, and readiness never grants production authority.
+@MainActor
+final class Task144EmptyFenceInitialRequest {
+    enum Outcome: Equatable { case waiting, ready, aborted, expired, inactive }
+    let deadline: ContinuousClock.Instant
+    private let initialRevision: Int
+    private let now: () -> ContinuousClock.Instant
+    private var requiresNewRevision = false
+    private(set) var isPending = true
+
+    init(initialRevision: Int, now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }) {
+        self.initialRevision = initialRevision
+        self.now = now
+        deadline = now().advanced(by: .seconds(5))
+    }
+
+    var isBeforeDeadline: Bool { now() < deadline }
+
+    func evaluate(admitted: Bool, revisionSignal: Int?, anchorsUnchanged: Bool) -> Outcome {
+        guard isPending else { return .inactive }
+        guard isBeforeDeadline else { isPending = false; return .expired }
+        guard anchorsUnchanged else { isPending = false; return .aborted }
+        guard admitted else { requiresNewRevision = true; return .waiting }
+        if requiresNewRevision, revisionSignal == nil || revisionSignal == initialRevision { return .waiting }
+        isPending = false
+        return .ready
+    }
+
+    func expire() -> Bool {
+        guard isPending, !isBeforeDeadline else { return false }
+        isPending = false
+        return true
+    }
+
+    func cancel() { isPending = false }
+}
+
 /// An explicitly requested, isolated UI-test dependency boundary. The App,
 /// ContentView, editor, recovery service and automatic queue remain production
 /// implementations. No default/private Supabase configuration is loaded.
@@ -186,6 +224,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private let ownedRepository: SyncStoreGenerationRepository
     private let ownedLegacyStoreURL: URL
     private var emptyFenceQualificationSubscription: AnyCancellable?
+    private struct EmptyFenceInitialAnchors {
+        let scope: Task126VerifiedOwnerStoreScope
+        let phase: SyncPhase
+        let container: ModelContainer
+    }
+    private var emptyFenceInitialAnchors: EmptyFenceInitialAnchors?
+    private var emptyFenceInitialRequest: Task144EmptyFenceInitialRequest?
+    private var emptyFenceInitialSubscription: AnyCancellable?
+    private var emptyFenceInitialExpiry: Task<Void, Never>?
+    private var emptyFenceInitialRequestWasStarted = false
     private var task: Task<Void, Never>?
     private var preparationTask: Task<Void, Never>?
     private var hasPreparationStarted = false
@@ -659,12 +707,14 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }
 
     func release() {
+        cancelEmptyFenceInitialRequest(stage: "cancelled-by-release")
         facts.remove("task144.controlled.held")
         facts.insert("task144.controlled.released")
         transport.release()
         catalogRemote.releaseHeldProduct()
     }
     func publishCheckingUpdate() {
+        cancelEmptyFenceInitialRequest(stage: "cancelled-by-phase-control")
         stateStore.updatePhase(.failed, outcome: .failed)
         stateStore.updatePhase(.checking)
         facts.insert("task144.controlled.state-updated")
@@ -674,7 +724,52 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     /// production view must schedule its own successor qualification.
     func invalidateEmptyRootPhysicalFence() {
         guard provesEmptyFenceRequalification, emptyBootstrap,
-              !facts.contains("task144.controlled.empty-fence.invalidated") else { return }
+              !facts.contains("task144.controlled.empty-fence.invalidated"),
+              !emptyFenceInitialRequestWasStarted else { return }
+        emptyFenceInitialRequestWasStarted = true
+        let request = Task144EmptyFenceInitialRequest(initialRevision: controller.localBodyQualificationRevision)
+        emptyFenceInitialRequest = request
+        // Subscribe before the first admission check. A truthful pending fact
+        // then causes the same normal view reevaluation as the former failure.
+        emptyFenceInitialSubscription = controller.$localBodyQualificationRevision.dropFirst().sink { [weak self, weak request] published in
+            Task { @MainActor [weak self, weak request] in
+                guard let self, let request, self.emptyFenceInitialRequest === request,
+                      self.controller.localBodyQualificationRevision == published else { return }
+                self.attemptEmptyRootPhysicalFence(request: request, revisionSignal: published)
+            }
+        }
+        emptyFenceInitialExpiry = Task { @MainActor [weak self, weak request] in
+            guard let request else { return }
+            do { try await Task.sleep(until: request.deadline, clock: .continuous) }
+            catch { return }
+            guard let self, self.emptyFenceInitialRequest === request, request.expire() else { return }
+            self.cancelEmptyFenceInitialRequest(stage: "initial-admission-timeout")
+        }
+        attemptEmptyRootPhysicalFence(request: request, revisionSignal: nil)
+    }
+
+    private func cancelEmptyFenceInitialRequest(stage: String? = nil) {
+        guard let request = emptyFenceInitialRequest else { return }
+        request.cancel()
+        emptyFenceInitialSubscription?.cancel()
+        emptyFenceInitialSubscription = nil
+        emptyFenceInitialExpiry?.cancel()
+        emptyFenceInitialExpiry = nil
+        emptyFenceInitialAnchors = nil
+        emptyFenceInitialRequest = nil
+        facts.remove("task144.controlled.empty-fence.waiting-initial-admission")
+        if let stage {
+            facts.formUnion(["task144.controlled.empty-fence.failure",
+                "task144.controlled.empty-fence.failure-stage.\(stage)"])
+        }
+    }
+
+    private func attemptEmptyRootPhysicalFence(request: Task144EmptyFenceInitialRequest, revisionSignal: Int?) {
+        guard emptyFenceInitialRequest === request, request.isPending else { return }
+        guard request.isBeforeDeadline else {
+            cancelEmptyFenceInitialRequest(stage: "initial-admission-timeout")
+            return
+        }
         var stage = "capture-scope"
         var firstFailedPrerequisite: String?
         func prerequisite(_ value: Bool, _ name: String) -> Bool {
@@ -692,9 +787,32 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   prerequisite(!transport.isReleased, "transport-held"),
                   prerequisite(authViewModel.localMutationOwnerUserID == owner, "owner"),
                   prerequisite(controller.activeManifest == nil, "no-manifest"),
-                  prerequisite(revision > 0, "qualification-revision"),
-                  prerequisite(controller.permitsScopedEmptyRoot(ownerUserID: owner), "empty-admission"),
-                  prerequisite(!Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner), "no-local-mutation-grant"),
+                  prerequisite(revision > 0, "qualification-revision") else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            if let anchors = emptyFenceInitialAnchors {
+                guard prerequisite(scope == anchors.scope, "initial-scope-unchanged"),
+                      prerequisite(phase == anchors.phase, "initial-phase-unchanged"),
+                      prerequisite(container === anchors.container, "initial-container-unchanged") else {
+                    _ = request.evaluate(admitted: false, revisionSignal: revisionSignal, anchorsUnchanged: false)
+                    throw SyncStoreGenerationError.activationReadBackFailed
+                }
+            } else {
+                emptyFenceInitialAnchors = EmptyFenceInitialAnchors(scope: scope, phase: phase, container: container)
+            }
+            let admitted = controller.permitsScopedEmptyRoot(ownerUserID: owner)
+            if !admitted {
+                switch request.evaluate(admitted: false, revisionSignal: revisionSignal, anchorsUnchanged: true) {
+                case .waiting:
+                    facts.insert("task144.controlled.empty-fence.waiting-initial-admission")
+                case .expired:
+                    cancelEmptyFenceInitialRequest(stage: "initial-admission-timeout")
+                default:
+                    cancelEmptyFenceInitialRequest(stage: "initial-admission-aborted")
+                }
+                return
+            }
+            guard prerequisite(!Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container, ownerUserID: owner), "no-local-mutation-grant"),
                   prerequisite(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
@@ -707,8 +825,24 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   let modificationDate = values.contentModificationDate else {
                 throw SyncStoreGenerationError.activeStoreMissing
             }
+            switch request.evaluate(admitted: true, revisionSignal: revisionSignal, anchorsUnchanged: true) {
+            case .ready: break
+            case .waiting:
+                facts.insert("task144.controlled.empty-fence.waiting-initial-admission")
+                return
+            case .expired:
+                cancelEmptyFenceInitialRequest(stage: "initial-admission-timeout")
+                return
+            default:
+                cancelEmptyFenceInitialRequest(stage: "initial-admission-aborted")
+                return
+            }
+            // Disarm both initial observers before the one mutation and before
+            // installing the unchanged post-mutation qualification observer.
+            cancelEmptyFenceInitialRequest()
             facts.insert("task144.controlled.empty-fence.initially-admitted")
             stage = "physical-fence-invalidation"
+            guard request.isBeforeDeadline else { throw SyncStoreGenerationError.activationReadBackFailed }
             try FileManager.default.setAttributes([.modificationDate: modificationDate.addingTimeInterval(-60)],
                 ofItemAtPath: ownedLegacyStoreURL.path)
             stage = "invalidated-fence-readback"
@@ -747,6 +881,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             facts.insert("task144.controlled.empty-fence.invalidated")
             controller.objectWillChange.send()
         } catch {
+            cancelEmptyFenceInitialRequest()
             var failureFacts: Set<String> = ["task144.controlled.empty-fence.failure",
                 "task144.controlled.empty-fence.failure-stage.\(stage)",
                 "task144.controlled.empty-fence.failure-kind.\(Self.failureKind(error))"]

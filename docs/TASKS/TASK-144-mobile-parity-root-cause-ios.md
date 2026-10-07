@@ -1215,6 +1215,49 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 
 **Preservazione/Handoff:** parent N solo Git; questa lane non muta Git. Nuovi tre hunks Execution/Fix/Handoff: la loro rimozione restituisce `f01e0d8e81604e5b7e028188d1c76ff56bc5bbd748471dde11d12d63be4fb634` esatto;54 insert preesistenti restano fuori index. Nessuna modifica a MASTER/Planning, primaria/config/sessione/459. Tutti i runner/group posseduti chiusi; integrazione exact-head successiva spetta al parent.
 
+### Esecuzione — 2026-10-07 UTC, precondizione bounded del witness empty-fence
+
+**Snapshot pre-gate finale:** main `1ea56c18149633ea85a56bd81532f662ed7cda31`; CI main37590771978 FAIL reale:1552=1515 PASS/1 FAIL/36 SKIP invariati,15 UI PASS/1 FAIL. Solo nuovoA/UI273 fallisce; log e xcresult ufficiali conservati prima della scadenza. Gli esiti full1552/PR37585875875 PASS precedenti restano storici sul candidato precedente, non sono la full di questa patch.
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — solo DEBUG: richiesta iniziale one-shot osservabile, attesa della vera nuova revisione, scadenza monotona5s senza reset, recheck integrale e una sola iniezione; cancellazione su release/phase control/error/timeout.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — append5 test del boundary realmente usato; tutti117 metodi e helper precedenti preservati come prefisso byte-esatto. Test UI originale, assert/timeout, singolo setAttributes e observer post-injection invariati.
+- Questo solo blocco Execution — esiti, limiti e handoff; Planning/criteri/MASTER e modifiche straniere preservati.
+
+**Azioni ed evidenze:**
+1. AX PID65445: initial-prerequisites/empty-admission/generation-readback-failed; iniezione fisica NON_TRAVERSED. I28 record RAM originali dello stesso PID mostrano first-failed physical-fence-equal, lettura riuscita e operandi precedenti veri; normale ticket5 pubblicato e admission/root visibile circa154ms dopo. Writer/file del drift UNKNOWN; nessun missing-resume prodotto dimostrato, nessuna causa storica trasferita.
+2. Il witness attende la normale pubblicazione dopo un diniego transitorio. Lo stato waiting è veritiero e permette la stessa rivalutazione della vista; nessuna qualification, Recovery, Retry o fase forzata. Scope/container/phase/owner/held/journal sono ricontrollati; scadenza anche immediatamente prima della scrittura, callback obsolete e duplicate disarmate.
+3. [Patch/freeze](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-empty-fence-bounded-initial-admission-fixture-fix-20261007-01/source-freeze-bounded-initial-admission-v1.json): freeze fd0a6bcb, patch fa62399b;46 altre fonti esatte. C e stesso reviewer indipendente APPROVED,0 finding.
+4. [Contract unit5](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-empty-fence-bounded-initial-admission-contract-unit-01/receipt.json):5 PASS/0 FAIL/0 SKIP, receipt8347e736, verifica11/11. Eventi/clock e contatore completamenti controllati: non I/O fisico o nuova qualification reale.
+5. [Original newA UI](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/ios-empty-fence-bounded-initial-admission-original-ui-01/receipt.json):1 PASS/0 FAIL/0 SKIP,26.973446s, receiptfa6ff957, verifica16/16. WAITPATH reale NOT_OBSERVED; nessuna copertura aggiuntiva inventata. PG propri terminati,6B Shutdown, famiglia default/source/Task/HEAD/index preservati; zero operazioni sul primario.
+
+**Check obbligatori al checkpoint:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Compilazione pertinente Debug | ESEGUITO | Compilazione effettiva unit5/UI1 senza errori; nuova full e CI ancora NON ESEGUITI. |
+| Analyze / static checks | NON ESEGUITO finale | Parse2file PASS; nuovo Analyze CI sul commit finale ancora pendente. |
+| Warning nuovi | ESEGUITO sui2file | Nessun warning nei2file modificati;19 righe legacy fuori perimetro nel compile incrementale, non comparer34 completo. |
+| Coerenza planning/mandato | ESEGUITO | Solo fixture DEBUG e contratto;0 produzione/build/project/API pubbliche/dipendenze. |
+| Criteri di accettazione | PARZIALE | Stati individuali sotto; nessun DONE globale. |
+
+**Stato individuale CA:**
+| CA | Stato | Evidenza / residuo |
+|---|---|---|
+|01|ESEGUITO|Baseline e snapshot exact-SHA; source/Task/master/workflow/index/stash e lavoro preesistente preservati.|
+|02|ESEGUITO locale|F01 e regressioni durevoli già verificate; nessuna modifica a questa logica.|
+|03|ESEGUITO controllato|F02 ownership/query e UI controllata già verificate; smoke primario finale separato.|
+|04|ESEGUITO controllato|F03 intent/retry/ACK e SQL storici documentati; ACK perso HTTP reale dalle app NON ESEGUITO.|
+|05|ESEGUITO documentale|Merge/CI/install/runtime/distribuzione separati; nuovo mainFAIL conservato.|
+|06|ESEGUITO documentale|Matrice20 capacità nel report corrente; nessuna feature rimossa.|
+|07|NON ESEGUIBILE finale|Input CUA noWindowsAvailable, UI/sessione/shop e convergenza autenticata per-record non qualificati.|
+|08|NON ESEGUITO integrale|Regressioni semantiche locali storiche PASS; workbook condiviso e immagini nelle UI finali ancora aperti.|
+|09|NON ESEGUIBILE finale|Dataset/sessione/UI mancanti, zero campioni finali qualificati; niente percentili da XCTest.|
+|10|NON ESEGUITO finale|Cheap5+UI1 PASS; nuova full1557 attesa e nuova PR/main CI ancora da eseguire.|
+|11|NON ESEGUITO integrazione finale|Re-review APPROVED; nuovo commit/PR/CI/merge da verificare, nessun PASS futuro.|
+|12|NON ESEGUITO chiusura|Report corrente/evidenze presenti; criteri finali aperti e Task resta FIX.|
+
+**Handoff:** proseguire commit/push/PR normali e full locale sullo stesso commit congelato; nuovaCI può avanzare in parallelo. Verifier2e42 invariato, baseline nuova full effettiva prima della qualifica terminale. Riuso Release/Proper/TEST solo per input Release effettivi invariati e con nota esplicita: non nuove build/install sul nuovo commit né prova di sessione. Non rilanciare una full invariata per nascondere un FAIL. Nessun reset/clear/uninstall/forcepush/deploy/store/credenziali; richiesta umana foreground ancora pendente, niente retry CUA senza cambiamento ambiente. Esiti finali successivi nel report corrente, senza commit documentali autoreferenziali.
+
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
