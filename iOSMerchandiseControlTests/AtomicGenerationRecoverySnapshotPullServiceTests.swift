@@ -7254,3 +7254,87 @@ private struct AtomicRecoveryHistoryRowPayload: Encodable {
         case deletedAt = "deleted_at"
     }
 }
+
+#if DEBUG
+@MainActor
+final class Task144EmptyFenceInitialRequestContractTests: XCTestCase {
+    func testDeniedAdmissionConsumesOnlyNewRevisionAndWritesOnce() async {
+        let origin = ContinuousClock.now
+        var now = origin
+        let request = Task144EmptyFenceInitialRequest(initialRevision: 4, now: { now })
+        let deadline = request.deadline
+        let revisions = PassthroughSubject<Int, Never>()
+        var admitted = false
+        var writes = 0
+        var outcomes: [Task144EmptyFenceInitialRequest.Outcome] = []
+        let subscription = revisions.sink { revision in
+            MainActor.assumeIsolated {
+                let outcome = request.evaluate(admitted: admitted, revisionSignal: revision, anchorsUnchanged: true)
+                outcomes.append(outcome)
+                if outcome == .ready { writes += 1 }
+            }
+        }
+        defer { subscription.cancel() }
+        XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+        admitted = true
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+        revisions.send(4)
+        XCTAssertEqual(writes, 0, "An old/current value is not a new qualification signal")
+        now = origin.advanced(by: .milliseconds(153))
+        revisions.send(5)
+        revisions.send(5)
+        revisions.send(6)
+        XCTAssertEqual(writes, 1)
+        XCTAssertEqual(outcomes, [.waiting, .ready, .inactive, .inactive])
+        XCTAssertEqual(request.deadline, deadline)
+        XCTAssertFalse(request.isPending)
+    }
+
+    func testFalseAdmissionAndNoPublicationExpireWithoutMovingDeadlineOrWriting() async {
+        for sendsFalseRevision in [false, true] {
+            let origin = ContinuousClock.now
+            var now = origin
+            let request = Task144EmptyFenceInitialRequest(initialRevision: 4, now: { now })
+            let deadline = request.deadline
+            XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+            now = origin.advanced(by: .seconds(4))
+            if sendsFalseRevision {
+                XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: 5, anchorsUnchanged: true), .waiting)
+            }
+            XCTAssertEqual(request.deadline, deadline)
+            XCTAssertFalse(request.expire())
+            now = deadline
+            XCTAssertTrue(request.expire())
+            XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 6, anchorsUnchanged: true), .inactive)
+            XCTAssertFalse(request.isPending)
+        }
+    }
+
+    func testChangedScopeAbortsAndCannotConsumeLaterValidRevision() async {
+        let request = Task144EmptyFenceInitialRequest(initialRevision: 4)
+        XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 5, anchorsUnchanged: false), .aborted)
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 6, anchorsUnchanged: true), .inactive)
+        XCTAssertFalse(request.isPending)
+    }
+
+    func testLateCallbackCannotInjectEvenBeforeExpiryTaskExecutes() async {
+        let origin = ContinuousClock.now
+        var now = origin
+        let request = Task144EmptyFenceInitialRequest(initialRevision: 4, now: { now })
+        XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+        now = request.deadline.advanced(by: .milliseconds(1))
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 5, anchorsUnchanged: true), .expired)
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 6, anchorsUnchanged: true), .inactive)
+        XCTAssertFalse(request.isPending)
+    }
+
+    func testCancelledRequestCannotInjectOnRealRevisionSignal() async {
+        let request = Task144EmptyFenceInitialRequest(initialRevision: 4)
+        XCTAssertEqual(request.evaluate(admitted: false, revisionSignal: nil, anchorsUnchanged: true), .waiting)
+        request.cancel()
+        XCTAssertEqual(request.evaluate(admitted: true, revisionSignal: 5, anchorsUnchanged: true), .inactive)
+        XCTAssertFalse(request.isPending)
+    }
+}
+#endif
