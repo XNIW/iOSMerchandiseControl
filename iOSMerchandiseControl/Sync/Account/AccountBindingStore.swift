@@ -165,8 +165,11 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
     }
 
     var pendingRecoveryJournal: AccountRecoveryJournalSnapshot? {
-        guard let journal = replacementJournal,
-              let deviceIdentityHash = journal.deviceIdentityHash,
+        replacementJournal.flatMap(Self.recoveryJournalSnapshot)
+    }
+
+    private static func recoveryJournalSnapshot(_ journal: AccountReplacementJournal) -> AccountRecoveryJournalSnapshot? {
+        guard let deviceIdentityHash = journal.deviceIdentityHash,
               deviceIdentityHash.count == 64 else { return nil }
         return AccountRecoveryJournalSnapshot(
             replacement: journal.replacement,
@@ -387,22 +390,9 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
         scope: Task126VerifiedOwnerStoreScope? = nil
     ) -> Bool {
         if let scope {
-            do {
-                return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
-                    scope,
-                    defaults: defaults
-                ) {
-                    updatePendingRecoveryWithLeaseHeld(
-                        accountHash: accountHash,
-                        storeIdentity: storeIdentity,
-                        deviceIdentityHash: deviceIdentityHash
-                    ) { journal in
-                        Self.prepareJournalForStaging(&journal, generationID: generationID)
-                    }
-                }
-            } catch {
-                return false
-            }
+            return recordPendingRecoveryStaging(accountHash: accountHash, storeIdentity: storeIdentity,
+                deviceIdentityHash: deviceIdentityHash, generationID: generationID,
+                scope: scope, expectedJournal: nil) != nil
         }
         return updatePendingRecovery(
             accountHash: accountHash,
@@ -411,6 +401,22 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
         ) { journal in
             Self.prepareJournalForStaging(&journal, generationID: generationID)
         }
+    }
+
+    /// Returns only the snapshot produced by this scoped, lease-held transition.
+    func recordPendingRecoveryStaging(
+        accountHash: String, storeIdentity: LocalStoreIdentity, deviceIdentityHash: String,
+        generationID: UUID, scope: Task126VerifiedOwnerStoreScope,
+        expectedJournal: AccountRecoveryJournalSnapshot?
+    ) -> AccountRecoveryJournalSnapshot? {
+        do {
+            return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+                updatePendingRecoveryWithLeaseHeld(accountHash: accountHash, storeIdentity: storeIdentity,
+                    deviceIdentityHash: deviceIdentityHash, expectedJournal: expectedJournal) { journal in
+                    Self.prepareJournalForStaging(&journal, generationID: generationID)
+                }
+            }
+        } catch { return nil }
     }
 
     @discardableResult
@@ -426,28 +432,10 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
     ) -> Bool {
         guard checkpointDigest.count == 64, watermark >= 0 else { return false }
         if let scope {
-            do {
-                return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(
-                    scope,
-                    defaults: defaults
-                ) {
-                    updatePendingRecoveryWithLeaseHeld(
-                        accountHash: accountHash,
-                        storeIdentity: storeIdentity,
-                        deviceIdentityHash: deviceIdentityHash
-                    ) { journal in
-                        Self.prepareJournalForVerification(
-                            &journal,
-                            generationID: generationID,
-                            checkpointDigest: checkpointDigest,
-                            watermark: watermark,
-                            baselineRunID: baselineRunID
-                        )
-                    }
-                }
-            } catch {
-                return false
-            }
+            return recordPendingRecoveryVerified(accountHash: accountHash, storeIdentity: storeIdentity,
+                deviceIdentityHash: deviceIdentityHash, generationID: generationID,
+                checkpointDigest: checkpointDigest, watermark: watermark, baselineRunID: baselineRunID,
+                scope: scope, expectedJournal: nil) != nil
         }
         return updatePendingRecovery(
             accountHash: accountHash,
@@ -462,6 +450,23 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
                 baselineRunID: baselineRunID
             )
         }
+    }
+
+    func recordPendingRecoveryVerified(
+        accountHash: String, storeIdentity: LocalStoreIdentity, deviceIdentityHash: String,
+        generationID: UUID, checkpointDigest: String, watermark: Int64, baselineRunID: UUID,
+        scope: Task126VerifiedOwnerStoreScope, expectedJournal: AccountRecoveryJournalSnapshot?
+    ) -> AccountRecoveryJournalSnapshot? {
+        guard checkpointDigest.count == 64, watermark >= 0 else { return nil }
+        do {
+            return try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+                updatePendingRecoveryWithLeaseHeld(accountHash: accountHash, storeIdentity: storeIdentity,
+                    deviceIdentityHash: deviceIdentityHash, expectedJournal: expectedJournal) { journal in
+                    Self.prepareJournalForVerification(&journal, generationID: generationID,
+                        checkpointDigest: checkpointDigest, watermark: watermark, baselineRunID: baselineRunID)
+                }
+            }
+        } catch { return nil }
     }
 
     /// Finalizes only metadata that is already proven by the atomically active
@@ -1000,16 +1005,20 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
         accountHash: String,
         storeIdentity: LocalStoreIdentity,
         deviceIdentityHash: String,
+        expectedJournal: AccountRecoveryJournalSnapshot?,
         mutation: (inout AccountReplacementJournal) -> Bool
-    ) -> Bool {
+    ) -> AccountRecoveryJournalSnapshot? {
         guard var journal = replacementJournal,
+              expectedJournal == nil || Self.recoveryJournalSnapshot(journal) == expectedJournal,
               journal.replacement.accountHash == accountHash,
               journal.replacement.storeIdentity == storeIdentity,
               journal.deviceIdentityHash == deviceIdentityHash,
-              mutation(&journal) else {
-            return false
+              mutation(&journal),
+              persistReplacementJournalWithLeaseHeld(journal) else {
+            return nil
         }
-        return persistReplacementJournalWithLeaseHeld(journal)
+        // The immutable result is captured before releasing the same lease.
+        return Self.recoveryJournalSnapshot(journal)
     }
 
     private static func prepareJournalForStaging(

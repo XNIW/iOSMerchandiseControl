@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import OSLog
 import SwiftData
 #if canImport(Darwin)
 import Darwin
@@ -1276,9 +1277,39 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
     private static let decoder = JSONDecoder()
 }
 
+private nonisolated struct LocalBodyQualificationReadbackFailure: Error, Sendable {
+    let stage: String // Only fixed literals assigned by the existing worker.
+    let underlying: any Error
+}
+
 @MainActor
 final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable {
     static let shared = SyncStoreGenerationController()
+    private static let qualificationLogger = Logger(
+        subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification"
+    )
+
+    private static func qualificationErrorReason(_ error: any Error) -> String {
+        if error is CancellationError { return "cancelled" }
+        if let failure = error as? SyncStoreGenerationError {
+            switch failure {
+            case .activationReadBackFailed: return "activation-readback-failed"
+            case .invalidManifest: return "invalid-manifest"
+            case .activeStoreMissing: return "active-store-missing"
+            case .generationResourceBudgetExceeded: return "resource-budget"
+            default: return "unknown"
+            }
+        }
+        if let failure = error as? ShopSyncRecoveryContractError {
+            switch failure {
+            case .checkpointChanged: return "checkpoint-changed"
+            case .persistedLedgerInvalid: return "persisted-ledger-invalid"
+            case .resourceBudgetExceeded, .totalResourceBudgetExceeded: return "resource-budget"
+            default: return "unknown"
+            }
+        }
+        return "unknown"
+    }
 
     @Published private(set) var active: SyncStoreActiveGeneration
     @Published private(set) var loadFailureCode: String?
@@ -1470,73 +1501,126 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         #endif
         localBodyQualificationTask = Task { [weak self] in
             var published = false
-            defer { self?.finishManifestQualification(identity, published: published, cancelled: Task.isCancelled) }
+            var firstFailureStage = "none"
+            var firstFailureReason = "none"
+            var firstPublicationFailure = "none"
+            var authorityClosureEntered = false
+            var authorityClosurePassed = false
+            func noteFailure(_ stage: String, _ reason: String) {
+                if firstFailureStage == "none" { firstFailureStage = stage; firstFailureReason = reason }
+            }
+            func observeAuthority(_ value: Bool, _ reason: String) -> Bool {
+                if !value && firstPublicationFailure == "none" { firstPublicationFailure = reason }
+                return value
+            }
+            func observeOptional<T>(_ value: T?, _ reason: String) -> T? {
+                _ = observeAuthority(value != nil, reason)
+                return value
+            }
+            defer {
+                let ownerPresent = ownerUserID != nil
+                let ownerMatches = ownerUserID.map(AccountBindingStore.accountHash(for:)) == manifest.accountHash
+                let bindingMatches = expectedBinding?.accountHash == manifest.accountHash
+                    && expectedBinding?.storeIdentity == manifest.storeIdentity
+                let shopMatches = expectedShop?.shopID == manifest.shopID
+                    && expectedShop?.localStoreIdentity == manifest.storeIdentity
+                let currentTask = self?.manifestQualificationID == identity
+                let currentContainer = self?.active.container === container
+                let currentManifest = self?.active.manifest == manifest
+                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED")
+                self?.finishManifestQualification(identity, published: published, cancelled: Task.isCancelled)
+            }
             for _ in 0..<2 {
-                guard !Task.isCancelled else { return false }
+                guard !Task.isCancelled else { noteFailure("capture-before", "cancelled"); return false }
                 let work = Task.detached(priority: .utility) {
-                    try Task.checkCancellation()
-                    let before = try repository.captureActiveMutationFence(for: captured)
-                    try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
-                        storeURL: repository.storeURLForLocalBodyReadback(manifest))
-                    let after = try repository.captureActiveMutationFence(for: captured)
-                    guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
-                    return after
+                    var stage = "capture-before"
+                    do {
+                        try Task.checkCancellation()
+                        let before = try repository.captureActiveMutationFence(for: captured)
+                        stage = "body-validation"
+                        try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
+                            storeURL: repository.storeURLForLocalBodyReadback(manifest))
+                        stage = "capture-after"
+                        let after = try repository.captureActiveMutationFence(for: captured)
+                        guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                        return after
+                    } catch {
+                        throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error)
+                    }
                 }
                 do {
                     let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                     #if DEBUG
                     await self?.localBodyQualificationBeforePublicationForTesting?()
                     #endif
-                    guard let self, !Task.isCancelled, self.manifestQualificationID == identity else { return false }
+                    guard let self,
+                          observeAuthority(!Task.isCancelled, "cancelled"),
+                          observeAuthority(self.manifestQualificationID == identity, "qualification-replaced") else {
+                        noteFailure("publication", firstPublicationFailure == "none" ? "controller-absent" : firstPublicationFailure)
+                        return false
+                    }
                     // The validated archive has stable provenance. Renewed
                     // selectedAt/name and writer leases are not its identity.
                     // Re-read authorization and publish under the same lease
                     // lock, so an old async writer gains no renewed authority.
+                    authorityClosureEntered = false
+                    authorityClosurePassed = false
                     published = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence) {
+                        authorityClosureEntered = true
                         let selectedStore = SelectedShopStore(defaults: self.defaults)
                         let currentBinding = AccountBindingStore(defaults: self.defaults)
                         let currentJournal = currentBinding.pendingRecoveryJournal
-                        guard !Task.isCancelled, self.active.container === container,
-                              self.active.manifest == manifest,
-                              self.defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == manifest.accountHash,
-                              ownerUserID.map(AccountBindingStore.accountHash(for:)).map({ $0 == manifest.accountHash }) ?? true,
-                              currentBinding.currentBinding == expectedBinding,
-                              currentBinding.hasPendingReplacementJournal == expectedPendingJournal,
+                        guard observeAuthority(!Task.isCancelled, "cancelled"),
+                              observeAuthority(self.active.container === container, "active-container-changed"),
+                              observeAuthority(self.active.manifest == manifest, "active-manifest-changed"),
+                              observeAuthority(self.defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == manifest.accountHash, "active-account-mismatch"),
+                              observeAuthority(ownerUserID.map(AccountBindingStore.accountHash(for:)).map({ $0 == manifest.accountHash }) ?? true, "owner-argument-mismatch"),
+                              observeAuthority(currentBinding.currentBinding == expectedBinding, "binding-changed"),
+                              observeAuthority(currentBinding.hasPendingReplacementJournal == expectedPendingJournal, "journal-presence-changed"),
                               // Journal progress describes staging, not this active archive.
                               // Its exact replacement binding (including boundAt), mode
                               // and device must remain the same recovery authority.
-                              currentJournal?.replacement == expectedJournal?.replacement,
-                              currentJournal?.mode == expectedJournal?.mode,
-                              currentJournal?.deviceIdentityHash == expectedJournal?.deviceIdentityHash,
-                              expectedBinding?.accountHash == manifest.accountHash,
-                              expectedBinding?.storeIdentity == manifest.storeIdentity,
-                              selectedStore.isResolutionReady(accountHash: manifest.accountHash),
-                              let currentShop = selectedStore.selectedShop(accountHash: manifest.accountHash),
-                              ownerUserID != nil || currentShop == expectedShop,
-                              currentShop.shopID == expectedShop?.shopID,
-                              currentShop.shopID == manifest.shopID,
-                              currentShop.localStoreIdentity == manifest.storeIdentity,
-                              currentShop.role == expectedShop?.role,
-                              currentShop.status == expectedShop?.status,
-                              currentShop.canWrite == expectedShop?.canWrite,
-                              LinkedShop(shopID: currentShop.shopID, code: currentShop.code, name: currentShop.name,
+                              observeAuthority(currentJournal?.replacement == expectedJournal?.replacement, "journal-replacement-changed"),
+                              observeAuthority(currentJournal?.mode == expectedJournal?.mode, "journal-mode-changed"),
+                              observeAuthority(currentJournal?.deviceIdentityHash == expectedJournal?.deviceIdentityHash, "journal-device-changed"),
+                              observeAuthority(expectedBinding?.accountHash == manifest.accountHash, "captured-binding-account-mismatch"),
+                              observeAuthority(expectedBinding?.storeIdentity == manifest.storeIdentity, "captured-binding-store-mismatch"),
+                              observeAuthority(selectedStore.isResolutionReady(accountHash: manifest.accountHash), "resolution-unready"),
+                              let currentShop = observeOptional(selectedStore.selectedShop(accountHash: manifest.accountHash), "selected-shop-absent"),
+                              observeAuthority(ownerUserID != nil || currentShop == expectedShop, "ownerless-selection-changed"),
+                              observeAuthority(currentShop.shopID == expectedShop?.shopID, "selected-shop-changed"),
+                              observeAuthority(currentShop.shopID == manifest.shopID, "selected-shop-manifest-mismatch"),
+                              observeAuthority(currentShop.localStoreIdentity == manifest.storeIdentity, "selected-store-manifest-mismatch"),
+                              observeAuthority(currentShop.role == expectedShop?.role, "selected-role-changed"),
+                              observeAuthority(currentShop.status == expectedShop?.status, "selected-status-changed"),
+                              observeAuthority(currentShop.canWrite == expectedShop?.canWrite, "selected-can-write-changed"),
+                              observeAuthority(LinkedShop(shopID: currentShop.shopID, code: currentShop.code, name: currentShop.name,
                                 role: currentShop.role, status: currentShop.status,
-                                selectable: currentShop.selectable, canWrite: currentShop.canWrite).isValidSelection,
-                              (try? DeviceInstallIDStore(defaults: self.defaults).requireDeviceInstallID()) == device,
-                              device.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash,
-                              (ownerUserID == nil || !selectedStore.hasConfirmedDeviceDenial(accountHash: manifest.accountHash,
-                                shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash)) else { return false }
+                                selectable: currentShop.selectable, canWrite: currentShop.canWrite).isValidSelection, "selected-shop-invalid"),
+                              observeAuthority((try? DeviceInstallIDStore(defaults: self.defaults).requireDeviceInstallID()) == device, "device-changed"),
+                              observeAuthority(device.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash, "device-manifest-mismatch"),
+                              observeAuthority((ownerUserID == nil || !selectedStore.hasConfirmedDeviceDenial(accountHash: manifest.accountHash,
+                                shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash)), "confirmed-device-denial") else { return false }
                         if expectedPendingJournal {
-                            guard let journal = currentJournal, journal.mode == .sameScopeRecovery,
-                                  journal.replacement.accountHash == manifest.accountHash,
-                                  journal.replacement.storeIdentity == manifest.storeIdentity,
-                                  journal.deviceIdentityHash == manifest.deviceIdentityHash else { return false }
+                            guard let journal = observeOptional(currentJournal, "journal-absent"),
+                                  observeAuthority(journal.mode == .sameScopeRecovery, "journal-not-same-scope"),
+                                  observeAuthority(journal.replacement.accountHash == manifest.accountHash, "journal-account-mismatch"),
+                                  observeAuthority(journal.replacement.storeIdentity == manifest.storeIdentity, "journal-store-mismatch"),
+                                  observeAuthority(journal.deviceIdentityHash == manifest.deviceIdentityHash, "journal-device-manifest-mismatch") else { return false }
                         }
+                        authorityClosurePassed = true
                         return true
                     }
                     if published { return true }
+                    noteFailure("publication", authorityClosurePassed
+                        ? "registered-container-or-current-physical-fence"
+                        : firstPublicationFailure)
                 } catch {
-                    if error as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
+                    let failure = error as? LocalBodyQualificationReadbackFailure
+                    let underlying = failure?.underlying ?? error
+                    noteFailure(failure?.stage ?? "publication", Self.qualificationErrorReason(underlying))
+                    // Preserve the original two-attempt checkpointChanged behavior exactly.
+                    if underlying as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
                     return false
                 }
             }
