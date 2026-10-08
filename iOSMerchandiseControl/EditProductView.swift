@@ -231,10 +231,14 @@ struct EditProductView: View {
             }
 
             Section(L("product.section.supplier")) {
+#if DEBUG
+                observedSupplierNameField
+#else
                 TextField(L("product.field.supplier_name"), text: $supplierName)
                     .focused($focusedField, equals: .supplierName)
                     .textInputAutocapitalization(.words)
                     .accessibilityLabel(Text(L("product.field.supplier_name")))
+#endif
 
                 if !suppliers.isEmpty {
                     Menu {
@@ -342,7 +346,11 @@ struct EditProductView: View {
         }
         .onChange(of: retainedDraft) { _, draft in
             guard isViewActive, retainsLocalDraft, isCurrentModelGeneration else { return }
+#if DEBUG
+            updateObservedRetainedDraft(draft)
+#else
             localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = draft }
+#endif
         }
         .onDisappear {
             isViewActive = false
@@ -397,6 +405,33 @@ struct EditProductView: View {
         modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
     }
 
+#if DEBUG
+    private var observedSupplierNameField: some View {
+        TextField(L("product.field.supplier_name"), text: observedSupplierNameBinding)
+            .focused($focusedField, equals: .supplierName)
+            .textInputAutocapitalization(.words)
+            .accessibilityLabel(Text(L("product.field.supplier_name")))
+    }
+
+    private func updateObservedRetainedDraft(_ draft: LocalRootPresentationState.EditorDraft) {
+        localPresentation?.update(presentationID: mountedPresentationID) {
+            $0.editor = draft
+            Task144RootObservation.recordRelatedSupplierInput("retained-update", value: draft.supplierName,
+                focusedField: draft.focusedField)
+        }
+    }
+
+    private var observedSupplierNameBinding: Binding<String> {
+        let original = $supplierName
+        guard Task144RootObservation.observesRelatedInput else { return original }
+        return Binding(get: { original.wrappedValue }, set: { (value: String, transaction: Transaction) in
+            original.transaction(transaction).wrappedValue = value
+            Task144RootObservation.recordRelatedSupplierInput("binding-set-returned", value: value,
+                focusedField: focusedField?.rawValue)
+        }).transaction(original.transaction)
+    }
+#endif
+
     private var retainedDraft: LocalRootPresentationState.EditorDraft {
         .init(remoteID: logicalRemoteID, originalBarcode: originalBarcode, baseline: initialDraft,
             barcode: barcode, name: name, secondName: secondName, itemNumber: itemNumber,
@@ -421,8 +456,20 @@ struct EditProductView: View {
             supplierName = draft.supplierName
             categoryName = draft.categoryName
             focusedField = draft.focusedField.flatMap(DraftField.init(rawValue:))
+#if DEBUG
+            Task144RootObservation.recordRelatedSupplierInput("restore-applied", value: draft.supplierName,
+                focusedField: draft.focusedField)
+#endif
         }
-        localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = retainedDraft }
+        localPresentation?.update(presentationID: mountedPresentationID) {
+            $0.editor = retainedDraft
+#if DEBUG
+            if let draft = $0.editor {
+                Task144RootObservation.recordRelatedSupplierInput("retained-from-restore", value: draft.supplierName,
+                    focusedField: draft.focusedField)
+            }
+#endif
+        }
     }
 
     private func clearRetainedDraft() {

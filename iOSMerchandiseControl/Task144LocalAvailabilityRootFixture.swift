@@ -28,11 +28,13 @@ private enum Task144ControlGestureObservation {
 /// Temporary observations scoped to the controlled empty/callback, physical-fence and related-save fixtures. This buffer is not ObservableObject and never
 /// publishes, reads a model/store, submits work or changes an admission result.
 nonisolated final class Task144RootObservation: @unchecked Sendable {
+    private static let relatedSaveMode = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1"
     static let enabled = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
         && ((ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
              && (ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
                  || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"))
-            || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1")
+            || relatedSaveMode)
+    static let observesRelatedInput = enabled && relatedSaveMode
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
     private var sequence = 0
@@ -65,6 +67,17 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
         buffer.lock.lock(); defer { buffer.lock.unlock() }
         return ";task144.observation.cached-at-real-render;dropped.\(buffer.dropped);"
             + buffer.events.joined(separator: ";")
+    }
+
+    static func recordRelatedSupplierInput(_ stage: String, value: String, focusedField: String?) {
+        guard observesRelatedInput else { return }
+        let expected = "New related supplier"
+        let valueClass = value.isEmpty ? "empty" : value == expected ? "full"
+            : expected.hasPrefix(value) ? "prefix" : "other"
+        let focus = focusedField.map { $0 == "supplierName" ? "supplier" : "other" } ?? "none"
+        record("related-supplier-\(stage)",
+            "value-class.\(valueClass).length-utf16.\(value.utf16.count).focus.\(focus)",
+            callsite: "EditProductView.supplier-input")
     }
 
     static func errorCategory(_ error: Error) -> String {
@@ -1445,7 +1458,15 @@ private struct Task144ControlledRootControls: View {
                     .accessibilityIdentifier("\(controlPrefix).state-update")
                 Text("Release controlled transport")
                     .padding(8).contentShape(Rectangle())
-                    .onLongPressGesture(minimumDuration: 1) { fixture.release() }
+                    .onLongPressGesture(minimumDuration: 1) {
+                        Task144ControlGestureObservation.record("perform-entry", control: "\(controlPrefix).release")
+                        fixture.release()
+                        Task144ControlGestureObservation.record(
+                            "returned.fact-present.\(fixture.facts.contains("task144.controlled.released"))",
+                            control: "\(controlPrefix).release")
+                    } onPressingChanged: { pressing in
+                        Task144ControlGestureObservation.record("pressing.\(pressing)", control: "\(controlPrefix).release")
+                    }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityValue(fixture.automaticReadback)
                     .accessibilityIdentifier("\(controlPrefix).release")

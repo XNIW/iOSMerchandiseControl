@@ -6142,6 +6142,349 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(checkpointCalls[1].expectedBaselineScopeKey, checkpoint.scope.key)
     }
 
+    func testActivatedUnfinalizedRecoveryRefreshesChangedCatalogAtUnchangedWatermark() async throws {
+        let fixture = try makeFixture()
+        let oldProduct = localAvailabilityProduct(fixture: fixture)
+        let checkpointA = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "activated-unfinalized-a", products: [oldProduct], prices: [])
+        let firstTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpointA, checkpointA], productRows: [oldProduct])
+        var cancelledAfterActualActivation = false
+        let firstService = makeService(fixture: fixture, transport: firstTransport, progressReporter: { event in
+            guard event.progress.stage == .finalizing, !cancelledAfterActualActivation else { return }
+            cancelledAfterActualActivation = fixture.controller.activeManifest != nil
+            // Interrupt only after the real durable cutover and before its
+            // finalization; do not construct or clear a recovery journal.
+            withUnsafeCurrentTask { $0?.cancel() }
+        })
+        let interrupted = Task { try await firstService.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID) }
+        do {
+            _ = try await interrupted.value
+            XCTFail("The setup must stop after activation and before finalization")
+            return
+        } catch {
+            XCTAssertEqual(error as? Task126OwnerStoreGateError, .cancelled)
+        }
+        XCTAssertTrue(cancelledAfterActualActivation)
+        XCTAssertEqual(firstTransport.counts().checkpoints, 2)
+        XCTAssertEqual(firstTransport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+
+        let reopened = try reopenFixture(fixture)
+        let oldManifest = try XCTUnwrap(reopened.controller.activeManifest)
+        let bindingStore = AccountBindingStore(defaults: reopened.defaults)
+        let oldJournal = try XCTUnwrap(bindingStore.pendingRecoveryJournal)
+        XCTAssertEqual(oldJournal.phase, .activated)
+        XCTAssertEqual(oldJournal.mode, .sameScopeRecovery)
+        XCTAssertEqual(oldJournal.generationID, oldManifest.generationID)
+        XCTAssertEqual(oldJournal.checkpointDigest, oldManifest.checkpoint.checkpointDigest)
+        XCTAssertEqual(oldJournal.watermark, 41)
+        XCTAssertEqual(oldJournal.baselineRunID, oldManifest.baselineRunID)
+        let currentScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults, allowsPendingSameScopeRecovery: true)
+        XCTAssertFalse(try reopened.controller.isActiveRecoveryFinalized(scope: currentScope))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: reopened.recoveryFinalizationURL.path))
+        let oldContext = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try oldContext.fetch(FetchDescriptor<Product>()).compactMap(\.remoteID), [oldProduct.id])
+        XCTAssertEqual(try oldContext.fetchCount(FetchDescriptor<ProductPrice>()), 0)
+        XCTAssertEqual(try oldContext.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        XCTAssertEqual(try oldContext.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+
+        let newProduct = RemoteInventoryProductRow(id: UUID(), ownerUserID: reopened.ownerUserID,
+            shopID: reopened.shopID, barcode: "TASK144-UNCHANGED-WATERMARK-NEW", itemNumber: "new-remote",
+            productName: "New remote product", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: 2,
+            updatedAt: "2026-10-08T15:42:01.000000Z", deletedAt: nil)
+        let products = [oldProduct, newProduct].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let prices = [
+            RemoteInventoryProductPriceRow(id: UUID(), ownerUserID: reopened.ownerUserID,
+                shopID: reopened.shopID, productID: oldProduct.id, type: "retail", price: 12,
+                priceCanonical: "12", effectiveAt: "2026-10-08 15:42:01", source: "TEST_REMOTE_MUTATION",
+                note: nil, createdAt: "2026-10-08 15:42:01", updatedAt: "2026-10-08T15:42:01.000000Z"),
+            RemoteInventoryProductPriceRow(id: UUID(), ownerUserID: reopened.ownerUserID,
+                shopID: reopened.shopID, productID: newProduct.id, type: "retail", price: 25,
+                priceCanonical: "25", effectiveAt: "2026-10-08 15:42:01", source: "TEST_REMOTE_MUTATION",
+                note: nil, createdAt: "2026-10-08 15:42:01", updatedAt: "2026-10-08T15:42:01.000000Z")
+        ].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let checkpointB = try makeCatalogPriceCheckpoint(fixture: reopened, maxEventID: 41,
+            seed: "activated-unfinalized-b", products: products, prices: prices)
+        XCTAssertEqual(checkpointB.scope, oldManifest.checkpoint.scope)
+        XCTAssertEqual(checkpointB.maxEventID, oldManifest.checkpoint.maxEventID)
+        XCTAssertEqual(checkpointB.syncEvents.domainMaxIds, oldManifest.checkpoint.syncEvents.domainMaxIds)
+        XCTAssertNotEqual(checkpointB.catalog.products, oldManifest.localVerification.products)
+        XCTAssertNotEqual(checkpointB.prices, oldManifest.localVerification.prices)
+        let resumeTransport = AtomicRecoveryTestTransport(ownerUserID: reopened.ownerUserID,
+            checkpoints: [checkpointB, checkpointB], productRows: products, priceRows: prices)
+        let summary: SyncRecoverySnapshotPullSummary
+        do {
+            // The ready, full marker DTO comes from B at the unchanged event
+            // watermark. The real adapter must reject it against A's receipt,
+            // then a bounded recovery must obtain and prove a fresh checkpoint.
+            summary = try await makeService(fixture: reopened, transport: resumeTransport)
+                .recoverFromRemoteSnapshot(ownerUserID: reopened.ownerUserID)
+        } catch {
+            let calls = resumeTransport.counts()
+            let retained = bindingStore.pendingRecoveryJournal
+            print("TASK144_ACTIVATED_STALE_MARKER marker-not-verified=\((error as? ShopSyncRecoveryContractError) == .markerNotVerified) old-generation-retained=\(reopened.controller.activeManifest?.generationID == oldManifest.generationID) journal-retained=\(retained == oldJournal) checkpoints=\(calls.checkpoints) pages=\(calls.pages)")
+            XCTFail("An activated unfinalized archive must recover a changed same-scope checkpoint at the same watermark")
+            return
+        }
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertEqual(summary.watermarkAfter, 41)
+        let newManifest = try XCTUnwrap(reopened.controller.activeManifest)
+        XCTAssertNotEqual(newManifest.generationID, oldManifest.generationID)
+        XCTAssertEqual(newManifest.checkpoint.catalog, checkpointB.catalog)
+        XCTAssertEqual(newManifest.checkpoint.prices, checkpointB.prices)
+        XCTAssertEqual(newManifest.localVerification.products, checkpointB.catalog.products)
+        XCTAssertEqual(newManifest.localVerification.prices, checkpointB.prices)
+        XCTAssertEqual(summary.activatedGenerationID, newManifest.generationID)
+        XCTAssertNil(bindingStore.pendingRecoveryJournal)
+        let finalScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults)
+        XCTAssertTrue(try reopened.controller.isActiveRecoveryFinalized(scope: finalScope))
+        let newContext = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(Set(try newContext.fetch(FetchDescriptor<Product>()).compactMap(\.remoteID)), Set(products.map(\.id)))
+        XCTAssertEqual(Set(try newContext.fetch(FetchDescriptor<ProductPrice>()).compactMap(\.remoteID)), Set(prices.map(\.id)))
+        XCTAssertEqual(try newContext.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        XCTAssertEqual(try newContext.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+        XCTAssertGreaterThan(resumeTransport.counts().checkpoints, 0)
+        XCTAssertLessThanOrEqual(resumeTransport.counts().checkpoints, 5)
+        XCTAssertGreaterThan(resumeTransport.counts().pages, 0)
+        XCTAssertLessThanOrEqual(resumeTransport.counts().pages, ShopSyncRecoveryDomain.allCases.count * 2)
+    }
+
+    func testActivatedStaleMarkerRejectsUnchangedContentAndRegressingWatermarks() async throws {
+        for regression in [false, true] {
+            let (fixture, product, manifest, journal) = try await makeActivatedUnfinalizedArchiveFixture()
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture,
+                maxEventID: regression ? 40 : 41, seed: "different-inspection-digest",
+                products: [product], prices: [])
+            XCTAssertNotEqual(checkpoint.checkpointDigest, manifest.checkpoint.checkpointDigest)
+            XCTAssertEqual(checkpoint.catalog, manifest.checkpoint.catalog)
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint], productRows: [product], markerFailure: .markerNotVerified)
+            do {
+                _ = try await makeService(fixture: fixture, transport: transport)
+                    .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTFail("An invalid marker cannot authorize an unchanged or regressing archive")
+            } catch {
+                XCTAssertEqual(error as? ShopSyncRecoveryContractError,
+                    regression ? .checkpointChanged : .markerNotVerified)
+            }
+            XCTAssertEqual(transport.counts().checkpoints, regression ? 2 : 1)
+            XCTAssertEqual(transport.counts().pages, 0)
+            XCTAssertEqual(fixture.controller.activeManifest, manifest)
+            XCTAssertEqual(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal, journal)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+        }
+    }
+
+    func testActivatedStaleMarkerDoesNotRestageAuthenticationLeaseCancellationOrTransportFailures() async throws {
+        for refusal in ["authentication", "lease", "cancelled", "transport", "decoding"] {
+            let (fixture, product, manifest, journal) = try await makeActivatedUnfinalizedArchiveFixture()
+            let transport = AtomicRecoveryTestTransport(
+                ownerUserID: refusal == "authentication" ? UUID() : fixture.ownerUserID,
+                checkpoints: [manifest.checkpoint], productRows: [product],
+                markerMutation: {
+                    switch refusal {
+                    case "lease": AccountBindingStore(defaults: fixture.defaults).clearBinding()
+                    case "cancelled": throw CancellationError()
+                    case "transport": throw URLError(.timedOut)
+                    default: break
+                    }
+                }, rawMarker: refusal == "decoding" ? Data("{}".utf8) : nil)
+            do {
+                _ = try await makeService(fixture: fixture, transport: transport)
+                    .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+                XCTFail("Only typed markerNotVerified may inspect a fresh checkpoint: \(refusal)")
+            } catch {
+                switch refusal {
+                case "authentication": XCTAssertEqual(error as? ShopSyncRecoveryContractError, .authenticationChanged)
+                case "lease": XCTAssertEqual(error as? Task126OwnerStoreGateError, .bindingMismatch)
+                case "cancelled": XCTAssertTrue(error is CancellationError)
+                case "transport": XCTAssertEqual((error as? URLError)?.code, .timedOut)
+                default: XCTAssertFalse((error as? ShopSyncRecoveryContractError) == .markerNotVerified)
+                }
+            }
+            XCTAssertEqual(transport.counts().checkpoints, 0, refusal)
+            XCTAssertEqual(transport.counts().pages, 0, refusal)
+            XCTAssertEqual(fixture.controller.activeManifest, manifest, refusal)
+            XCTAssertEqual(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal, journal, refusal)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path), refusal)
+        }
+    }
+
+    func testActivatedStaleMarkerRejectsJournalReplacementDuringFreshCheckpoint() async throws {
+        let (fixture, product, manifest, journal) = try await makeActivatedUnfinalizedArchiveFixture()
+        let newer = RemoteInventoryProductRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, barcode: "TASK144-JOURNAL-CHANGED", itemNumber: "new",
+            productName: "New remote product", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-10-08T15:42:01.000000Z", deletedAt: nil)
+        let rows = [product, newer].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "changed-journal", products: rows, prices: [])
+        let foreignGeneration = UUID()
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: rows, checkpointMutation: { call in
+                guard call == 1 else { return }
+                XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).recordPendingRecoveryStaging(
+                    accountHash: journal.replacement.accountHash, storeIdentity: journal.replacement.storeIdentity,
+                    deviceIdentityHash: journal.deviceIdentityHash, generationID: foreignGeneration))
+            })
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("The fallback must not adopt another invocation's journal transition")
+        } catch {
+            XCTAssertEqual(error as? AtomicGenerationRecoveryError, .journalTransitionRejected)
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 1)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        let retained = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(retained.generationID, foreignGeneration)
+        XCTAssertEqual(retained.phase, .staging)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+    }
+
+    func testActivatedStaleMarkerDoesNotOverwriteJournalChangedAtOwnedTransition() async throws {
+        let (fixture, product, manifest, journal) = try await makeActivatedUnfinalizedArchiveFixture()
+        let newer = RemoteInventoryProductRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, barcode: "TASK144-OWNED-JOURNAL-CAS", itemNumber: "new",
+            productName: "New remote product", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-10-08T15:42:01.000000Z", deletedAt: nil)
+        let rows = [product, newer].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "owned-journal-cas", products: rows, prices: [])
+        let foreignGeneration = UUID()
+        var injected = false
+        AtomicGenerationRecoverySnapshotPullService.beforeOwnedStagingJournalTransitionForTesting = { injectingScope in
+            guard !injected else { return }
+            injected = true
+            // A real scoped transition at the old compare/mutate boundary.
+            // Journal metadata changes do not renew or invalidate this lease.
+            XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).recordPendingRecoveryStaging(
+                accountHash: journal.replacement.accountHash, storeIdentity: journal.replacement.storeIdentity,
+                deviceIdentityHash: journal.deviceIdentityHash, generationID: foreignGeneration,
+                scope: injectingScope))
+        }
+        defer { AtomicGenerationRecoverySnapshotPullService.beforeOwnedStagingJournalTransitionForTesting = nil }
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: rows)
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            print("TASK144_OWNED_JOURNAL_CAS injected.\(injected) rejected.false old-generation-retained.\(fixture.controller.activeManifest == manifest) pages.\(transport.counts().pages)")
+            XCTFail("A recovery must reject a journal replaced after its outer comparison")
+            return
+        } catch {
+            XCTAssertEqual(error as? AtomicGenerationRecoveryError, .journalTransitionRejected)
+        }
+        XCTAssertTrue(injected)
+        XCTAssertEqual(transport.counts().checkpoints, 1)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        let retained = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(retained.generationID, foreignGeneration)
+        XCTAssertEqual(retained.phase, .staging)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+        print("TASK144_OWNED_JOURNAL_CAS injected.\(injected) rejected.true old-generation-retained.\(fixture.controller.activeManifest == manifest) pages.\(transport.counts().pages)")
+    }
+
+    func testActivatedStaleMarkerRejectsCheckpointBThatReturnsToOldArchive() async throws {
+        let (fixture, product, manifest, _) = try await makeActivatedUnfinalizedArchiveFixture()
+        let newer = RemoteInventoryProductRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, barcode: "TASK144-CHECKPOINT-B-FLOOR", itemNumber: "new",
+            productName: "New remote product", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-10-08T15:42:01.000000Z", deletedAt: nil)
+        let rows = [product, newer].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let changed = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "checkpoint-b-floor", products: rows, prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [changed, manifest.checkpoint], productRows: rows)
+        do {
+            _ = try await makeService(fixture: fixture, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("A validated first checkpoint must not admit a later return to the old archive")
+        } catch {
+            XCTAssertEqual(error as? ShopSyncRecoveryContractError, .markerNotVerified)
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 2)
+        XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        let journal = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(journal.mode, .sameScopeRecovery)
+        XCTAssertEqual(journal.phase, .staging)
+        XCTAssertNotEqual(journal.generationID, manifest.generationID)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+    }
+
+    func testActivatedStaleMarkerFreshRecoveryPreservesExistingDurableLocalOperation() async throws {
+        let (fixture, product, manifest, _) = try await makeActivatedUnfinalizedArchiveFixture()
+        let qualified = await fixture.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        let operation = try saveLocalAvailabilityEdit(fixture: fixture, productID: product.id)
+        let newer = RemoteInventoryProductRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, barcode: "TASK144-PENDING-PRESERVED", itemNumber: "new",
+            productName: "New remote product", secondProductName: nil, purchasePrice: nil,
+            retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-10-08T15:42:01.000000Z", deletedAt: nil)
+        let rows = [product, newer].sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "pending-preserved", products: rows, prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: rows)
+        let summary = try await makeService(fixture: fixture, transport: transport)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertTrue(summary.hasPendingLocalWork)
+        XCTAssertNotEqual(fixture.controller.activeManifest?.generationID, manifest.generationID)
+        XCTAssertEqual(summary.watermarkAfter, 41)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        try await assertLocalAvailabilityEdit(fixture: try reopenFixture(fixture),
+            productID: product.id, operation: operation)
+        XCTAssertGreaterThan(transport.counts().checkpoints, 0)
+        XCTAssertLessThanOrEqual(transport.counts().checkpoints, 5)
+        XCTAssertGreaterThan(transport.counts().pages, 0)
+        XCTAssertLessThanOrEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count * 2)
+    }
+
+    private func makeActivatedUnfinalizedArchiveFixture() async throws -> (
+        AtomicRecoveryFixture, RemoteInventoryProductRow, SyncStoreGenerationManifest, AccountRecoveryJournalSnapshot
+    ) {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "activated-negative-a", products: [product], prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product])
+        var interruptedAfterActivation = false
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            guard event.progress.stage == .finalizing, !interruptedAfterActivation else { return }
+            interruptedAfterActivation = fixture.controller.activeManifest != nil
+            withUnsafeCurrentTask { $0?.cancel() }
+        })
+        let interrupted = Task { try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID) }
+        do {
+            _ = try await interrupted.value
+            XCTFail("The negative setup must stop after the actual durable cutover")
+        } catch { XCTAssertEqual(error as? Task126OwnerStoreGateError, .cancelled) }
+        XCTAssertTrue(interruptedAfterActivation)
+        let reopened = try reopenFixture(fixture)
+        let manifest = try XCTUnwrap(reopened.controller.activeManifest)
+        let journal = try XCTUnwrap(AccountBindingStore(defaults: reopened.defaults).pendingRecoveryJournal)
+        XCTAssertEqual(journal.phase, .activated)
+        XCTAssertEqual(journal.mode, .sameScopeRecovery)
+        XCTAssertEqual(journal.generationID, manifest.generationID)
+        XCTAssertEqual(journal.checkpointDigest, manifest.checkpoint.checkpointDigest)
+        XCTAssertEqual(journal.baselineRunID, manifest.baselineRunID)
+        XCTAssertEqual(journal.watermark, 41)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: reopened.recoveryFinalizationURL.path))
+        return (reopened, product, manifest, journal)
+    }
+
     func testFinalizedMarkerResumesAfterCrashWithoutRemoteEqualityCheck() async throws {
         let fixture = try makeFixture()
         let stable = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "stable")

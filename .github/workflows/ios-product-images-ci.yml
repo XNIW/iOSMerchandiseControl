@@ -226,6 +226,200 @@ jobs:
           compression-level: 0
           include-hidden-files: false
 
+      - name: Export small XCTest failure summary
+        id: xctest_failure_summary
+        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          XCTEST_OUTCOME: ${{ steps.xctest.outcome }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, selectors, signal, subprocess, sys, time
+          from pathlib import Path
+          STDOUT_LIMIT, STDERR_LIMIT = 2 * 1024 * 1024, 64 * 1024
+          ARTIFACT_LIMIT, METADATA_RESERVE = 10 * 1024 * 1024, 64 * 1024
+          MAX_FAILED_LEAVES, EXPORT_TIMEOUT_SECONDS = 4, 20
+          retained_bytes = 0
+          bundle = Path(os.environ['RUNNER_TEMP']) / 'ios-merchandise-control-tests.xcresult'
+          output = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-failure-summary'
+          output.mkdir(parents=True, exist_ok=False)  # Refuse to mix a prior artifact into this budget.
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as actions_output:
+              actions_output.write(f'artifact_directory={output}\n')
+          provenance = {'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                        'repository': os.environ['GITHUB_REPOSITORY'], 'event': os.environ['GITHUB_EVENT_NAME'],
+                        'ref': os.environ['GITHUB_REF'], 'eventSHA': os.environ['GITHUB_SHA'],
+                        'destination': os.environ.get('DEVICE_ID'), 'xctestOutcome': os.environ['XCTEST_OUTCOME'],
+                        'resultBundle': bundle.name, 'exports': [], 'failedTests': [],
+                        'limits': {'stdoutBytesPerExport': STDOUT_LIMIT, 'stderrBytesPerExport': STDERR_LIMIT,
+                                   'artifactBytes': ARTIFACT_LIMIT, 'metadataReservedBytes': METADATA_RESERVE,
+                                   'maxFailedLeaves': MAX_FAILED_LEAVES},
+                        'selectionStatus': 'NOT_PARSED_EXPORTS_PENDING'}
+          digest = hashlib.sha256()
+          with Path('.github/workflows/ios-product-images-ci.yml').open('rb') as source:
+              for chunk in iter(lambda: source.read(65536), b''):
+                  digest.update(chunk)
+          provenance['workflowSHA256'] = digest.hexdigest()
+          def save():
+              provenance['retainedOutputBytes'] = retained_bytes
+              data = (json.dumps(provenance, indent=2) + '\n').encode()
+              if len(data) > METADATA_RESERVE:
+                  provenance['metadataTruncated'] = True
+                  data = (json.dumps({'runId': provenance['runId'], 'runAttempt': provenance['runAttempt'],
+                          'eventSHA': provenance['eventSHA'], 'metadataTruncated': True,
+                          'unretainedMetadataBytes': len(data), 'unretainedMetadataSHA256': hashlib.sha256(data).hexdigest(),
+                          'retainedOutputBytes': retained_bytes, 'exportCount': len(provenance['exports']),
+                          'failedLeafCount': provenance.get('failedLeafCount'),
+                          'omittedFailedLeafCount': provenance.get('omittedFailedLeafCount'),
+                          'selectionStatus': 'NOT_QUALIFIED_METADATA_LIMIT'}) + '\n').encode()
+              assert len(data) <= METADATA_RESERVE
+              (output / 'provenance.json').write_bytes(data)
+          def export(name, argv):
+              global retained_bytes
+              stdout, stderr = output / name, output / (name + '.stderr')
+              result = {'argv': argv, 'stdout': stdout.name, 'stderr': stderr.name,
+                        'timeoutSeconds': EXPORT_TIMEOUT_SECONDS, 'attempted': False,
+                        'hashScope': 'retained-file-bytes'}
+              if retained_bytes >= ARTIFACT_LIMIT - METADATA_RESERVE:
+                  result.update(omitted=True, omissionReason='ARTIFACT_BYTE_BUDGET',
+                                parseStatus='NOT_PARSED_EXPORT_OMITTED', complete=False)
+                  provenance['exports'].append(result)
+                  save()
+                  return False
+              streams = {key: {'retainedBytes': 0, 'observedBytes': 0, 'eof': False,
+                              'truncated': False, 'digest': hashlib.sha256()}
+                         for key in ['stdout', 'stderr']}
+              process, selector = None, selectors.DefaultSelector()
+              deadline = time.monotonic() + EXPORT_TIMEOUT_SECONDS
+              with stdout.open('wb') as out, stderr.open('wb') as err:
+                  try:
+                      process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                                 start_new_session=True)
+                      result.update(attempted=True, childPID=process.pid)
+                      for pipe, key, file, limit in [(process.stdout, 'stdout', out, STDOUT_LIMIT),
+                                                    (process.stderr, 'stderr', err, STDERR_LIMIT)]:
+                          os.set_blocking(pipe.fileno(), False)
+                          selector.register(pipe, selectors.EVENT_READ, (key, file, limit))
+                      while selector.get_map():
+                          remaining = deadline - time.monotonic()
+                          if remaining <= 0:
+                              raise subprocess.TimeoutExpired(argv, EXPORT_TIMEOUT_SECONDS)
+                          for ready, _ in selector.select(remaining):
+                              key, file, limit = ready.data
+                              try:
+                                  chunk = os.read(ready.fd, 65536)
+                              except BlockingIOError:
+                                  continue
+                              if not chunk:
+                                  streams[key]['eof'] = True
+                                  selector.unregister(ready.fileobj)
+                                  continue
+                              stream = streams[key]
+                              stream['observedBytes'] += len(chunk)
+                              keep = min(len(chunk), limit - stream['retainedBytes'],
+                                         ARTIFACT_LIMIT - METADATA_RESERVE - retained_bytes)
+                              if keep:
+                                  file.write(chunk[:keep])
+                                  stream['digest'].update(chunk[:keep])
+                                  stream['retainedBytes'] += keep
+                                  retained_bytes += keep
+                              if keep < len(chunk):
+                                  stream['truncated'] = True  # Continue draining/discarding to EOF/deadline.
+                      result['exitCode'] = process.wait(timeout=max(0, deadline - time.monotonic()))
+                  except subprocess.TimeoutExpired:
+                      result['timedOut'] = True
+                  except OSError as error:
+                      result.update(exitCode=None, errorType=type(error).__name__)
+                  finally:
+                      selector.close()
+                      if process is not None:
+                          try:
+                              os.killpg(process.pid, signal.SIGKILL)
+                          except ProcessLookupError:
+                              pass
+                          try:
+                              result['exitCode'] = process.wait(timeout=1)
+                              result['childReaped'] = True
+                          except subprocess.TimeoutExpired:
+                              result['childReaped'] = False
+                          process.stdout.close()
+                          process.stderr.close()
+              for key, stream in streams.items():
+                  result[key + 'SHA256'] = stream.pop('digest').hexdigest()
+              result['streams'] = streams
+              stdout_complete = streams['stdout']['eof'] and not streams['stdout']['truncated']
+              result['parseStatus'] = 'COMPLETE_STDOUT_AVAILABLE' if stdout_complete else 'NOT_PARSED_INCOMPLETE_STDOUT'
+              result['complete'] = (result.get('exitCode') == 0 and result.get('childReaped') is True
+                                    and not result.get('timedOut') and not result.get('errorType')
+                                    and all(stream['eof'] and not stream['truncated'] for stream in streams.values()))
+              provenance['exports'].append(result)
+              save()
+              return (stdout_complete and result.get('exitCode') == 0 and result.get('childReaped') is True
+                      and not result.get('timedOut') and not result.get('errorType'))
+          save()
+          export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
+          export('toolchain.txt', ['xcodebuild', '-version'])
+          base = ['xcrun', 'xcresulttool', 'get', 'test-results']
+          summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)])
+          tests_ok = export('tests.json', base + ['tests', '--path', str(bundle)])
+          provenance['selectionStatus'] = 'NOT_PARSED_INCOMPLETE_SUMMARY_OR_TESTS'
+          if summary_ok and tests_ok:
+              try:
+                  with (output / 'summary.json').open() as source:
+                      summary = json.load(source)  # Each complete input is bounded by STDOUT_LIMIT.
+                  with (output / 'tests.json').open() as source:
+                      tests = json.load(source)
+                  provenance['failedLeafCount'] = 0
+                  def walk(value, module=None):
+                      if isinstance(value, dict):
+                          if value.get('nodeType') in {'Unit test bundle', 'UI test bundle'}:
+                              module = value.get('name')
+                          if value.get('nodeType') == 'Test Case' and value.get('result') == 'Failed':
+                              provenance['failedLeafCount'] += 1
+                              if len(provenance['failedTests']) < MAX_FAILED_LEAVES:
+                                  if not isinstance(value['nodeIdentifier'], str):
+                                      raise TypeError('Non-string test identifier')
+                                  provenance['failedTests'].append({'id': value['nodeIdentifier'], 'module': module})
+                          for child in value.values():
+                              walk(child, module)
+                      elif isinstance(value, list):
+                          for child in value:
+                              walk(child, module)
+                  walk(tests)
+                  provenance['summaryFailedTests'] = summary['failedTests']
+                  provenance['failureCountMatchesSummary'] = provenance['failedLeafCount'] == summary['failedTests']
+                  provenance['omittedFailedLeafCount'] = provenance['failedLeafCount'] - len(provenance['failedTests'])
+                  provenance['selectionStatus'] = 'PARSED'
+                  save()
+                  for index, case in enumerate(provenance['failedTests'], 1):
+                      for kind in ['test-details', 'activities']:
+                          export(f'failure-{index:03d}.{kind}.json',
+                                 base + [kind, '--path', str(bundle), '--test-id', case['id']])
+              except (KeyError, ValueError, OSError, TypeError, RecursionError) as error:
+                  provenance['selectionErrorType'] = type(error).__name__
+                  provenance['selectionStatus'] = 'NOT_PARSED_SELECTION_ERROR'
+          save()
+          # Diagnostics do not replace the XCTest verdict or the complete bundle.
+          sys.exit(0 if all(item.get('complete') is True for item in provenance['exports'])
+                   and provenance.get('selectionStatus') == 'PARSED'
+                   and not provenance.get('selectionErrorType')
+                   and provenance.get('failureCountMatchesSummary') is True
+                   and provenance.get('omittedFailedLeafCount') == 0
+                   and not provenance.get('metadataTruncated') else 1)
+          PY
+
+      - name: Preserve small XCTest failure summary
+        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') && steps.xctest_failure_summary.outputs.artifact_directory != '' }}
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task144-failure-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.xctest_failure_summary.outputs.artifact_directory }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 9
+          include-hidden-files: false
+
       - name: Analyze
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
