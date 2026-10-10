@@ -206,6 +206,38 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+<!-- TASK144_LANGUAGE_LABEL_EXECUTION_BEGIN -->
+### Esecuzione — 2026-10-10 UTC, etichette della Database montata dopo cambio lingua
+
+**Sintomo e causa:** nella schermata iOS italiana corrente, le tre sezioni Database e i filtri Storefront restano inglesi. La lettura consentita del solo `appLanguage=it` e delle risorse italiane installate esclude risorse mancanti. Il nuovo caso guida le normali Opzioni sul vero App/ContentView/Database: dopo Italiano, la root diventa italiana ma i `ForEach` su enum costanti conservano le stringhe delle etichette precedenti.
+
+**File modificati:**
+- `iOSMerchandiseControl/DatabaseView.swift` — identità del solo gruppo di etichette Picker legata a `resolvedLanguageCode`.
+- `iOSMerchandiseControl/StorefrontAuthoringViews.swift` — osservazione della locale e identità del solo gruppo di pulsanti filtro. Binding, ScrollView, root, editor, query e modelli non ricreati dal fix.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — nuovo caso EN → IT → EN tramite normali Opzioni; tre sezioni e otto filtri, query non vuota, selezione Tutti, riga locale e trasporto trattenuto verificati. Nessun override `-appLanguage`, reset o assert esistente rimosso.
+
+**Azioni ed evidenze:**
+1. Primo tentativo fermo prima della selezione Italiano per tastiera sopra la tab bar: FAIL conservato e classificato come harness, non RED funzionale. Corretto il gesto normale Return e verificata la vera navigazione Options.
+2. RED02 causale sulla produzione invariata: 1 FAIL atteso sulle sezioni inglesi; allegato conferma anche otto filtri inglesi e query conservata. GREEN dello stesso test: 1 PASS, sezioni/filtri italiani e stato conservato. [Evidenze originali](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/red-attempt02/root-adjudication.json).
+3. Review indipendente C: produzione senza finding; CHANGES_REQUESTED per il test che lasciava Italiano persistente. Gruppo adiacente01 originale 20 = 15 PASS / 5 FAIL / 0 SKIP conservato, con successivi casi English contaminati. Aggiunto solo ritorno normale a English e relative verifiche; rimozione del nuovo metodo restituisce byte-esatti tutti gli otto test/helper originari.
+4. Re-review C APPROVED_CODE sul delta finale `candidate-source-02`, patch `f87012328ee6d23c08dc1cc2ccd84f8dc496f12a5d90f3198120add258d197bc`. Produzione byte-esatta rispetto al primo GREEN.
+5. [Adiacente02 finale](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/adjacent-attempt02/root-adjudication.json): 20 PASS / 0 FAIL / 0 SKIP, 9 UI root e 11 LocalizationCoverage; Save/own ACK/replay/cutover/bozza/focus/empty admission e quattro lingue con caratteri grandi coperti dalle fixture esistenti. Non sommare il singolo GREEN agli stessi identifier del gruppo.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza e limiti |
+|---|---|---|
+| Build Debug | ESEGUITO | Compilazione reale nei runner RED/GREEN/adiacente; finale exit 0. |
+| Warning nuovi | ESEGUITO | Nessun warning emesso dalla compilazione dei due file prodotto modificati nel GREEN. Non sostituisce il confronto canonico CI. |
+| Coerenza planning | ESEGUITO | Nuovo P2 concretamente riprodotto, CA-06 localizzazione e CA-10 regressione; tre sole righe prodotto, nessuna dipendenza/API/business/auth/sync/DAO modificata. |
+| Regressioni pertinenti | ESEGUITO | 20 identifier unici PASS nell'adiacente finale; originali FAIL preservati. |
+| Secret scan canonico | ESEGUITO | Comando workflow esatto sui quattro percorsi, exit 0; [receipt](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/canonical-secret-scan-01/receipt.json). |
+| CI full / Analyze sul nuovo SHA | NON ESEGUITO al momento della pubblicazione | Passo successivo del parent, documentato con receipt effettiva nel report aggregato; nessun risultato futuro inventato. |
+| Nuovo Proper TEST / installazione | NON ESEGUITO al momento della pubblicazione | Questo delta cambia Release; occorrono nuovo artefatto e installazione preservativa effettiva. Nessuna equivalenza binaria dedotta. |
+| Collaudo autenticato Android ↔ iOS | NON ESEGUIBILE in questa lane | Fixture isolata non vale staging. Riapertura B fermata prima del gesto dal Mac bloccato; sola richiesta di unlock umano già pendente presso C. ACK propri, peer, offline e prova finale restano aperti. |
+
+**Preservazione:** tutti i runner usano nuovo UUID di proprietà e cache CoW di proprietà, budget 600 s / riserva cleanup 90 s, senza operazioni su 459C/5554. Finale release 01:33:45.799326Z, gruppi/UUID assenti, pins esatti, PID correnti iOS11428/Android3627 invariati. Checkout primario iOS e suoi file stranieri intatti. Planning/CA/Master e storia precedente non modificati; task resta FIX, non DONE.
+<!-- TASK144_LANGUAGE_LABEL_EXECUTION_END -->
+
 ### Esecuzione — 2026-10-08 UTC, recovery activated non finalizzata con checkpoint corrente e journal atomico
 
 **File modificati:**
@@ -1356,6 +1388,12 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+<!-- TASK144_LANGUAGE_LABEL_FIX_BEGIN -->
+### Fix — 2026-10-10 UTC, P2 etichette lingua e isolamento del nuovo test
+
+Identità dipendente dalla lingua soltanto sui due gruppi di etichette; nessuna `.id` su DatabaseView, TabView, root o editor. RED02 e GREEN causali conservati. P2 di isolamento segnalato dalla review corretto soltanto con ritorno English tramite Opzioni e assert del percorso inverso. Finale adiacente20 PASS; gate remoti e nuova consegna Release registrati separatamente dal parent.
+<!-- TASK144_LANGUAGE_LABEL_FIX_END -->
+
 ### Fix — 2026-10-08 UTC, archivio stale e transizioni journal entro lease
 
 Il solo errore tipizzato `markerNotVerified` di una recovery same-scope activated non finalizzata può passare al percorso canonico di staging fresco. Il checkpoint iniziale e ogni successivo checkpoint B devono conservare scope e floor dell'archivio, avere watermark globali/di dominio non regressivi e un cambiamento reale di contenuto o watermark; il solo digest dell'envelope o l'ID di baseline richiesto non basta. Rimangono obbligatori marker, fence, autorizzazione corrente, cancellazione, trasferimento del lavoro locale, cutover e finalizzazione. Archivio già finalizzato mantiene il resume senza RPC; auth/lease/transport/decode e journal estraneo falliscono chiusi. Non viene aggiunto un requisito pending0 né un READY sintetico.
@@ -1411,6 +1449,12 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+<!-- TASK144_LANGUAGE_LABEL_HANDOFF_BEGIN -->
+### Handoff — 2026-10-10 UTC, nuovo delta locale approvato
+
+Freeze finale e patch in [candidate-source-02](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/candidate-source-02/candidate.json); test finale in [adiacente02](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/adjacent-attempt02/root-adjudication.json). Review C APPROVED_CODE, nessun nuovo reviewer/catena. Il parent prosegue commit/PR, CI exact-SHA, merge ordinario, source FF preservativo e nuovo Proper TEST. Non chiudere il task dall'esito delle fixture: sullo scope TEST reale A è presente su Android/server ma non ancora provato su iOS, B è salvato localmente con tre intent pendenti e senza proprio ACK. Mac unlock umano pendente, nessun nuovo W GO/T0 e nessun reset/forzatura READY/SQL condiviso autorizzato da questo delta.
+<!-- TASK144_LANGUAGE_LABEL_HANDOFF_END -->
 
 ### Handoff corrente — 2026-10-08 UTC, fonte48_342f / Atomic136 verificata
 

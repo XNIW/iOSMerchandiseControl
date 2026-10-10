@@ -38,6 +38,7 @@ func resolvedStorefrontScope(
 }
 
 struct StorefrontFilterBar: View {
+    @Environment(\.locale) private var locale
     @Binding var selection: StorefrontListFilter
 
     var body: some View {
@@ -61,6 +62,7 @@ struct StorefrontFilterBar: View {
                     .accessibilityAddTraits(selection == filter ? .isSelected : [])
                     .accessibilityIdentifier("storefront.filter.\(filter.rawValue)")
                 }
+                .id(locale.identifier)
             }
             .padding(.horizontal)
         }

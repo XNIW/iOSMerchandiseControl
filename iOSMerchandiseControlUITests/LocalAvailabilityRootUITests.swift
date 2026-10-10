@@ -307,6 +307,98 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
     }
 
+    func testDatabaseLabelsFollowNormalLanguageChangeWithoutLosingQueryOrFilter() {
+        app.launch()
+        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
+        app.tabBars.buttons["Options"].tap()
+        let english = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "English")).firstMatch
+        for _ in 0..<5 {
+            if english.exists && english.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(english.waitForExistence(timeout: 5)); english.tap()
+        app.tabBars.buttons["Database"].tap()
+        let search = app.textFields.matching(NSPredicate(
+            format: "identifier == %@", "task140.database.root"
+        )).firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap(); search.typeText("LOCAL-ROOT")
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls.buttons["Products"].exists)
+        XCTAssertEqual(app.buttons["storefront.filter.all"].label, "All")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        let before = XCTAttachment(screenshot: app.screenshot())
+        before.name = "Task144 language change: English Database before normal Options input"
+        before.lifetime = .keepAlways
+        add(before)
+
+        // The software keyboard covers the tab bar. Complete the normal
+        // single-line search before navigating; do not tap through its keys.
+        search.typeText("\n")
+        let keyboardHidden = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter.wait(for: [keyboardHidden], timeout: 5), .completed)
+        XCTAssertTrue(app.tabBars.buttons["Options"].isHittable)
+        app.tabBars.buttons["Options"].tap()
+        XCTAssertTrue(app.navigationBars["Options"].waitForExistence(timeout: 5))
+        let italian = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Italiano")).firstMatch
+        for _ in 0..<5 {
+            if italian.exists && italian.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(italian.waitForExistence(timeout: 5)); italian.tap()
+        XCTAssertTrue(app.tabBars.buttons["Opzioni"].waitForExistence(timeout: 5),
+                      "The real root must observe the normal language selection before checking cached labels")
+        app.tabBars.buttons["Database"].tap()
+        let expectedFilters = [("all", "Tutti"), ("published", "Pubblicati"),
+                               ("unpublished", "Non pubblicati"), ("draft", "Bozze"),
+                               ("scheduled", "Programmati"), ("hidden", "Nascosti"),
+                               ("needs_update", "Da aggiornare"), ("conflict", "Con conflitto")]
+        let labels = app.segmentedControls.buttons.allElementsBoundByIndex.map(\.label)
+        let filterLabels = expectedFilters.map { "\($0.0)=\(app.buttons["storefront.filter." + $0.0].label)" }
+        let readback = XCTAttachment(string: "sections=\(labels); filters=\(filterLabels); query=\(search.value ?? "nil")")
+        readback.name = "Task144 actual mounted Database labels after Italian Options selection"
+        readback.lifetime = .keepAlways
+        add(readback)
+        let after = XCTAttachment(screenshot: app.screenshot())
+        after.name = "Task144 language change: Database after Italian selection without relaunch"
+        after.lifetime = .keepAlways
+        add(after)
+
+        XCTAssertEqual(labels, ["Prodotti", "Fornitori", "Categorie"])
+        for (id, title) in expectedFilters {
+            XCTAssertEqual(app.buttons["storefront.filter." + id].label, title)
+        }
+        XCTAssertEqual(search.value as? String, "LOCAL-ROOT")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].exists)
+        assertHeldBoundary()
+
+        // Restore the suite's ordinary English preference through the real UI.
+        // This also verifies the reverse language change without relaunching.
+        app.tabBars.buttons["Opzioni"].tap()
+        for _ in 0..<5 {
+            if english.exists && english.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(english.waitForExistence(timeout: 5)); english.tap()
+        XCTAssertTrue(app.tabBars.buttons["Options"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Database"].tap()
+        XCTAssertEqual(app.segmentedControls.buttons.allElementsBoundByIndex.map(\.label),
+                       ["Products", "Suppliers", "Categories"])
+        let englishFilters = [("all", "All"), ("published", "Published"),
+                              ("unpublished", "Unpublished"), ("draft", "Drafts"),
+                              ("scheduled", "Scheduled"), ("hidden", "Hidden"),
+                              ("needs_update", "Needs update"), ("conflict", "Conflicts")]
+        for (id, title) in englishFilters {
+            XCTAssertEqual(app.buttons["storefront.filter." + id].label, title)
+        }
+        XCTAssertEqual(search.value as? String, "LOCAL-ROOT")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].exists)
+        assertHeldBoundary()
+    }
+
     func testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages() {
         let variants = [
             ("en", "en_US", "Options", "Inventory", "History", "Database", "Cloud account connected"),
