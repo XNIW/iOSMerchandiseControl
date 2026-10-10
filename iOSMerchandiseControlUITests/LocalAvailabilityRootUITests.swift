@@ -307,6 +307,84 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
     }
 
+    func testDatabaseLabelsFollowNormalLanguageChangeWithoutLosingQueryOrFilter() {
+        app.launch()
+        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
+        app.tabBars.buttons["Options"].tap()
+        tapFullyVisibleLanguageOption("English")
+        app.tabBars.buttons["Database"].tap()
+        let search = app.textFields.matching(NSPredicate(
+            format: "identifier == %@", "task140.database.root"
+        )).firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap(); search.typeText("LOCAL-ROOT")
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls.buttons["Products"].exists)
+        XCTAssertEqual(app.buttons["storefront.filter.all"].label, "All")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        let before = XCTAttachment(screenshot: app.screenshot())
+        before.name = "Task144 language change: English Database before normal Options input"
+        before.lifetime = .keepAlways
+        add(before)
+
+        // The software keyboard covers the tab bar. Complete the normal
+        // single-line search before navigating; do not tap through its keys.
+        search.typeText("\n")
+        let keyboardHidden = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter.wait(for: [keyboardHidden], timeout: 5), .completed)
+        XCTAssertTrue(app.tabBars.buttons["Options"].isHittable)
+        app.tabBars.buttons["Options"].tap()
+        XCTAssertTrue(app.navigationBars["Options"].waitForExistence(timeout: 5))
+        tapFullyVisibleLanguageOption("Italiano")
+        XCTAssertTrue(app.tabBars.buttons["Opzioni"].waitForExistence(timeout: 5),
+                      "The real root must observe the normal language selection before checking cached labels")
+        app.tabBars.buttons["Database"].tap()
+        let expectedFilters = [("all", "Tutti"), ("published", "Pubblicati"),
+                               ("unpublished", "Non pubblicati"), ("draft", "Bozze"),
+                               ("scheduled", "Programmati"), ("hidden", "Nascosti"),
+                               ("needs_update", "Da aggiornare"), ("conflict", "Con conflitto")]
+        let labels = app.segmentedControls.buttons.allElementsBoundByIndex.map(\.label)
+        let filterLabels = expectedFilters.map { "\($0.0)=\(app.buttons["storefront.filter." + $0.0].label)" }
+        let readback = XCTAttachment(string: "sections=\(labels); filters=\(filterLabels); query=\(search.value ?? "nil")")
+        readback.name = "Task144 actual mounted Database labels after Italian Options selection"
+        readback.lifetime = .keepAlways
+        add(readback)
+        let after = XCTAttachment(screenshot: app.screenshot())
+        after.name = "Task144 language change: Database after Italian selection without relaunch"
+        after.lifetime = .keepAlways
+        add(after)
+
+        XCTAssertEqual(labels, ["Prodotti", "Fornitori", "Categorie"])
+        for (id, title) in expectedFilters {
+            XCTAssertEqual(app.buttons["storefront.filter." + id].label, title)
+        }
+        XCTAssertEqual(search.value as? String, "LOCAL-ROOT")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].exists)
+        assertHeldBoundary()
+
+        // Restore the suite's ordinary English preference through the real UI.
+        // This also verifies the reverse language change without relaunching.
+        app.tabBars.buttons["Opzioni"].tap()
+        tapFullyVisibleLanguageOption("English")
+        XCTAssertTrue(app.tabBars.buttons["Options"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Database"].tap()
+        XCTAssertEqual(app.segmentedControls.buttons.allElementsBoundByIndex.map(\.label),
+                       ["Products", "Suppliers", "Categories"])
+        let englishFilters = [("all", "All"), ("published", "Published"),
+                              ("unpublished", "Unpublished"), ("draft", "Drafts"),
+                              ("scheduled", "Scheduled"), ("hidden", "Hidden"),
+                              ("needs_update", "Needs update"), ("conflict", "Conflicts")]
+        for (id, title) in englishFilters {
+            XCTAssertEqual(app.buttons["storefront.filter." + id].label, title)
+        }
+        XCTAssertEqual(search.value as? String, "LOCAL-ROOT")
+        XCTAssertTrue(app.buttons["storefront.filter.all"].isSelected)
+        XCTAssertTrue(app.staticTexts["Safe local baseline"].exists)
+        assertHeldBoundary()
+    }
+
     func testRealOptionsAndNavigationRemainReadableAtLargeFontInAllFourLanguages() {
         let variants = [
             ("en", "en_US", "Options", "Inventory", "History", "Database", "Cloud account connected"),
@@ -405,6 +483,50 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
     }
 
+    private func tapFullyVisibleLanguageOption(
+        _ title: String, file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let option = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        let controls = app.buttons["task144.controlled.release"]
+        let navigationBar = app.navigationBars.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(controls.exists, file: file, line: line)
+        XCTAssertTrue(navigationBar.exists, file: file, line: line)
+        XCTAssertTrue(tabBar.exists, file: file, line: line)
+
+        // A partly exposed row can be reported hittable while XCTest chooses
+        // an edge point covered by the fixture's observation controls. Reveal
+        // the whole row through ordinary scrolling before the single tap.
+        for _ in 0..<5 {
+            let top = max(controls.frame.maxY, navigationBar.frame.maxY) + 8
+            let bottom = tabBar.frame.minY - 8
+            var movement: CGFloat = -160
+            if option.exists {
+                let frame = option.frame
+                if frame.minY >= top && frame.maxY <= bottom { break }
+                movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
+            }
+            // A gesture with little or no movement could be interpreted as
+            // a premature tap. Leave an ambiguous row to the guards below.
+            if abs(movement) < 44 { break }
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+                .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
+            start.press(forDuration: 0.05,
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)))
+        }
+        XCTAssertTrue(option.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(option.isHittable, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(option.frame.minY,
+                                   max(controls.frame.maxY, navigationBar.frame.maxY) + 8,
+                                   file: file, line: line)
+        XCTAssertLessThanOrEqual(option.frame.maxY, tabBar.frame.minY - 8, file: file, line: line)
+        let exposed = XCTAttachment(screenshot: app.screenshot())
+        exposed.name = "Task144 fully visible language row before single normal tap: \(title)"
+        exposed.lifetime = .keepAlways
+        add(exposed)
+        option.tap()
+    }
+
     private func assertHeldBoundary(file: StaticString = #filePath, line: UInt = #line) {
         let held = app.staticTexts["task144.controlled.held"].exists
         let released = app.staticTexts["task144.controlled.released"].exists
@@ -454,6 +576,25 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         field.tap()
         let current = field.value as? String ?? ""
         if !current.isEmpty {
+            let keyboard = app.keyboards.firstMatch
+            XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
+            var previousFieldFrame: CGRect?
+            var previousKeyboardFrame: CGRect?
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                let fieldFrame = field.frame
+                let keyboardFrame = keyboard.frame
+                let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
+                previousFieldFrame = fieldFrame
+                previousKeyboardFrame = keyboardFrame
+                return field.isHittable && fieldFrame.height > 0 && keyboardFrame.height > 0
+                    && fieldFrame.maxY < keyboardFrame.minY && stable
+            }, object: field)
+            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed,
+                           "The focused field and visible keyboard must finish repositioning before native selection")
+            let geometry = XCTAttachment(string: "field=\(field.frame); keyboard=\(keyboard.frame)")
+            geometry.name = "Task144 focused field geometry before the single native selection press"
+            geometry.lifetime = .keepAlways
+            add(geometry)
             // Use the native edit menu rather than typing keyboard glyphs or
             // relying on the caret position chosen by a tap in the field.
             field.press(forDuration: 1.1)
