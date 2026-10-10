@@ -206,6 +206,63 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_EXECUTION_BEGIN -->
+### Esecuzione — 2026-10-10 UTC, originali CI e correzioni tecniche della fixture verificate
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — espone interamente la riga lingua prima dell'unico tap; attende la geometria stabile del campo e della tastiera prima dell'unica pressione nativa di selezione.
+- Questo file — append solo Execution/Fix/Handoff; stato FIX, Master/Planning/criteri/Review e snapshot precedenti preservati.
+
+**Azioni eseguite:**
+1. Unico percorso Range autorizzato sullo stesso artifact11656570580/run38013914838: solo tail122475276byte da38518784, HTTP206/Content-Range esatti. Prefisso SHA726570cd invariato; archivio completo160994060byte/SHAfcbf4d36, CRC/path4477entry validi. [Receipt originale](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/pr-ci-01-full-original-range-tail-20261010-01/receipt.json). Vecchia CI1577=1540P/1F/36S rimane FAIL, nessuna rerun invariata.
+2. Gerarchia/evento/video originali qualificano il pannello tecnico sopra Italiano e il tap sul bordo coperto. La prima correzione con swipe completo e710 fallisce la guardia di geometria, prima del tap; originale e cleanup con SIGINT/SIGTERM propri conservati. Drag ordinario bounded6747 passa il mirato; finding C P2 sul movimento minimo risolto107140. Helper finale: massimo5gesture da44 a160pt, guardie visibilità/hittable e timeout5 invariati, una sola selezione, attachment reale.
+3. Adiacente107140 conserva19P/1F/0S: Select All assente al secondo replaceText dopo il primo Save e la riapertura, prima di seconda bozza/cutover. Gerarchia e video originali letti; causa precisa della pressione non strumentata UNKNOWN. Nessun difetto applicativo dedotto da questo limite del test.
+4. Fonte finale UITest197b4fab aggiunge soltanto readiness bounded: tastiera visibile e due CGRect consecutivi identici, campo hittable interamente sopra tastiera. Unica press1.1/SelectAll5s/typeText/fullvalueassert e tutti i corpi dei test originali restano esatti. Review dello stesso C APPROVED_CODE/0finding; nessun nuovo reviewer, refocus/retyping/retry/sleep, assert indebolito, dipendenza o modifica applicativa/config oltre PR22 già revisionata.
+5. Mirato originale su197b:1P/0F/0S62.408s, [adjudicationb32457fe](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/editor-selection-readiness-targeted-attempt01/adjudication/root-adjudication.json). Adiacente finale sulla stessa fonte:20ID esatti=20P/0F/0S,9UI+11localization, [adjudication1cd7afe7](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/editor-selection-readiness-adjacent-attempt01/adjudication/root-adjudication.json). EN→IT→EN/query/section/filter/seed,4lingue-largefont, Save/draft/cutover/focus/ownACK controllati passano. Non sommare il mirato ai20.
+6. Exit0/ownPG54666gone/UUID proprio eliminato, release20:57:25.439062UTC; exportgroupsgone20:58:08.162925UTC. Sorgente/config congelati esatti e PIDs iOS11428/guestAndroid3627 invariati;0input/install/reset sui target correnti. Originali e hash dei due casi esportati, non prova live.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build Debug e test pertinenti | ESEGUITO / PASS | Compilazione del nuovo helper e20ID ufficiali finali PASS su proprio iPhone16e/iOS26.2. |
+| Analyze / full canonico / scan sul commit finale | NON ESEGUITO, PENDING CI | CI standard sul nuovo SHA dopo il commit selettivo; vecchio FAIL non promosso. |
+| Warning nuovi | ESEGUITO nel delta locale | Nessun nuovo warning Swift; metadata AppIntents preesistente nel mirato. Gate CI finale ancora pendente. |
+| Coerenza con planning | ESEGUITO | CA10/11 e addendum umano: originali→meccanismo tecnico osservato→delta minimo→review→test finali; nessun cambio delle assertions business. |
+| Criteri globali / chiusura | NON ESEGUITO integralmente | CI/merge/Proper/install nuovi pendenti; ownACK e peer autenticati/cutover/offline/QA globale/performance restano distinti. FIX/NON DONE. |
+
+**Baseline regressione:**20ID pertinenti invariati, nessun test rimosso/indebolito e nessun nuovo skip. Android TASK004 N/A per questo delta soloUITest iOS; il full canonico ufficiale resta necessario.
+
+**Incertezze:** causa esatta della precedente pressione SelectAll non registrata; nuova barriera verificata nel test, non accettazione cloud. A Android e B iOS riaperti con copie locali intatte; B3pending senza proprio ACK. Vecchio Mac unlock non è il blocco attuale.
+
+**Handoff notes:** commit/push ordinario dei soli UITest+Task; CI exact-SHA nuova, poi Proper TEST/merge/mainCI/sourceFF/install preservativo soltanto dopo prove reali. Nessun nuovo native SaveA/B/Retry, SQL/DDL/cron/deploy o GO W dal checkpoint C04 ritirato.
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_EXECUTION_END -->
+
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_EXECUTION_BEGIN -->
+### Esecuzione — 2026-10-10 UTC, esito originale PR22 e due confronti parametrizzati
+
+**File modificati:** questo solo file, append in Execution/Fix/Handoff. Log locale fuori index, senza nuovo push dello stesso source per far ripartire la CI. I tre file prodotto/test restano byte-esatti al commit `0dc3e38204670d5edf8e980a3e9db72f1d23c28f`.
+
+**Azioni e risultati:** PR22 pubblicata e allegata; CI38013914838 sullo SHA esatto: 1577 = 1540 PASS / 1 FAIL / 36 SKIP. Tutti i 1576 identifier/stati precedenti e le 36 motivazioni SKIP sono esatti; fallisce soltanto il nuovo caso lingua, prima delle assertions delle etichette: dopo tap Italiano non appare Opzioni entro 5 s. La causa resta UNKNOWN. Gli originali ufficiali small sono completi con provenance, sei export, digest/CRC e owner rilasciato. La sola acquisizione full è terminata per timeout dopo 240 s: ZIP parziale conservata, screenshot/gerarchia NON LETTI, nessun redownload o limite aumentato.
+
+Due sole domande ulteriori con source e test invariati: stesso caso su nuovo iPhone16e/26.1, poi stesso modello con 26.2/build23C54 come CI. Entrambi 1 PASS; i casi si sovrappongono al gruppo di 20, non sono nuovi identifier da sommare. L'errore CI non è riprodotto. Compiler CI Xcode26.6/build17F113, locale Xcode27.0/build27A266a: distinto dal runtime26.2 comune. Una precedente descrizione della versione compiler è corretta nel record separato senza alterare gli originali.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build Debug CI | ESEGUITO / PASS | Step ufficiale sullo SHA esatto. |
+| XCTest completo CI | ESEGUITO / FAIL | 1540P/1F/36S; nessuna rerun invariata o assert indebolito. |
+| Analyze / scan CI | NON ESEGUITO | SKIPPED dopo il FAIL full; scan locale precedente distinto. |
+| Nuovi warning del delta documentale | N/A | Nessun source/config/resorsa modificato dopo il FAIL CI. |
+| Coerenza planning | ESEGUITO | Esiti reali e limiti registrati; nessun fix ipotetico o nuova dipendenza. |
+| Criteri di accettazione globali | NON ESEGUITO integralmente | CI FAIL; merge/Proper/installazione nuova non eseguiti; own ACK/peer/cutover/offline/reopen reali restano aperti. |
+
+**Preservazione:** ultimo owner SDK rilasciato 02:25:00.511413Z, gruppi e due UUID propri assenti, source/test esatti, PID correnti iOS11428 e Android3627 invariati. Nessun input/install sui target correnti; richiesta umana Mac unlock già pendente, senza duplicazione. Stato task FIX invariato; Master/Planning/CA/Review e testo storico intatti.
+
+**Evidenze:** [CI originale](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/pr-ci-01/root-adjudication-before-media.json), [confronto runtime26.2](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/compact-runtime26_2-attempt01/root-adjudication.json), [correzione metadata](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/toolchain-metadata-correction.json).
+
+**Preparazione reader corretta separatamente (offline):** il nuovo lettore accetta la forma con Data/Info.plist alla root oppure una cartella xcresult esterna e normalizza solo dopo size/digest ufficiali completi, CRC e path safety. Nove verifiche pure PASS: le due forme valide e rifiuto della partial originale, radici miste, traversal, symlink, digest errato, central directory incompleta e CRC errato. Limiti invariati; zero rete/SDK/source-test writes, vecchio producer e acquisizione FAIL/partial byte-esatti. Entrypoint di nuova acquisizione disabilitato: nessuna ripetizione automatica. [Receipt reader offline](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/archive-reader-offline-validation-01/receipt.json). Queste prove non validano l'originale full CI, che rimane assente localmente; causa del test CI UNKNOWN.
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_EXECUTION_END -->
+
 <!-- TASK144_LANGUAGE_LABEL_EXECUTION_BEGIN -->
 ### Esecuzione — 2026-10-10 UTC, etichette della Database montata dopo cambio lingua
 
@@ -1388,6 +1445,18 @@ Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 a
 
 ## Fix
 
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_FIX_BEGIN -->
+### Fix — 2026-10-10 UTC, fixture lingua e selezione nativa
+
+Il test lingua espone la riga completa attraverso scrolling ordinario prima del solo tap. Il helper condiviso replaceText aspetta campo/tastiera stabili prima della stessa singola pressione nativa. Fonte197b4fab APPROVED_CODE/0finding e adiacente20P/0F/0S qualificata; selezione completa, Save/bozza/cutover/focus/ownACK controllati intatti. Nessun cambio ulteriore al codice prodotto o ai timeout/assert originali. FAIL storici originali conservati; task FIX, acceptance autenticata ancora aperta.
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_FIX_END -->
+
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_FIX_BEGIN -->
+### Fix — 2026-10-10 UTC, confine dopo CI FAIL
+
+Nessuna patch prodotto/test applicata dopo il nuovo FAIL CI non riprodotto. I PASS parametrizzati locali mantengono il fix già approvato, senza qualificare la CI fallita o attribuire una causa al gesto/root. L'originale remoto e il timeout locale restano esiti distinti.
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_FIX_END -->
+
 <!-- TASK144_LANGUAGE_LABEL_FIX_BEGIN -->
 ### Fix — 2026-10-10 UTC, P2 etichette lingua e isolamento del nuovo test
 
@@ -1449,6 +1518,18 @@ R-I03 (P2): errore e timestamp derivano dal risultato canonico corrente; scope v
 R-I01 (P1): due test rossi hanno riprodotto ricevuta A non consolidata prima di leggere C. Il batch distingue ricevuta e stato corrente, consolida atomicamente A, ribasa B su A prima del conflitto e rende la base disponibile all'editor; retry identico adotta C, delta solo prezzo preserva nome C al reapply. Errore disco conserva l'intent precedente. Guardia finale scope protegge anche readback che termina offline dopo cambio shop. Re-review limitata APPROVED;46 unit + 4 UI finali PASS.
 
 ## Handoff
+
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_HANDOFF_BEGIN -->
+### Handoff — 2026-10-10 UTC, candidata finale verificata prima della nuova CI
+
+Questo snapshot prevale sui limiti delle append precedenti: originale full CI0dc3 recuperato con una sola tailRange e integrità qualificata; rootcause del tap lingua coperto provata. Nuova fonteUITest197b4fab review APPROVED_CODE e20ID finali tuttiPASS; owner/exportgroups rilasciati, app/dati correnti intatti. Commit selettivo e CI standard sul nuovo SHA sono il prossimo gate; nessun merge/Proper/install futuro dichiarato PASS. OwnACK/peer/cutover/offline/QA globale/performance restano aperti. N unico owner nativo, C solo2doccentrali; C04 precedente withdrawn senza GO, nessuna finestra W attiva dedotta.
+<!-- TASK144_REVIEWED_FIXTURE_FINAL_HANDOFF_END -->
+
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_HANDOFF_BEGIN -->
+### Handoff — 2026-10-10 UTC, PR22 senza merge e acceptance aperta
+
+PR22 resta senza merge: CI38013914838 FAIL, Analyze/scanCI SKIPPED, nuovo Proper TEST / installazione NON ESEGUITI. Il prossimo intervento sul codice richiede una differenza osservabile che spieghi il primo errore, mantenendo assertions e originali. Nessuna nuova ripetizione dello stesso caso/CI per cercare verde. Il reader full preparato supponeva una cartella xcresult contenitrice ma il primo header della ZIP parziale ha Data alla root; estrazione non attraversata, non riusare quell'assunzione. Sul TEST corrente A remoto/Android presente, B locale con tre intent pending, own ACK/peer/reopen non conclusi; serve lo sblocco manuale già richiesto per riprendere l'input ordinario. Nessun W GO o T0; FIX/NON DONE. Questa append documentale resta locale fuori index, pronta a seguire un delta effettivo senza un nuovo push del source invariato.
+<!-- TASK144_LANGUAGE_LABEL_CI_RESULT_HANDOFF_END -->
 
 <!-- TASK144_LANGUAGE_LABEL_HANDOFF_BEGIN -->
 ### Handoff — 2026-10-10 UTC, nuovo delta locale approvato

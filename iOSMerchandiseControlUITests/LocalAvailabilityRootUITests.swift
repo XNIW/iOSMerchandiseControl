@@ -311,12 +311,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         app.tabBars.buttons["Options"].tap()
-        let english = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "English")).firstMatch
-        for _ in 0..<5 {
-            if english.exists && english.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(english.waitForExistence(timeout: 5)); english.tap()
+        tapFullyVisibleLanguageOption("English")
         app.tabBars.buttons["Database"].tap()
         let search = app.textFields.matching(NSPredicate(
             format: "identifier == %@", "task140.database.root"
@@ -341,12 +336,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Options"].isHittable)
         app.tabBars.buttons["Options"].tap()
         XCTAssertTrue(app.navigationBars["Options"].waitForExistence(timeout: 5))
-        let italian = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Italiano")).firstMatch
-        for _ in 0..<5 {
-            if italian.exists && italian.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(italian.waitForExistence(timeout: 5)); italian.tap()
+        tapFullyVisibleLanguageOption("Italiano")
         XCTAssertTrue(app.tabBars.buttons["Opzioni"].waitForExistence(timeout: 5),
                       "The real root must observe the normal language selection before checking cached labels")
         app.tabBars.buttons["Database"].tap()
@@ -377,11 +367,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // Restore the suite's ordinary English preference through the real UI.
         // This also verifies the reverse language change without relaunching.
         app.tabBars.buttons["Opzioni"].tap()
-        for _ in 0..<5 {
-            if english.exists && english.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(english.waitForExistence(timeout: 5)); english.tap()
+        tapFullyVisibleLanguageOption("English")
         XCTAssertTrue(app.tabBars.buttons["Options"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Database"].tap()
         XCTAssertEqual(app.segmentedControls.buttons.allElementsBoundByIndex.map(\.label),
@@ -497,6 +483,50 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
     }
 
+    private func tapFullyVisibleLanguageOption(
+        _ title: String, file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let option = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        let controls = app.buttons["task144.controlled.release"]
+        let navigationBar = app.navigationBars.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(controls.exists, file: file, line: line)
+        XCTAssertTrue(navigationBar.exists, file: file, line: line)
+        XCTAssertTrue(tabBar.exists, file: file, line: line)
+
+        // A partly exposed row can be reported hittable while XCTest chooses
+        // an edge point covered by the fixture's observation controls. Reveal
+        // the whole row through ordinary scrolling before the single tap.
+        for _ in 0..<5 {
+            let top = max(controls.frame.maxY, navigationBar.frame.maxY) + 8
+            let bottom = tabBar.frame.minY - 8
+            var movement: CGFloat = -160
+            if option.exists {
+                let frame = option.frame
+                if frame.minY >= top && frame.maxY <= bottom { break }
+                movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
+            }
+            // A gesture with little or no movement could be interpreted as
+            // a premature tap. Leave an ambiguous row to the guards below.
+            if abs(movement) < 44 { break }
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+                .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
+            start.press(forDuration: 0.05,
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)))
+        }
+        XCTAssertTrue(option.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(option.isHittable, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(option.frame.minY,
+                                   max(controls.frame.maxY, navigationBar.frame.maxY) + 8,
+                                   file: file, line: line)
+        XCTAssertLessThanOrEqual(option.frame.maxY, tabBar.frame.minY - 8, file: file, line: line)
+        let exposed = XCTAttachment(screenshot: app.screenshot())
+        exposed.name = "Task144 fully visible language row before single normal tap: \(title)"
+        exposed.lifetime = .keepAlways
+        add(exposed)
+        option.tap()
+    }
+
     private func assertHeldBoundary(file: StaticString = #filePath, line: UInt = #line) {
         let held = app.staticTexts["task144.controlled.held"].exists
         let released = app.staticTexts["task144.controlled.released"].exists
@@ -546,6 +576,25 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         field.tap()
         let current = field.value as? String ?? ""
         if !current.isEmpty {
+            let keyboard = app.keyboards.firstMatch
+            XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
+            var previousFieldFrame: CGRect?
+            var previousKeyboardFrame: CGRect?
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                let fieldFrame = field.frame
+                let keyboardFrame = keyboard.frame
+                let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
+                previousFieldFrame = fieldFrame
+                previousKeyboardFrame = keyboardFrame
+                return field.isHittable && fieldFrame.height > 0 && keyboardFrame.height > 0
+                    && fieldFrame.maxY < keyboardFrame.minY && stable
+            }, object: field)
+            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed,
+                           "The focused field and visible keyboard must finish repositioning before native selection")
+            let geometry = XCTAttachment(string: "field=\(field.frame); keyboard=\(keyboard.frame)")
+            geometry.name = "Task144 focused field geometry before the single native selection press"
+            geometry.lifetime = .keepAlways
+            add(geometry)
             // Use the native edit menu rather than typing keyboard glyphs or
             // relying on the caret position chosen by a tap in the field.
             field.press(forDuration: 1.1)
