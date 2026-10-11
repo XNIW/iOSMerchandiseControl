@@ -598,7 +598,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 }
                 return hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
                     && fieldFrame.maxY < keyboardFrame.minY && stable
-            }, object: field)
+            }, object: nil)
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
             let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count))\n" + readinessSamples.joined(separator: "\n"))
             readiness.name = "Task144 existing readiness predicate observations before assertion"

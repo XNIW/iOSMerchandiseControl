@@ -206,6 +206,35 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-11 — contesto diagnostico della readiness XCTest
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — solo `object: field` → `object: nil` nella expectation di `replaceText`; la closure cattura già field/keyboard e non usa gli argomenti del predicato.
+- Questo file task — evidenza della nuova CI fallita e verifica del candidato; Planning, criteri e stato FIX invariati.
+
+**Azioni eseguite:**
+1. CI normale `38157876293`, attempt1, HEAD `66a7bdfc1a65668e21fc48665e9c2cf273bcd615`: 1.577 test distinti, 1.540 PASS / 1 FAIL / 36 SKIP; UI 16 PASS / 1 FAIL. Build Debug PASS; Analyze e Secret scan SKIPPED. FAIL esclusivo: `testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover`, sulla seconda readiness prima della modifica non salvata.
+2. Originale completo ufficiale CRC/path verificato (4.485 entries), export dello stesso solo caso fallito qualificato: 25 file / 18.264.996 byte; nessun nuovo test per ottenere gli allegati. Seconda readiness: una sola valutazione, campo `(32,486.6666666666667,326,22)`, tastiera `(0,553,390,233)`, hittable=true, tutte condizioni geometriche vere, stable=false con precedenti nil. Prima readiness: due valutazioni, stable=false poi true. Gli snapshot diagnostici impliciti dell'oggetto XCUIElement compaiono nelle activity originali; non sono disponibili durate CPU.
+3. Candidato minimo: elimina solo il contesto object inutilizzato della expectation. Mantiene tre query SDK reali e ordine, precedenti nil, due campioni reali stabili, predicato, timeout5s, press1.1s, Select All, verifica completa del testo e asserzioni Save/cutover/ACK. Nessun refocus, retype, sleep, seed delle geometrie o rilassamento.
+4. Review C stessa catena APPROVED_AS_MINIMAL_NULL_DIAGNOSTIC_CONTEXT_CANDIDATE_AND_ONE_OWNED_NINE_CLASS_VALIDATION. Una sola esecuzione Root9, stesso ordine originale, fixture propria iPhone16e/iOS26.2, budget900s/reserve90: ricevuta ufficiale `readiness-null-context-nine-root-tests-20261011-01/adjudication/receipt.json`, SHA `09bbe396d7cd60ae8bb48c969641776c4b99ab51f005d0e6dd97676517170d9e`, 9 ID distinti PASS / 0 FAIL / 0 SKIP, 211 pin esatti prima/dopo, 14 export / 1.066.194 byte. PID primari11428/3627 invariati, UUID eliminato, PG25418 e collector assenti. Target release18:22:30.903952UTC; overall SDK release18:22:52.646113UTC, entrambe entro deadline.
+5. `readiness-null-context-local-effect-adjudication-20261011.json`, SHA `a8909ff8a7a789bbaecd208d1d1c72ba4acfcd003658ac9f8624d597ae6160d5`: tutte4readiness completate con due letture reali/stablefalse→true, ultimi due frame uguali/campo sopra tastiera/hittabletrue. Tutte asserzioni originali passate. Il PASS9 è sovrapposto ai run precedenti e non va sommato. Log build completo SHA `953d2d00030cd68c54cf80243845edbd8acd6cc5c4b51e7e642594082bf4d258`: zero warning/error sui tre source pertinenti.
+6. Scan canonico della singola riga aggiunta: PASS, `readiness-null-context-new-line-sensitive-scan-20261011-01/receipt.json`, SHA `21da832fdb9f61aeff71d5a410eb9ede9b58995136f5363fbea2d399dbc89c43`, JSON/MD/log completi. Fullscope FAIL storico per sola email sintetica preesistente invariato; nessuna esenzione. CI canonica finale del nuovo candidato ancora NON ESEGUITA, attesi1577ID/1541PASS/0FAIL/36stessiSKIP/17UI e Analyze. Pubblicazione normale selettiva dei soli UI+Task dopo qualificazione/review locale; nessun nuovo workflow o dispatch.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug | ✅ ESEGUITO | Run Root9 sulla UI finale247b17d5, official9PASS. |
+| Analyze / scan | ❌ NON ESEGUITO Analyze; ✅ ESEGUITO scan delta | Analyze atteso dalla CI finale. Scan della nuova riga PASS21da832f; il match sintetico preesistente fullscope resta separato. |
+| Warning nuovi | ✅ ESEGUITO locale | Log completo zero warning/error nei tre source pertinenti; compiler CI ancora da verificare. |
+| Coerenza con planning | ✅ ESEGUITO | Delta test-only per nuova regressione CI concreta CA-10; nessuna modifica runtime. |
+| Criteri di accettazione | ❌ NON ESEGUITO | Task FIX; CI finale e prove native autenticate restano aperte. |
+
+**Incertezze:**
+- `INCERTEZZA:` object nil è API nullable supportata; due valutazioni e completamento sono ora osservati localmente; la causa CPU non è provata e CI26.6 deve ancora qualificare il delta.
+
+**Handoff notes:**
+- Pacchetto `readiness-null-context-preparation-20261011-01`, originale CI `known-ACK-CI-full-original-connector-copy-20261011-01`, export `known-ACK-CI-saved-draft-original-export-20261011-01`. Review indipendente stessa catena e slot SDK coordinato eseguiti; N0SDK/input/heavy dopo18:22:52, comunicato a W. Nuova CI/review del risultato prima del merge. Nessuna nuova Save A/B, Retry nativa, modifica DB/backend o DONE.
+
 ### Esecuzione — 2026-10-11, correzione tecnica viewport del solo originale ACK001
 
 **Stato:** FIX / NON DONE; nuova CI canonica e acceptance nativa ancora pendenti. Nessuna causa attribuita agli altri tre failure originali.
