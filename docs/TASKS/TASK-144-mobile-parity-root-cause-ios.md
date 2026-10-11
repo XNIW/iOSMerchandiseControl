@@ -206,6 +206,69 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-11, correzione tecnica viewport del solo originale ACK001
+
+**Stato:** FIX / NON DONE; nuova CI canonica e acceptance nativa ancora pendenti. Nessuna causa attribuita agli altri tre failure originali.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — nel solo test ACK001, un normale swipe sul CollectionView contenente Name prima dell'unico tap di focus. L'ancestor reale è verificato nell'originale CI; nessun retry/refocus/retype, timeout o asserzione modificati. I tre file osservativi e il precedente log restano inclusi nel medesimo delta.
+- Questo file — aggiunta solo Execution; Planning, criteri, Master e sezioni storiche preservati.
+
+**Azioni eseguite:**
+1. C, stessa catena, ha verificato patch `da964532` e runner `8422b5aa`: APPROVED_AS_KNOWN001_VIEWPORT_FIXTURE_CANDIDATE. Un solo run mirato sul test modificato, con namespace/UUID posseduto e sorgenti congelati; nessuna modifica alle primarie o ai dati utente.
+2. Ricevuta ufficiale `original-ACK-viewport-scroll-target-20261011-01/adjudication/receipt.json`, SHA `e1dc247e6c399b80057c410dd801288c4ff1284feb83dc1e401736795b683e70`: 1 ID unico PASS / 0 FAIL / 0 SKIP; tre allegati 1.977 byte, 211 pin source esatti prima/dopo. PID iOS11428/Android3627 invariati, target cleanup16:33:39.070004UTC, release SDK complessiva16:34:12.272154UTC. Il PASS1 si sovrappone alla precedente classe9: non sono10test distinti.
+3. Adjudication effetto `original-ACK-viewport-scroll-effect-adjudication-20261011.json`, SHA `b32be843277fdad50bb672b9b864b53e3e8991c3fd80dff8813afc9ccca69311`: swipe reale, unico Name tap14.92s; campo y480/maxY502 sopra tastiera553, hittabletrue, stablefalse→true. Full value/Save/ownACK/independent history/replay immutabile positivi e negativi originali PASS. Il default SDK ha gestito una banner notification: nessun handler/dismiss/wait applicativo aggiunto.
+4. C ha qualificato APPROVED_AS_LOCALLY_VALIDATED_KNOWN001_VIEWPORT_FIXTURE_CANDIDATE. Nessun nuovo run9/full locale per soli allegati. La CI sul codice cambiato deve conservare17UI e1.577ID (atteso1.541PASS/0FAIL/36stessiSKIP e motivazioni), contratti/workflow/permessi invariati; static contract `8654f7bf`.
+5. Wrapper statico fullscope: i tentativi precedenti restano FAIL senza verdict scanner; la derivazione del nome report dall'intero argv supera PC_NAME_MAX255. Usata soltanto l'opzione esistente MC_CMD_SLUG breve nel child, mantenendo tutti7argomenti e tre Swift espliciti. Nessuna patch tooling/config privata/SDK/auth/host. Il run corretto produce JSON/MD/log e resta **FAIL**, ricevuta `2ccaac81`: unico match email sintetica preesistente `.example.invalid` nella fixture, riga364 byte-identica a HEAD (SHA riga `afa30fa4`). Nessuna esenzione o riscrittura della fixture per ottenere verde. Il PASS precedente a4argomenti copre solo il perimetro canonico directory, non questi Swift.
+6. Canonical scanner su tutte19righe source aggiunte: **PASS**, ricevuta `known-ACK-new-lines-sensitive-scan-20261011-01/receipt.json`, SHA `5379726a4cbe0ac45d68ef8026777e729d41c31e6b31782e663f0b816c6d3c83`. Questo attesta assenza di nuovi match nel delta e non promuove il fullscope FAIL a PASS.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build Debug | ESEGUITO | Run mirato1 PASS sulla versione finale source; precedente9PASS distinto. |
+| Lint / Analyze | NON ESEGUITO | Atteso dalla normale nuova CI sul commit finale. |
+| Warning nuovi | ESEGUITO nel build locale | Nessun warning/error nuovo sui tre source modificati; compiler CI diverso ancora da verificare. |
+| Coerenza planning | ESEGUITO | Unica correzione tecnica supportata dall'originale001; diagnostica preserva guard/throw/query/state e altri8corpi. |
+| Criteri accettazione | NON ESEGUITO per chiusura | CI completa e liveA/B/convergenza/QA/performance restano aperti. |
+
+**Baseline regressione:** stesso singolo ID ACK001 con tutte le asserzioni originali; nessun test aggiunto/rimosso/skip.17UI e source unit/workflow/contratti invariati.
+
+**INCERTEZZA:** PASS locale non prova cause002/003/004 o compiler CI26.6; non è acceptance autenticata. Scan fullscope FAIL sintetico preesistente preservato, controllo delta PASS distinto.
+
+**Handoff:** autorizzata pubblicazione normale selettiva dei soli4path sul branch/PR22 esistenti dopo review/static; merge/install sono gated dalla qualificazione CI finale. Nessun nuovo Save A/B, Retry o write SQL. N0SDK/input dopo release16:34:12; W/C04 prioritario su sblocco umano. Master e task restano FIX.
+
+### Esecuzione diagnostica — 2026-10-11, originali CI e singola candidata osservativa
+
+**Stato:** FIX / NON DONE. La CI canonica38085914191/head eb9754e2 rimane FAIL1537PASS/4FAIL/36stessiSKIP. Questa diagnosi locale non chiude il task o la causa CI.
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift` — solo DEBUG: otto confronti booleani fra CURRENT/EXPECTED già catturati nella registrazione esistente del guard; nessun guard, throw, lease, capture o business logic cambiato.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — il valore accessibility del controllo esistente conserva automaticReadback come prefisso e aggiunge il getter RAM bounded128 già esistente; nessuna query, pubblicazione o nuova famiglia diagnostica.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — campioni bounded64 dei frame/stable/isHittable già letti dal predicato; attachment prima dell'asserzione, stessi timeout5s/press1.1s/select/type/assert e corpi dei nove test invariati.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — solo questo log Execution.
+
+**Azioni eseguite:**
+1. Recuperato originale ufficiale corrente220179964byte/SHAf57d8f46, CRC/path safety4539entry; preservati tre tentativi parziali terminali. Esportati69allegati/ottoframe originali. Caso001 nomey655 contro tastiera553; casi002/004 componente readinessUNKNOWN; caso003 scope-changed/stageheld-recovery prima del gesto invalidazione.
+2. Unico lettore console originale revisionato: FAILrc1/stdout0, errore SDK chiuso “No console log available” qualificato dal match integrale32byte/SHAstderr7edd4c9b. Nessun retry, assenza non equivale a nessun evento.
+3. Review C stessa catena APPROVED_AS_OBSERVATIONAL_CANDIDATE sul patch7c393f2c; applicati solo tre hunk, altri208file source byte-esatti. Una sola prova della classe originale9, nello stesso ordine START della CI, su UUID posseduto iPhone16e/iOS26.2/Xcode27; nessun input/install/reset sul target utente.
+4. [Ricevuta ufficiale](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/original-failures-diagnostic-nine-root-tests-20261011-01/adjudication/receipt.json)9afbb1b7:9PASS/0FAIL/0SKIP, ID e ordine9 esatti, source211 prima/dopo esatti, PID utenti11428/3627 invariati. Cleanup VM/PG7286 concluso16:13:28.718200UTC; collector bounded6SDK/PG8654 rilasciato16:17:29.093675UTC. Nessun nuovo rerun, CI dispatch, merge o Proper TEST.
+5. [Osservazioni](/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/nine-root-local-readiness-observations-20261011.json): quattro sostituzioni raccolgono due campioni, y486.6667/maxY508.6667 sopra tastiera553, hittabletrue e stablefalse→true. Nessun RED locale; componenti originali002/004 e guard originale003 restanoUNKNOWN. Caso003 locale PASS senza witness RAM esportato: NOT_OBSERVED, non “nessun mismatch”. Le condizioni pure sui frame non provano che ogni termine short-circuit sia stato valutato.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build Debug | ESEGUITO | Singolo xcodebuildtest exit0/TEST SUCCEEDED, source candidata esatta; non compiler CI26.6. |
+| Lint / Analyze | NON ESEGUITO | Gate finale del futuro fix funzionale ancora da eseguire; nessun N/A o PASS dedotto. |
+| Warning nuovi | ESEGUITO nel build locale | Zero warning/error sulle tre sorgenti modificate nel log completo. |
+| Coerenza planning | ESEGUITO | Diagnosi nel medesimo task/mandato, review stessa catena, nessuna modifica funzionale/speculativa o nuova dipendenza. |
+| Criteri accettazione | NON ESEGUITO per chiusura finale | CI4FAIL e prove native autenticate/parità/performance ancora aperte; le evidenze precedenti per CA restano distinte. |
+
+**Baseline regressione:** sola classe RootUITests9, nessun test nuovo/rimosso/indebolito; prova controllata di input, Save/ACK/history, empty/fence/callback, quattro lingue/largefont e draft/cutover. Non è full canonico né accettazione live; i9 sovrapposti non si sommano alle suite storiche.
+
+**INCERTEZZA:** nessuna causa CI dedotta dal PASS locale; originale001 giustifica valutare un normale scroll tecnico del Form, mentre gli altri componenti richiedono prova. Nessun cambio production recovery o timeout.
+
+**Handoff:** main/primarie e loro modifiche straniere preservate, HEADworktree eb9754e2 con tre soli file osservativi e questo log dirty. A/B conservano il singolo Save esistente; ownACK/peer/cutover/offline/QA/perf nativi restano aperti. C04 finale FAIL sessione scaduta, fence ARMED/UI recovery pending; release complessiva N16:17:29 comunicata al proprietario W.
+
 <!-- TASK144_REVIEWED_FIXTURE_FINAL_EXECUTION_BEGIN -->
 ### Esecuzione — 2026-10-10 UTC, originali CI e correzioni tecniche della fixture verificate
 

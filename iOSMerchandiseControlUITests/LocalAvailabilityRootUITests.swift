@@ -129,6 +129,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
+        // Bring the Name row above the keyboard before the sole focus tap.
+        // The original CI editor hierarchy identifies this Form as a CollectionView.
+        app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch.swipeUp()
         replaceText(in: name, with: "Saved before network release")
         assertHeldBoundary()
         app.buttons["Save"].tap()
@@ -580,16 +583,28 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
             var previousFieldFrame: CGRect?
             var previousKeyboardFrame: CGRect?
+            var readinessSamples: [String] = []
+            var readinessSampleCount = 0
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
                 let fieldFrame = field.frame
                 let keyboardFrame = keyboard.frame
                 let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
                 previousFieldFrame = fieldFrame
                 previousKeyboardFrame = keyboardFrame
-                return field.isHittable && fieldFrame.height > 0 && keyboardFrame.height > 0
+                let hittable = field.isHittable
+                readinessSampleCount += 1
+                if readinessSamples.count < 64 {
+                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittable); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY)")
+                }
+                return hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
                     && fieldFrame.maxY < keyboardFrame.minY && stable
             }, object: field)
-            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed,
+            let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
+            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count))\n" + readinessSamples.joined(separator: "\n"))
+            readiness.name = "Task144 existing readiness predicate observations before assertion"
+            readiness.lifetime = .keepAlways
+            add(readiness)
+            XCTAssertEqual(readinessResult, .completed,
                            "The focused field and visible keyboard must finish repositioning before native selection")
             let geometry = XCTAttachment(string: "field=\(field.frame); keyboard=\(keyboard.frame)")
             geometry.name = "Task144 focused field geometry before the single native selection press"

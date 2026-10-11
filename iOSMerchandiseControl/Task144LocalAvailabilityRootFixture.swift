@@ -1468,7 +1468,7 @@ private struct Task144ControlledRootControls: View {
                         Task144ControlGestureObservation.record("pressing.\(pressing)", control: "\(controlPrefix).release")
                     }
                     .accessibilityAddTraits(.isButton)
-                    .accessibilityValue(fixture.automaticReadback)
+                    .accessibilityValue(fixture.automaticReadback + Task144RootObservation.snapshotAtRealRender())
                     .accessibilityIdentifier("\(controlPrefix).release")
             }.font(.caption2)
         }.padding(2).background(.ultraThinMaterial)
