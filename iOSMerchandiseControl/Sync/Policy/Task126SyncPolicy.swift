@@ -464,7 +464,7 @@ nonisolated enum Task126OwnerStoreGate {
         )
         guard current == expected else {
             #if DEBUG
-            Task144RootObservation.record("scope-revalidate-denied", "first-failed.full-current-scope-equality;error.Task126OwnerStoreGateError.scopeChanged", callsite: "Task126.revalidateAutomaticScope")
+            Task144RootObservation.record("scope-revalidate-denied", "first-failed.full-current-scope-equality;error.Task126OwnerStoreGateError.scopeChanged;owner-match.\(current.ownerUserID == expected.ownerUserID);account-match.\(current.accountHash == expected.accountHash);shop-match.\(current.shopID == expected.shopID);store-match.\(current.storeIdentity == expected.storeIdentity);device-install-match.\(current.deviceInstallID == expected.deviceInstallID);device-identity-match.\(current.deviceIdentityHash == expected.deviceIdentityHash);pending-replacement-match.\(current.pendingReplacement == expected.pendingReplacement);lease-generation-match.\(current.leaseGeneration == expected.leaseGeneration)", callsite: "Task126.revalidateAutomaticScope")
             #endif
             throw Task126OwnerStoreGateError.scopeChanged
         }

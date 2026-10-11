@@ -3639,6 +3639,7 @@ struct DatabaseView: View {
                 ForEach(DatabaseSection.allCases) { section in
                     Text(section.title).tag(section)
                 }
+                .id(resolvedLanguageCode)
             }
             .pickerStyle(.segmented)
             .accessibilityLabel(L("database.title"))
