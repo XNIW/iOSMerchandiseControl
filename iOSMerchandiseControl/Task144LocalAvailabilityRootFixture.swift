@@ -35,6 +35,9 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
                  || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_FENCE_REQUALIFICATION"] == "1"))
             || relatedSaveMode)
     static let observesRelatedInput = enabled && relatedSaveMode
+    private static let observesScopeRevalidation = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
+        .flatMap(UUID.init(uuidString:)) != nil
+        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_OBSERVE_SCOPE"] == "1"
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
     private var sequence = 0
@@ -43,7 +46,7 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private var dropped = 0
 
     static func record(_ kind: String, _ closedFacts: String, callsite: String = #function) {
-        guard enabled else { return }
+        guard enabled || (observesScopeRevalidation && kind == "scope-revalidate-denied") else { return }
         let buffer = shared
         buffer.lock.lock()
         let key = kind + ":" + callsite
@@ -62,7 +65,7 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     }
 
     static func snapshotAtRealRender() -> String {
-        guard enabled else { return "" }
+        guard enabled || observesScopeRevalidation else { return "" }
         let buffer = shared
         buffer.lock.lock(); defer { buffer.lock.unlock() }
         return ";task144.observation.cached-at-real-render;dropped.\(buffer.dropped);"
@@ -276,6 +279,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private let provesShopCallbackOrder = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_CALLBACK_ORDER"] == "1"
     private let provesIndependentPending = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] == "1"
     private let observesReplayScopeComponents = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_LOSE_FIRST_PRODUCT_RESPONSE"] == "1"
+        || ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_OBSERVE_SCOPE"] == "1"
     private var independentPendingInserted = false
     private let provesRelatedSave = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_RELATED_SAVE"] == "1"
     private var lastAutomaticResult = "not-observed"

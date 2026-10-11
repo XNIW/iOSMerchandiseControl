@@ -206,6 +206,82 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-11 — prefisso diagnostico2 terminale, causa non riprodotta
+
+**Stato: FIX / NON DONE.** Una sola prova originale ACK→ProductSave è terminata2PASS/0FAIL/0SKIP, ordine e ID esatti; observer7699161f/UI172fc6ac. Il fallimento Root9 precedente8P/1F e CI main38175902086 FAIL restano distinti. Non c'è una nuova patch prodotto né una chiusura della causa storica.
+
+**File modificati:** questo solo blocco Execution; Planning/CA/stato e testi precedenti intatti. Nessun altro cambio sorgente dopo il freeze cb9306ba.
+
+**Azioni ed evidenze:**
+1. Target receipt3bdf3091, source211cb9306ba, SDKexit0, actualrelease22:44:49.851444UTC/ownUUID assente. Collector4SDK (summary/tree e due export originali) receipt68650d6e, ownera0db39d9/exit0/actualrelease22:45:00.097874UTC; allgroupgone/211pin e PIDcorrenti11428-3627 invariati. Overallefd103c9 qualifica2P0F0S nel solo contesto diagnostico, non acceptance nativa/TEST.
+2. Gli allegati effettivi sono7file/4.728B, soltanto geometria/input/readiness. Il caso ha raggiunto il predicato ownACK, quindi il capture esistente riservato al FAIL non è stato invocato. Nessun `scope-components` o `scope-revalidate-denied` negli export: il mismatch precedente NON RIPRODOTTO, componente e primo diniego ancora UNKNOWN. Nessun rerun immutato, loop untilPASS/FAIL o bypass di equality/ACK/CAS/predicati.
+3. Scan canonica sulle18righe sorgente aggiunte totali (helper+observer) receipt a4c30748 PASS,3report canonici/EOFrc0/gruppi propri assenti, release22:47:52.297386UTC. Config solo esempio pubblico completo e MC_CMD_SLUG breve; nessun segreto o fullscope rieseguito. Sourcepins7699161f/172fc6ac invariati.
+4. Nessun warning nuovo nel build selezionato;3occorrenze della sola vecchia metadata extraction AppIntents skipped. Nessun nuovo Analyze/CI/publish/primaryFF/install/input utente ancora eseguito.
+
+**Check obbligatori:** build/prova mirata e scan ESEGUITI;2P0F0S non sostituisce la Root9FAIL o mainFAIL. Coerenza scope ESEGUITA. Analyze/CI finali e CA nativi/autenticati NON ESEGUITI, motivi e gate ancora aperti.
+
+**Incertezze e handoff:** INCERTEZZA: la prova osservativa positiva non acquisisce il fatto mancante del run storico. C normale review del risultato nella stessa catena; nessuna causa attribuita per eliminazione incompleta, nessuna correzione di produzione senza discriminante reale. Il Mac nella verifica pubblica W risulta locked,0successfulobservations/authUNATTESTED; sblocco manuale richiesto da W prima di future finestre UI. VecchiA/B e dati/sessioni/code preservati.
+
+### Esecuzione — 2026-10-11 — esito Root9 e osservazione mirata dello scope
+
+**Stato: FIX / NON DONE.** La nuova unica classe originale9 ha terminato8PASS/1FAIL/0SKIP, stesso ordine e9ID esatti. ACK e Saved/unsaved superano gli assert finali; fallisce invece il caso invariato ProductSave/independent-history, che non chiama il helper geometrico. CI main38175902086 resta FAIL e non è stata rieseguita.
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — osservazione privata opt-in del solo evento `scope-revalidate-denied` già esistente, con UUID fixture valido e flag esplicito; snapshot dei fatti chiusi e componenti scope già implementati. Tutto entro `#if DEBUG`; admission, provider, stato, HTTP, ACK/CAS e predicati invariati.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — una sola variabile di osservazione nel caso ProductSave. Helper del singolo pan862507 e tutte le azioni/assert/timeout invariati.
+- Questo file — sola aggiunta Execution; Planning, criteri, sezioni storiche e stato FIX preservati.
+
+**Azioni eseguite:**
+1. Root9: receipt47fe3d81, freeze211bc6f95c5, officialadjudication1a8474bb; SDKexit65,8P/1F/0S. Owner target rilasciato22:30:44.854913UTC e collector22:32:23.231440UTC, gruppi propri assenti/UUID proprio eliminato, PIDcorrenti11428/3627 e211sorgenti invariati. Nessun input/install sui target correnti.
+2. ACK Name269,667…291,667 dentro fascia237,667…422; secondo Saved Name280,333…302,333 dentro248,333…422. Un solo pan richiesto501pt per caso, due campioni reali stable/isHittable, valore completo, bozza/cutover/continuazione/reopen/ACK originali PASS. I PNG reali sono stati letti; nessuna promozione a acceptance TEST.
+3. Nuovo FAIL: HTTP2 con identici ID/corpo/revisione sealed, scope stabile e completo diversi; ACK locale prodotto presente e history indipendente ancora pending. Seconda richiesta ha CASprecedente corrispondente ma ACKprecedente assente; esatto componente cambiato e primo confine risposta→diniego UNKNOWN. Non indebolire equality/predicati/http-count-one/assert e non bypassare uno staleACK.
+4. C ha riesaminato nella stessa catena il minimo observer (fixture7699161f/UI172fc6ac), inversione byte-esatta su3d9/862; general observation enabled invariato. Preparata una sola prova diagnostica del prefisso originale2 (ACK poi ProductSave), riutilizzando runner e collector con soli binding selector/count/order/source/output. Ancora NON ESEGUITA al momento di questa voce.
+5. Scan delle sole11righe helper: primo tentativo FAIL per tre report canonici mancanti (nomi327/329B oltre NAME_MAX255), conservato3bf665a9; sola correzione operativa MC_CMD_SLUG breve, secondo receipt8131f9ce PASS con3report, EOF/rc0/gruppi assenti. Nessuna reinterpretazione del primoFAIL o della scan fullscope storica.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / test iOS | ✅ ESEGUITO con FAIL | Root9 compilata;8PASS/1FAIL/0SKIP. Observer nuovo da compilare e diagnosticare nel solo prefisso2. |
+| Analyze / scan / CI finale | ❌ NON ESEGUITO | Scan helper11righe PASS; observer nuovo e nuova CI finale ancora pendenti. Nessun rerun immutato main. |
+| Warning nuovi | ✅ ESEGUITO per Root9 | Solo vecchio metadata AppIntents skipped; nuovo observer ancora NON ESEGUITO. |
+| Coerenza con planning | ✅ ESEGUITO | Setup e osservazione DEBUG; nessun cambiamento prodotto o controlli di sicurezza. |
+| Criteri di accettazione | ❌ NON ESEGUITO | Test complessivo FAIL, CI mainFAIL, acceptance nativa/autenticata e CA residui aperti. |
+
+**Incertezze:**
+- INCERTEZZA: il mismatch non è spiegabile dalla sola leaseGeneration, esclusa dal confronto stabile. Non è ancora provato quale componente cambia o perché la prima risposta non venga applicata. Osservazione mirata prima di qualsiasi patch prodotto.
+
+**Handoff notes:**
+- Una prova prefisso2; catturare il primo fatto reale diverso, nessun loop until PASS/FAIL. Tutti i gate pubblicazione/integrazione/install restano insoddisfatti; pacchetto bcaf già qualificato ma non installato, niente Release equivalente per delta UI/DEBUG/doc.
+
+### Esecuzione — 2026-10-11 — margine del singolo pan dopo FAIL reale su main
+
+**Stato: FIX / NON DONE; nuova verifica NON ESEGUITA.** La PR22 è stata integrata normalmente su main `d57876edfc5e85c352ca9988d4accbdb82a29423`, ma la CI main38175902086 è FAIL:1.540PASS/1FAIL/36SKIP invariati,16UI PASS/1UI FAIL. Il precedente PASS della PR38173188925 resta distinto. Il fallimento Saved/unsaved è nello strict assert geometrico dopo l'unico pan e prima del secondo tap/readiness, quindi bozza e cutover successivi non sono attraversati in questa CI.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — il target del solo movimento preparatorio passa dal centro al bordo interno direzionale della medesima fascia; margine geometrico di16pt o metà dello spazio residuo se più stretto. Nessun rapporto empirico, secondo gesto o rilassamento della fascia/assert. Aggiunta osservazione della distanza richiesta.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — solo questa voce Execution; planning, criteri e stato FIX invariati.
+
+**Azioni eseguite:**
+1. Acquisito una sola volta il nuovo small ufficiale e il nuovo originale main38175902086/11716277675; ZIP184.557.473B/SHA `d117722156e340623b3d701c19301a8811740c6b75a7dbaf8d93b8af0865eac0`, EOF/size/digest/CRC/path safety superati. Esportati una volta gli allegati del solo test fallito e decodificati quattro soli frame nuovi; vecchi originali/export/frame restano chiusi.
+2. Prima geometria divergente: fascia248,333…422 e Name prima765,333…787,333 identici al locale riuscito; dopo il pan main420,667…442,667 contro locale339,667…361,667. Il percorso richiesto è identico (441,167pt), ma il contenuto main si muove344,667pt. Il target centrale lascia75,833pt di margine, inferiore alla differenza osservata96,5pt; Name termina20,667pt fuori fascia.
+3. Nuova ipotesi di setup: usare il bordo interno e il resto della fascia come margine per uno spostamento del contenuto inferiore a quello del dito. Review indipendente favorevole dello stesso delta geometrico da C; il commento non attribuisce il gap a un meccanismo fisico non provato.
+4. `replaceText`, un solo focus, readiness con due campioni reali stabili/isHittable/timeout5s, Select All nativo, valore completo, Save/ACK/cutover e tutti i nove flussi sono byte exact. Nessun file di produzione, feature o integrazione modificato.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / test iOS | ❌ NON ESEGUITO | Una nuova esecuzione della classe originale9 nello stesso ordine ancora da eseguire. |
+| Analyze / scan / CI finale | ❌ NON ESEGUITO | Dopo effetto locale qualificato e review normale; nessun rerun della CI main immutata. |
+| Warning nuovi | ❌ NON ESEGUITO | Verifica sulle uscite del nuovo build selezionato. |
+| Coerenza con planning | ✅ ESEGUITO | Solo setup del test; dati, app, pianificazione e criteri invariati. |
+| Criteri di accettazione | ❌ NON ESEGUITO | Acceptance nativa/autenticata e CA residui restano distinti; nessun DONE. |
+
+**Incertezze:**
+- INCERTEZZA: origine fisica esatta della differenza96,5pt non provata. I frame mostrano il titolo che si compatta durante il gesto; non dimostrano una causa esclusiva, CPU, focus o un difetto di produzione. La nuova destinazione richiede una prova reale completa.
+
+**Handoff notes:**
+- Riutilizzare runner/collector verificati con i soli binding correnti, una prova9, e fermarsi al primo fatto diverso se fallisce. CI mainFAIL resta bloccante per fast-forward/installazione; pacchetto firmato bcaf qualificato ma non installato. Delta UI-test/doc non richiede una Release equivalente.
+
 ### Esecuzione — 2026-10-11 — addendum fascia completa del solo setup UI
 
 **Stato: FIX / NON DONE.** Il candidato precedente UI998 ha terminato una sola classe Root9:9PASS/0FAIL/0SKIP, stessi9ID/STARTorder. Non sostituisce CI38164103461/bfaf FAIL1539PASS/2FAIL/36SKIP e non soddisfa da solo il nuovo addendum.

@@ -98,6 +98,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testCurrentProductSaveIsCloudConfirmedWhileAnIndependentHistoryIntentRemainsPending() {
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] = "1"
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_SCOPE"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         let row = app.staticTexts["Safe local baseline"]
@@ -601,8 +602,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         let inside = before.minY >= upper && before.maxY <= lower
         var positioned = before
+        var requestedTravel: CGFloat = 0
         if !inside {
-            let displacement = before.midY - (upper + lower) / 2
+            // Content moved less than the finger in the failing main run.
+            // Aim at the inner edge, allowing the remaining band height for that
+            // difference without an empirical multiplier or a second pan.
+            let margin = min(padding, (lower - upper - before.height) / 2)
+            let targetMidY = before.minY < upper
+                ? lower - margin - before.height / 2
+                : upper + margin + before.height / 2
+            let displacement = before.midY - targetMidY
             let top = upper + padding
             let bottom = scrollBottom - max(32, viewport.height * 0.06)
             guard bottom > top else {
@@ -611,6 +620,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             let startY = displacement > 0 ? bottom : top
             let endY = min(bottom, max(top, startY - displacement))
+            requestedTravel = endY - startY
             // The inset Form gutter is outside its cells and below both toolbars.
             let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                 dx: visibleForm.minX - formFrame.minX + 8, dy: startY - formFrame.minY))
@@ -618,7 +628,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                         withVelocity: .slow, thenHoldForDuration: 0.2)
             positioned = field.frame
         }
-        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside)")
+        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel)")
         geometry.name = "Task144 actual Name viewport before the sole focus tap"
         geometry.lifetime = .keepAlways
         add(geometry)
