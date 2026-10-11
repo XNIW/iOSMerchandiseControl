@@ -206,6 +206,60 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-11 — addendum fascia completa del solo setup UI
+
+**Stato: FIX / NON DONE.** Il candidato precedente UI998 ha terminato una sola classe Root9:9PASS/0FAIL/0SKIP, stessi9ID/STARTorder. Non sostituisce CI38164103461/bfaf FAIL1539PASS/2FAIL/36SKIP e non soddisfa da solo il nuovo addendum.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — solo helper dei due focus già circoscritti: limite superiore dal Form/viewport, navigation toolbar e controlli esistenti; limite inferiore prudente nella metà superiore del viewport, ulteriormente ridotto se tastiera presente con riserva esplicita per accessori non compresi nell'AX frame. Nessun pan se l'intero campo è dentro; altrimenti un solo drag al margine Form, verso l'alto o il basso secondo geometria. Assert della posizione effettiva e attachment dei soli frame reali prima dell'unico tap.
+- Questo file — sola aggiunta Execution. Planning/CA/stato globale e sezioni storiche preservati.
+
+**Azioni ed evidenze:**
+1. Risultato ufficiale candidato998 `bounded-native-name-viewport-nine-root-tests-20261011-01/adjudication/receipt.json`, SHA922456866115325a20c413905f1519f305f4dc40d2f9737b00aacc9e75d0836b:9ID unici PASS, quattro readiness con2campioni reali/hittabletrue/stablefalse→true. ACKcampo370.6667/KB553; SavedDraftFIRST486.6667 e SECOND369.6667. Fullvalue, Save/pending, replay immutabile/ownACK e SavedDraftbozza/cutover/input senza refocus/riapertura passati.
+2. Target release20:08:14.546200UTC, collector20:16:33.124847UTC, overall20:16:45.597923UTC/SHA3a058768f8d533a0db143696b5a47f1479b1f60e36faef57684ce679babdecfa. OwnUUID e gruppi assenti,211pin source/PIDprimari11428-3627 esatti. Nessuna somma di test sovrapposti.
+3. Addendum umano richiede fascia completa e direzione corretta; sostituisce il precedente guard displacement>0, che poteva lasciare Name sopra il limite utile. Il nuovo helper resta test-only. `replaceText` e tutti gli assert successivi byte-identici,5s/duecampioni reali/isHittable/SelectAll/pressione1.1 invariati. Nessun retry/tap/refocus/retype/sleep/marker sintetico/assegnazione diretta/timeout ampliato.
+4. C04R2 ordinary recovery rilasciata effettivamente20:26:12.809UTC/7926bf7f, zero nuovi Save/Retry/Reload/Reapply/businesswrite; runtimeAcceptancefalse/reloadAcceptedfalse, fence originale archiviato solo dopo verifica. C stessa catena APPROVED_SCOPED_CANDIDATE_FOR_ONE_VALIDATION. Applicazione UI3bc5055f/Task8a17 dopo releaseW con journalff6de91f, altre210source esatte/indexvuoto/primarienonmodificate. Runnerba94→9e2c e collector43df→e4d9 riusati, inversebinding21ab esatto; sola necessaria corrispondenza della guardia release al nuovo schema W (ownedRunnerCount/lockAbsent/SDKDisconnectCertain), identica semantica e meccanica.
+5. Una sola Root9 definitiva20:28:15.479257→20:36:28.560320UTC/900-90: officialreceipt769dffc2504d120e25c715218f7c20913d1e1afd08ce3fb42729c9bd6d6dd3dd,9PASS/0FAIL/0SKIP/stessi9ID eSTARTorder. Source211 freeze1c1f8186 prima/dopo esatto, PID11428/3627 preservati, ownUUID/PG68653 eliminati. Collector release20:37:22.671331UTC/dabac654; overall20:38:01.224936UTC/4fdbcabb, gruppi tutti assenti. Nessun rerun o somma dei precedenti9PASS.
+6. Effectreceiptc6e99b95256ce3bf652f0c569b956bbd6720e86d40ab5aaeb405c37393972521: due attachment geometrici reali, ACKband237.6667..422/Nameprima754.6667/dopo334..356; SavedSECONDband248.3333..422/Nameprima765.3333/dopo339.6667..361.6667. Due soli pan reali al margine x8, unici tap/readiness originali. Quattro readiness2campioni reali/hittabletrue/stablefalse→true, KB553/233. ACK43.840s fino a sealedbody/replay/ownACK/historypending/assertnegativi finali; Saved66.093s fino a stateupdate/bozza/cutover/input reale senza refocus/Cancel/drain/riapertura. Screenshot prima/dopo cutover letti; valore completo asserito anche quando il testo scorre orizzontalmente al cursore. La banda è verificata prima del focus, non dichiarata persistente dopo remount/cutover.
+7. Scan canonico sole54righe source aggiunte PASS03406dd9a48afaacbb69d2085f75f3602eb6e57692af7152ab59493c6a9892c3/3reportcompleti/EOFrc0/ownedgroupgone/release20:29:10.060907/source3bcunchanged. FullscopeFAIL sintetico preesistente separato, nessuna esenzione. Buildlog corrente nessun warning/error nei Swift pertinenti; unica nota AppIntents metadata preesistente. Direzione giù/no-pan static review only, non esercitate dai due attuali focus fuori fascia inferiore. Pubblicazione normale/CIfinale ancora pending; richiesti1577ID/1541PASS/0FAIL/36stessiSKIP/17UIPASS e tutti10step canonici inclusiAnalyze eSecretScan.
+
+**Check obbligatori sul nuovo delta:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/Test selezionato | ESEGUITO | Root9 definitivo UI3bc,9PASS/0FAIL/0SKIP, source211 eordine esatti;9PASS998 storico distinto. |
+| Static/Warning nuovi | ESEGUITO locale; NON ESEGUITO AnalyzeCI | Delta54linePASS03406 e log finale senza nuovi warning nei Swift pertinenti. Analyze/SecretScan canonici attesi da nuovaCI. |
+| Coerenza con planning | ESEGUITO | Due focus originali/CA10, helper di setup, nessun runtime o API cambiato. |
+| Criteri di accettazione | NON ESEGUITO | CI finale/integration CA10/11 e native live CA7/9 ancora aperti. |
+
+**INCERTEZZA:** causa esatta SavedDraftSECONDhitfalse originale non provata. Il margine prudente è una precondizione del setup corrente, non una certificazione di ogni tastiera/viewport. Se il caso fallisce dentro la fascia, leggere il primo fatto divergente e cambiare ipotesi, senza ripetere o ampliare scroll; un difetto prodotto richiede RED separato.
+
+**Handoff:** stessa review C del delta stabile, singola classe9 con ordine originale, effetto completo dei due flussi, pubblicazione normale e CI. Verificare intero divario installato→candidato: niente Release equivalente per soli test/docs, pacchetto qualificato se esistono fix applicativi non installati. Dopo gate validi, collaudo ordinario e nuove modifiche TEST Android→iOS/iOS→Android con ID/revisioni/operationID nuovi e aggiornamento automatico; non ripubblicare vecchiA/B. Offline/reconnect/reopen distinti; verde CI non è acceptance live.
+
+### Esecuzione — 2026-10-11 — posizionamento nativo Name dei due focus falliti
+
+**Stato: FIX / NON DONE; verifica del candidato ancora NON ESEGUITA.** CI canonica38164103461/bfaf conservata FAIL:1.539PASS/2FAIL/36stessiSKIP;15UI PASS/2UI FAIL. Originale11712596689/178.702.700B/SHAbac78190 e due soli casi falliti qualificati, nessuna esclusione/rerun immutato.
+
+**File modificati dal candidato:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — sostituisce il broad Form.swipeUp del primo focus ACK con un singolo drag lento al margine calcolato dalla geometria reale; prepara allo stesso modo solo il secondo focus SavedDraft. Target40percent dell'altezza Form; se Name già sopra il target non trascina. Prima del tap originale, senza retry/refocus/retype o nuovo input business.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — questa sola aggiunta Execution; planning/CA/stato globale non modificati.
+
+**Azioni ed evidenze:**
+1. AX originaleACK: Name42.6667..64.6667, toolbar63..117, tap195/53.6667, focus e keyboardfocusfalse. Pixel originali14.935→17.970 mostrano Name da visibile in MainData a fuori viewport dopo broadscroll. Nessuna tastiera; fallisce l'attesa originale5s prima della custom readiness.
+2. SavedDraftSECOND: due campioni reali stessofield486.6667/KB553, stablefalse→true ma hittabletrue→false. Pixel57.875/60.930/63.9083/65.9083 mostrano caret preservato vicino al bordo superiore della barra predittiva; niente menu/modale visibile. INCERTEZZA: causa esatta del hit-testfalse non dimostrata. Candidato di setup viewport, non fix runtime o causa CPU dichiarata.
+3. `replaceText` intera funzione byte-identica: stessi ordine/query/object:nil/prevnil/due campioni stabili/isHittable/5s/press1.1/SelectAll/fullvalue/Save/cutover/ownACK. Primo SavedDraft e altri focus invariati. Baseline/product position/dati/schema/auth e timeout invariati.
+4. Media corrente CLOSED; due clip/otto frame originali qualificati, ultimooverallSDKrelease19:48:53.012751UTC/4fd92aeb,4SDKespliciti(2ADBreadonlyPID+2Swiftdecode), HOST11428/GUEST3627/source211 esatti/groupsgone/0device mutation. C04 observerR2readonly distinto415a311e released19:47:35.693UTC, no runtime acceptance/fence removal.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/Test selezionato | ❌ NON ESEGUITO | Previsto un solo Root9 owned900/90, stessi9ID e STARTorder originale; risultato non ancora disponibile. |
+| Static/Warning nuovi | ❌ NON ESEGUITO | Da valutare sui log attuali e delta effettivamente applicato; vecchioPASS locale distinto. |
+| Coerenza con planning | ✅ ESEGUITO | CA10/11, due focus originali falliti/test-only, nessun runtime refactor o feature nuova. |
+| Criteri di accettazione | ❌ NON ESEGUITO | CA10 gate finale exactSHA e CA11 integrazione ancora aperti; CA7/9 live/performance separati. |
+
+**Handoff:** C stessa reviewcatena sul candidato e recipe concreto, Root9/effetto poi CI canonica finale; merge/Proper/mainCI/primaryFF/install NOT GO finché CI non qualificata. Nessun nuovo SaveA/B/Retry/input/auth/READY forzato o SQLwrite.
+
+
 ### Esecuzione — 2026-10-11 — contesto diagnostico della readiness XCTest
 
 **File modificati:**

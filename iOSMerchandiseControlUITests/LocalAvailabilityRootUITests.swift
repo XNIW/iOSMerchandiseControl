@@ -52,6 +52,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "The fixture must read the real file-backed store with a fresh context while RPC is still held")
         app.staticTexts["Saved before network release"].tap()
         XCTAssertTrue(name.waitForExistence(timeout: 5))
+        positionNameInEditorViewport(name)
         replaceText(in: name, with: "Unsaved second draft")
         XCTAssertEqual(name.value as? String, "Unsaved second draft",
                        "The intended draft must be present before the cloud state update")
@@ -129,9 +130,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
-        // Bring the Name row above the keyboard before the sole focus tap.
-        // The original CI editor hierarchy identifies this Form as a CollectionView.
-        app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch.swipeUp()
+        // Position the Name row with a bounded drag before the sole focus tap.
+        positionNameInEditorViewport(name)
         replaceText(in: name, with: "Saved before network release")
         assertHeldBoundary()
         app.buttons["Save"].tap()
@@ -573,6 +573,57 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         attachment.name = "Task144 actual facade categorical result and bounded TEST counts"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func positionNameInEditorViewport(_ field: XCUIElement) {
+        let form = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
+        let viewport = app.frame
+        let formFrame = form.frame
+        let visibleForm = formFrame.intersection(viewport)
+        let toolbar = app.navigationBars["Edit product"].frame
+        let controls = app.buttons["task144.controlled.editor.release"].frame
+        let padding: CGFloat = 16
+        let upper = max(visibleForm.minY, max(toolbar.maxY, controls.maxY)) + padding
+        // Reserve the lower half before focus; AX keyboard.frame can omit its accessory strip.
+        var lower = min(visibleForm.maxY - padding, viewport.midY)
+        var scrollBottom = visibleForm.maxY
+        let keyboard = app.keyboards.firstMatch
+        if keyboard.exists {
+            let accessoryReserve = max(44, viewport.height * 0.08)
+            let keyboardTop = keyboard.frame.minY - accessoryReserve
+            lower = min(lower, keyboardTop - padding)
+            scrollBottom = min(scrollBottom, keyboardTop)
+        }
+        let before = field.frame
+        guard visibleForm.width > padding, before.height > 0, lower - upper > before.height else {
+            XCTFail("No usable Name band: form=\(visibleForm); upper=\(upper); lower=\(lower); field=\(before)")
+            return
+        }
+        let inside = before.minY >= upper && before.maxY <= lower
+        var positioned = before
+        if !inside {
+            let displacement = before.midY - (upper + lower) / 2
+            let top = upper + padding
+            let bottom = scrollBottom - max(32, viewport.height * 0.06)
+            guard bottom > top else {
+                XCTFail("No scrollable Form margin above the keyboard/accessory region")
+                return
+            }
+            let startY = displacement > 0 ? bottom : top
+            let endY = min(bottom, max(top, startY - displacement))
+            // The inset Form gutter is outside its cells and below both toolbars.
+            let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                dx: visibleForm.minX - formFrame.minX + 8, dy: startY - formFrame.minY))
+            start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: endY - startY)),
+                        withVelocity: .slow, thenHoldForDuration: 0.2)
+            positioned = field.frame
+        }
+        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside)")
+        geometry.name = "Task144 actual Name viewport before the sole focus tap"
+        geometry.lifetime = .keepAlways
+        add(geometry)
+        XCTAssertTrue(positioned.minY >= upper && positioned.maxY <= lower,
+                      "One controlled movement must put the complete Name field inside the usable band")
     }
 
     private func replaceText(in field: XCUIElement, with value: String) {
