@@ -683,7 +683,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             var previousKeyboardFrame: CGRect?
             var readinessSamples: [String] = []
             var readinessSampleCount = 0
+            var readinessPollCount = 0
+            var invalidSnapshotSampleCount = 0
+            var invalidSnapshotSamples: [String] = []
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                readinessPollCount += 1
                 // Capture the geometry pair from one hierarchy. The latest CI
                 // returned a zero keyboard frame from separate queries while
                 // nearby video frames showed the keyboard. Hittability below
@@ -695,11 +699,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 case .failure(let error):
                     previousFieldFrame = nil
                     previousKeyboardFrame = nil
-                    let failure = XCTAttachment(string: "snapshot-error-type=\(String(reflecting: type(of: error))); prior-geometry-cleared=true")
-                    failure.name = "Task144 readiness snapshot failure before assertion"
-                    failure.lifetime = .keepAlways
-                    self.add(failure)
-                    XCTFail("The readiness geometry snapshot must be captured successfully")
+                    invalidSnapshotSampleCount += 1
+                    let snapshotError = error as NSError
+                    let invalidSample = "poll=\(readinessPollCount); uptime=\(ProcessInfo.processInfo.systemUptime); snapshot-error-type=\(String(reflecting: type(of: error))); domain=\(snapshotError.domain); code=\(snapshotError.code); prior-geometry-cleared=true"
+                    if invalidSnapshotSamples.count < 64 {
+                        invalidSnapshotSamples.append(invalidSample)
+                        let failure = XCTAttachment(string: invalidSample)
+                        failure.name = "Task144 readiness snapshot failure before assertion"
+                        failure.lifetime = .keepAlways
+                        self.add(failure)
+                    }
+                    // An invalid observation cannot establish readiness or
+                    // carry stability into the next sample. The original
+                    // five-second waiter still requires two fresh valid samples.
                     return false
                 }
                 let frames = self.readinessFrames(from: snapshot)
@@ -726,7 +738,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     && fieldFrame.maxY < keyboardFrame.minY && stable
             }, object: nil)
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
-            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count))\n" + readinessSamples.joined(separator: "\n"))
+            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count))\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
             readiness.name = "Task144 existing readiness predicate observations before assertion"
             readiness.lifetime = .keepAlways
             add(readiness)

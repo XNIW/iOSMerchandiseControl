@@ -206,6 +206,57 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC: campione snapshot invalido e readiness finale originale
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — snapshot SDK fallita resta un campione negativo, azzera entrambe le geometrie precedenti e non alimenta la stabilità. Il waiter e l'assert finale originali richiedono ancora entro5s due nuovi snapshot completi/univoci con geometria stabile, tastiera visibile e actualisHittable; nessuna geometria cached/fallback, sleep, retry di input, altro tap/pan o timeout ampliato. Allegato failure-only aggiunge soltanto NSError domain/code categorici, senza userInfo o messaggio raw.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — log del delta osservatore e criteri ancora non superati.
+
+**Azioni eseguite:**
+1. La nuova CI fd337 ha fallito nell'assert immediato aggiunto dentro il polling snapshot, dopo un primo campione valido. Quell'assert richiedeva successo di ogni acquisizione, distinto dal contratto originale di readiness entro5s. È rimosso solo l'assert intermedio: il campione fallito restituiscefalse/azzera baseline; l'assert finale .completed resta invariato. Se non arrivano due nuovi campioni realmente validi il test fallisce ancora. Non è un fallback PASS e non recupera un errore applicativo.
+2. Diagnostica invalidsnapshot conserva contatore poll/tempo monotonic/type/domain/code e massimo64 fatti, anche nel riepilogo finale prima dell'assert. Nessuna userInfo/descrizione raw o nuova query SDK; il conteggio non qualifica readiness.
+3. Originale CI negativa, nuovi32hash/9TXT e baseline locale9PASS preservati. Causa NSError e risultato del delta NON PROVATI; source modificata solo dopo la fine della CI, prima di una nuova Root9 e della normale review del medesimoC. Nessun prodotto/fixture/SDKdependency/CIworkflow modificato.
+
+4. SameC finalsource/Task/bindings review conclusa suUI692/Task4eaa/patchd8f54/meta7f8-b024. Prima Root9 v5:sourcefreeze422e5ddd/HEADfd337, entry10:02:22.679615UTC, release10:10:51.635685UTC, receipt9243051e; exit0/noSignals/PG41186gone/ownUUID3A7C672Ddeleted/nativeHOST11428-GUEST3627/source211beforeafterexact, entro90090. Bundle completo. Collector f0863ce2 / owner5a144271 release10:11:16.327007UTC entro60090,6SDK EOF/rc0,9IDunici/9PASS0FAIL0SKIP eordine originale esatto. ACK66.467s e Saved65.349s fino agli assert finali; summary155ffc9b/tests f00cce73.
+5. Readback55c9cc90:24hash/18TXT/4manifest verificati una volta. ACK269.666..291.666 nella fascia237.666..422 e Saved seconda280.333..302.333 nella fascia248.333..422 dopo un solo pan; tutte le readiness hanno due snapshot completi/univoci KB553/233/hittrue/stablefalse→true/result1, invalid-snapshots0. Il ramo NSError NON è stato attraversato in questa prova: nessuna causa remota dimostrata o effetto CI già accertato. Due PNG originali letti una volta mostrano bozza/caret/tastiera prima e editor attivato/rilasciato/caret/tastiera/testo continuato dopo cutover; non continuità firstResponder, fullvalue dagli assert originali. Una notice AppIntents metadata baseline, nessun nuovo warning Swift. WholeRelease-equivalence74619c17:211hash/soloUI cambiata,210altri/progetto/scheme/PackageResolved/fixtureb88 esatti; stessa catenaProperc1f44-bcaf/ef8d/23preservation9e4e, nessun rebuild equivalente. CI fd337 restaFAIL, nuova CI del candidato non ancora eseguita.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / warning Swift | ESEGUITO | Nuovo Debug compilato e Root9 PASS; nessun nuovo warning Swift, notice AppIntents baseline. |
+| XCTest Root9 | ESEGUITO | Official9PASS0FAIL0SKIP/9ID/ordine originale; ACK e Saved fino agli assert finali. |
+| CI canonica finale | NON ESEGUITO | fd337 precedenteFAIL preservato; nuovo commit e prima CI corrente dopo normale review risultati/body. |
+| Coerenza planning | ESEGUITO | Readiness finale5s e tutti assert business preservati; nessuna causa app dichiarata. |
+| Criteri accettazione | NON ESEGUITO | Gate finale, integrazione/main e prove CA07/08/09 restano aperti. |
+
+**Incertezze:** ramo NSError non attraversato nella Root9 v5; causa SDK remota UNKNOWN e non è dimostrato che il nuovo polling supererà la CI; invalidsnapshot non vale campione valido e non può rendere il test PASS da sola. Nessuna modifica prodotto senza RED separato.
+
+**Handoff:** stessa review C source/Task/bindings conclusa; normale verifica dei nuovi risultati/Task/body prima pubblicazione, nessuna nuova catena GO. Preservare tutti i negativi, fonte frozen durante il run e cleanup dei soli processi posseduti.
+
+### Esecuzione — 2026-10-12 UTC: CI fd337 negativa e primo fatto divergente dello snapshot
+
+**File modificati:**
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — esito della prima CI completa del candidato e limite osservativo accertato; nessun delta applicativo.
+
+**Azioni eseguite:**
+1. Pubblicazione normale sulla PR24 esistente: commitfd3372122f09af5b16c45a7d8aaec0d0ff95142e, soli UI e Task, preservazione primaria14foreign e211source esatta. Prima CI canonica38226591211/workflow_dispatch/campaignfalse termina FAIL; Build Debug PASS, XCTest full FAIL, Analyze e Secret scan SKIPPED. Nessun rerun, merge, FF, install o input nativo.
+2. Una acquisizione small ufficiale: qualification NOT_QUALIFIED, owner8539b6d5 exit1/PG39945gone alle09:45:19.382516UTC. Tutti sei export completi EOF/rc0/reaped e digest verificati. Readback negativo26e15484:1577unici=1540PASS/1FAIL/36stessiSKIP,17UI=16PASS/1FAIL; tutti gli altri1576ID/stati esatti. Unico FAIL Saved/unsaved83.6021489s: assert custom «The readiness geometry snapshot must be captured successfully». Local9PASS rimane prova distinta.
+3. Una sola acquisizione del nuovo originale11737783791:164520798B/digestee575bc1, receiptc25c1a27/owner54771b40 rc0,4473entry/CRC/path-safe completi, release09:50:04.166518UTC. Una sola export del caso Saved: receipt28cde4e9/owneref81ce29,32file/24877443B. Slot complessivo600/90, nativeHOST11428 e AndroidGUEST3627 prima/dopo e source211 esatti; tutti gruppi posseduti rimossi, ultimo rilascio09:51:24.325850UTC. GUEST identifica il namespace del processo, non stato auth.
+4. Firstfactsc0f61edc:32hash/9TXT/manifest letti una volta. FIRST readiness ha due campioni univoci/completi KB553/233, actualhittrue, stablefalse→true/result1; Save locale durevole e riapertura attraversati. SECOND unico pan-501 sposta Name765.333→378..400, dentroband248.333..422. Primo snapshot Name1/KB1/completo/KB553/stablefalse; il successivo snapshot SDK lancia NSError, baseline azzerata e assert custom immediato. Domain/code non sono registrati. Seconda selezione, bozza, cutover e assert finali NON ESEGUITI in questa CI. Nessun nuovo decode video e nessuna riapertura dei vecchi originali.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug CI | ESEGUITO | Compilazione corrente PASS; non prova runtime nativo. |
+| XCTest completo corrente | NON ESEGUITO | Esecuzione effettuata ma criterio non superato:1540PASS/1FAIL/36stessiSKIP, Saved fallisce nello snapshot SDK. |
+| Analyze / Secret scan CI | NON ESEGUITO | SKIPPED dopo XCTest FAIL; non dichiarati PASS. |
+| Coerenza planning | ESEGUITO | Primo fatto divergente letto; nessuna causa applicativa o perdita bozza/focus inferita. |
+| Criteri di accettazione | NON ESEGUITO | Candidato/main non qualificati; CA07nativeTEST bidirezionale, CA08 integrale e CA09misure restano aperti. |
+
+**Incertezze:** causa NSError UNKNOWN; nessuna prova di perdita focus/bozza, CPU o difetto prodotto. L'assert immediato di acquisizione snapshot viene valutato come semantica dell'osservatore, senza allentare readiness finale5s/due campioni validi/actualhit/assert business.
+
+**Handoff:** stesso reviewer/writer C, N fonte/Git/SDK/report; nessun nuovo owner/GO. Conservare tutte le evidenze negative e locali, Release equivalente e dati/sessioni/code/14foreign. Nessuna integrazione/install/prova utente prima dei gate validi.
+
 ### Esecuzione — 2026-10-12 UTC, probe opzionale disabilitato: unica Root9 completa PASS, CI finale ancora pendente
 
 **Stato FIX / NON DONE.** Candidato UIb6962170, baseHEAD0a2, source211dcc49d5a. ONEclasse originaleRoot9 nell'ordine dei9ID: 9PASS/0FAIL/0SKIP ufficiali. PreviousShop attraversa activated20s e termina; nessun nuovo failure readback in questo PASS, primo callsite precedente UNKNOWN. Saved conserva original5s e2campioni di readiness in ciascuna sostituzione: FIRST486.667/SECOND284/KB553, hittrue entrambi/stablefalse→true; interoSECOND dentro248.333..422 dopo unicoFormpan-501 e soleTap. NativeSelectAll/fullvalue/primoSave/pending/bozza/cutover/digitazione senzarefocus/Cancel/drain/ownACK/reopen tutti attraversati. Il PASS locale non prova la causa del primo mainCI38203952665 (1539P/2F/36S), conservato comeFAIL.
