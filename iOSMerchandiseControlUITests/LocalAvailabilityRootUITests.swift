@@ -128,7 +128,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         let row = app.staticTexts["Safe local baseline"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        let rowAppeared = row.waitForExistence(timeout: 5)
+        if !rowAppeared {
+            let result = XCTAttachment(string: "rowAppeared=\(rowAppeared); timeoutSeconds=5")
+            result.name = "Task144 ACK original initial row wait result before diagnostic queries"
+            result.lifetime = .keepAlways
+            add(result)
+            captureControlledAutomaticReadback()
+        }
+        XCTAssertTrue(rowAppeared); row.tap()
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         // Position the Name row with a bounded drag before the sole focus tap.
@@ -644,6 +652,27 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "One controlled movement must put the complete Name field inside the usable band")
     }
 
+    private func readinessFrames(from root: XCUIElementSnapshot) ->
+        (field: CGRect, keyboard: CGRect, fieldCount: Int, keyboardCount: Int, complete: Bool) {
+        var pending = [root]
+        var fieldFrames: [CGRect] = []
+        var keyboardFrames: [CGRect] = []
+        var visited = 0
+        while let node = pending.popLast() {
+            visited += 1
+            guard visited <= 1_024 else {
+                return (.zero, .zero, fieldFrames.count, keyboardFrames.count, false)
+            }
+            if node.elementType == .textField && node.identifier == "task144.product.name" {
+                fieldFrames.append(node.frame)
+            }
+            if node.elementType == .keyboard { keyboardFrames.append(node.frame) }
+            pending.append(contentsOf: node.children)
+        }
+        return (fieldFrames.first ?? .zero, keyboardFrames.first ?? .zero,
+                fieldFrames.count, keyboardFrames.count, true)
+    }
+
     private func replaceText(in field: XCUIElement, with value: String) {
         field.tap()
         let current = field.value as? String ?? ""
@@ -655,13 +684,34 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             var readinessSamples: [String] = []
             var readinessSampleCount = 0
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                let fieldFrame = field.frame
-                let keyboardFrame = keyboard.frame
-                let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
-                previousFieldFrame = fieldFrame
-                previousKeyboardFrame = keyboardFrame
+                // Capture the geometry pair from one hierarchy. The latest CI
+                // returned a zero keyboard frame from separate queries while
+                // nearby video frames showed the keyboard. Hittability below
+                // still comes from the actual field's separate hit-point query.
+                let snapshot: XCUIElementSnapshot
+                switch Result(catching: { try self.app.snapshot() }) {
+                case .success(let captured):
+                    snapshot = captured
+                case .failure(let error):
+                    previousFieldFrame = nil
+                    previousKeyboardFrame = nil
+                    let failure = XCTAttachment(string: "snapshot-error-type=\(String(reflecting: type(of: error))); prior-geometry-cleared=true")
+                    failure.name = "Task144 readiness snapshot failure before assertion"
+                    failure.lifetime = .keepAlways
+                    self.add(failure)
+                    XCTFail("The readiness geometry snapshot must be captured successfully")
+                    return false
+                }
+                let frames = self.readinessFrames(from: snapshot)
+                let fieldFrame = frames.field
+                let keyboardFrame = frames.keyboard
+                let geometryIsUnambiguous = frames.complete && frames.fieldCount == 1 && frames.keyboardCount == 1
+                let stable = geometryIsUnambiguous
+                    && previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
+                previousFieldFrame = geometryIsUnambiguous ? fieldFrame : nil
+                previousKeyboardFrame = geometryIsUnambiguous ? keyboardFrame : nil
                 if readinessSampleCount < 64 {
-                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable)")
+                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
                     beforeHit.name = "Task144 actual readiness geometry before hit-point query"
                     beforeHit.lifetime = .keepAlways
                     self.add(beforeHit)
@@ -669,9 +719,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let hittable = field.isHittable
                 readinessSampleCount += 1
                 if readinessSamples.count < 64 {
-                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittable); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY)")
+                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittable); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
                 }
-                return hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
+                return frames.complete && frames.fieldCount == 1 && frames.keyboardCount == 1
+                    && hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
                     && fieldFrame.maxY < keyboardFrame.minY && stable
             }, object: nil)
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
