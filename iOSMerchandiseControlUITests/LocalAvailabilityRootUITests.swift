@@ -25,6 +25,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover() {
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
                       "The real recovery RPC must enter its held boundary before business input")
@@ -98,6 +99,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testCurrentProductSaveIsCloudConfirmedWhileAnIndependentHistoryIntentRemainsPending() {
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] = "1"
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_SCOPE"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         let row = app.staticTexts["Safe local baseline"]
@@ -601,8 +603,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         let inside = before.minY >= upper && before.maxY <= lower
         var positioned = before
+        var requestedTravel: CGFloat = 0
         if !inside {
-            let displacement = before.midY - (upper + lower) / 2
+            // Content moved less than the finger in the failing main run.
+            // Aim at the inner edge, allowing the remaining band height for that
+            // difference without an empirical multiplier or a second pan.
+            let margin = min(padding, (lower - upper - before.height) / 2)
+            let targetMidY = before.minY < upper
+                ? lower - margin - before.height / 2
+                : upper + margin + before.height / 2
+            let displacement = before.midY - targetMidY
             let top = upper + padding
             let bottom = scrollBottom - max(32, viewport.height * 0.06)
             guard bottom > top else {
@@ -611,6 +621,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             let startY = displacement > 0 ? bottom : top
             let endY = min(bottom, max(top, startY - displacement))
+            requestedTravel = endY - startY
             // The inset Form gutter is outside its cells and below both toolbars.
             let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                 dx: visibleForm.minX - formFrame.minX + 8, dy: startY - formFrame.minY))
@@ -618,7 +629,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                         withVelocity: .slow, thenHoldForDuration: 0.2)
             positioned = field.frame
         }
-        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside)")
+        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel)")
         geometry.name = "Task144 actual Name viewport before the sole focus tap"
         geometry.lifetime = .keepAlways
         add(geometry)
@@ -642,6 +653,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
                 previousFieldFrame = fieldFrame
                 previousKeyboardFrame = keyboardFrame
+                if readinessSampleCount < 64 {
+                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable)")
+                    beforeHit.name = "Task144 actual readiness geometry before hit-point query"
+                    beforeHit.lifetime = .keepAlways
+                    self.add(beforeHit)
+                }
                 let hittable = field.isHittable
                 readinessSampleCount += 1
                 if readinessSamples.count < 64 {
@@ -655,6 +672,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             readiness.name = "Task144 existing readiness predicate observations before assertion"
             readiness.lifetime = .keepAlways
             add(readiness)
+            // A failed readiness may be observed after its deadline; diagnostic
+            // AX queries must not consume the predicate's five-second budget.
+            if readinessResult != .completed,
+               app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
+                let observationUptime = ProcessInfo.processInfo.systemUptime
+                let observer = app.otherElements["task144.controlled.native-name-observation"]
+                let observation = observer.exists ? (observer.value as? String ?? "MISSING_VALUE") : "MISSING_OBSERVER"
+                let native = XCTAttachment(string: "post-readiness-result=\(readinessResult.rawValue); query-start-uptime=\(observationUptime); query-end-uptime=\(ProcessInfo.processInfo.systemUptime); \(observation)")
+                native.name = "Task144 native Name post-readiness failure observation"
+                native.lifetime = .keepAlways
+                add(native)
+            }
             XCTAssertEqual(readinessResult, .completed,
                            "The focused field and visible keyboard must finish repositioning before native selection")
             let geometry = XCTAttachment(string: "field=\(field.frame); keyboard=\(keyboard.frame)")
