@@ -535,7 +535,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(contentSource.contains("AppSyncRootHost("))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.rootPresentationState"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.shouldShowRootBanner"))
-        XCTAssertTrue(hostSource.contains("safeAreaInset(edge: .top"))
+        XCTAssertTrue(hostSource.contains("rootBanner(state: rootBannerState, isVisible: showsRootBanner)"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleScenePhaseChanged(phase)"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleAuthPresentationChanged()"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleShopContextChanged()"))

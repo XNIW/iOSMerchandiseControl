@@ -206,6 +206,19 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC — assertion presenter aggiornata e failure CI originali preservate
+
+La CI PR24 38284153180/head4a8 è FAIL1580=1542PASS/2FAIL/36SKIP: il test statico TASK092 cercava il vecchio safeAreaInset; Saved/Unsaved si ferma prima della selezione nella seconda acquisizione della readiness. DTO recovery avanzato e due geometrie passano; gli altri otto Root9 passano. Originali completi212224499B/SHA45e775cd, prefisso34586624B/timeout240s conservato e sola coda Range206 acquisita, CRC/size/pathsafe verificati, owner rilasciato18:46:19.072364. Nessun rerun della failure.
+
+**File modificati:** `iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift` — una sola assertion obsoleta safeAreaInset sostituita con la verifica del binding rootBanner(state:rootBannerState,isVisible:showsRootBanner). Tutte le altre assertion di presenter condiviso, busy gating, trigger, bootstrap/stop e gli altri25casi/helper restano invariati. La geometria reale resta coperta dai due test runtime qualificati, non da un nome di modifier. Review indipendente C ordinaria CLOSED, nessun nuovoGO. Questo Task: sola Execution.
+
+**Verifica pertinente:** classe intera26casi ufficiali,26PASS/0FAIL/0SKIP, summarySHA789ef11e, firstfactsf598ae1567fa8d473cc0cd3f180632ed18762332206bcfdac5eb17de5cb568a5, namespace `ios-language-label-regression-01/native-static-root-presenter-unit-class-20261012-02`. H217900s/90reserve, SDKexit0/PGgone/ownclone eliminato/source313before-after esatta, release18:56:56.369223. UI160, geometryc49, fixtureDC4 e produzioneD86/514 immutate; nessun nuovo Root9 locale o cambio di timeout/gesto/readiness. Prima preparazione01 NON ESEGUITA perché il guard storico PID11428 non esisteva;0test/0clone. Negativo conservato, nuovo02 lega identità corrente50838/G3627/binarioda207 before-after esatti.
+
+**Failure Saved corrente osservata:** 35attachment/16818028B esportati una volta, ownergone18:47:37.350447, cap100file/64MiB invariati. TXT originali EA7A/1008e0, B670/5d0c89, A23E/c0182d: primo campione completo/unico, Name311.667…333.667 sopra keyboard553; secondo poll NSError com.apple.dt.XCTest.XCTFuture1001, geometria precedente invalidata,0hit-query. Non è provato isHittable=false, campo coperto o perdita della bozza; causa specifica1001 non attribuita al prodotto. Il primo replace dello stesso caso supera due campioni stabili e hit query. Originale FAIL resta FAIL; la successiva CI completa sul nuovoSHA deve attraversare il caso fino agli assert finali.
+
+**Check e handoff:** coerenza planning e regressione pertinente ESEGUITI; nuova CI completa/Analyze/SecretScan, ProperTEST, main/FF/install e accettazione nativa NON ESEGUITI per il nuovoSHA. Nessuna distribuzione o chiusura DONE dal solo26PASS. Primaria corrente50838/binarioda207 non ha lineage qualificata: lstart raw14:37:23, verificaTZUTC17:37:23 del12ottobre; non18:37. Config in RAM semanticamente uguale alla primaria, URL/keyTESTapproved uguali, ImageAPI_BASE_URL e keyset diversi;0valori esportati. Vecchi2cb/11428 sono storici. Prima di una nuova installazione qualificare baseline effettiva/dati/pending/profilo; niente replay di vecchie snapshot o attribuzione di autore, crash, perdita o auth dal solo cambio processo.
+
+
 ### Esecuzione — 2026-10-12 UTC, candidato integrato localmente qualificato e pubblicazione normale
 
 **File modificati e motivazioni finali:**
