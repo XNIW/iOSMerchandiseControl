@@ -25,6 +25,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover() {
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
                       "The real recovery RPC must enter its held boundary before business input")
@@ -657,6 +658,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     beforeHit.name = "Task144 actual readiness geometry before hit-point query"
                     beforeHit.lifetime = .keepAlways
                     self.add(beforeHit)
+                    if self.app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
+                        let observer = self.app.otherElements["task144.controlled.native-name-observation"]
+                        let value = observer.exists ? (observer.value as? String ?? "MISSING_VALUE") : "MISSING_OBSERVER"
+                        let native = XCTAttachment(string: "readiness-sample=\(readinessSampleCount + 1); \(value)")
+                        native.name = "Task144 actual native Name before hit-point query"
+                        native.lifetime = .keepAlways
+                        self.add(native)
+                    }
                 }
                 let hittable = field.isHittable
                 readinessSampleCount += 1

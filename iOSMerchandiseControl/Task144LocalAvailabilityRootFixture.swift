@@ -1481,6 +1481,117 @@ private struct Task144ControlledRootControls: View {
             .dynamicTypeSize(.medium ... .large)
     }
 }
+/// On-demand public UIKit observations in the isolated fixture only. This view
+/// does not participate in hit testing or publish any application state.
+@MainActor
+private final class Task144NativeNameReadbackView: UIView {
+    weak var fixture: Task144LocalAvailabilityRootFixture?
+    private var sampleCount = 0
+
+    override var accessibilityValue: String? {
+        get { nativeNameReadback() }
+        set { }
+    }
+
+    private func nativeNameReadback() -> String {
+        guard sampleCount < 256 else { return "native-name-observation=CAP256" }
+        sampleCount += 1
+        var result: [String: Any] = [
+            "sample": sampleCount, "uptime": ProcessInfo.processInfo.systemUptime,
+            "observerID": String(describing: ObjectIdentifier(self))
+        ]
+        guard let fixture, let window, let scene = window.windowScene else {
+            result["status"] = "MISSING_FIXTURE_WINDOW_OR_SCENE"
+            return encode(result)
+        }
+        result["windowID"] = String(describing: ObjectIdentifier(window))
+        result["windowBounds"] = String(describing: window.bounds)
+        result["windowIsKey"] = window.isKeyWindow
+        result["presentationID"] = String(describing: fixture.controller.presentationID)
+        result["modelContainerID"] = String(describing: ObjectIdentifier(fixture.controller.modelContainer))
+        result["activeManifestGeneration"] = fixture.controller.activeManifest
+            .map { String(describing: $0.generationID) } ?? "missing"
+        var pending: [UIView] = [window]
+        var fields: [UITextField] = []
+        var visited = 0
+        while visited < 1024, let view = pending.popLast() {
+            visited += 1
+            if let field = view as? UITextField,
+               field.accessibilityIdentifier == "task144.product.name" {
+                fields.append(field)
+            }
+            pending.append(contentsOf: view.subviews)
+        }
+        result["visitedViewCount"] = visited
+        result["exactNameFieldCount"] = fields.count
+        guard pending.isEmpty, fields.count == 1 else {
+            result["status"] = pending.isEmpty
+                ? (fields.isEmpty ? "MISSING_EXACT_NATIVE_NAME" : "AMBIGUOUS_EXACT_NATIVE_NAME")
+                : "VIEW_TRAVERSAL_CAP1024"
+            return encode(result)
+        }
+        let field = fields[0]
+        result["status"] = "EXACT_NATIVE_NAME"
+        result["fieldID"] = String(describing: ObjectIdentifier(field))
+        result["fieldFrameInWindow"] = String(describing: field.convert(field.bounds, to: window))
+        result["accessibilityFrameInScreen"] = String(describing: field.accessibilityFrame)
+        let activation = field.accessibilityActivationPoint
+        result["accessibilityActivationPointInScreen"] = String(describing: activation)
+        result["isFirstResponder"] = field.isFirstResponder
+        result["isEnabled"] = field.isEnabled
+        result["isHidden"] = field.isHidden
+        result["alpha"] = Double(field.alpha)
+        result["isUserInteractionEnabled"] = field.isUserInteractionEnabled
+        if activation.x.isFinite, activation.y.isFinite {
+            let point = window.convert(activation, from: scene.screen.coordinateSpace)
+            let hit = window.hitTest(point, with: nil)
+            result["activationPointInWindow"] = String(describing: point)
+            result["hitTargetExists"] = hit != nil
+            result["hitTargetIsFieldOrDescendant"] = hit === field
+                || hit?.isDescendant(of: field) == true
+        } else { result["hitTestStatus"] = "NOT_REQUESTED_NONFINITE_ACTIVATION_POINT" }
+        var ancestors: [[String: Any]] = []
+        var ancestor = field.superview
+        while let view = ancestor, ancestors.count < 16 {
+            ancestors.append([
+                "id": String(describing: ObjectIdentifier(view)),
+                "frameInWindow": String(describing: view.convert(view.bounds, to: window)),
+                "clipsToBounds": view.clipsToBounds, "isHidden": view.isHidden,
+                "alpha": Double(view.alpha), "isUserInteractionEnabled": view.isUserInteractionEnabled
+            ])
+            ancestor = view.superview
+        }
+        result["ancestors"] = ancestors
+        result["ancestorLimitReached"] = ancestor != nil
+        return encode(result)
+    }
+
+    private func encode(_ result: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]),
+              data.count <= 8192, let text = String(data: data, encoding: .utf8) else {
+            return "native-name-observation=ENCODING_OR_BYTE_LIMIT"
+        }
+        return text
+    }
+}
+
+@MainActor
+private struct Task144NativeNameReadback: UIViewRepresentable {
+    let fixture: Task144LocalAvailabilityRootFixture
+
+    func makeUIView(context: Context) -> Task144NativeNameReadbackView {
+        let view = Task144NativeNameReadbackView()
+        view.fixture = fixture
+        view.isAccessibilityElement = true
+        view.accessibilityIdentifier = "task144.controlled.native-name-observation"
+        view.accessibilityLabel = "Controlled native Name observation"
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: Task144NativeNameReadbackView, context: Context) { }
+}
+
 private struct Task144ControlledRootModifier: ViewModifier {
     let inEditor: Bool
     func body(content: Content) -> some View {
@@ -1488,6 +1599,13 @@ private struct Task144ControlledRootModifier: ViewModifier {
             content.safeAreaInset(edge: .top, spacing: 0) {
                 Task144ControlledRootControls(fixture: fixture,
                     controlPrefix: inEditor ? "task144.controlled.editor" : "task144.controlled")
+                    .overlay(alignment: .topLeading) {
+                        if inEditor && ProcessInfo.processInfo.environment[
+                            "TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
+                            Task144NativeNameReadback(fixture: fixture)
+                                .frame(width: 1, height: 1).allowsHitTesting(false)
+                        }
+                    }
             }
         } else { content }
     }

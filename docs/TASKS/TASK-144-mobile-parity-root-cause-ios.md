@@ -206,6 +206,59 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC — prima Root9 e JSON native Name qualificati
+
+**File modificati:**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — osservatore UIKit opt-in nel solo DEBUG, già reviewed; lettura del Name univoco per identificatore esatto, frame/activation point/responder/antenati limitati, senza fallback o mutazione dello stato.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — Saved abilita l'osservatore e conserva il JSON prima dell'immutata query hit-point; nessun cambiamento agli input/assert originali.
+- Questo file — esclusivamente Execution; intera storia precedente e Planning/criteri preservati.
+
+**Azioni eseguite:**
+1. Apply selettivo `ed2de1ec`: tre percorsi owned, altri209 sorgenti e14foreign primari esatti. Equivalenza Release intera211 `50d68a23`: fixture integralmente #ifDEBUG e target UITest esclusi dalla Release, altri209 file esatti; Proper `c1f44`/binary `bcaf`/canonical `ef8d` immutati, zero rebuild equivalente/install.
+2. UNA prima classe Root9 originale: runner `7e7c29fc`, source211 `db02c96c`, receipt `efa19717`; ingresso01:36:13.828932UTC, rilascio01:44:27.022765UTC,900/90,0retry. PG9183 assente/ownUUID eliminato e native HOST11428/GUEST3627 invariati. Collector `004696ed`/owner `d7c08eda`, concluso01:44:47.046398UTC,6SDK/28file/1.064.962B completi,211hash e ordine9originali esatti. Risultato9PASS/0FAIL/0SKIP. ACK e Saved/unsaved attraversano tutti gli assert originali finali; letti solo2nuoviPNG prima/dopo cutover, bozza/caret/continuedtyping visibili.
+3. Readback canonico `15bfa600`: quattro JSON `EXACT_NATIVE_NAME`, un solo UITextField con l'identificatore richiesto, due campioni per ciascun focus Saved. FIRSTframe486,667 e SECONDframe284/KB553, firstRespondertrue; fieldID invariato dentro ciascun focus, stesso window/container/presentation/generation. Il punto UIKit(0,0) e hitnotfield compaiono anche nel FIRSTpass: nessuna inferenza causale. Antenati limitati16/cap dichiarato: nessuna prova catena completa/occlusione; due letture istantanee non escludono transienti fra esse. Non attestata equivalenza identità UIKit↔AXXCTest. La prima receipt `83d25e0f` contiene una frase descrittiva sbagliata da output troncato, mentre i JSON conservati mostrano IDuguali; rettifica SOLOfile `87c3679a`, originale preservata,0SDK/sourcefix/rerun.
+4. Prima scan127righe `8345a88d` NON_QUALIFIED:rc0/EOF ma tre report assenti, basename314/316B oltrePC_NAME_MAX255; adjudfile-only `04829a47`, originale preservato. Corretta soltanto invocazione con il supportato MC_CMD_SLUG corto, stesso scanner/publicconfig/127righe/guard: scan `a1d16b57` PASS, tre reportcanonici SHA `ea0a310e`/`4b38b645`/`b77cab3b` realmente presenti, JSONresultPASS/exit0, stdout+stderrEOF/stderr0/PG11254assente/source211esatta;0SDK/sourcepatch/Root9rerun. Zero compilerwarning nei due sorgenti modificati; warning test unitari preesistenti preservati. Test locale PASS con observer può influenzare timingAX: FAIL remoto NON RIPRODOTTO, causa UNKNOWN, nessun productfix o miglioramento sync dichiarato.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build pertinente | ESEGUITO | Compilazione Debug della prima Root9 corrente e9test originali PASS; nessuna esclusione di casi nella classe. |
+| Static/sensitive | ESEGUITO | Scan127righe PASS; intero fixture DEBUG e209fileRelease invariati; Analyze corrente va verificato nella nuova CI canonica. |
+| Warning nuovi | ESEGUITO | Nessun warning nei due sorgenti modificati; baseline unit-test non modificata. |
+| Coerenza planning/contratto | ESEGUITO | Solo diagnostico finito defaultoff; pan/soleTap/getter/readiness/5s/nativeSelectAll/fullvalue/Save/draft/cutover/ACK originali invariati. |
+| CA-10/CA-11 | NON ESEGUITO integralmente | Root9 locale ESEGUITA; normale review risultato e nuova CI full sullo SHA pubblicato prima dell'integrazione. CI38187620457 restaFAIL. |
+| CA-07/CA-09 e chiusura globale | NON ESEGUITO | Acceptance autenticata bidirezionale/per-record e performance richiedono le prove residue; nessun DONE per inferenza. |
+
+**Incertezze / Handoff:** errore remoto non riprodotto, UIKit pointzero non discriminante da solo; nessun refocus/panaggiuntivo/typingalternativo/catchfatal/timeoutrelax. C resta stesso reviewer normale e unico writer dei due centrali. Pubblicare nella stessa PR23 solo dopo review del risultato; nessun nuovo reviewer/GO o rerun immutato. No merge/FF/install/provaTEST sottoCIFAIL; dati/sessioni/code e lavoro foreign preservati. Stato FIX / NON DONE.
+
+### Esecuzione — 2026-10-12 UTC — primo dato AX corrente e osservazione UIKit isolata
+
+**File modificati (delta osservativo, non correzione di prodotto):**
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — lettura pubblica UIKit del Name effettivo nel solo fixture DEBUG opt-in; nessun accesso business/store o nuova azione.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — solo Saved abilita l'osservazione; attachment prima della query hit-point conserva il campione UIKit, senza sostituire la readiness.
+- Questo file — solo Execution; Planning/criteri e intera Execution precedente preservati.
+
+**Azioni eseguite / evidenza di partenza:**
+1. CI38187620457/head75241ff terminaleFAIL:1577ID esatti=1540PASS/1FAIL/36stessiSKIP,17UI16PASS/1FAIL. BuildPASS, Analyze/Secret scanSKIPPED. UnicoSaved/unsavedSECOND ActivationPointinvalid; ACK e ProductSave/historyPASS. Smallqual1bc689ecNOT_QUALIFIED, ownerbe2b0150/release01:00:49.506609 e failureadjud65ec699d preservati.
+2. ONE nuovo originale11721700354/192578840B/SHA10f1e46a, EOF/CRC4509safeentries. ONEexportSaved27file, due pre-hit actualName382,333...404,333 nella fascia248,333...422/KB553, sample1stablefalse e sample2stabletrue, poi fatal. Primoedit hittrue/stablefalse→true. SnapshotAX solo root/childrenvuoti. ONEdecode4nuoviframe conNamevisibile/caretblu negliultimi2;65,8precedeactualsynthesis65,819. Exportoverall23f160c3/videooverall73ffa0ad, tutte risorse proprie rilasciate/nativeHOST11428-GUEST3627/source211 esatti. Media attuale e precedente chiusa dopo reviewC, nessuna reacquisizione o inferenza causale.
+3. Diagnosi concreta: frame stabile e pixels visibili non forniscono l'activation point UIKit o provano interagibilità. Non modificare pan, hitpredicate,5s,soleTap,SelectAll,fullvalue,Save/bozza/cutover/ACK; non attribuire CPU/clipping/remount/prodotto senza separata riproduzione.
+4. Osservazione preparata nel DEBUGfixture già isolato, defaultOFF: targetsoloUITextField con identifierNameesatto; MISSING/AMBIGUOUS/cap espliciti, nessun fallback o markerPASS. Identità field/window/observer/presentation/modelContainer, generation effettiva o missing, uptime,frame/activation/responder/ancestor e hitTest solo pubblici. Nessun layout/focus/publish/admission/dato/coda modificato. Limiti256letture perobserver/1024view/16ancestor/8192B, attachment sotto64campioni esistenti. Corretto staticamente l'ordine del budget prima di pop prima di qualsiasi compilazione/esecuzione; v1 mai applicata.
+5. UI/UX: nessun miglioramento applicativo dichiarato. Il probeDEBUG1x1 non riceve input e non cambia dimensioni del pannello; modifica tuttavia l'albero AX del fixture. Exists/value aggiungono letture nello stesso5s; eventualePASS resta NO_REPRODUCTION, non causalfix. IdentiferSwiftUI può non essere esposto sul controlloUIKit: il primo Root9 deve qualificare il dato effettivo, non promuovere un MISSING a prova.
+
+**Check obbligatori (checkpoint preparazione, non chiusura):**
+| Check | Stato | Note |
+|---|---|---|
+| Build / XCTest | NON ESEGUITO | Nuovo delta da verificare una sola volta nella classe Root9 originale, stessi9ID/ordine e assert; CI752FAIL conservata. |
+| Analyze / scan | NON ESEGUITO | Scan necessario sulle sole nuove righe; nessun PASS dedotto. |
+| Warning nuovi | NON ESEGUITO | Da adjudicare sui log reali; UIKit già importato, nessuna dipendenza aggiunta. |
+| Coerenza con planning | ESEGUITO | Diagnosi osservativa CA-10 nello stesso TaskFIX; nessuna apppatch o modifica agli assert. |
+| Criteri di accettazione | NON ESEGUITO | CA-07/09 e prove utente restano aperte; nessuna chiusuraDONE. |
+
+**Incertezze:** causaAX/prodottoUNKNOWN; campionamento e1pxobserver possono alterare timing/AX. Prima di un fix applicativo occorre separata causalrepro. MissingnativeName e generationmissing restano fatti mancanti.
+
+**Handoff notes:** normale source reviewC/N del delta concreto, stessa catena senza nuoviGO/reviewer. Riutilizzare runner/collector con sole associazioni necessarie; nessun rerun immutato, Release equivalente, installazione o nuovoTESTSave sottoCI non qualificata.
+
+
 ### Esecuzione — 2026-10-12 UTC / 11 ottobre Santiago — Root9 terminale PASS, errore remoto non riprodotto
 
 **Stato: FIX / NON DONE.** Una sola Root9 originale completa termina9PASS/0FAIL/0SKIP, tutti9ID/ordine esatti. Ciò non cambia il FAIL ufficiale della CI38182254343/head3fe o la causa UNKNOWN della queryAX. Nessuna nuova patch prodotto; sei righe osservative UI499e2640 approvate dalla normale review C.
