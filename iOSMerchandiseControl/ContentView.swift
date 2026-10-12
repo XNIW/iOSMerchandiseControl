@@ -677,11 +677,10 @@ private struct AppSyncRootHost<Content: View>: View {
         let rootBannerState = syncOrchestrator.rootPresentationState
         let showsRootBanner = syncOrchestrator.shouldShowRootBanner(rootBannerState, selectedTab: selectedTab)
 
-        content(syncOrchestrator)
-            .padding(.top, showsRootBanner ? rootBannerReservedTopPadding(for: rootBannerState) : 0)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                rootBanner(state: rootBannerState, isVisible: showsRootBanner)
-            }
+        VStack(spacing: 0) {
+            rootBanner(state: rootBannerState, isVisible: showsRootBanner)
+            content(syncOrchestrator)
+        }
             .task {
                 await refreshShopContextAndResumeSync()
                 #if DEBUG
@@ -773,10 +772,6 @@ private struct AppSyncRootHost<Content: View>: View {
         }
     }
 
-    private func rootBannerReservedTopPadding(for state: SyncRootPresentationState) -> CGFloat {
-        state.kind == .checking ? 38 : 52
-    }
-
     private func handleRootAction(_ actionID: SyncRootPresentationActionID?) {
         switch actionID {
         case .reviewChanges:
@@ -822,54 +817,97 @@ private struct AppSyncRootHost<Content: View>: View {
 }
 
 private struct SyncRootForegroundBanner: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let state: SyncRootPresentationState
     let reduceMotion: Bool
     let action: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Image(systemName: state.systemImage)
-                .imageScale(.small)
-                .foregroundStyle(iconTint)
-                .frame(width: 22, height: 22)
-                .background(iconTint.opacity(0.14), in: Circle())
-                .accessibilityHidden(true)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: state.systemImage)
+                            .font(.system(size: 14))
+                            .imageScale(.small)
+                            .foregroundStyle(iconTint)
+                            .frame(width: 22, height: 22)
+                            .background(iconTint.opacity(0.14), in: Circle())
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(L(state.titleKey))
+                                .font(.footnote)
+                                .fontWeight(.semibold)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(L(state.titleKey))
-                    .font(.footnote)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.86)
-
-                if let detailKey = visibleDetailKey {
-                    Text(L(detailKey))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.86)
+                            if let detailKey = visibleDetailKey {
+                                Text(L(detailKey))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    if let actionTitle = publicRemediationActionTitle {
+                        Button(L(actionTitle), action: action)
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .fixedSize(horizontal: true, vertical: true)
+                    }
                 }
-            }
+            } else {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: state.systemImage)
+                        .imageScale(.small)
+                        .foregroundStyle(iconTint)
+                        .frame(width: 22, height: 22)
+                        .background(iconTint.opacity(0.14), in: Circle())
+                        .accessibilityHidden(true)
 
-            if let actionTitle = publicRemediationActionTitle {
-                Button(L(actionTitle), action: action)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .fixedSize(horizontal: true, vertical: true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L(state.titleKey))
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+
+                        if let detailKey = visibleDetailKey {
+                            Text(L(detailKey))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let actionTitle = publicRemediationActionTitle {
+                        Button(L(actionTitle), action: action)
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .fixedSize(horizontal: true, vertical: true)
+                    }
+                }
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .frame(maxWidth: maxBannerWidth, alignment: .leading)
+        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : maxBannerWidth, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
-        .background(.regularMaterial, in: Capsule(style: .continuous))
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-        )
+        .background {
+            if dynamicTypeSize.isAccessibilitySize {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.regularMaterial)
+            } else {
+                Capsule(style: .continuous).fill(.regularMaterial)
+            }
+        }
+        .overlay {
+            if dynamicTypeSize.isAccessibilitySize {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+            } else {
+                Capsule(style: .continuous)
+                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+            }
+        }
         .shadow(color: Color.black.opacity(0.08), radius: 7, y: 3)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier("sync.root.foreground.banner")
         .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: state.kind)
     }
@@ -894,8 +932,7 @@ private struct SyncRootForegroundBanner: View {
     private var accessibilityLabel: String {
         [
             L(state.titleKey),
-            visibleDetailKey.map { L($0) },
-            state.primaryActionTitleKey.map { L($0) }
+            visibleDetailKey.map { L($0) }
         ]
         .compactMap { $0 }
         .joined(separator: ". ")

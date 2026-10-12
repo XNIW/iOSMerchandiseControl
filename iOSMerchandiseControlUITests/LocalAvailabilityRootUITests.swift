@@ -684,6 +684,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             var readinessSamples: [String] = []
             var readinessSampleCount = 0
             var readinessPollCount = 0
+            var hittabilityQueryCount = 0
             var invalidSnapshotSampleCount = 0
             var invalidSnapshotSamples: [String] = []
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
@@ -722,23 +723,36 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     && previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
                 previousFieldFrame = geometryIsUnambiguous ? fieldFrame : nil
                 previousKeyboardFrame = geometryIsUnambiguous ? keyboardFrame : nil
+                let geometryReady = geometryIsUnambiguous && stable
+                    && fieldFrame.height > 0 && keyboardFrame.height > 0
+                    && fieldFrame.maxY < keyboardFrame.minY
                 if readinessSampleCount < 64 {
-                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
-                    beforeHit.name = "Task144 actual readiness geometry before hit-point query"
+                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount); hit-query-planned=\(geometryReady)")
+                    beforeHit.name = "Task144 actual readiness geometry before conditional hit-point query"
                     beforeHit.lifetime = .keepAlways
                     self.add(beforeHit)
                 }
-                let hittable = field.isHittable
+                // Geometry that is already negative cannot admit this sample.
+                // Query the actual hit point only for a candidate sample, keeping
+                // its result mandatory without spending the waiter on a query
+                // whose answer cannot change an unstable sample's verdict.
+                let hittable: Bool?
+                if geometryReady {
+                    hittabilityQueryCount += 1
+                    hittable = field.isHittable
+                } else {
+                    hittable = nil
+                }
+                let hittableObservation = hittable.map { String($0) }
+                    ?? "NOT_QUERIED_GEOMETRY_NOT_READY"
                 readinessSampleCount += 1
                 if readinessSamples.count < 64 {
-                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittable); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
+                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittableObservation); hit-query-performed=\(geometryReady); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
                 }
-                return frames.complete && frames.fieldCount == 1 && frames.keyboardCount == 1
-                    && hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
-                    && fieldFrame.maxY < keyboardFrame.minY && stable
+                return geometryReady && hittable == true
             }, object: nil)
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
-            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count))\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
+            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count))\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
             readiness.name = "Task144 existing readiness predicate observations before assertion"
             readiness.lifetime = .keepAlways
             add(readiness)

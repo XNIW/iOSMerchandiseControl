@@ -1479,6 +1479,8 @@ private struct Task144ControlledRootControls: View {
             // Observation controls must not consume the product's viewport
             // when the real root is exercised at accessibility text sizes.
             .dynamicTypeSize(.medium ... .large)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("\(controlPrefix).band")
     }
 }
 /// On-demand public UIKit observations in the isolated fixture only. This view

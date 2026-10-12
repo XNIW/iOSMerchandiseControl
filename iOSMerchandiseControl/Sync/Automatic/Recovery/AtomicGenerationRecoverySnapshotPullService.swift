@@ -572,10 +572,22 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             } catch let error as Task126OwnerStoreGateError where error == .scopeChanged && manifestActivated {
                 if let ledger { try? ledger.closeWrites() }
                 guard let activatedManifest, let activatedJournal,
-                      let completed = try await completePublishedSameScopeGenerationAfterLeaseRefresh(
+                      let resumed = try await completePublishedSameScopeGenerationAfterLeaseRefresh(
                         originalScope: scope, manifest: activatedManifest, journal: activatedJournal
                       ) else { throw error }
-                return completed
+                switch resumed {
+                case .completed(let summary): return summary
+                case .restage(let manifest, let journal):
+                    // This publication consumed one of the existing attempts.
+                    // Reverify a fresh, changed archive only within that budget;
+                    // all active-generation/journal/fence guards still apply.
+                    guard attempt < maximumAttempts else {
+                        throw ShopSyncRecoveryContractError.markerNotVerified
+                    }
+                    restagingFloor = manifest
+                    restagingJournal = journal
+                    lastCheckpointError = ShopSyncRecoveryContractError.markerNotVerified
+                }
             } catch {
                 if let ledger { try? ledger.closeWrites() }
                 if !Self.isResumableTransportFailure(error) {
@@ -596,7 +608,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         originalScope: Task126VerifiedOwnerStoreScope,
         manifest: SyncStoreGenerationManifest,
         journal: AccountRecoveryJournalSnapshot
-    ) async throws -> SyncRecoverySnapshotPullSummary? {
+    ) async throws -> ActivatedGenerationCompletion? {
         for admissionAttempt in 1...maximumAttempts {
             try Task.checkCancellation()
             guard journal.mode == .sameScopeRecovery,
@@ -630,10 +642,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 if let resumed = try await completeActivatedGenerationIfPossible(
                     ownerUserID: originalScope.ownerUserID, scope: current
                 ) {
-                    switch resumed {
-                    case .completed(let summary): return summary
-                    case .restage: throw ShopSyncRecoveryContractError.markerNotVerified
-                    }
+                    return resumed
                 }
                 return nil
             } catch let error as Task126OwnerStoreGateError where error == .scopeChanged {

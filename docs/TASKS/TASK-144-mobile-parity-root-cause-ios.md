@@ -206,6 +206,265 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC, candidato integrato localmente qualificato e pubblicazione normale
+
+**File modificati e motivazioni finali:**
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — completa restaging del checkpoint avanzato dopo pubblicazione/lease refresh nel loop originale massimo2, conservando authority/archivio/finalizzazione.
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — regressione reale DTO/journal RED6PASS1FAIL→GREEN7PASS; sei guardie precedenti mantenute.
+- `iOSMerchandiseControl/ContentView.swift` — riserva intrinseca unica nel root, testo completo e CTA separata ad accessibilità; normale layout contenuto invariato, nessun dato/navigation state modificato.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — solo gruppoAX/identifier dei controlli DEBUG per misurare il confine senza confonderlo con la navbar.
+- `iOSMerchandiseControlUITests/RootCloudBannerLayoutUITests.swift` — due nuove regressioni sui margini reali4/2±1, fullmessage/Retry/viewport/tabs/hidden.
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — diagnostica readiness preesistente source160, tutti9corpi/assert/gesti/timeout originali conservati.
+
+**Esito integrato:** originalRoot08 tutti9PASS/0FAIL/0SKIP nello stesso ordine originale d221, nessun nuovo warningSwift. Le asserzioni finali ACK/replayimmutabile, ProductSave conhistoryindipendente, Saved/UnsavedIntent/cutover, SupplierCategory mapping+OwnACK, callback previousShop, bootstrap/local access e4lingue largefont tutte eseguite. Runnerd4e36e57: SDK0PG33277gone/noSignals17:14:57.920398, ownUUIDdeleted, overall17:14:58.534558 primadeadline17:22:03.022022. Collectore6d458fb/ownerddf179c2:6SDKrc0EOF/reaped, release17:18:33.963571. Summary1e2321ab/tree72c83a01/readback590ab1bc;24hashfiles/18nuoviTXT/4manifest conservati. Fonte313/PID11428-3627 esatti. I tempi testcase38.957/25.594/65.148/51.857s includono setup/gesti e non sono prestazioni native.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build iOS / Preview | ESEGUITO | Nuova fonteintegrata compilata per Root08 e geometry04. |
+| Static / whitespace | ESEGUITO | Review mirata C, git diff --check; Analyzer completo affidato alla nuovaCI. |
+| Warning nuovi | ESEGUITO | ZeroSwift nuovi, noticesAppIntents baseline. |
+| Coerenza planning | ESEGUITO | Correzioni minime nel mandato; nuovi2test e tutti17precedenti conservati. |
+| Criteri accettazione globale | NON ESEGUITO | NuovaCI1580, firmaeffettiva/merge/main/IDE/install preserving e nativeUX/Auth/peer/offline/VO/finestrapassiva ancora necessari. |
+
+**Handoff:** Task FIX/NON DONE. Gate locali7unit/2geometry/9originali distinti, non sommare overlap. Pubblicazione normale PR24 sul branch corrente autorizzata, senza force/admin bypass; primaryb869 e tutte14modifiche estranee/indexvuoto/stash[] verificati immutati nel preflight9cccf1e0. I vecchiFAIL e pacchetti restano sigillati; nuovo prodotto richiede nuova compilazione TEST effettiva.
+
+
+### Esecuzione — 2026-10-12 UTC, due regressioni geometria PASS e qualifica original9 integrata
+
+Coppia c49/dc4 con prodotto d86/514 e Unit751: ufficiali2PASS/0FAIL/0SKIP su nuova iPhone16e iOS26.2, ordine dei due casi atteso effettivamente osservato. Runner f10dfba9: SDK0, PG24760 assente/noSignals17:01:28.291999, ownUUIDdeleted, overall17:01:28.849953; collector e1681a85/owner89f28f87:4SDK EOF0/reaped, rilascio17:02:31.121126. Fonte313/7percorsi/PID11428-3627 invariati. Summary52679d2a/tree86356526; nuovi originaliTXT/readbackbb449406 preservati; nessun vecchioFAIL convertito in PASS.
+
+Entrambi i testi esattamente1ciascuno e Retry positivo/fullbounds/distinto/hittable, row separata AX; tutti4tab percorsi. Wholeband osservato maxY101.6667, banner minY105.1667: margine3.5pt entro4±1. Viewport vero condiviso da anchor+tabbar default151.6667/AX446, banner maxY150.1667/444.5: margine1.5pt entro2±1. Inventory title completo/raggiungibile sopra tabbar; Options hidden iniziale/finale frame viewport intero identico, no phantomreservation. Sono misure controllate sul compact, non collaudo nativo autenticato/VoiceOver o prova esatta della categoria default; actualXXXL verificato dall'assertUIKit esistente.
+
+**Check:** compilazione e Preview ESEGUITO nel targetUI, whitespace/review ESEGUITO, nessun nuovo warningSwift (solo3noticeAppIntents baseline); coerenza planning ESEGUITO. Accettazione globale NON ESEGUITO: ora original9 con tutta la nuova gerarchiaAXDEBUG, fullCI1580, firma/merge/main/install e nativeUX/peer/passivewindow. Nessun rerun Unit7 o prove immutate. Task FIX/NON DONE.
+
+
+### Esecuzione e fix oracle — 2026-10-12 UTC, confini effettivi di fixture/banner/viewport
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/RootCloudBannerLayoutUITests.swift` — candidataL c49ea88f: stesso snapshot fresco, antenato Other condiviso per percorso e frame da contenuto nativo e tabbar; regioni identiche deduplicate, ambiguità rifiutata, viewport parziale visibile e finestra in Options. Verifica4±1pt dal wholefixture al banner e2±1pt dal banner al viewport in Database/History/Inventory, e ritorno hidden identico; non usa la navbar come bordo dell'allocazione.
+- `iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift` — SOLO2modifier AX sul gruppo completo dei controlli DEBUG: contain e controlPrefix.band. Inverse patch restituisce b88 byteesatto, tutti i dati, callback, gesture e stati invariati. Nessun effetto su Release o utenza ordinaria.
+
+**Azioni eseguite:**
+1. Geometry03 fonte701: compilerPASS e2FAIL ufficiali69 preservati. Nuovi4TXT readback1eec38a1 dimostrano antenati navbar con viewport default151.6667/AX446 e barra+10pt; Options antenati fullscreen0. Il bordo inferiore AXbanner è1.5pt prima del viewport. Il gruppo controlli non esponeva il proprio frame. Questo invalida il vecchio confronto navbarOptions→navbarDB come misura della sola riserva; non prova un nuovo difetto prodotto.
+2. C ha revisionato la coppia concreta c49/dc4; N integra soltanto quei due file, nessun ContentView/taskL/checkout importato. Fonte prodotto d86/514 e Unit751 restano invariati. Margin precision1, due snapshot stabili complete5s/cap1024, exact1title1detail, Retry positivo/hittable/separatoAX, held/unreleased, tabs e tutti17corpi precedenti mantenuti. Nessuna sottrazione costante1/10/63.67 o compensazione nuova.
+3. UI/UX: solo osservazione DEBUG del wholefixture; comportamento prodotto resta d86. La gerarchia AX DEBUG cambia: original9 e tutti17UI precedenti devono essere qualificati sul candidato integrato.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build iOS / Preview | NON ESEGUITO | Coppia c49/dc4 da compilare nella prima qualifica. |
+| Static / whitespace | ESEGUITO | Review mirata C e git diff --check; fonte313/7percorsi propri. |
+| Warning nuovi | NON ESEGUITO | Nuovo compile da osservare; nessun nuovo warningSwift nel precedente. |
+| Coerenza planning | ESEGUITO | Comparator sui confini reali secondo mandato UI, nessuno stato prodotto forzato. |
+| Criteri accettazione | NON ESEGUITO | Primo runtime del wholeband e antenato condiviso ancora da qualificare, poi original9/CI1580/Proper/main/install/native. |
+
+**Handoff notes:**
+- Task FIX/NON DONE; tuttiFAIL precedenti immutabili. Actualsharedancestor deve esporre fisicamente un frame coerente con contenuto e tabbar prima di PASS, nessun fallback o nuova approvazione/GO.
+
+
+### Esecuzione diagnostica — 2026-10-12 UTC, confine misurato della navbar e dei controlli TEST
+
+Fonte d86/UI193 geometry-02: compilazione PASS, ufficiali0PASS/2FAIL/0SKIP, entrambi69. FullOther identificato, title/detail esattamente1ciascuno e frame positivi dentrobanner; Retry distinto/hittable e riga separata AX verificati in Database. La riserva navbar rispetto Options include63.6667pt ulteriori sia default siaXXXL; lowergap osservato11.5pt ma l'assert2pt non raggiunto. Non è ancora prova di doppio spazio prodotto: la fixture aggiunge safeAreaInset esterno e il frame UIKit della navbar non è il frame del contenuto assegnato. History/Inventory successivi NON ESEGUITI. Runner54887f34/collector23b594d6/owner c4ce250f rilasciato16:00:51.234284, source313/PID11428-3627 invariati; nuovo readback originali4TXT f4da1112 conservato.
+
+Il delta diagnostico70164609 aggiunge SOLO ancestry type/id/frame della navbar, del banner e del release-control, dalla medesima snapshot fresca già usata; nessuna nuova query/snapshot, nessun cambio a6/2pt±1/5s/2fresh/1024/labelpair/frames/gesture/assert o sorgente prodotto. Rende osservabile l'allocazione reale prima di attribuire i margini; non sottrae64 o10 costanti. UI/UX prodotto invariata rispetto d86, task FIX/NON DONE. Nuova fonte osservativa da compilare, risultato ancora NON ESEGUITO.
+
+
+### Esecuzione e fix — 2026-10-12 UTC, riserva intrinseca root e oracolo del reale errore held
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — il root host usa un unico VStack stabile con banner e contenuto; riserva la sola altezza intrinseca, senza inset aggiunto o padding misurato. Identifier del container AX; solo icona decorativa accessibilità14pt nel frame22 esistente. Stato, contenuti, font di testo, azioni e callback invariati.
+- `iOSMerchandiseControlUITests/RootCloudBannerLayoutUITests.swift` — i due nuovi test misurano il reale HeldRecoveryError; full Other container univoco, title/detail e Retry discendenti con frame positivi, dentro il banner, sopra tabbar; CTA accessibilità su riga separata e raggiungibile.
+
+**Azioni eseguite:**
+1. Prima qualifica geometry2 fonte355/ea445: compilerPASS,0PASS/2FAIL/0SKIP ufficiali. Options baseline due snapshot complete stabili; Database cinque snapshot senza il container Checking atteso, navminY47 in entrambe le schede. Diagnostic/readback6e29756d, runner11837d27, collector bdfb9dd6/owner6fa24609; ultimo rilascio collector15:30:28.964984UTC, fonte313 e PID11428/3627 invariati. History/Inventory in quel run NON ESEGUITI.
+2. Unico nuovo frame originale dal video case1: requested18s ma actual14.356667s, SHA f493070f, letto una volta. Mostra Cloud check failed, detail completo e Retry separato; tabbar libera, banner sovrapposto a parte della navbar e icona decorativa oltre il proprio frame. Non è una retro-PASS dei due FAIL.
+3. Review mirata C della fonte d86: inverse patch SOLO3hunk; wrapper VStack a slot lessicali stabili, icona decorativa14, identifier full AX. Review della correzione nuova oracle nel normale stesso ciclo; variante L a4cb selezionata, più guard positivo width/height e coppia esatta title/detail V2. La correzione concreta richiesta da C conserva anche le label in Geometry/diagnostic, così due titoli uguali non sostituiscono il dettaglio. N5779 e tutte le preview/FAIL precedenti conservati NONAPPLIED/nonselezionati.
+4. UI/UX: spazio unico e derivato dall'altezza reale impedisce il banner sulla navbar; layout AX conserva messaggio completo e CTA distinta, senza ridurre font di testo o troncature. Nessun cambiamento ai17test UI precedenti, in particolare tutti9corpi/assert/gesture/timeout source160 restano esatti.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build iOS / Preview | NON ESEGUITO | Nuova fonte d86/be1d da compilare. Il compilerPASS precedente vale355/ea445. |
+| Static / whitespace | ESEGUITO | Scope minimo e git diff --check richiesto all'integrazione. |
+| Warning nuovi | NON ESEGUITO | Nessun nuovo warning Swift nel run precedente; nuovo run da osservare. |
+| Coerenza planning | ESEGUITO | Difetto visuale effettivo e correzione della sola nuova oracle fallita. |
+| Criteri accettazione | NON ESEGUITO | Nuova geometria/original9,CI1580,Proper/main/install e nativeUX/Auth/VO restano aperti. |
+
+**Incertezze:**
+- Disposizione della VStack, conservazione runtime delle identità e ruolo/frame del container AX non sono dedotti dalla sola statica: verificare primaqualifica e original9.
+- Le categorie sono richieste; solo XXXL dispone dell'assert della categoria UIKit effettiva. Nessun PASS default categoria esatta ancora attestato.
+
+**Handoff notes:**
+- Stato FIX / NON DONE; nessun re-run immutato, nessun nuovo harness/GO o modifica dati/configuration.
+
+
+### Esecuzione e fix — 2026-10-12 UTC, banner responsive dopo Root07 originale
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — solo `SyncRootForegroundBanner`: testo accessibilità su riga completa e CTA separata; altezza determinata dal contenuto, shape arrotondata e larghezza proposta dal parent. Il layout normale conserva contenuti, font e azioni; equivalenza visiva da verificare.
+- `iOSMerchandiseControlUITests/RootCloudBannerLayoutUITests.swift` — due regressioni geometria sul root reale, testo default richiesto e accessibilità XXXL; margini effettivi4/2pt, confronto nav Database/History contro Options, Inventory misurato separatamente.
+
+**Azioni eseguite:**
+1. Root07 originale:8PASS/1FAIL/0SKIP, solo LargeFont riga483. I due assert sulla stessa riga non consentono attribuire in modo certo exists o isHittable.
+2. Il nuovo frame originale71.233s riproduce il banner verticale con testo compresso e tabbar coperta. Il frame69.793s è una transizione con Database selezionata e non è un baseline Options stabile. Export complessivo FAIL per cap64MiB mantenuto; subset45file e due frame separati non trasformano il test/export in PASS.
+3. Review mirata C conclusa su preview4c81 e V2: solo36spazi rimossi da quattro righe vuote, SHA3554961f. Fonte fuori dal banner, lifecycle/root e safeAreaInset4/2 invariati; nessuna troncatura, riduzione font, height cap o cambio dati. UI/UX: CTA su riga separata alle dimensioni accessibilità per preservare lettura completa e navigazione.
+4. Integrati solo i due test L già revisionati; non importata la sua produzione alternativa. Il nuovo file è intent-to-add per il freeze, nessun contenuto staged. I nove corpi, assert, gesture e timeout di LocalAvailabilityRootUITests restano invariati.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build iOS / Preview | NON ESEGUITO | Nuova fonte da compilare nel runner posseduto. |
+| Static / whitespace | ESEGUITO | Review C conclusa e git diff --check. |
+| Warning nuovi | NON ESEGUITO | Da osservare nella nuova compilazione. |
+| Coerenza planning | ESEGUITO | Difetto UI reale nel mandato umano del12ottobre; fix circoscritto. |
+| Criteri accettazione | NON ESEGUITO | Geometria effettiva, originalRoot9, CI, VoiceOver e collaudo nativo ancora aperti. |
+
+**Incertezze:**
+- La shape normale conserva lo stile ma le API background/overlay sono riscritte: equivalenza runtime NON dedotta dalla statica.
+- Il container AX.other esatto e la sua altezza devono essere qualificati nel primo run; nessun fallback al frame della Text o confronto nav fittizio.
+- Richiesta default.large non è attestazione effettiva della categoria; XXXL ha il marker UIKit esistente.
+
+**Handoff notes:**
+- Task FIX / NON DONE. Recovery514 e Unit751 già qualificati; nuovi controlli layout separati da autenticazione e sincronizzazione reale.
+
+
+### Esecuzione — 2026-10-12 UTC: recovery qualificata nella Root9 e layout integrato
+
+**File modificati:**
+- `iOSMerchandiseControl/ContentView.swift` — UI/UX: tolti solo padding superiore duplicato e helper38/52 con safeAreaInset mantenuto, testo banner senza truncation/scalefactor, azione figlia accessibile separatamente (motivo: uso dello spazio e leggibilità/accessibilità; nessun altro lifecycle/state/engine cambiato).
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — risultato Root9, integrazione autorizzata e gate ancora aperti; Planning/storia invariati.
+
+**Azioni eseguite:**
+1. ONEoriginalRoot9 suProd514/Unit751/UI160/Task3b, frozen312260303: entry13:30:55.605962/deadline13:45:55.605962, SDKPG70565exit0/noSignals/gone/release13:39:05.796019, overall13:39:06.514843/ownUUID70900deleted/nativePIDs/source312exact entro90090. Collectorcbf29413/ownercb695bff release13:42:15.160329 entro60090,6SDK EOF/rc0/reaped. Summary7960a35e/treef0adb9e1:9unique/originalorder/**9PASS0FAIL0SKIP**. ACK37.446s/ProductSave25.958s/Saved65.080s/Supplier51.721s fino a tutti gli assert finali; large-font4lang161.900PASS. Non è solo journalactivated o tastiera visibile.
+2. Readback289118df:24hash1053587B/18TXT4manifest verificati una volta N+C, CLOSED,0pixels/video. Readiness osservate tutte2freshcompleteName1KB1KB553/233/stablefalse→true/firstNOTQUERIED/finalactualhittrue/querycount1/invalid0; Saved2field280.333..302.333 nella fascia248.333..422 dopoONEpan-501. Nessuna continuità focus o causa precisaRoot05 retroattiva inferita. Unit7PASS è risultato distinto riusato, non duplicato in Root9.
+3. Mandato umano diretto a9bf71 (chat Completa sync e correggi UI reali) autorizza completamento e layout integrato. StessaC staticreview13:42:27; copiato SOLOContentView da commitL c6ad47e9f3606720021751d8a6b02806ecb73ba4 con parent8d6f byteexactN e deltaa215; gitapplycheck/diffcheckPASS, receiptb329637f/patch0d5e29c9. Non importati oldProdBC7/UI692 o TaskL. Prod514/Unit751/UI160/fixtureb88/policy93ef invariati.
+4. Layout a215 non era incluso nella Root9 sopra. Prossimo ONEoriginalRoot9 sul candidato integrato, stessi9corpi/assert/gesti/order/readiness5s, nessuna Unit7 duplicata; source312 congelata. UI acceptance richiede same15ProMax26.1+compact,4tab/banner hidden-checking-error/testogrande4lang/VO e screenshot beforeafter in punti, non pixel scalati. Foto prima fornite dall'umano in evidence/sync-layout-20261012; oldnativebinary2cb precede label/recoveryfix, non è regressionproof dei fix correnti.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Unit7 / Root9 recovery | ESEGUITO (PASS) | 7P0F0S e9P0F0S distinti, tutti finalassert invariati. |
+| Build / Root9 layout integrato | NON ESEGUITO | Primo nuovo run sul soloContentViewa215 dopo review ordinaria. |
+| Layout native / AX / lingue | NON ESEGUITO | Diffcheck/staticreview non sono misura gap, screenshotafter o VoiceOver. |
+| Nuova CI / Proper / main / install | NON ESEGUITO | Fontefinale+1578/36sameSkip, nuovoProper necessario, preservazione dati/sourceforeign. |
+| Coerenza planning | ESEGUITO | Nuovo mandatoUI autorizzato nello stessoTask; nessunporting/refactorengine/API/DAO ocompensazione layout altrove. |
+| Criteri accettazione | NON ESEGUITO | NativeCA07/08/09 e UXreale ancora aperti. |
+
+**Incertezze:** originalRoot05guard preciso e remotiXCTFuture1001 UNKNOWN; nessunaAuthnative/propagazione/metricareale dafixture/localCI. N2340 pending va tracciato peridentità effettiva senza resave/replay/drop/ACKartificiale. W/C04separato; suoi timeout/readonly/Cua latejournals non diventano Nativetestgates. No nuove domande unlock senza evidenza corrente.
+
+**Handoff:** NsoleSDK/install/main, Csole2centraldocs/reviewer esistente; Lsource-onlyUI nuovo autorizzato dall'umano. NuovoProperfinale dopo codice e layout stabili; normalecommit/PRCI/mainCI/FF preservativa senza nuoveGOchain. NoDONEanticipato.
+
+
+### Esecuzione — 2026-10-12 UTC: fix separato verificato e prossima Root9 originale
+
+**File modificati:**
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — esito positivo del fix minimo, gate residui e fonte congelata della prossima classe UI; storico/Planning intatti.
+
+**Azioni eseguite:**
+1. Applicato code-only51426/Task0c772 dopo stessaC ordinaryreview12:50:27 e Wrelease9ab certa/lockassente, receipt994d759b. ONEGreen7 source312833e/unit751/UI160/fixtureb88/prod514: entry12:54:44.474819/deadline13:09:44.474819, SDKPG60794exit0/noSignals/gone/release12:55:38.135954, overall12:55:38.801630/ownUUIDE1FDFdeleted/native11428-3627/source312exact entro90090. Collectorfa03370c/ownerdf388246 release12:57:23.178155 entro60090/3SDK EOF/rc0/reaped. Officialsummary56d74ff9/tree37fe3d09:7ID/ordine invariato/**7PASS0FAIL0SKIP**. Il precedente readback Ccollectorabsent12:57:14 resta fatto storico prima del completamento.
+2. Nuovo test0.292s supera tutti gli assert originali: completedRecoveryJournal, nuova generation, checkpoint42 completo, finalization valida/journal assente,4checkpoint12domainpages nel budget2, riapertura e prodotto remoto conservato/pending-outbox0 della fixture controllata. Sei regressioni precedenti passano; nessun loro corpo/assert indebolito. Readbackf20a6618; un manifest4B[] e log raw letti una volta; tre notice AppIntents baseline su tre target, nessun nuovo warning Swift. Questo è un PASS unitario locale, non accettazione TEST nativa o prova retrospettiva del guard preciso Root05.
+3. Prossima verifica: ONE classe Root9 originale, ordine9 invariato e tutti assert/gesti/timeouts/probe-off originali, su prodotto514 e UI160 esatti. Unit7 non duplicata nella selezione Root9; compilazione include tutti100unit e sourcefreeze312. Nessun rilancio invariato o nuovo GO chain.
+4. Dopo stabilità locale servono nuova normale CI completa, nuovo Proper del prodotto modificato, normale integrazione/mainCI e preserving install prima di CA07/08/09 reali. Unico nuovo metodo unitario aggiunto: atteso inventarioCI1578 rispetto1577 precedenti,0nuovi skip; tutti36skip preesistenti restano distinti. Nessuna equivalenza del vecchio bcaf al nuovo prodotto.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / nuovo warning Swift | ESEGUITO | Green7 compila;0nuovi Swiftwarning,solo3notice AppIntents baseline. |
+| XCTest pertinenti fix | ESEGUITO (PASS) | 7PASS0FAIL0SKIP con tutti gli assert finali e sei guard esistenti. |
+| Root9 dopo fix / nuova CI | NON ESEGUITO | Root05 7P2F eCI3cfcFAIL preservati; prossimo primo run sul nuovo prodotto. |
+| Nuovo Proper / main / install | NON ESEGUITO | Dopo gate finali, dati/sourceforeign preservati. |
+| Coerenza planning | ESEGUITO | Fix riprodotto, stesso limite2/authority/finalization/archive guards; UI/fixture invariati. |
+| Criteri accettazione | NON ESEGUITO | CA07/08/09 native autentiche ancora aperte. |
+
+**Incertezze:** guard preciso delle due Root05failure e causa remotaXCTFuture1001 UNKNOWN. NativeAuth UNKNOWN; MiniHome9ab sessionlocaltrue ma TTL507<600, signedInfalse/profileMatchesfalse: nonserverAuth/nativePASS. Wrenewal autorizzata è finestra separata, senza C04case/Save/SQL; nessun abbassamento guard. ManualunlockMac richiesto una volta e pending finché non verificato fresco.
+
+**Handoff:** stessi N/C/W; ogni source congelata durante SDK e solo owncleanup. Nessun DONE da localunit/Root/CI; nativeintentIDs solo all'effettivo ingresso del nuovo caso.
+
+
+### Esecuzione — 2026-10-12 UTC: RED separato e restaging dopo publication nello stesso budget
+
+**File modificati:**
+- `iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift` — il solo catch same-scope scopeChanged dopo publication propaga la richiesta di restaging al prossimo tentativo esistente; nessun reset budget o bypass di guard.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — RED e fix circoscritto; storico e Planning preservati.
+
+**Azioni eseguite:**
+1. Riproduzione separata reale: ONE7 su unit751/freeze3124ab2, runner57c9/SDKPG50943exit65/noSignals/gone/release12:27:04.393465, overall12:27:04.941137/ownUUIDdeleted/nativePIDs/source312exact entro90090. Collectorffdfed8e/ownera7e95045 release12:28:27.485057 entro60090,3SDK EOF/rc0/reaped; officialsummary8e57894c/tree f66f973e,7ID/ordine esatti/6PASS1FAIL0SKIP. Solo nuovo test fallisce al completamento line2433, dopo vera publication e refresh stesso SelectedShop: marker DTO42 contro baseline41, refreshedtrue/markerNotVerifiedtrue/generationretained/journalactivated/2checkpoint6pagine. Sei regressioni originali passano; compilazione e setup completati. Readback2e4eff90, solo un nuovo manifest4B vuoto; nessun typed errore marker iniettato dal mock. La preview iniziale370 è rimasta NON APPLICATA/NON ESEGUITA, errore di modello individuato dalla review e corretto prima del run.
+2. Difetto separato confermato nel helper postpublication: richiesta `.restage` convertita in errore prima di una nuova verifica checkpoint. Fix minimo code-onlyb0c95812/prod51426b89: ritorno del privateenum esistente, caller `.completed` invariato, `.restage` solo se attempt<maximumAttempts2 con floor/journal originali validati. Il prossimo tentativo esegue fresh admission, guard activegeneration/journal/not-finalized, archive realmentechanged e monotonic, stage/marker/finalization normali. Nessuna ricorsione, terzo tentativo, allow flag, schema/RPC/backend/dependency o API pubblica modificata. Intero file inverso esatto salvo tre blocchi.
+3. Unit751 e tutti i suoi assert, UI160/originali9corpi/gesti/timeouts/assert, fixtureb88 e policy93ef invariati. Il primo guard concreto delle due failure Root05 resta UNKNOWN: questo fix deriva dal RED separato, senza attribuirgli retrospettivamente i fallimenti UI sulla sola categoria.
+4. Release product cambia: precedente equivalenza/packagebcaf non qualificano il nuovo codice. Dopo stabilità dei test/gate servirà un nuovo Proper finale, preservando i dati reali e il main. Nessuna installazione, Auth forzata, dati TEST/reset o nuovo intento business.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| RED separato | ESEGUITO (FAIL atteso) | 6PASS1FAIL0SKIP; fallimento funzionale desiderato distinto da setup/compile. |
+| Build / warning nuovo prodotto | NON ESEGUITO | Da verificare nel prossimo batch7 sul fix. |
+| XCTest pertinenti dopo fix | NON ESEGUITO | Stessi sette casi e assert, fonte congelata durante SDK. |
+| Root9 originale / CI finale | NON ESEGUITO | v6 7P2F0S e CI3cfcFAIL preservati; nessun rilancio invariato. |
+| Nuovo Proper / integrazione / main / install | NON ESEGUITO | Gate finali precedono maintenance preserving. |
+| Coerenza planning | ESEGUITO | Fix di causa riprodotta, guard e massimo2 preservati, nessuna feature nuova. |
+| Criteri accettazione | NON ESEGUITO | CA07/08/09 reali restano aperti. |
+
+**Incertezze:** Root05throw preciso e cause remoteXCTFuture1001 UNKNOWN; nativeAuth UNKNOWN. CUA corrente99c8675c segnala Maclocked/autounlockfailed, richiesta manualunlock PENDING; gate solo della futura UI, non del batch headless. Non ripetere la domanda senza nuova evidenza.
+
+**Handoff:** stesso reviewerC e stesso N owner; nessuna nuova chat/reviewer/GO chain. Negativi e originali sigillati preservati. Mai dichiarare DONE dal solo unit/CI/localfixtures.
+
+
+### Esecuzione — 2026-10-12 UTC: v6 Root9 negativa e primo fatto applicativo divergente
+
+**File modificati:**
+- `iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift` — un test separato di publication/lease refresh e checkpoint avanzato, con risposta DTO reale test-only; tutti i test precedenti e ramo marker default invariati.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — risultato v6 effettivo e log della riproduzione separata, non modifica Planning.
+
+**Azioni eseguite:**
+1. ONE Root9 v6 su UI160093c0/freeze211ca0b536b: entry11:27:45.561443UTC, release11:36:15.590466UTC entro90090, receipt790ad0f3/SDKexit65/PG46917gone/noSignals/ownUUID7CDDA382deleted/nativeHOST11428-GUEST3627/source211exact. Collector c8bc8284 completo, release11:37:57.341913UTC entro60090/PG48120gone/6SDK EOF rc0. NoveID e ordine originali esatti: **7PASS/2FAIL/0SKIP**. ACK40.480s e Saved64.547s raggiungono tutti gli assert finali. ProductSave42.474s e SupplierCategory62.636s falliscono nel waiter activated originale20s; classe NON QUALIFICATA.
+2. Nuovi quattro export59hash/39TXT/4manifest19143129B letti una volta N+C, CLOSED/0video. Readiness osservate ammesse solo al secondo snapshot fresco completo/stabile con actualhittrue/querycount1/invalid0; primo campione NOT_QUERIED_GEOMETRY_NOT_READY/stablefalse. Questa prova non esercita il ramo NSError e non spiega il precedente codice1001 remoto.
+3. ProductSave AXDD585SHAe4ddbc06 mostra released/local-save-durable/independent-history-pending e failure held-recovery/contract-marker-not-verified/journalactivated/newgenerationtrue/scopeaccepted. Unico export nuovo del solo SupplierCategory dal bundle locale completo: receipt347767fa/ownereb5dffd5;59hash/25TXT/1manifest27329720B NreadONCE CLOSED, firstfacts105fff9b. AX867148SHA5304d79d conferma released e la medesima categoria/journalactivated/newgenerationtrue/scopeaccepted. Nessun reexport dei quattro precedenti o download. L'assenza della UI activated non dimostra assenza di cutover o perdita dati.
+4. Slot extra60090 rilasciato12:02:58.802290UTC, receipt286624dc; treSDK soltanto (due PIDguest e un export), EOF/rc0/reap, nativeHOST11428-GUEST3627/source211 e Taskaa esatti prima/dopo. Nessuna azione UI o modifica fonte durante gli SDK.
+5. Categoria markerNotVerified non identifica il guard esatto. Candidato statico circoscritto: il helper post-publication per same-scope lease refresh converte `.restage` in errore prima di una nuova verifica checkpoint; i guard remote marker, finalization e changed/nonregressing archive restano invariati. Preparato soltanto RED separato NON APPLICATO su test unitario reale: preview3709669f/receipt23158df6, inverse dell'intero file base670b058d esatta salvo un nuovo test e un override checkpoint marker test-only nil per tutti i test precedenti. Nessuna patch prodotto o fixture e nessuna causa Root9 attribuita sulla sola categoria.
+
+6. La prima preview370966 è rimasta NON APPLICATA/NON ESEGUITA: il mock rifiutava il baseline prima dell’encode DTO. V2 corretta751698 restituisce il DTO reale corrente42/requestedbaseline41 attraverso decoder/validator, senza typed marker error iniettato; inverse dell’intero file base670b esatta salvo il nuovo test e il ramo override nil per i precedenti. StessoC review preview/bindings conclusa12:23:07UTC; applicato soltanto il nuovo file test, nessun prodotto/fixture. Prossimo ONE batch7 include questo nuovo RED e sei regressioni pertinenti invariate, budget tentativi2. Risultato RED ancora NON ESEGUITO al presente log.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / warning Swift | ESEGUITO | Root9 compila; una notice AppIntents baseline, nessun nuovo warning Swift nel delta UI. |
+| XCTest Root9 | ESEGUITO (FAIL) | Verifica eseguita con esito FAIL:7PASS/2FAIL/0SKIP; ACK e Saved completati ma classe non qualificata. |
+| RED prodotto separato | NON ESEGUITO | Preview NON APPLICATA/NON ESEGUITA; causa esatta ancora UNKNOWN. |
+| CI canonica finale | NON ESEGUITO | 3cfc CI38235536379 FAIL preservata; nessuna pubblicazione o dispatch v6. |
+| Coerenza planning | ESEGUITO | Assert/gesti/readiness/timeouts originali conservati; nessun retry fino al verde. |
+| Criteri accettazione | NON ESEGUITO | Classe verde, nuova CI/integrazione/main/installazione e CA07/08/09 reali restano aperti. |
+
+**Incertezze:** guard preciso delle due failure applicative UNKNOWN; la stessa categoria non prova la stessa causa. Auth/session native UNKNOWN; fixture controlled non è accettazione TEST autenticata. Nessuna conclusione DONE.
+
+**Handoff:** stessi N/C e writer centrali separati; negativi e storia preservati. Prossimo passo è la riproduzione separata pertinente prima di qualsiasi patch applicativa, poi originali Root9/CI completa e collaudo reale richiesto. Nessun nuovo owner/chat/reviewer/GO chain.
+
+
+### Esecuzione — 2026-10-12 UTC: hit-point query solo su geometria candidata alla readiness
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — i requisiti geometrici già necessari sono valutati prima della query SDK `isHittable`. Un campione instabile, ambiguo, incompleto, non positivo o coperto resta negativo senza una query che non può cambiarne l'esito. Ogni campione ammesso richiede ancora actual `isHittable=true`, due snapshot fresche complete/univoche e il waiter originale5s. Diagnostica tri-state `NOT_QUERIED_GEOMETRY_NOT_READY`, query planned/performed/count espliciti; nessun bool sintetico, fallback o nuova query.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — nuovo log Execution; storia, Planning e criteri preservati.
+
+**Azioni eseguite:**
+1. Prima CI canonica3cfc/PR24/run38235536379 terminaleFAIL:1577=1540PASS1FAIL36stessiSKIP,17UI16PASS1FAIL; unicoSavedDraft85.112688899s. ACK e tutti gli altri1576stati/stessi36skip esatti. FIRSTSave locale durevole/reopen attraversati; seconda readiness fallisce prima di nativeSelectAll, bozza non salvata, cutover ed assert finali. BuildPASS/AnalyzeScanSKIP; nessun rilancio dello stessoSHA.
+2. Small ufficiale acquisito una volta/6export completi EOF/rc0/reaped; negativo b842025c preservato. Nuovo full11742670881: connettore45s FAILAbortError24543232B/EOFfalse (deb8e56c), diretto240s FAILTimeoutError76398592B/prefix126004 (6e9600a3/owner97029a3e gone11:07:39.379735). Entrambi prefissi/negativi preservati; successivo UN Range esistente exact206/ContentRange ha completato178129590B/digest05473/4481CRCpathsafe (receipt9bc0ecd/ownere738gone11:14:48.577354). Tre trasporti complessivi dello stesso nuovo originale, nessun vecchio originale riscaricato.
+3. ONEselectedSaved export f88cd265/ownera08fadbd gone11:15:30.056654:33hash/10TXT/1manifest letti una volta N+C CLOSED; nessuna visualizzazione/decodifica richiesta. Overall0b80d4e8 actualresource11:15:42.360696 prima del deadline11:25:15.887045; HOST11428/GUEST3627/source211beforeafterexact/allPGgone,SDK3 readonly/export eUI0. FIRSTreadiness2campioni/actualhittrue/stablefalse→true/result1/invalid0. SECOND unico pan-501 porta Name352.666..374.666 nella fascia248.333..422; sample1 completo/univoco KB553/233, actualhittrue ma stablefalse. Poll2 snapshotNSError `com.apple.dt.XCTest.XCTFuture` code1001/reset entrambe geometrie; result2/observed1/polls2/invalid1. Causa SDK/focus/app UNKNOWN, nessuna perdita bozza/CPU dedotta.
+4. Il campione stablefalse è già negativo indipendentemente dal risultato della sua query hit-point, che non alimenta la baseline geometrica. Il delta esegue quella query solo quando gli stessi requisiti geometrici originali possono ammettere il campione, mantenendo actualhittrue obbligatorio. Snapshot invalida continua ad azzerare entrambe le geometrie e restituirefalse. Sole pan/tap, input nativo, nove corpi di test ed assert finali invariati; nessuna modifica prodotto/fixture/workflow/dependency/auth. La riduzione di lavoro SDK inutile non spiega da sola il codice1001 e non garantisce il prossimo esito CI.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build / warning Swift | NON ESEGUITO | Nuovo delta da compilare nella sola prossima Root9 originale. |
+| XCTest Root9 | NON ESEGUITO | NovePASS locali692 restano baseline distinta; nuovi source da eseguire una volta dopo review ordinaria. |
+| CI canonica finale | NON ESEGUITO | 3cfcFAIL preservato; nuova pubblicazione/prima CI solo dopo gate locali e review. |
+| Coerenza planning | ESEGUITO | Stessi requisiti di ammissione, waiter5s ed assert finali; skipquery diagnosticamente esplicito e mai ammesso come PASS. |
+| Criteri accettazione | NON ESEGUITO | Gate finale, integrazione/main, installazione necessaria e CA07/08/09 reali ancora aperti. |
+
+**Incertezze:** causa remotaXCTFuture1001 UNKNOWN; nessuna prova di efficacia del nuovo ordine fino ai risultati. Nessun codice applicativo corretto senza RED separato. Non attribuire al prodotto questa modifica del test.
+
+**Handoff:** source3cfc baseline/negativi e letture originali N+C chiusi. Stesso reviewerC: normale review del delta effettivo/Task/bindings prima ONEnewRoot9; nessuna nuova catena GO, timeout ampliato o input ripetuto. Fonte congelata durante gli SDK e cleanup solo processi posseduti. CA07 nuova prova TEST autenticata bidirezionale/per-record/autoprop/offline/reconnect/reopen, CA08 integrale e CA09 misure reali restano NON ESEGUITI.
+
 ### Esecuzione — 2026-10-12 UTC: campione snapshot invalido e readiness finale originale
 
 **File modificati:**
