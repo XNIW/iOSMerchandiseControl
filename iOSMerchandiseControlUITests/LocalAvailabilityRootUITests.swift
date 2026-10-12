@@ -689,6 +689,41 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             var invalidSnapshotSamples: [String] = []
             var deferredReadinessAttachments: [(name: String, contents: String)] = []
             var readinessWaitStartedUptime: TimeInterval?
+            var readinessWaitFinishedUptime: TimeInterval?
+            var recordedReadinessResult: XCTWaiter.Result?
+            var latestHitStartedUptime: TimeInterval?
+            var latestHitFinishedUptime: TimeInterval?
+            var readinessDiagnosticsEmitted = false
+            let emitReadinessDiagnostics: (String) -> Void = { [weak self] phase in
+                guard let self, !readinessDiagnosticsEmitted else { return }
+                readinessDiagnosticsEmitted = true
+                let attachmentEmissionStartedUptime = ProcessInfo.processInfo.systemUptime
+                for deferred in deferredReadinessAttachments {
+                    let attachment = XCTAttachment(string: deferred.contents)
+                    attachment.name = deferred.name
+                    attachment.lifetime = .keepAlways
+                    self.add(attachment)
+                }
+                let attachmentEmissionFinishedUptime = ProcessInfo.processInfo.systemUptime
+                let result = recordedReadinessResult.map { String($0.rawValue) } ?? "NOT_RETURNED"
+                let waitStart = readinessWaitStartedUptime.map { String($0) } ?? "NOT_ARMED"
+                let waitEnd = readinessWaitFinishedUptime.map { String($0) } ?? "NOT_RETURNED"
+                let deadline = readinessWaitStartedUptime.map { String($0 + 5) } ?? "NOT_ARMED"
+                let hitStart = latestHitStartedUptime.map { String($0) } ?? "NOT_QUERIED"
+                let hitEnd = latestHitFinishedUptime.map { String($0) }
+                    ?? (latestHitStartedUptime == nil ? "NOT_QUERIED" : "NOT_RETURNED")
+                let hitRemaining = latestHitStartedUptime.flatMap { hitStart in
+                    readinessWaitStartedUptime.map { String($0 + 5 - hitStart) }
+                } ?? "NOT_QUERIED"
+                let readiness = XCTAttachment(string: "result=\(result); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count)); wait-start=\(waitStart); wait-end=\(waitEnd); deadline=\(deadline); latest-hit-start=\(hitStart); latest-hit-end=\(hitEnd); remaining-before-latest-hit=\(hitRemaining); hit-in-flight=\(latestHitStartedUptime != nil && latestHitFinishedUptime == nil); emission-phase=\(phase); attachment-emission-start=\(attachmentEmissionStartedUptime); attachment-emission-end=\(attachmentEmissionFinishedUptime); attachment-emission-seconds=\(attachmentEmissionFinishedUptime - attachmentEmissionStartedUptime)\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
+                readiness.name = "Task144 existing readiness predicate observations before assertion"
+                readiness.lifetime = .keepAlways
+                self.add(readiness)
+            }
+            // XCTest still runs teardown blocks when a native getter records a
+            // failure with continueAfterFailure=false. Flush only existing RAM
+            // facts if that failure prevented the normal post-wait emission.
+            addTeardownBlock { emitReadinessDiagnostics("teardown") }
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
                 guard let waitStartedUptime = readinessWaitStartedUptime else { return false }
                 let deadlineUptime = waitStartedUptime + 5
@@ -750,11 +785,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let queryHit = geometryReady && hitStartedUptime < deadlineUptime
                 if queryHit {
                     hittabilityQueryCount += 1
+                    latestHitStartedUptime = hitStartedUptime
+                    latestHitFinishedUptime = nil
                     hittable = field.isHittable
                 } else {
                     hittable = nil
                 }
                 let hitFinishedUptime = ProcessInfo.processInfo.systemUptime
+                if queryHit { latestHitFinishedUptime = hitFinishedUptime }
                 let hitTiming = queryHit
                     ? "hit-start=\(hitStartedUptime); hit-end=\(hitFinishedUptime); hit-seconds=\(hitFinishedUptime - hitStartedUptime); hit-out-of-window=\(hitFinishedUptime > deadlineUptime)"
                     : "hit-timing=NOT_QUERIED"
@@ -771,21 +809,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let waitStartedUptime = ProcessInfo.processInfo.systemUptime
             readinessWaitStartedUptime = waitStartedUptime
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
-            let waitFinishedUptime = ProcessInfo.processInfo.systemUptime
+            readinessWaitFinishedUptime = ProcessInfo.processInfo.systemUptime
+            recordedReadinessResult = readinessResult
             // Keep the same bounded diagnostics and order without writing
             // attachments while the five-second readiness budget is running.
-            let attachmentEmissionStartedUptime = ProcessInfo.processInfo.systemUptime
-            for deferred in deferredReadinessAttachments {
-                let attachment = XCTAttachment(string: deferred.contents)
-                attachment.name = deferred.name
-                attachment.lifetime = .keepAlways
-                add(attachment)
-            }
-            let attachmentEmissionFinishedUptime = ProcessInfo.processInfo.systemUptime
-            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count)); wait-start=\(waitStartedUptime); wait-end=\(waitFinishedUptime); deadline=\(waitStartedUptime + 5); attachment-emission-start=\(attachmentEmissionStartedUptime); attachment-emission-end=\(attachmentEmissionFinishedUptime); attachment-emission-seconds=\(attachmentEmissionFinishedUptime - attachmentEmissionStartedUptime)\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
-            readiness.name = "Task144 existing readiness predicate observations before assertion"
-            readiness.lifetime = .keepAlways
-            add(readiness)
+            emitReadinessDiagnostics("after-wait")
             // A failed readiness may be observed after its deadline; diagnostic
             // AX queries must not consume the predicate's five-second budget.
             if readinessResult != .completed,
