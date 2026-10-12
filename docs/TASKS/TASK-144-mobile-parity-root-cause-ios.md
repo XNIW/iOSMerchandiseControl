@@ -206,6 +206,14 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC — osservazioni readiness entro il budget originale
+
+La CI `38295216794` su `cbd6af2525f4831c2feb4ec1ce62299bfbab0b41` conserva **1543 PASS / 1 FAIL / 36 SKIP**. Gli originali appena acquisiti (`responsive-recovery-static-contract-CI-one-failure-original-export-20261012-01`, nello stesso pacchetto evidence di coordinamento) confermano nel caso SavedDraft una prima osservazione completa/univoca con Name `(32,378,326,22)` sopra keyboard `(0,553,390,233)`, seguita da errore `XCTest.XCTFuture/1001`: `A9D2959F-AED4-4E5E-9B30-044E15059374.txt` registra `1` campione valido, `2` poll, `0` hit query e cancellazione della geometria precedente. Il primo replace dello stesso caso passa con due osservazioni stabili e hit reale (`554676D6-5A03-4EA2-BF70-7790B7554341.txt`). La failure corrente è un'osservazione AX incompleta; campo coperto, hit negativo e causa dell'errore1001 non sono provati.
+
+Delta limitato a `LocalAvailabilityRootUITests.replaceText`: gli stessi attachment, nello stesso ordine e con i limiti64 esistenti, sono conservati in RAM ed emessi dopo `XCTWaiter.wait`. Il recorder misura in monotonic uptime inizio/fine capture, hit già ammesso, budget residuo ed emissione diagnostica. Il deadline di cinque secondi è armato subito prima del wait; nessuna query prima dell'armamento o iniziata oltre il deadline. Una risposta API oltre budget resta registrata ma non può ammettere il campione. Il fatto obbligatorio finale è l'hit reale concluso entro il deadline, insieme al waiter completato; un ritorno tardivo del solo wrapper non invalida un fatto già osservato entro budget. Restano richiesti due snapshot freschi/completi/univoci, geometrie stabili/positive e campo sopra tastiera; gli errori o l'ambiguità cancellano la stabilità precedente. Tap, gesti, valori, Save, cutover, ACK, timeout5 e assert successivi non cambiano; nessuna query AX aggiuntiva, refocus, retyping, sleep o retry.
+
+La scrittura degli allegati è lavoro rimosso dal polling, **non una causa dimostrata del1001 né una garanzia di PASS**. Review ordinaria C e verifica SDK del proprietario N restano da eseguire sul delta. Root esegue solo controllo statico/diff, senza SDK, Git mutativo o UI primaria; task resta **FIX**, nessun esito nativo o globale inferito.
+
 ### Esecuzione — 2026-10-12 UTC — assertion presenter aggiornata e failure CI originali preservate
 
 La CI PR24 38284153180/head4a8 è FAIL1580=1542PASS/2FAIL/36SKIP: il test statico TASK092 cercava il vecchio safeAreaInset; Saved/Unsaved si ferma prima della selezione nella seconda acquisizione della readiness. DTO recovery avanzato e due geometrie passano; gli altri otto Root9 passano. Originali completi212224499B/SHA45e775cd, prefisso34586624B/timeout240s conservato e sola coda Range206 acquisita, CRC/size/pathsafe verificati, owner rilasciato18:46:19.072364. Nessun rerun della failure.
@@ -2210,6 +2218,34 @@ Log dettagliato e file modificati: [ios-execution.md](EVIDENCE/TASK-144/ios-exec
 ## Review
 
 Review indipendente e re-review completate: sorgente APPROVED, nessun P0/P1/P2 aperto dopo R-I01, R-I02, R-I03 (diagnostica e scheda generale) e la correzione test-only del crash runtime26. Gate locali finali PASS, prima run interrotta conservata. [Rapporto indipendente](EVIDENCE/TASK-144/independent-review.md). Approvazione tecnica distinta da review GitHub del maintainer e accettazione autenticata.
+
+### Esecuzione — 2026-10-12 20:55 UTC — nove percorsi originali sul recorder aggiornato
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — solo il recorder di readiness già descritto: allegati fuori dal waiter, clock/capture/hit entro5s; stesso corpo dei9casi, gesti e assert.
+- `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md` — questa evidenza Execution; stato FIX/NON DONE.
+
+**Azioni eseguite:**
+1. Review indipendente ordinaria C chiusa sullo SHA UI `a51e24b768addf4f63caa77a7ac6f7872e1cf5df178c84246e777721f95972d5`: zero allegati costruiti/emessi nel predicate; deadline5s monotonic, due snapshot fresh completi/unique/stabili/positivi sopraKB e hit reale obbligatorio entrodeadline. Cap64 per ognuna delle due categorie,128totale come prima. Nessun refocus/retyping/sleep/queryextra o timeout ampliato.
+2. Una sola nuova esecuzione dell'intera classe Root9 sul delta effettivo, ordine originale9ID, clone iPhone16e/iOS26.2 posseduto; source313 before/after esatto, produzione514/ContentD86/fixtureDC4/geometryUIc49 e staticUnit975 invariati. SDK PG76179 exit0/gone20:54:15.605584; clone proprio eliminato e release20:54:16.205812 entro900s/90reserve. Processi primari iOS50838 e Android5173 prima/dopo invariati,0input/install/terminate/dati primari.
+3. Originali XCTest summary/tree ed export4casi acquisiti una volta: **9PASS/0FAIL/0SKIP**, tutti gli assert finali attraversati, compresi Saved/Unsaved e NewSupplierCategory. Receipt ufficiale381f911c66d052f4851bf4230a370309cbce906e9dba77af6b3c8e6d756916e5, summary1ecb2d76/tree5c27c88b; readerPG79997exit0/gone20:55:28.938863. I18TXT originali sono stati letti direttamente, zero nuovo download/test.
+4. Saved: entrambe le sostituzioni result1/duefreshcompleteunique/stabili+un hittrue/0invalid; hitEnd rispettivamente2.70335262499s e2.64337754165s prima dello stesso deadline5s. Capture0.134582/0.128970 e0.222482/0.222786s; emissione allegati dopoWait0.000780/0.000599s. Questi tempi locali NON spiegano retroattivamente XCTFuture1001 della CI38295216794, che restaFAIL originale. Nessuna nuova causa dedotta dal soloPASS.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Xcode della classe UI | ESEGUITO | Unico xcodebuild test corrente exit0,9casi ufficialiPASS; compila il deltaUITest. |
+| Statico/diff | ESEGUITO | ReviewC ordinaria/diffcheck; body e assert byteinvariati, soli2paths. |
+| Warning nuovi | ESEGUITO | Nessuna nuova diagnostica compiler rispetto Root08 nel log corrente; produzione immutata. |
+| Coerenza con planning | ESEGUITO | Solo recorder discriminante/overhead; nessuna attenuazione della readiness o modifica prodotto. |
+| Criteri di accettazione | NON ESEGUITO integralmente | Root9 localePASS; nuova CI head/main, nuovoProperTEST/iOSinstall, auth/crossplatform/VO/perf e collaudo primario restano aperti. |
+
+**Incertezze:**
+- Causa sottostante del vecchioXCTFuture1001 ancora NON PROVATA; il PASS locale non è accettazione autenticata nativa né garanzia CI.
+
+**Handoff notes:**
+- Riutilizzare DTO7PASS, geometrie2+2 e staticUnit26 già qualificati sui byte immutati; non sommare overlap né ripeterli senza ragione. Normalcommit/push dei2paths e CI sul nuovoSHA prima di nuovo pacchetto prodotto/integrazione/installazione; task nonDONE.
+
 
 ## Fix
 
