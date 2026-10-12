@@ -206,6 +206,38 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC / 11 ottobre Santiago — Root9 terminale PASS, errore remoto non riprodotto
+
+**Stato: FIX / NON DONE.** Una sola Root9 originale completa termina9PASS/0FAIL/0SKIP, tutti9ID/ordine esatti. Ciò non cambia il FAIL ufficiale della CI38182254343/head3fe o la causa UNKNOWN della queryAX. Nessuna nuova patch prodotto; sei righe osservative UI499e2640 approvate dalla normale review C.
+
+**Azioni ed evidenze:**
+1. Target2cc8b7a/source211a0c3a79d, entry00:03:53.872728UTC/deadline00:18:53.872728/90090; exit0/gruppi propri assenti/ownUUID eliminato/actualrelease00:11:51.942962UTC. Collector6SDK summary/tree e quattro export correnti receipt18ec4b15/ownerb18540ef, exit0/groupsgone/actualrelease00:12:04.048561UTC. Overall651298f5;211fonti byte-esatte/PIDHOST11428 eGUEST3627 prima/dopo esatti; zero input/install sulle app utente, nessun dato/coda/sessione modificato.
+2. Tutti24file/1.050.676B degli export completi/pin verificati. Nuove osservazioni prequery effettive: ACK269,667...291,667 e SavedSECOND280,333...302,333, tastiera553, due campioni reali/stablefalse→true/isHittabletrue; cinque secondi originali e tutti input/assert invariati. ACK/own replay e Saved/unsaved raggiungono tutti assert finali: selezione nativa intero valore, primo Save durevole, seconda bozza, cutover, continuedtyping senza refocus, Cancel/drain/reopen/ownACK. I due PNG nuovi before/aftercutover letti una volta; testo e caret preservati, valore completo attestato dagli originali assert, non dalla sola viewport orizzontale dell'editor. Readback8b3f7e12.
+3. Errore CI NON RIPRODOTTO: nella prova locale il frame SECOND è280,333, mentre nel FAILCI il frame prefocus era378; il frameAX immediatamente prima del diniego remoto resta ignoto. Nessuna correzione causale, origine CPU, clipping o recovery dedotta dal PASS o dall'overhead osservativo. Mismatchscope precedente NON RIPRODOTTO e non risolto causalmente. Nessun rerun locale immutato.
+4. Scan finale sei righe668ab11c PASS/tre report/EOFrc0/gruppi assenti, release00:01:07.204346UTC. Solo un warning preesistente AppIntents metadata extraction skipped; zero Swiftcompiler warning nuovo. Equivalenza Release2116dc689b3, binding freeze5fb80fa2: solo UITest e fixture interaDEBUG differiscono da Proper867/c1f44/bcaf; nessun rebuild equivalente, nessun install.
+
+**Check obbligatori:** build e Root9 ESEGUITI/9P0F0S; scan e warning nuovi ESEGUITI nel perimetro; coerenza planning e preservazione ESEGUITE. CI381822 FAIL/Analyze-SecretScan SKIPPED conservati; nuova qualifica canonica e CA autenticati/prima prova utente NON ESEGUITI per gate CI. C review indipendente del risultato nella stessa catena; pubblicazione di eventuale osservazione corrente distinta da fix prodotto. Planning/CA/storia precedente intatti; Task NON DONE.
+
+**Handoff:** gruppi target+collector tutti rilasciati, W continua0risorse senza nuova finestra. Nessun vecchioA/B risalvato e nessun reset. Originali/export/nuovi PNG chiusi dopo lettura indipendente corrente; non riaprire quelli storici. Eventuale nuova CI sul delta osservativo deve qualificare tutti1577ID/36motiviSKIP/17UI e step canonici senza esclusioni; il suo PASS non dimostra da solo sincronizzazione autentica.
+
+### Esecuzione — 2026-10-11 — CI PR23 FAIL e geometria reale prima della query hit-point
+
+**Stato: FIX / NON DONE.** CI38182254343 attempt1/head3fe1f766 termina1540PASS/1FAIL/36motiviSKIP invariati,1577ID esatti;17UI=16PASS/1FAIL. ACK e ProductSave/history indipendente PASS. Unico SavedSECOND fallisce nella query `isHittable` con activation point invalid, dopo wholeband assert, soleTap e tastiera presente; seconda bozza/cutover non attraversati. Qual3c47d3e0 NOT_QUALIFIED/owner a9f2db2d release23:38:49.338047UTC; adjudication offline beb1acdd,8export ufficiali completi. Analyze/SecretScan SKIPPED; niente merge/FF/install/nativeTESTSave.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — sei sole righe osservative, max64 già esistente; allegato degli actual frame Name/keyboard e stable già letti immediatamente prima della query hit-point invariata. L'eccezione della query interrompeva il predicato prima dell'attuale append/attachment, perdendo il campione causale. Nessun getter o input aggiuntivo, nessuna patch prodotto.
+- Questo blocco Execution — evidenze e limite della candidata; Planning/CA/Decisioni e testo precedente byte-esatti.
+
+**Azioni ed evidenze:**
+1. ONEoriginale11719002425/183105564B/SHAd9ef3a05 acquisito da connector; EOF-size-digest/CRC4493safeentry PASS, owner rilasciato23:50:27.817441UTC. ONEexport23file/20904138B,7d982ff6/ownerc283f1a9/overall8f8edd7d release23:51:20.291834UTC, HOST11428/GUEST3627/source211 exactbeforeafter.
+2. Allegato effettivo A544: fascia248,333...422, Name dopo unico pan−501 è378...400; tap sintetizzato195,389. Quattro sole nuove immagini52/64,2/69,5/75s decodificate0dee110b/owner8f7bce8b/overall27eb0b8b release23:52:40.245086UTC. Pixelread b72266cb: Name visibile con valore Saved e cursore durante keyboard e primo errore; solo AXroot/emptychildren, nessun actualpostfocus NameAXframe/activationpoint. Tutti originali/export/frame chiusi dopo lettura indipendente corrente; nessun vecchio materiale riaperto.
+3. Candidata finale UI499e2640 deriva172fc6ac con inversione esatta delle sei righe. La preparazione78f precedente è conservata NON ESEGUITA: prima di ogni SDK è stato reso esplicito `self.add` richiesto dalla closure Swift; receipt ccc18236, runner581b9e61/collector22598fd0 con soli pin necessari aggiornati, tutti guard invariati. Pan, soleTap, ordinequery, `isHittable`, predicato e5s, stable, nativeSelectAll, fullvalue, Save, bozza/cutover/ACK restano byte-esatti. Osservazione aggiunge overhead: un eventuale PASS non dimostra correzione causale o sincronizzazione.
+4. Launcher/collector e71ed51b/079b6b4b riusati con soli pin/head/namespace/output e schema della releaseW a68 aggiornati; preparation8d633a18. ONEclasse originaleRoot9, tutti9ID/ordine invariati, niente tre casi saltando il contesto precedente, niente duplicati. Nuova prova ancora NON ESEGUITA alla scrittura; owner900/90 e collector600/90, H217/945, ownUUID e PID correnti/data preservati. C review indipendente stessa catena sul delta e dati correnti prima dell'esito finale; nessun toolGO aggiuntivo.
+
+**Check obbligatori:** Build/prova Root9 e scan delle nuove righe NON ESEGUITI alla preparazione; coerenza scope/inversione ESEGUITA. CI corrente FAIL conservata, Analyze/SecretScan SKIPPED; CA autenticati e prima nuova prova utente NON ESEGUITI per gate CI ancora rosso. Nessun DONE.
+
+**Incertezze e handoff:** INCERTEZZA: pixel-focus visibile non attesta AXhittable; actualframe immediatamente prima dell'errore ancora mancante. Nessuna causa CPU/clipping/remount/recovery/prodotto inferita; nessun aumento pan/refocus/retype/timeout/skip. Mismatch scope storico NON RIPRODOTTO in nuova CI, non dichiarato corretto. Ultimo Maclocked22:41 è una lettura storica da rivalutare solo quando serve input. VecchiA/B/sessioni/dati/code preservati.
+
 ### Esecuzione — 2026-10-11 — prefisso diagnostico2 terminale, causa non riprodotta
 
 **Stato: FIX / NON DONE.** Una sola prova originale ACK→ProductSave è terminata2PASS/0FAIL/0SKIP, ordine e ID esatti; observer7699161f/UI172fc6ac. Il fallimento Root9 precedente8P/1F e CI main38175902086 FAIL restano distinti. Non c'è una nuova patch prodotto né una chiusura della causa storica.

@@ -652,6 +652,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
                 previousFieldFrame = fieldFrame
                 previousKeyboardFrame = keyboardFrame
+                if readinessSampleCount < 64 {
+                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable)")
+                    beforeHit.name = "Task144 actual readiness geometry before hit-point query"
+                    beforeHit.lifetime = .keepAlways
+                    self.add(beforeHit)
+                }
                 let hittable = field.isHittable
                 readinessSampleCount += 1
                 if readinessSamples.count < 64 {
