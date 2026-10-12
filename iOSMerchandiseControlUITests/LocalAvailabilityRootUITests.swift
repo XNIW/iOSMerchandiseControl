@@ -658,14 +658,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     beforeHit.name = "Task144 actual readiness geometry before hit-point query"
                     beforeHit.lifetime = .keepAlways
                     self.add(beforeHit)
-                    if self.app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
-                        let observer = self.app.otherElements["task144.controlled.native-name-observation"]
-                        let value = observer.exists ? (observer.value as? String ?? "MISSING_VALUE") : "MISSING_OBSERVER"
-                        let native = XCTAttachment(string: "readiness-sample=\(readinessSampleCount + 1); \(value)")
-                        native.name = "Task144 actual native Name before hit-point query"
-                        native.lifetime = .keepAlways
-                        self.add(native)
-                    }
                 }
                 let hittable = field.isHittable
                 readinessSampleCount += 1
@@ -680,6 +672,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             readiness.name = "Task144 existing readiness predicate observations before assertion"
             readiness.lifetime = .keepAlways
             add(readiness)
+            // A failed readiness may be observed after its deadline; diagnostic
+            // AX queries must not consume the predicate's five-second budget.
+            if readinessResult != .completed,
+               app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
+                let observationUptime = ProcessInfo.processInfo.systemUptime
+                let observer = app.otherElements["task144.controlled.native-name-observation"]
+                let observation = observer.exists ? (observer.value as? String ?? "MISSING_VALUE") : "MISSING_OBSERVER"
+                let native = XCTAttachment(string: "post-readiness-result=\(readinessResult.rawValue); query-start-uptime=\(observationUptime); query-end-uptime=\(ProcessInfo.processInfo.systemUptime); \(observation)")
+                native.name = "Task144 native Name post-readiness failure observation"
+                native.lifetime = .keepAlways
+                add(native)
+            }
             XCTAssertEqual(readinessResult, .completed,
                            "The focused field and visible keyboard must finish repositioning before native selection")
             let geometry = XCTAttachment(string: "field=\(field.frame); keyboard=\(keyboard.frame)")

@@ -206,6 +206,59 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC — prima Root9 post-readiness diagnostic delta qualificata
+
+**Stato FIX / NON DONE.** ONE nuova classe originaleRoot9 completa9PASS/0FAIL/0SKIP,9ID eordineSTART esatti; fonteUIe6038a69/fixtureb88/source211d1a996. Il PASS locale non sostituisce il FAIL precedente38193829637/c712 (1540PASS/1FAIL/36SKIP) né prova una causa del fatal o del timeout. Nuova CI exactSHA ancora NON ESEGUITA.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — solo delta diagnostico giàreviewed:8righe di queryobserver rimosse dal predicato5s; UNA osservazione dopo il resoconto della readiness SOLO suFAIL, prima dell'immutatoassert.
+- Questo file — esclusivamente Execution, esiti e limiti correnti; tutta storia/Planning/criteri precedenti preservati.
+
+**Azioni eseguite:**
+1. Stessa ordinary review C del delta e correzione d'ordine conclusa. V1f111 APPLIED_NOT_RUN0SDK preservata; v2placement7d7600f5 lascia byte-identici readinessrecord eallgates,sourceUIe603/Task6701. Toolrunnerba377/collector048373 inverseparent7e7/6af esatte due livelli di solipin/purpose/namespace; nessun nuovoGO,reviewer,timeout,selector,skip,refocus o altroinput.
+2. ONErun03:15:11.306829→actualrelease03:23:07.470068UTC,900/90; receipt6fc489996b9912030462ab2249e567c3a18c4f8662d0259143383c59133f6bfc/PG17076gone/ownfixtureUUIDdeleted/HOST11428GUEST3627beforeafter/source211d1a996esatto. Nessuna modifica sorgenti sottojob o input/install sui targetutente.
+3. Collector55d05bdb7e3b2d12abf1b4aa22f50587a4640b8d2527bebedf5a661343de41e6/owner8b5870a1 rc0/PG18190gone03:23:33.479923;6SDK completiEOF/cap/metadata,24exportfiles1060855B. Tutti9casePassed con0S; esiti sovrapposti mai sommati.
+4. ACK attraversa il suo ultimoassert. SavedFIRST frame486.667/SECOND291.667/KB553; entrambi result1 observed2/hittrue inentrambicampioni/stablefalse→true. SECOND è intero nella banda248.333..422 dopo unico pan-501 e soleTap. NativeSelectAll/fullvalue/Save/localpending/bozza/stateupdate/cutover/continuedtyping/ownACK/reopen tutti attraversati. ExplicitnativeJSON=0/NOT_REQUESTED_BY_DESIGN neiPASS; precedentelettore4EXACT distinto, nessuna qualificanativa nuova simulata.
+5. Letti una volta soli2nuovi PNG pre/postcutover543b92a7/d0bfbe87: bozza/caret/tastiera prima; activated/released+continuedsuffix/caret/tastiera dopo. Il valore lungo scorre orizzontalmente: pixel non mostrano tutta la stringa, assert originale fullvalue la verifica. Readbacka2eab50f; nessun nuovo video decode/oldexport reread.
+6. One sensitive scan12nuovelinee73ab9e,3canonicalreportsPASS/exit_code0/EOF/PG16431gone03:12:00.534444. Readerca615KeyErrorwrongexitCodepreservato; solo readbackda629c35 su3report originali7089e9c8/95e683d4/5027f1b3,0scanrerun. Eqe038a73f intero211: soloUITeste603 differisce50d68parent, tutti210altriApp/DEBUGfixtureb88/resource/project/package/schemeesatti. ProperTESTc1f44/bcaf/originalef8d preservato;0equivalentReleasebuild/install.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build eRoot9 pertinente | ESEGUITO | Compilazione eclasse completa9PASS0FAIL0SKIP suUIe603,211d1a996. |
+| Static/analyze | NON ESEGUITO | Scan nuoverigheESEGUITO/PASS; gateAnalyze canonico finale sulla futuraCI exactSHA ancora da eseguire. |
+| Warning nuovi | ESEGUITO | Nessun nuovo warning del compilatore Swift nel solo sorgente UI modificato. Nel log restano tre avvisi del processore App Intents: estrazione metadati saltata per assenza della dipendenza AppIntents.framework. Nessuna soppressione; non è un claim sui19warning unitari storici o suunbuildRelease nuovo. |
+| Coerenza con planning | ESEGUITO | Addendum/CA10/11, wholeband/5s/tuttiinput/assert originali invariati; costo esplicito diagnostico isolato, non nuova featureprodotto. |
+| Criteri di accettazione | NON ESEGUITO | GatefinaliCI/integration/CA07nativeTESTbidirezionale/CA09misure separati aperti. |
+
+**Incertezze/Handoff:** causeprecedentiUNKNOWN; il costo implicito del getter negli snapshot AX non è escluso epostwaitreadnonècampionealfailure. Stesso C reviewdei nuovi risultati/Task/body, poi normalecommit/push2ownedpaths nella stessaPR23 eprimanuovaCI completa. Nessun merge/FF/install/nativeTESTSave sottoCI FAIL. Dati/sessioni/code eforeign14 preservati; nessun nuovoGO/reviewer/rerunimmutato. C sole2centraliwriter.
+
+### Esecuzione — 2026-10-12 UTC — isolare la lettura diagnostica dopo readiness fallita
+
+**Stato FIX / NON DONE; nuova verifica NON ESEGUITA.** CI38193829637/c712 attempt1 termina1540PASS/1FAIL/36stessiSKIP,17UI=16PASS/1FAIL; Build Debug PASS, Full XCTest FAIL, Analyze/Secret scan SKIPPED. Il primo Save attraversa native Select All/full value/Save; secondo readiness result2/observed1/hittable=false/stable=false, con Name intero315.667..337.667 dentro banda248.333..422. L'attachment secondo native contiene MISSING_VALUE, nonJSON. Due veri FIRSTJSON più terzo placeholder, nessuna lettura nativa al punto fallito. Intervallo2.289s osservato tra geometria e lettura aggiunta non prova causalità; vecchio fatal activation-point-invalid distinto e causaUNKNOWN.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — rimuove dal predicato le query aggiunte observer.exists/value; UNA lettura solo se il waiter fallisce, dopo il suo ritorno e dopo add(readiness), prima dell'immutato assert, con inizio/fine uptime e risultato dichiarati post-readiness. Nessuna query nativa esplicita nei PASS.
+- Questo file — solo Execution, intero planning/criteri/storia precedente preservati.
+
+**Azioni eseguite:**
+1. Small ufficiale attuale e ONE export del solo Saved riletti:1577ID/36motiviSKIP esatti; native attachment secondo DD43b8a16833B=MISSING_VALUE, predicato84d7 result2/observed1. Readbackda7c00c1; export076ef460/owner41af6da4 rc0/PGgone; overall22b44f66 rilasciato03:01:51.201047 entro600/90,3SDKtotali,source211db02/c712 e nativeHOST11428/GUEST3627 preservati,0input/install/sourcewrites.
+2. Minimo isolamento test-only della diagnostica aggiunta: beforeHitgeometry, frame/keyboard/stable/isHittable/count/return boolean restano esatti; wholeband/solepan/soleTap,5s, nativeSelectAll/fullvalue/Save/bozza/cutover/continuedtyping/ownACK/reopen invariati. FixtureDEBUGb88 e tutti gli altri210source invariati, nessuna patch prodotto.
+3. La lettura dopo timeout non certifica il campione precedente. Nei PASS è NOT_REQUESTED per costruzione; la qualifica del lettore precedente rimane distinta. Il getter può ancora essere letto implicitamente dagli snapshotAX: costo zero e causa del fatal/timeout NON dimostrati. Un fatal nel predicato può non restituire il waiter; nessun catch o bypass.
+
+4. Correzione puntuale della review C: candidato v1 applicato03:08:23 con receiptf11112ce e0SDK; blocco identico12righe spostato dopo add(readiness) prima dell'assert per preservare il resoconto originale anche se la query diagnostica fallisce. V1/copie/ricevuta preservate; nessuna esecuzione sulv1.
+
+**Check obbligatori:**
+| Check | Stato | Evidenza / limite |
+|---|---|---|
+| Build/test pertinente | NON ESEGUITO | Una sola futura classe originaleRoot9, stesso ordine e9ID, con runner/collector esistenti e soli binding aggiornati. |
+| Static/analyze | NON ESEGUITO | Gate canonico finale sulla prossima CI exactSHA; nessuna nuova dipendenza o configurazione. |
+| Warning nuovi | NON ESEGUITO | Compilazione del nuovo candidato ancora da osservare. |
+| Coerenza con planning | ESEGUITO | CA10/11 e addendum, costo diagnostico fuori5s; nessuna asserzione indebolita. |
+| Criteri di accettazione | NON ESEGUITO | CI/integration finali e nativeCA07/CA09 separati aperti. |
+
+**Handoff:** stesso reviewerC, normale source review prima della prima Root9 sul candidato; no nuoviGO/reviewer/unchangedrerun. C sole centrali writer. Conservare tutti FAIL storici; niente merge/FF/install/provaTEST sottoFAIL.
+
 ### Esecuzione — 2026-10-12 UTC — prima Root9 e JSON native Name qualificati
 
 **File modificati:**
