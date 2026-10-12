@@ -25,7 +25,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover() {
-        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
                       "The real recovery RPC must enter its held boundary before business input")
@@ -309,7 +308,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Safe local baseline"].exists)
         XCTAssertFalse(app.staticTexts["task144.controlled.activated-and-drained"].exists)
         app.buttons["task144.controlled.release"].press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
+        let activated = app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20)
+        if !activated {
+            let waitResult = XCTAttachment(string: "activated=\(activated); timeoutSeconds=20")
+            waitResult.name = "Task144 PreviousShop original activation wait result before diagnostic queries"
+            waitResult.lifetime = .keepAlways
+            add(waitResult)
+            captureControlledAutomaticReadback()
+        }
+        XCTAssertTrue(activated)
     }
 
     func testDatabaseLabelsFollowNormalLanguageChangeWithoutLosingQueryOrFilter() {

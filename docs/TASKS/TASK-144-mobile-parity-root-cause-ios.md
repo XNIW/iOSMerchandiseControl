@@ -206,6 +206,60 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-12 UTC, probe opzionale disabilitato: unica Root9 completa PASS, CI finale ancora pendente
+
+**Stato FIX / NON DONE.** Candidato UIb6962170, baseHEAD0a2, source211dcc49d5a. ONEclasse originaleRoot9 nell'ordine dei9ID: 9PASS/0FAIL/0SKIP ufficiali. PreviousShop attraversa activated20s e termina; nessun nuovo failure readback in questo PASS, primo callsite precedente UNKNOWN. Saved conserva original5s e2campioni di readiness in ciascuna sostituzione: FIRST486.667/SECOND284/KB553, hittrue entrambi/stablefalse→true; interoSECOND dentro248.333..422 dopo unicoFormpan-501 e soleTap. NativeSelectAll/fullvalue/primoSave/pending/bozza/cutover/digitazione senzarefocus/Cancel/drain/ownACK/reopen tutti attraversati. Il PASS locale non prova la causa del primo mainCI38203952665 (1539P/2F/36S), conservato comeFAIL.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — stesso delta già reviewed b696, nessun cambiamento ulteriore.
+- Questo file — esclusivamente nuova Execution/esiti; precedente Task/storia/Planning/criteri ricostruibili byte-identici.
+
+**Azioni ed evidenze:**
+1. C ordinarysource/Task/bindingreview conclusa nello stessochain; record6f1dd651/patch038c/wholeReleaseeq21f2f811, altri210incl.fixtureb88immutabili. Nessuna modifica prodotto/auth/scope/catch, skip/timeout/gesture/assert.
+2. Runner9933e01e: entry06:07:43.520209→actualrelease06:15:46.160211UTC,90090/H217; receipt05e7d28f, ownPG26696gone/rc0, proprioUUID9DF3DEA2 eliminato, nativeHOST11428/GUEST3627esatti prima/dopo/source211immutabili.0input/install/device-datawrites sugli app target correnti.
+3. Collector096d564c:6SDK,24file1048337B/EOF/rc0/sizeSHA verificati, receipt7dc51d9f, ownerfd3bb851 actualrelease06:16:57.568871/PG27753gone.9ID/order originali esatti, summary0dc13cde.18solinuoviTXT letti N una volta/readback65568070;2nuoviPNG a688796b/68871bd8 letti N una volta: bozza/caret/KBprima e continuedsuffix/caret/KB/activatedreleaseddopo; valorelungo clippato, fullvalue prova dell'assert. NativeName explicitreads0=NOT_REQUESTED_BY_DESIGN, no implicitAXcostzero/causeclaim.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build Debug + Root9 selezionata | ESEGUITO | Comando reale xcodebuild test, no esclusioni/parallelizzazione/retry,9PASS ufficiali. |
+| Analyze/secret scan CI finale | NON ESEGUITO | Candidato non ancora pubblicato; nuovo gate completo richiesto. |
+| Warning nuovi Swift/sourceUI | ESEGUITO |0nuoviwarning compilerSwift;3notice AppIntents metadata extraction skipped, distinti dawarningzero globale. |
+| Coerenza planning/addendum | ESEGUITO | Sole2hunk minimi/source210esatti/tutti gate eassert preservati. |
+| CA-10/11 finali | NON ESEGUITO | Locale9verificata; nuovaCI/integrazione/main/FF/install ancora pendenti. |
+| CA-07/09 autenticati/performance | NON ESEGUITO | NuoviTESTbidirezionali/perrecord/autoprop/offline/reopen e misure ancora aperti. |
+
+**Incertezze:** PreviousShop primo throw eSavedAXframe0/hitfalse sul main restano UNKNOWN. Nuovo PASSlocale non giustifica productfix néAcceptance nativa.
+
+**Handoff:** stessa ordinaria review result/Task/body daC, pubblicazione normale del seguito perché PR23 è giàMERGED; mai aggiornare la PRchiusa comeaperta. Nessun nuovo agente/chat/reviewchain/GO. MainFAIL tiene primaryFF/install/input0; Properc1f44/bcaf invariato/no Release equivalente, vecchiA/B/sessioni/code e14foreign preservati.
+
+### Esecuzione — 2026-10-12 UTC, main FAIL: prova senza il probe UIKit opzionale e readback della failure PreviousShop
+
+**Stato FIX / NON DONE.** PR23 integrata normalmente in `0a2ba66e`; primo main CI38203952665 conserva 1539PASS/2FAIL/36stessiSKIP,17UI15PASS/2FAIL. Originali acquisiti una volta; PreviousShop fallisce il wait activated20s con failure scope-changed/activated-journal; il primo throw/callsite resta UNKNOWN. Saved: Name361..383 dentro banda248.333..422, readiness due campioni KB553..786→frame0 e hittrue→false; query UIKit successiva firstRespondertrue è postfact. Quattro nuovi frame mostrano KB/caret nei tre campioni successivi, senza prova exact-at-predicate/continuous-focus. DecodeSDK0/EOF ma collectorFAIL per nomi Double70.2/76.4; actualSeconds non retained. Overall chiuso FAIL/deadlineexpired, afterPID NON ESEGUITO, nessun repeatSDK. Console originale non disponibile, FAIL conservato.
+
+**File modificati:**
+- `iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift` — Saved non abilita più l'osservatore UIKit opzionale con getter AX; stessa readiness5s/isHittable/stabilità/fascia/sole pan/tap/native Select All/full value/assert finali. PreviousShop aggiunge il medesimo readback esistente soltanto dopo il wait20s fallito, prima dell'assert invariato. Nessuna correzione applicativa dichiarata; causa dei due FAIL non provata.
+- Questo file — solo Execution, stato e check correnti; Planning/criteri/storia precedenti byte-identici.
+
+**Azioni eseguite:**
+1. Normal FF del solo worktree pulito736→main0a2, full-tree equivalente e tutti211 source hash identici; primaryb869 e14foreign non modificati. Receipt89cc4800.
+2. Delta test minimo con backup/inverse esatto: rimuovere il probe evita che le ordinarie snapshot possano richiamare traversal/hitTest diagnostici; non attribuisce il timeout al costo del getter.
+3. Prima di ogni nuova query diagnostica PreviousShop conserva come attachment il Boolean actual activated=false del wait20s fallito; readback cached puo essere incompleto/troncato, non automaticamente first callsite.
+4. Next originaleRoot9 intera classe e ordine obbligatorio, una sola esecuzione, nessun rilancio invariato fino al verde. Source freeze e gate ancora da eseguire.
+
+**Check obbligatori:**
+| Check | Stato | Note |
+|---|---|---|
+| Build/gate XCTest pertinente | NON ESEGUITO | Candidato nuovo, run originaleRoot9 ancora da eseguire. |
+| Analyze/Secret scan CI | NON ESEGUITO | Nuovo candidato non pubblicato. |
+| Warning nuovi | NON ESEGUITO | Nessun risultato del nuovo run. |
+| Coerenza planning/addendum | ESEGUITO | Test-only; nessun timeout/skip/catch/stato sintetico; app/scopes/auth/queue invariati. |
+| Criteri CA-07/09/10/11 finali | NON ESEGUITO | Review/gate nuove, CI/main, acceptance TEST bidirezionale e misure ancora aperti. |
+
+**Incertezze:** primo throw scope-changed e causa AX frame0/hitfalse UNKNOWN. Il getter opzionale viene disabilitato come discriminazione del setup, non come prova di causa prodotto.
+
+**Handoff:** stesso sole reviewer C/stesso chain e sole writer centrali C. Nessun nuovo GO/owner/agente/chat, nessun FF primary/install/native input prima dei gate validi.
+
 ### Esecuzione — 2026-10-12 UTC — prima Root9 post-readiness diagnostic delta qualificata
 
 **Stato FIX / NON DONE.** ONE nuova classe originaleRoot9 completa9PASS/0FAIL/0SKIP,9ID eordineSTART esatti; fonteUIe6038a69/fixtureb88/source211d1a996. Il PASS locale non sostituisce il FAIL precedente38193829637/c712 (1540PASS/1FAIL/36SKIP) né prova una causa del fatal o del timeout. Nuova CI exactSHA ancora NON ESEGUITA.
