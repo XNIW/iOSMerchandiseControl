@@ -1126,6 +1126,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     "same-first-device-install.\(scope.deviceInstallID == first?.scope.deviceInstallID)",
                     "same-first-device-hash.\(scope.deviceIdentityHash == first?.scope.deviceIdentityHash)",
                     "same-first-full-pending.\(scope.pendingReplacement == first?.scope.pendingReplacement)",
+                    "pending-present.\(scope.pendingReplacement != nil)",
+                    "pending-account-matches-scope.\(scope.pendingReplacement.map { String($0.accountHash == scope.accountHash) } ?? "absent")",
+                    "pending-full-store-matches-scope.\(scope.pendingReplacement.map { String($0.storeIdentity == scope.storeIdentity) } ?? "absent")",
                     "same-first-lease.\(scope.leaseGeneration == first?.scope.leaseGeneration)"]
                 result.append(components.joined(separator: "."))
             }
