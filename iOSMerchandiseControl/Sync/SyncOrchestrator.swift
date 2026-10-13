@@ -112,6 +112,7 @@ final class SyncOrchestrator: ObservableObject {
     private var localQualificationSubscription: AnyCancellable?
     private var localQualificationEventTask: Task<Void, Never>?
     private var lastResumedLocalQualificationRevision = 0
+    private var pendingPopulatedQualificationScope: Task126VerifiedOwnerStoreScope?
     private let foregroundRetryDelay: @Sendable (TimeInterval) async -> Void
     private let maximumForegroundBusyRetryAttempts: Int
 
@@ -167,22 +168,21 @@ final class SyncOrchestrator: ObservableObject {
             // A populated readback is asynchronous too. Resume only a new,
             // physically current proof for this mounted owner/shop generation.
             // This is an ordinary trigger, not explicit Retry authority.
-            guard !self.authViewModel.isTransitioning,
-                  self.authViewModel.sessionInfo?.userID == owner,
-                  let manifest = controller.activeManifest,
-                  controller.localBodyQualificationRevision != self.lastResumedLocalQualificationRevision,
-                  let journal = self.stateStore.pendingRecoveryJournal,
-                  journal.mode == .sameScopeRecovery,
-                  let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
-                    defaults: self.defaults, allowsPendingSameScopeRecovery: true),
-                  scope.accountHash == manifest.accountHash,
-                  scope.shopID == manifest.shopID,
-                  scope.storeIdentity == manifest.storeIdentity,
-                  scope.deviceIdentityHash == manifest.deviceIdentityHash,
-                  scope.pendingReplacement == journal.replacement,
+            guard let scope = self.currentPopulatedRecoveryScope(),
+                  self.pendingPopulatedQualificationScope == nil || self.pendingPopulatedQualificationScope == scope else {
+                self.discardPopulatedQualificationWait()
+                return
+            }
+            guard self.pendingPopulatedQualificationScope != nil
+                    || controller.localBodyQualificationRevision != self.lastResumedLocalQualificationRevision,
                   Task126OwnerStoreGate.permitsSameScopeLocalAccess(
                     modelContainer: controller.modelContainer, ownerUserID: owner, defaults: self.defaults
                   ) else { return }
+            if self.pendingPopulatedQualificationScope != nil {
+                self.deferForegroundCheck(source: .rootForeground, forceIncremental: true)
+                guard self.foregroundTask == nil, !self.activityCenter.isBusy else { return }
+                self.pendingPopulatedQualificationScope = nil
+            }
             self.lastResumedLocalQualificationRevision = controller.localBodyQualificationRevision
             self.deferForegroundCheck(source: .rootForeground, forceIncremental: true)
             // Editing or an existing run retains the coalesced ordinary request.
@@ -301,6 +301,10 @@ final class SyncOrchestrator: ObservableObject {
         guard didReachInteractiveUI,
               hasDeferredForegroundCheck,
               !activityCenter.isBusy else { return }
+        if pendingPopulatedQualificationScope != nil {
+            scheduleLocalQualificationReadback()
+            return
+        }
         let source = deferredForegroundSource ?? .rootForeground
         hasDeferredForegroundCheck = false
         deferredForegroundSource = nil
@@ -363,6 +367,9 @@ final class SyncOrchestrator: ObservableObject {
         forceIncremental: Bool = false
     ) {
         guard !isStopped else { return }
+        if source == .releaseCard {
+            pendingPopulatedQualificationScope = nil
+        }
         recordRuntimeDiagnostic("foreground.requestedAt", Date().timeIntervalSince1970)
         recordRuntimeDiagnostic("foreground.source", source.diagnosticsName)
         recordRuntimeDiagnostic("foreground.forceIncremental", forceIncremental)
@@ -376,6 +383,16 @@ final class SyncOrchestrator: ObservableObject {
             recordRuntimeDiagnostic("foreground.outcome", "deferred_store_replacement")
             return
         }
+        if (source == .rootForeground || source == .networkReconnect),
+           let waitingScope = pendingPopulatedQualificationScope {
+            guard currentPopulatedRecoveryScope() == waitingScope else {
+                discardPopulatedQualificationWait()
+                return
+            }
+            deferForegroundCheck(source: .rootForeground, forceIncremental: forceIncremental)
+            scheduleLocalQualificationReadback()
+            return
+        }
         guard foregroundTask == nil else {
             deferForegroundCheck(source: source, forceIncremental: forceIncremental)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_existing_task")
@@ -387,30 +404,26 @@ final class SyncOrchestrator: ObservableObject {
             return
         }
 
-        // Reopening a populated same-scope store can finish auth/shop admission
-        // before its physical body readback. Wait without spending a recovery
-        // attempt; the existing qualification publisher resumes this request.
+        let capturedPopulatedScope: Task126VerifiedOwnerStoreScope?
+        let beganWithoutBodyProof: Bool
         if (source == .rootForeground || source == .networkReconnect),
            stateStore.state.phase == .recoveryRequired,
-           authViewModel.isSignedIn, !authViewModel.isTransitioning,
-           let owner = authViewModel.sessionInfo?.userID,
-           authViewModel.localMutationOwnerUserID == owner,
-           let controller = storeGenerationController, let lease = storeGenerationLease,
-           (try? controller.validateLease(lease)) != nil,
-           let manifest = controller.activeManifest,
-           let journal = stateStore.pendingRecoveryJournal,
-           journal.mode == .sameScopeRecovery,
-           let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
-             defaults: defaults, allowsPendingSameScopeRecovery: true),
-           scope.accountHash == manifest.accountHash,
-           scope.shopID == manifest.shopID,
-           scope.storeIdentity == manifest.storeIdentity,
-           scope.deviceIdentityHash == manifest.deviceIdentityHash,
-           scope.pendingReplacement == journal.replacement,
-           !Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer) {
-            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-            controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: owner)
-            return
+           storeGenerationController?.activeManifest != nil,
+           stateStore.pendingRecoveryJournal?.mode == .sameScopeRecovery {
+            guard let scope = currentPopulatedRecoveryScope(),
+                  let controller = storeGenerationController else {
+                discardPopulatedQualificationWait(includingUnstartedRequest: true)
+                return
+            }
+            capturedPopulatedScope = scope
+            beganWithoutBodyProof = !Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer)
+            guard !beganWithoutBodyProof || currentScenePhase == .active else {
+                discardPopulatedQualificationWait(includingUnstartedRequest: true)
+                return
+            }
+        } else {
+            capturedPopulatedScope = nil
+            beganWithoutBodyProof = false
         }
 
         let isExplicitRecoveryRetry = source == .releaseCard
@@ -454,7 +467,7 @@ final class SyncOrchestrator: ObservableObject {
         foregroundStartedFromRecoveryRequired = isRecoveryRetry
         let preserveRecoveryRequired = isRecoveryRetry
         foregroundTask = Task { @MainActor in
-            let decidedAction = await decideAction(
+            let (decidedAction, hasPendingLocalChanges) = await decideAction(
                 source: source,
                 forceLightReconcile: forceIncremental
             )
@@ -467,6 +480,46 @@ final class SyncOrchestrator: ObservableObject {
                 recordRuntimeDiagnostic("foreground.outcome", "completed_recovery_scope_changed")
                 completeForegroundTask()
                 return
+            }
+            if let capturedPopulatedScope {
+                // The snapshot can finish after an account, scene or activity
+                // change. Reject stale authority before recording any attempt.
+                guard currentPopulatedRecoveryScope() == capturedPopulatedScope,
+                      let controller = storeGenerationController else {
+                    discardPopulatedQualificationWait(includingUnstartedRequest: true)
+                    completeForegroundTask(runDeferred: false)
+                    if deferredForegroundSource == .releaseCard { runDeferredForegroundCheckIfNeeded() }
+                    return
+                }
+                if deferredForegroundSource == .releaseCard {
+                    pendingPopulatedQualificationScope = nil
+                    completeForegroundTask(runDeferred: false)
+                    runDeferredForegroundCheckIfNeeded()
+                    return
+                }
+                // Pending work still needs qualification when the decision is
+                // temporarily blocked/busy. Pure bootstrap remains independent.
+                if hasPendingLocalChanges,
+                   beganWithoutBodyProof || !Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer) {
+                    pendingPopulatedQualificationScope = capturedPopulatedScope
+                    deferForegroundCheck(source: .rootForeground, forceIncremental: forceIncremental)
+                    controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: capturedPopulatedScope.ownerUserID)
+                    completeForegroundTask(runDeferred: false)
+                    scheduleLocalQualificationReadback()
+                    return
+                }
+                guard !beganWithoutBodyProof || currentScenePhase == .active else {
+                    completeForegroundTask(runDeferred: false)
+                    return
+                }
+                if activityCenter.isBusy || automaticRuntime.isRunning || decidedAction == .retryAfterBusy {
+                    deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                    completeForegroundTask(runDeferred: false)
+                    if !activityCenter.isBusy, !automaticRuntime.isRunning {
+                        resumeDeferredForegroundCheckIfReady()
+                    }
+                    return
+                }
             }
             // Explicit retry normalization requires release-card authority.
             // An admitted automatic resume retains its gated bootstrap plan.
@@ -582,6 +635,7 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func cancelForegroundCheck() {
+        pendingPopulatedQualificationScope = nil
         let preserveRecoveryRequired = foregroundStartedFromRecoveryRequired
             && !isAccountStoreReplacementInProgress
         clearDeferredForegroundCheck()
@@ -608,6 +662,7 @@ final class SyncOrchestrator: ObservableObject {
             throw AccountStoreReplacementRuntimeError.alreadyInProgress
         }
         isAccountStoreReplacementInProgress = true
+        pendingPopulatedQualificationScope = nil
         foregroundStartedFromRecoveryRequired = false
         stateStore.reconcilePendingRecoveryJournal()
         objectWillChange.send()
@@ -845,6 +900,10 @@ final class SyncOrchestrator: ObservableObject {
 
     private func runDeferredForegroundCheckIfNeeded() {
         guard !isStopped, hasDeferredForegroundCheck else { return }
+        if pendingPopulatedQualificationScope != nil {
+            scheduleLocalQualificationReadback()
+            return
+        }
         let source = deferredForegroundSource ?? .rootForeground
         let forceIncremental = deferredForegroundForceIncremental
         hasDeferredForegroundCheck = false
@@ -866,7 +925,7 @@ final class SyncOrchestrator: ObservableObject {
     private func decideAction(
         source: SyncAutomaticTriggerSource,
         forceLightReconcile: Bool
-    ) async -> SyncAction {
+    ) async -> (action: SyncAction, hasPendingLocalChanges: Bool) {
         let snapshot = await decisionInputProvider.makeSnapshot(
             triggerSource: source,
             isAuthenticated: authViewModel.isSignedIn,
@@ -879,9 +938,37 @@ final class SyncOrchestrator: ObservableObject {
         // bootstrap and pending work retain precedence; only a local no-op is
         // upgraded to the bounded reconciliation path.
         if forceLightReconcile, action == .noOp {
-            return .lightReconcile
+            return (.lightReconcile, snapshot.hasPendingLocalChanges)
         }
-        return action
+        return (action, snapshot.hasPendingLocalChanges)
+    }
+
+    private func currentPopulatedRecoveryScope() -> Task126VerifiedOwnerStoreScope? {
+        guard !isStopped, !isAccountStoreReplacementInProgress,
+              authViewModel.isSignedIn, !authViewModel.isTransitioning,
+              let owner = authViewModel.sessionInfo?.userID,
+              authViewModel.localMutationOwnerUserID == owner,
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              (try? controller.validateLease(lease)) != nil,
+              let manifest = controller.activeManifest,
+              let journal = stateStore.pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery,
+              let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                defaults: defaults, allowsPendingSameScopeRecovery: true),
+              scope.accountHash == manifest.accountHash,
+              scope.shopID == manifest.shopID,
+              scope.storeIdentity == manifest.storeIdentity,
+              scope.deviceIdentityHash == manifest.deviceIdentityHash,
+              scope.pendingReplacement == journal.replacement else { return nil }
+        return scope
+    }
+
+    private func discardPopulatedQualificationWait(includingUnstartedRequest: Bool = false) {
+        guard pendingPopulatedQualificationScope != nil || includingUnstartedRequest else { return }
+        pendingPopulatedQualificationScope = nil
+        if deferredForegroundSource != .releaseCard {
+            clearDeferredForegroundCheck()
+        }
     }
 
     static func retryTriggerSource(for phase: SyncPhase) -> SyncAutomaticTriggerSource {
