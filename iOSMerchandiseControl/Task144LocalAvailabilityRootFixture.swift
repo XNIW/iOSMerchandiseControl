@@ -505,7 +505,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 defer { recovery.cancel() }
                 while !transport.isReleased {
                     if try durableSaveReadback() {
-                        facts.insert("task144.controlled.local-save-durable")
+                        if !facts.contains("task144.controlled.local-save-durable") {
+                            facts.insert("task144.controlled.local-save-durable")
+                        }
                         if provesIndependentPending, !independentPendingInserted {
                             try insertIndependentPendingHistory()
                         }
