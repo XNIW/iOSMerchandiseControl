@@ -715,10 +715,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let hitRemaining = latestHitStartedUptime.flatMap { hitStart in
                     readinessWaitStartedUptime.map { String($0 + 5 - hitStart) }
                 } ?? "NOT_QUERIED"
-                let readiness = XCTAttachment(string: "result=\(result); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count)); wait-start=\(waitStart); wait-end=\(waitEnd); deadline=\(deadline); latest-hit-start=\(hitStart); latest-hit-end=\(hitEnd); remaining-before-latest-hit=\(hitRemaining); hit-in-flight=\(latestHitStartedUptime != nil && latestHitFinishedUptime == nil); emission-phase=\(phase); attachment-emission-start=\(attachmentEmissionStartedUptime); attachment-emission-end=\(attachmentEmissionFinishedUptime); attachment-emission-seconds=\(attachmentEmissionFinishedUptime - attachmentEmissionStartedUptime)\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n"))
+                let readinessText = "result=\(result); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count)); wait-start=\(waitStart); wait-end=\(waitEnd); deadline=\(deadline); latest-hit-start=\(hitStart); latest-hit-end=\(hitEnd); remaining-before-latest-hit=\(hitRemaining); hit-in-flight=\(latestHitStartedUptime != nil && latestHitFinishedUptime == nil); emission-phase=\(phase); attachment-emission-start=\(attachmentEmissionStartedUptime); attachment-emission-end=\(attachmentEmissionFinishedUptime); attachment-emission-seconds=\(attachmentEmissionFinishedUptime - attachmentEmissionStartedUptime)\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n")
+                let readiness = XCTAttachment(string: readinessText)
                 readiness.name = "Task144 existing readiness predicate observations before assertion"
                 readiness.lifetime = .keepAlways
                 self.add(readiness)
+                print("TASK144_READINESS_OBSERVATIONS \(readinessText)")
             }
             // XCTest still runs teardown blocks when a native getter records a
             // failure with continueAfterFailure=false. Flush only existing RAM
@@ -806,14 +808,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 return geometryReady && hittable == true
                     && hitFinishedUptime <= deadlineUptime
             }
+            let ready = XCTestExpectation(description: "Name and keyboard are ready for native selection")
             let waitStartedUptime = ProcessInfo.processInfo.systemUptime
             readinessWaitStartedUptime = waitStartedUptime
-            // Include the first observation in the same five-second window,
-            // without waiting for the expectation's first scheduled poll.
-            _ = sampleReadiness()
-            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                sampleReadiness()
-            }, object: nil)
+            // Each synchronous sample obtains a new hierarchy. Start the next
+            // one directly, without a predicate timer consuming the same budget.
+            while ProcessInfo.processInfo.systemUptime < waitStartedUptime + 5 {
+                if sampleReadiness() {
+                    ready.fulfill()
+                    break
+                }
+            }
             let remainingReadinessTime = max(
                 0, waitStartedUptime + 5 - ProcessInfo.processInfo.systemUptime)
             let readinessResult = XCTWaiter.wait(for: [ready], timeout: remainingReadinessTime)
