@@ -206,6 +206,26 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-13 05:03 UTC — stessa coppia geometrica sui due runtime
+
+Review indipendente C di Layout88a/Task7d e binding492/8a7/ec0/f76/4b155 chiusa. Stessi due casi originali, stesso ordine: **2 PASS / 0 FAIL / 0 SKIP su iPhone16e/iOS26.2** e **2 PASS / 0 FAIL / 0 SKIP su iPhone15ProMax/iOS26.1**. Build Debug ESEGUITA; zero warning nuovi rispetto a Root13, solo metadata AppIntents già presente; runtimeWarnings ufficiali vuoti. Parser, due corpi, margini4/2±1, Retry e Inventoryhit/assert finali restano byte-identici; prodotto/fixturec199/Savedhelper76fa invariati. Nessun rerun di Root9/7DTO/26unit immutati.
+
+16e: runner56837a84/PG58599 exit0/reap04:59:08.635361UTC, intero runner+clonecleanup04:59:09.255795; collector7acffad9/ownerac3064b6/PG59087 exit0/reap04:59:32.201953, summaryf58df72f/tree42121101. 15PM: runner5fa7eef1/PG59161 exit0/reap05:01:05.299828, intero runner+clonecleanup05:01:05.861311; collectorebcbdd3f/owner5a72d675/PG59611 exit0/reap05:01:26.065664, summarycec74288/treeb142f1b1. Entrambe le finestre entro900s/collector600s, tutti gruppi e soli clone assenti, source313 prima/dopo esatte su88a/Task7d, PIDs primarie50838/12799 invariati;0input/install/reset ai dati reali.
+
+Venti nuovi geometryTXT (dieci perdevice) hanno ciascuno due catture fresche complete/valide/univoche/stabili entro lo stesso5s, veroresult1 ed emissioneafter-wait, testo byte-identico in stdout. Readback16ea95eb35a ePM150778d1; quattro finalmeasurementTXT2c1667f3/edc75d5d/380f75dd/0dc300cf confermano i flussi dei due corpi fino agli assert finali: 4/2margini entro1pt, fullmessage+Retry eInventorytitleraggiungibili, Optionshiddenagain ripristina viewport. Fatalfallback NON ESERCITATO; causa del1001 remoto NON PROVATA e CI383418/fc2XXXLFAIL non retroqualificata da questo PASS locale. Durate delle prove non sono misure CA09.
+
+La sola Execution registra ora gli esiti dopo tutti i rilasci. Publication nuovoSHA/CIcompleta1580+19UI/main/ProperTEST/install/accettazione nativa autenticata restano NON ESEGUITI. TASK FIX / NON DONE.
+
+### Esecuzione — 2026-10-13 04:45 UTC — campionamento diretto della geometria root entro lo stesso deadline
+
+**Originale corrente conservato:** head `fc2bd8b1`, CI `38341854573`, 1.543 PASS / 1 FAIL / 36 SKIP su 1.580 ID. Tutti i nove casi LocalAvailabilityRoot, compreso Saved/Unsaved, e il layout a testo standard sono PASS. Il solo layout XXXL si ferma in `settledGeometry(Database, true)` con waiter2: Options TXT `182b6dc4` contiene due geometrie complete/univoche identiche; Database TXT `9da5e151` contiene soltanto XCTFuture1001 e cancellazione del campione precedente. Non esistono misure Database valide né una violazione geometrica provata. Archivio ufficiale `394ba64c`, export singolo `5678f5bc`, review indipendente C chiusa; source313 e skip/motivi verificati. Analyze e Secret scan SKIPPED; causa sottostante1001 UNPROVEN.
+
+**Delta minimo selezionato da N:** solo `settledGeometry` nel test esistente. Riusa il campionamento sincrono immediato del helper76fa: arm monotono prima della prima cattura, due snapshot nuove complete/univoche e con geometria stabile, cattura e osservazione concluse entro lo stesso limite5s, unica expectation reale e vero waiter sul tempo residuo. Un campione nil o un errore cancella ancora la geometria precedente; niente prearm, cache o successo tardivo. Parser, due corpi dei test, navigazione/gesti, hit reali di Riprova e titolo Inventario, margini4/2, precisione1 e assert finali restano byte-identici. Nessun cambiamento a prodotto, fixture, helper Saved, flag, dipendenze o timeout.
+
+Il recorder RAM esistente resta limitato a16 righe per attesa: aggiunge soltanto tempi monotoni di poll/cattura/osservazione, residuo ed esiti già valutati. Lo stesso testo va in attachment e stdout soltanto dopo il waiter; teardown idempotente conserva i fatti già raccolti se un errore nativo impedisce il ritorno, senza nuove query. Il delta elimina lo scheduling del predicate timer e rende misurabile una futura acquisizione; non attribuisce la causa1001 attuale e non dichiara un PASS controfattuale.
+
+**Verifica e handoff:** STATIC/coerenza ESEGUITA; inversione della sola funzione ricostruisce l'intero file `c49ea88f`, rimozione della sola Execution ricostruisce Task `82b588ec`, gli altri311 hash sono invariati. Review del diff concreto affidata a C; BUILD, warning, gli stessi due casi sui due runtime già previsti e CI exact-head NON ESEGUITI, owner N. ProperTEST, main/installazione, prove native autenticate e accettazione globale rimangono aperti; TASK FIX / NON DONE.
+
 ### Esecuzione — 2026-10-13 03:22 UTC — Root9 sul solo guard del fatto durevole
 
 Review indipendente C della fixturec199/Task17bd e dei binding10a/58e/21c chiusa. La classe originale completa resta **9 PASS / 0 FAIL / 0 SKIP**, stessi ID/ordine/body/gesti/assert; source313 prima/dopo esatte, helper76fa e prodotto invariati. Build Debug ESEGUITA; nessun warning nuovo rispetto a Root12, solo metadata AppIntents già presente; runtimeWarnings ufficiali vuoti. Summary33ee8dc6/tree5a47de6c/adjudication19b6a737. Saved/Unsaved59,050s e NewSupplierCategory finale PASS; queste durate non sono misure CA09.

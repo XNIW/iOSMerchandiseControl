@@ -146,37 +146,92 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         var previous: Geometry?
         var settled: Geometry?
         var diagnostics: [String] = []
-        let stable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            do {
-                // All frames and the held/selected state come from one fresh
-                // hierarchy. Never substitute the title Text's frame for the
-                // .contain banner group or carry a failed snapshot forward.
-                let snapshot = try self.app.snapshot()
+        var pollCount = 0
+        var waitStartedUptime: TimeInterval?
+        var waitFinishedUptime: TimeInterval?
+        var recordedResult: XCTWaiter.Result?
+        var latestCaptureStartedUptime: TimeInterval?
+        var latestCaptureFinishedUptime: TimeInterval?
+        var diagnosticsEmitted = false
+        let emitDiagnostics: (String) -> Void = { [weak self] phase in
+            guard let self, !diagnosticsEmitted else { return }
+            diagnosticsEmitted = true
+            let result = recordedResult.map { String($0.rawValue) } ?? "NOT_RETURNED"
+            let start = waitStartedUptime.map { String($0) } ?? "NOT_ARMED"
+            let end = waitFinishedUptime.map { String($0) } ?? "NOT_RETURNED"
+            let deadline = waitStartedUptime.map { String($0 + 5) } ?? "NOT_ARMED"
+            let captureStart = latestCaptureStartedUptime.map { String($0) } ?? "NOT_STARTED"
+            let captureEnd = latestCaptureFinishedUptime.map { String($0) } ?? "NOT_RETURNED"
+            let contents = "tab=\(tab);showsBanner=\(showsBanner);result=\(result);units=points;polls=\(pollCount);retained=\(diagnostics.count);wait-start=\(start);wait-end=\(end);deadline=\(deadline);latest-capture-start=\(captureStart);latest-capture-end=\(captureEnd);emission-phase=\(phase)\n"
+                + diagnostics.joined(separator: "\n")
+            let evidence = XCTAttachment(string: contents)
+            evidence.name = "Task144 root banner fresh geometry: \(tab)"
+            evidence.lifetime = .keepAlways
+            self.add(evidence)
+            print("TASK144_ROOT_BANNER_GEOMETRY \(contents)")
+        }
+        // Preserve the existing RAM observations if a native failure prevents
+        // the ordinary post-wait emission. Never query the app from teardown.
+        addTeardownBlock { emitDiagnostics("teardown") }
+        let sampleGeometry: () -> Bool = {
+            guard let waitStartedUptime else { return false }
+            let deadlineUptime = waitStartedUptime + 5
+            let pollStartedUptime = ProcessInfo.processInfo.systemUptime
+            guard pollStartedUptime < deadlineUptime else { return false }
+            pollCount += 1
+            // All frames and the held/selected state come from one fresh
+            // hierarchy. Never substitute the title Text's frame for the
+            // .contain banner group or carry a failed snapshot forward.
+            let captureStartedUptime = ProcessInfo.processInfo.systemUptime
+            guard captureStartedUptime < deadlineUptime else { return false }
+            latestCaptureStartedUptime = captureStartedUptime
+            latestCaptureFinishedUptime = nil
+            let captureResult = Result(catching: { try self.app.snapshot() })
+            let captureFinishedUptime = ProcessInfo.processInfo.systemUptime
+            latestCaptureFinishedUptime = captureFinishedUptime
+            let captureTiming = "poll=\(pollCount);poll-start=\(pollStartedUptime);capture-start=\(captureStartedUptime);capture-end=\(captureFinishedUptime);capture-seconds=\(captureFinishedUptime - captureStartedUptime);remaining-before-capture=\(deadlineUptime - captureStartedUptime);remaining-after-capture=\(deadlineUptime - captureFinishedUptime);capture-out-of-window=\(captureFinishedUptime > deadlineUptime)"
+            switch captureResult {
+            case .success(let snapshot):
                 let sample = self.geometry(from: snapshot, tab: tab, showsBanner: showsBanner)
-                if diagnostics.count < 16 { diagnostics.append(sample.diagnostic) }
+                let matchesPrevious = sample.geometry != nil && previous == sample.geometry
+                previous = sample.geometry
+                let observationFinishedUptime = ProcessInfo.processInfo.systemUptime
+                if diagnostics.count < 16 {
+                    diagnostics.append("\(captureTiming);observation-end=\(observationFinishedUptime);remaining-after-observation=\(deadlineUptime - observationFinishedUptime);geometry-valid=\(sample.geometry != nil);stable=\(matchesPrevious);\(sample.diagnostic)")
+                }
                 guard let geometry = sample.geometry else {
-                    previous = nil
                     return false
                 }
-                let matchesPrevious = previous == geometry
-                previous = geometry
-                if matchesPrevious { settled = geometry }
-                return matchesPrevious
-            } catch {
+                let ready = matchesPrevious && captureFinishedUptime <= deadlineUptime
+                    && observationFinishedUptime <= deadlineUptime
+                if ready { settled = geometry }
+                return ready
+            case .failure(let error):
                 previous = nil
                 let failure = error as NSError
+                let observationFinishedUptime = ProcessInfo.processInfo.systemUptime
                 if diagnostics.count < 16 {
-                    diagnostics.append("snapshot-error-domain=\(failure.domain);code=\(failure.code);prior-cleared=true")
+                    diagnostics.append("\(captureTiming);observation-end=\(observationFinishedUptime);remaining-after-observation=\(deadlineUptime - observationFinishedUptime);snapshot-error-domain=\(failure.domain);code=\(failure.code);prior-cleared=true")
                 }
                 return false
             }
-        }, object: nil)
-        let result = XCTWaiter.wait(for: [stable], timeout: 5)
-        let evidence = XCTAttachment(string: "tab=\(tab);showsBanner=\(showsBanner);result=\(result.rawValue);units=points\n"
-            + diagnostics.joined(separator: "\n"))
-        evidence.name = "Task144 root banner fresh geometry: \(tab)"
-        evidence.lifetime = .keepAlways
-        add(evidence)
+        }
+        let stable = XCTestExpectation(description: "Two fresh complete root geometry samples are stable")
+        let start = ProcessInfo.processInfo.systemUptime
+        waitStartedUptime = start
+        // Each synchronous sample obtains a new hierarchy immediately, without
+        // a predicate timer consuming the same five-second observation budget.
+        while ProcessInfo.processInfo.systemUptime < start + 5 {
+            if sampleGeometry() {
+                stable.fulfill()
+                break
+            }
+        }
+        let remainingTime = max(0, start + 5 - ProcessInfo.processInfo.systemUptime)
+        let result = XCTWaiter.wait(for: [stable], timeout: remainingTime)
+        waitFinishedUptime = ProcessInfo.processInfo.systemUptime
+        recordedResult = result
+        emitDiagnostics("after-wait")
         XCTAssertEqual(result, .completed,
                        "Require one native navigation bar for titled roots, the Inventory scroll/title pair, and one .other recovery-error banner container when visible; AX ambiguity is not a layout PASS")
         return try XCTUnwrap(settled, "No two complete stable root geometry samples were observed")
