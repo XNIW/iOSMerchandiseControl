@@ -111,6 +111,7 @@ final class SyncOrchestrator: ObservableObject {
     private var isStopped = false
     private var localQualificationSubscription: AnyCancellable?
     private var localQualificationEventTask: Task<Void, Never>?
+    private var lastResumedLocalQualificationRevision = 0
     private let foregroundRetryDelay: @Sendable (TimeInterval) async -> Void
     private let maximumForegroundBusyRetryAttempts: Int
 
@@ -143,6 +144,7 @@ final class SyncOrchestrator: ObservableObject {
         self.backgroundScheduler = backgroundScheduler ?? SyncBackgroundTaskScheduler.shared
         self.maximumForegroundBusyRetryAttempts = max(0, maximumForegroundBusyRetryAttempts)
         self.foregroundRetryDelay = foregroundRetryDelay
+        lastResumedLocalQualificationRevision = storeGenerationController?.localBodyQualificationRevision ?? 0
         localQualificationSubscription = storeGenerationController?.objectWillChange.sink { [weak self] _ in
             self?.scheduleLocalQualificationReadback()
         }
@@ -162,6 +164,29 @@ final class SyncOrchestrator: ObservableObject {
                   (try? controller.validateLease(lease)) != nil,
                   let owner = self.authViewModel.localMutationOwnerUserID else { return }
             controller.requestEmptyRootQualificationAfterPublication(ownerUserID: owner)
+            // A populated readback is asynchronous too. Resume only a new,
+            // physically current proof for this mounted owner/shop generation.
+            // This is an ordinary trigger, not explicit Retry authority.
+            guard !self.authViewModel.isTransitioning,
+                  self.authViewModel.sessionInfo?.userID == owner,
+                  let manifest = controller.activeManifest,
+                  controller.localBodyQualificationRevision != self.lastResumedLocalQualificationRevision,
+                  let journal = self.stateStore.pendingRecoveryJournal,
+                  journal.mode == .sameScopeRecovery,
+                  let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    defaults: self.defaults, allowsPendingSameScopeRecovery: true),
+                  scope.accountHash == manifest.accountHash,
+                  scope.shopID == manifest.shopID,
+                  scope.storeIdentity == manifest.storeIdentity,
+                  scope.deviceIdentityHash == manifest.deviceIdentityHash,
+                  scope.pendingReplacement == journal.replacement,
+                  Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                    modelContainer: controller.modelContainer, ownerUserID: owner, defaults: self.defaults
+                  ) else { return }
+            self.lastResumedLocalQualificationRevision = controller.localBodyQualificationRevision
+            self.deferForegroundCheck(source: .rootForeground, forceIncremental: true)
+            // Editing or an existing run retains the coalesced ordinary request.
+            self.resumeDeferredForegroundCheckIfReady()
         }
     }
 
@@ -359,6 +384,32 @@ final class SyncOrchestrator: ObservableObject {
         guard !activityCenter.isBusy else {
             deferForegroundCheck(source: source, forceIncremental: forceIncremental)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_busy")
+            return
+        }
+
+        // Reopening a populated same-scope store can finish auth/shop admission
+        // before its physical body readback. Wait without spending a recovery
+        // attempt; the existing qualification publisher resumes this request.
+        if (source == .rootForeground || source == .networkReconnect),
+           stateStore.state.phase == .recoveryRequired,
+           authViewModel.isSignedIn, !authViewModel.isTransitioning,
+           let owner = authViewModel.sessionInfo?.userID,
+           authViewModel.localMutationOwnerUserID == owner,
+           let controller = storeGenerationController, let lease = storeGenerationLease,
+           (try? controller.validateLease(lease)) != nil,
+           let manifest = controller.activeManifest,
+           let journal = stateStore.pendingRecoveryJournal,
+           journal.mode == .sameScopeRecovery,
+           let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+             defaults: defaults, allowsPendingSameScopeRecovery: true),
+           scope.accountHash == manifest.accountHash,
+           scope.shopID == manifest.shopID,
+           scope.storeIdentity == manifest.storeIdentity,
+           scope.deviceIdentityHash == manifest.deviceIdentityHash,
+           scope.pendingReplacement == journal.replacement,
+           !Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer) {
+            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+            controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: owner)
             return
         }
 
@@ -688,11 +739,38 @@ final class SyncOrchestrator: ObservableObject {
         source: SyncAutomaticTriggerSource,
         forceIncremental: Bool
     ) {
-        hasDeferredForegroundCheck = true
-        deferredForegroundSource = Self.preferredDeferredSource(
+        var preferredSource = Self.preferredDeferredSource(
             current: deferredForegroundSource,
             incoming: source
         )
+        // A Save or safety poll during editing must not demote an already
+        // qualified ordinary recovery request to a source that cannot resume it.
+        // Retain it only while the complete mounted authority remains current.
+        if source == .localMutation || source == .foregroundPoll, hasDeferredForegroundCheck,
+           let pendingSource = deferredForegroundSource,
+           pendingSource == .rootForeground || pendingSource == .networkReconnect,
+           !isStopped, authViewModel.isSignedIn, !authViewModel.isTransitioning,
+           let owner = authViewModel.sessionInfo?.userID,
+           authViewModel.localMutationOwnerUserID == owner,
+           let controller = storeGenerationController, let lease = storeGenerationLease,
+           (try? controller.validateLease(lease)) != nil,
+           let manifest = controller.activeManifest,
+           let journal = stateStore.pendingRecoveryJournal,
+           journal.mode == .sameScopeRecovery,
+           let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+             defaults: defaults, allowsPendingSameScopeRecovery: true),
+           scope.accountHash == manifest.accountHash,
+           scope.shopID == manifest.shopID,
+           scope.storeIdentity == manifest.storeIdentity,
+           scope.deviceIdentityHash == manifest.deviceIdentityHash,
+           scope.pendingReplacement == journal.replacement,
+           Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+             modelContainer: controller.modelContainer, ownerUserID: owner, defaults: defaults
+           ) {
+            preferredSource = pendingSource
+        }
+        hasDeferredForegroundCheck = true
+        deferredForegroundSource = preferredSource
         deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
     }
 

@@ -1714,6 +1714,263 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         print("TASK144_REOPEN_QUALIFICATION_ORDER old=false current=true same-generation=true same-body=true")
     }
 
+    func testPopulatedQualificationAutomaticallyResumesPendingCatalogAfterReadback() async throws {
+        try await assertPopulatedQualificationPendingCatalogResume(change: "current")
+    }
+
+    func testPopulatedQualificationRetainsRecoveryResumeAcrossBusyLocalSave() async throws {
+        try await assertPopulatedQualificationPendingCatalogResume(change: "busy-save")
+    }
+
+    func testPopulatedQualificationRetainsRecoveryResumeAcrossBusyForegroundPoll() async throws {
+        try await assertPopulatedQualificationPendingCatalogResume(change: "busy-poll")
+    }
+
+    func testPopulatedQualificationDoesNotResumeStoppedInactiveForeignOrExhaustedWork() async throws {
+        for change in ["stopped", "inactive", "owner", "shop", "device", "exhausted"] {
+            try await assertPopulatedQualificationPendingCatalogResume(change: change)
+        }
+    }
+
+    private func assertPopulatedQualificationPendingCatalogResume(change: String) async throws {
+        let shouldResume = change == "current" || change == "busy-save" || change == "busy-poll"
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        if change == "busy-save" {
+            // Configure this MainActor test remote before any Catalog request;
+            // the later Save must send exactly 2, while all legacy cases use 1.
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+            proof.remote.prepareProductForPush(ordinaryContinuationProduct(
+                fixture: proof.fixture, id: proof.productID, stock: 0), expectedUpdateStockQuantity: 2)
+        }
+        let manifest = try XCTUnwrap(proof.fixture.controller.activeManifest)
+        let binding = AccountBindingStore(defaults: proof.fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+            storeIdentity: manifest.storeIdentity, reason: "populated-qualification-auto-resume",
+            deviceIdentityHash: proof.scope.deviceIdentityHash))
+        var scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: proof.fixture.ownerUserID,
+            defaults: proof.fixture.defaults, allowsPendingSameScopeRecovery: true)
+        XCTAssertTrue(binding.recordPendingRecoveryStaging(accountHash: scope.accountHash,
+            storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+            generationID: manifest.generationID, scope: scope))
+        scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: proof.fixture.ownerUserID,
+            defaults: proof.fixture.defaults, allowsPendingSameScopeRecovery: true)
+        XCTAssertTrue(binding.recordPendingRecoveryVerified(accountHash: scope.accountHash,
+            storeIdentity: manifest.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+            generationID: manifest.generationID, checkpointDigest: manifest.checkpoint.checkpointDigest,
+            watermark: try XCTUnwrap(manifest.checkpoint.maxEventID),
+            baselineRunID: manifest.baselineRunID, scope: scope))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+
+        // The reopened production controller starts its own real file readback.
+        // Hold only publication, so ordinary bootstrap races the unqualified body.
+        let fixture = try reopenFixture(proof.fixture)
+        let controller = fixture.controller
+        let container = controller.modelContainer
+        let entered = expectation(description: "Populated readback held before publication: \(change)")
+        let gate = Task144ManifestQualificationGate(entered: entered)
+        controller.localBodyQualificationBeforePublicationForTesting = { await gate.wait() }
+        defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
+        await fulfillment(of: [entered], timeout: 2)
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
+        let bodyBefore = try completedRecoveryBusinessSnapshot(fixture)
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        let prefix = "task144.populated-qualification-resume.\(change)"
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix)
+        state.recordRunResult(.recoveryRequired())
+        let lease = try XCTUnwrap(controller.captureLease(for: container))
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint], productRows: [ordinaryContinuationProduct(
+                fixture: fixture, id: proof.productID, stock: 0)])
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel,
+            catalogPushProvider: CatalogPushService(modelContainer: container,
+                remote: proof.remote, defaults: fixture.defaults),
+            productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: SyncEventIncrementalPullService(modelContainer: container,
+                remote: proof.remote, defaults: fixture.defaults, storeGenerationController: controller),
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: container,
+                recorder: proof.remote, defaults: fixture.defaults),
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try controller.validateLease(lease) } }))
+        let activities = ForegroundCloudWorkflowActivityCenter()
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: activities, syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        let premature = expectation(description: "No runtime attempt before actual body proof: \(change)")
+        premature.isInverted = true
+        runtime.expectedCompletions = [premature]
+        let budgetKey = "\(prefix).automaticRecoveryAttempt.v1"
+        let budgetBefore = fixture.defaults.data(forKey: budgetKey)
+        await orchestrator.bootstrap(scenePhase: .active)
+        await fulfillment(of: [premature], timeout: 2)
+        print("TASK144_POPULATED_RESUME case=\(change) before-proof-runs=\(runtime.results.count) errors=\(runtime.results.map { $0.errorCode ?? "none" }) remote=\(proof.remote.catalogPushCallCount)")
+        XCTAssertTrue(runtime.actions.isEmpty, "An unqualified body must defer before runtime admission")
+        XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetBefore,
+            "Waiting for body qualification must not consume the recovery retry budget")
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+        XCTAssertEqual(proof.remote.recordRequests.count, 0)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), bodyBefore)
+
+        if change == "stopped" { orchestrator.stop() }
+        if change == "inactive" { orchestrator.handleScenePhaseChanged(.inactive) }
+        let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+        if change == "owner" { selectedStore.noteActiveAccount(AccountBindingStore.accountHash(for: UUID())) }
+        if change == "shop" {
+            let selected = try XCTUnwrap(selectedStore.selectedShop(accountHash: scope.accountHash))
+            XCTAssertTrue(selectedStore.save(SelectedShop(shopID: UUID(), code: selected.code,
+                name: selected.name, role: selected.role, status: selected.status,
+                selectable: selected.selectable, canWrite: selected.canWrite,
+                selectedAt: selected.selectedAt), accountHash: scope.accountHash))
+        }
+        if change == "device" { fixture.defaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id") }
+        if change == "exhausted" {
+            let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+            let past = Date().addingTimeInterval(-100)
+            for attempt in 1...3 {
+                XCTAssertEqual(state.beginAutomaticRecoveryAttempt(identity: identity,
+                    now: past.addingTimeInterval(Double(attempt * 10))), attempt)
+            }
+            XCTAssertEqual(state.automaticRecoveryAttemptEligibility(identity: identity), .exhausted)
+        }
+        let budgetAtPublication = fixture.defaults.data(forKey: budgetKey)
+        let editingToken = UUID()
+        if change == "busy-save" || change == "busy-poll" {
+            activities.setActive(.editing, true, token: editingToken)
+        }
+        defer { activities.setActive(.editing, false, token: editingToken) }
+        let finished = expectation(description: "Only current active authority resumes after publication: \(change)")
+        finished.isInverted = !shouldResume
+        // Preserve indexes if RED already recorded the real premature failure.
+        runtime.expectedCompletions = Array(repeating: premature, count: runtime.results.count) + [finished]
+        gate.release()
+        let qualified = await controller.awaitLocalBodyQualification()
+        await orchestrator.awaitLocalQualificationEventForTesting()
+        XCTAssertEqual(qualified, !["owner", "shop", "device"].contains(change), change)
+        if change == "busy-save" {
+            XCTAssertTrue(activities.isBusy)
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetBefore)
+            var saveNotifications = 0
+            // The same two event consumers are wired by AppSyncRootHost. The
+            // test sends no synthetic cloud request and invokes no Retry.
+            let saves = NotificationCenter.default.publisher(for: .localPendingChangesDidChange).sink { _ in
+                saveNotifications += 1
+                orchestrator.handleLocalPendingChanges()
+            }
+            let activity = activities.objectWillChange.sink { _ in
+                orchestrator.resumeDeferredForegroundCheckIfReady()
+            }
+            defer { saves.cancel(); activity.cancel() }
+            let savedID = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                let id = proof.productID
+                let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(
+                    predicate: #Predicate { $0.remoteID == id })).first)
+                let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                product.stockQuantity = 2
+                let pending = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                    ownerUserID: fixture.ownerUserID, storeIdentity: scope.storeIdentity)
+                    .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                        changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+                try context.save()
+                return pending.changeID
+            }
+            XCTAssertEqual(savedID, setup.changeID, "The unattempted local intent coalesces normally")
+            XCTAssertEqual(saveNotifications, 1)
+            // Observe the actual asynchronous notification consumer reaching
+            // its busy gate before releasing editing; no trigger is injected.
+            for _ in 0..<100 where UserDefaults.standard.string(forKey: "sync.runtime.foreground.source")
+                != SyncAutomaticTriggerSource.localMutation.rawValue { await Task.yield() }
+            XCTAssertEqual(UserDefaults.standard.string(forKey: "sync.runtime.foreground.source"),
+                SyncAutomaticTriggerSource.localMutation.rawValue)
+            XCTAssertEqual(UserDefaults.standard.string(forKey: "sync.runtime.foreground.outcome"), "deferred_busy")
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+            XCTAssertTrue(activities.isBusy)
+            activities.setActive(.editing, false, token: editingToken)
+        }
+        if change == "busy-poll" {
+            XCTAssertTrue(activities.isBusy)
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetBefore)
+            let activity = activities.objectWillChange.sink { _ in
+                orchestrator.resumeDeferredForegroundCheckIfReady()
+            }
+            defer { activity.cancel() }
+            // Exercise the exact public event submitted by the safety loop.
+            // This is an adversarial scheduling contract, not a real timer tick
+            // or a source that can independently authorize pending recovery.
+            orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+            XCTAssertEqual(UserDefaults.standard.string(forKey: "sync.runtime.foreground.source"),
+                SyncAutomaticTriggerSource.foregroundPoll.rawValue)
+            XCTAssertEqual(UserDefaults.standard.string(forKey: "sync.runtime.foreground.outcome"), "deferred_busy")
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetBefore)
+            activities.setActive(.editing, false, token: editingToken)
+        }
+        await fulfillment(of: [finished], timeout: 2)
+
+        print("TASK144_POPULATED_RESUME_RESULT case=\(change) results=\(runtime.results.map { "status.\($0.status.rawValue)/error.\($0.errorCode ?? "none")/block.\(String(describing: $0.blockReason))" }) state-error=\(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode") ?? "none")")
+        if shouldResume {
+            XCTAssertEqual(runtime.actions, [.sequence([.pushPending, .bootstrap])])
+            XCTAssertEqual(runtime.sources, [.rootForeground])
+            XCTAssertEqual(runtime.results.count, 1)
+            XCTAssertTrue(runtime.results.last?.verifiedConvergence == true)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+            XCTAssertEqual(proof.remote.recordRequests.count, 1)
+            let context = ModelContext(container)
+            let changes = try context.fetch(FetchDescriptor<LocalPendingChange>()).filter { $0.changeID == setup.changeID }
+            XCTAssertEqual(changes.count, 1)
+            XCTAssertEqual(changes.first?.status, .acknowledged)
+            let events = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "catalog" }
+            XCTAssertEqual(events.count, 1)
+            XCTAssertEqual(events.first?.status, .sent)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
+            if change == "busy-save" {
+                let id = proof.productID
+                let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(
+                    predicate: #Predicate { $0.remoteID == id })).first)
+                XCTAssertEqual(product.stockQuantity, 2)
+                XCTAssertEqual(changes.first?.intendedFingerprintHash,
+                    LocalPendingChangeLogicalKey.productFingerprintHash(product))
+            }
+        } else {
+            XCTAssertTrue(runtime.actions.isEmpty, change)
+            XCTAssertEqual(binding.pendingRecoveryJournal, journal, change)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetAtPublication, change)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0, change)
+            XCTAssertEqual(proof.remote.recordRequests.count, 0, change)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), bodyBefore, change)
+        }
+        // Duplicate notifications carry no new qualification revision or authority.
+        let calls = runtime.actions.count
+        let revision = controller.localBodyQualificationRevision
+        for _ in 0..<3 {
+            controller.objectWillChange.send()
+            await orchestrator.awaitLocalQualificationEventForTesting()
+        }
+        XCTAssertEqual(controller.localBodyQualificationRevision, revision)
+        XCTAssertEqual(runtime.actions.count, calls)
+        XCTAssertEqual(binding.currentBinding, originalBinding)
+        XCTAssertEqual(controller.activeManifest, manifest)
+        XCTAssertTrue(controller.modelContainer === container)
+        XCTAssertEqual(transport.counts().checkpoints, 0)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        print("TASK144_POPULATED_RESUME case=\(change) qualified=\(qualified) runs=\(runtime.results.count) catalog-ack=\(proof.remote.catalogPushCallCount) journal-complete=\(binding.pendingRecoveryJournal == nil)")
+    }
+
     func testPendingFinalizedRecoveryWithRealCatalogACKAutomaticallyResumesForForegroundAndReconnect() async throws {
         for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect] {
             let setup = try await makePendingAutomaticSequenceFixture()
@@ -8619,6 +8876,7 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
     var reconciliationCountsOverride: SyncInventoryCountSnapshot?
     var eventToPublishAfterCounts: RemoteSyncEventRow?
     private(set) var catalogPushCallCount = 0
+    private var expectedUpdateStockQuantity: Double = 1
     private(set) var recordRequests: [SyncEventRecordRequest] = []
     private(set) var acknowledgedSelfEvent: RemoteSyncEventRow?
 
@@ -8634,7 +8892,10 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
         self.product = product
     }
 
-    func prepareProductForPush(_ row: RemoteInventoryProductRow) { product = row }
+    func prepareProductForPush(_ row: RemoteInventoryProductRow, expectedUpdateStockQuantity: Double = 1) {
+        product = row
+        self.expectedUpdateStockQuantity = expectedUpdateStockQuantity
+    }
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         throw ShopSyncRecoveryContractError.invalidPage(domain: .suppliers)
@@ -8653,7 +8914,7 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
     }
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
         _ = try verifiedScope()
-        guard let product, product.id == id, payload.stockQuantity == 1 else {
+        guard let product, product.id == id, payload.stockQuantity == expectedUpdateStockQuantity else {
             throw ShopSyncRecoveryContractError.invalidPage(domain: .products)
         }
         catalogPushCallCount += 1
