@@ -128,15 +128,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         let row = app.staticTexts["Safe local baseline"]
-        let rowAppeared = row.waitForExistence(timeout: 5)
+        let rowAppeared = tapStableInitialReplayProduct(row)
         if !rowAppeared {
             let result = XCTAttachment(string: "rowAppeared=\(rowAppeared); timeoutSeconds=5")
-            result.name = "Task144 ACK original initial row wait result before diagnostic queries"
+            result.name = "Task144 initial replay product admission result before diagnostic queries"
             result.lifetime = .keepAlways
             add(result)
             captureControlledAutomaticReadback()
         }
-        XCTAssertTrue(rowAppeared); row.tap()
+        XCTAssertTrue(rowAppeared, "The initial product must have stable native layout and a current hit point within five seconds")
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         // Position the Name row with a bounded drag before the sole focus tap.
@@ -161,6 +161,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "Independent pending work must not hide an exact current-record ACK")
         XCTAssertFalse(app.staticTexts["task144.controlled.queue-empty-no-duplicates"].exists)
         let readback = app.buttons["task144.controlled.release"].value as? String ?? ""
+        let replayReadback = XCTAttachment(string: readback)
+        replayReadback.name = "Task144 immutable committed response replay existing readback"
+        replayReadback.lifetime = .keepAlways
+        add(replayReadback)
         let expected = ["task144.controlled.auto.calls.2.events.1",
             "task144.controlled.independent.attempt-observation-capped.false",
             "task144.controlled.independent.first-product-commit-response-lost.true",
@@ -592,6 +596,85 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         add(attachment)
     }
 
+    private func tapStableInitialReplayProduct(_ row: XCUIElement) -> Bool {
+        let started = ProcessInfo.processInfo.systemUptime
+        let deadline = started + 5
+        var previousLayout: [[CGRect]]?
+        var samples: [String] = []
+        var sampleCount = 0
+        var tapStarted: TimeInterval?
+        var tapFinished: TimeInterval?
+        var emitted = false
+        let emit = { [weak self] in
+            guard let self, !emitted else { return }
+            emitted = true
+            let attachment = XCTAttachment(string: "start=\(started); deadline=\(deadline); samples=\(sampleCount); retained=\(samples.count); tap-start=\(String(describing: tapStarted)); tap-end=\(String(describing: tapFinished))\n" + samples.joined(separator: "\n"))
+            attachment.name = "Task144 initial replay product native layout before the sole tap"
+            attachment.lifetime = .keepAlways
+            self.add(attachment)
+        }
+        addTeardownBlock { emit() }
+        defer { emit() }
+        // Reuse the existing synchronous snapshot pattern inside the original
+        // row's five-second admission window; no separate timer or sleep.
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            sampleCount += 1
+            let captureStarted = ProcessInfo.processInfo.systemUptime
+            guard let root = try? app.snapshot() else {
+                previousLayout = nil
+                if samples.count < 64 { samples.append("sample=\(sampleCount); capture-start=\(captureStarted); capture-end=\(ProcessInfo.processInfo.systemUptime); invalid-snapshot=true; prior-layout-cleared=true") }
+                continue
+            }
+            let captureFinished = ProcessInfo.processInfo.systemUptime
+            var pending: [(XCUIElementSnapshot, [CGRect])] = [(root, [])]
+            var titles: [[CGRect]] = []
+            var histories: [CGRect] = []
+            var controls: [CGRect] = []
+            var navigation: [CGRect] = []
+            var banners: [CGRect] = []
+            var visited = 0
+            while let (node, ancestors) = pending.popLast() {
+                visited += 1
+                if visited > 1_024 { break }
+                let path = ancestors + [node.frame]
+                if node.elementType == .staticText && node.label == "Safe local baseline" { titles.append(path) }
+                if node.elementType == .button && node.label == "Price history" { histories.append(node.frame) }
+                if node.identifier == "task144.controlled.band" { controls.append(node.frame) }
+                if node.elementType == .navigationBar && node.identifier == "Database" { navigation.append(node.frame) }
+                if node.identifier == "sync.root.foreground.banner" { banners.append(node.frame) }
+                pending.append(contentsOf: node.children.map { ($0, path) })
+            }
+            let title = titles.first?.last ?? .zero
+            let history = histories.first ?? .zero
+            let layout = [titles.first ?? [], histories, controls, navigation, banners]
+            let valid = visited <= 1_024 && titles.count == 1 && histories.count == 1
+                && controls.count == 1 && navigation.count == 1 && banners.count <= 1
+                && title.width > 0 && title.height > 0 && history.width > 0 && history.height > 0
+                && root.frame.contains(title) && root.frame.contains(history)
+                && title.maxY <= history.minY && !title.intersects(history)
+                && title.minY > max(controls.first?.maxY ?? 0, navigation.first?.maxY ?? 0)
+                && layout.joined().allSatisfy { $0.origin.x.isFinite && $0.origin.y.isFinite && $0.width.isFinite && $0.height.isFinite }
+            let stable = valid && previousLayout == layout
+            previousLayout = valid ? layout : nil
+            let hitStarted = ProcessInfo.processInfo.systemUptime
+            let queryHit = stable && hitStarted < deadline
+            let hittable = queryHit ? row.isHittable : false
+            let hitFinished = ProcessInfo.processInfo.systemUptime
+            if samples.count < 64 {
+                samples.append("sample=\(sampleCount); capture-start=\(captureStarted); capture-end=\(captureFinished); visited=\(visited); title-count=\(titles.count); title=\(title); history-count=\(histories.count); history=\(history); ancestor-layout=\(layout); valid=\(valid); stable=\(stable); hit-queried=\(queryHit); hittable=\(hittable); hit-start=\(hitStarted); hit-end=\(hitFinished)")
+            }
+            guard queryHit, hittable, hitFinished < deadline else { continue }
+            let tapAdmission = ProcessInfo.processInfo.systemUptime
+            guard tapAdmission < deadline else { return false }
+            tapStarted = tapAdmission
+            row.tap()
+            let finished = ProcessInfo.processInfo.systemUptime
+            tapFinished = finished
+            return finished <= deadline
+        }
+        return false
+    }
+
     private func positionNameInEditorViewport(_ field: XCUIElement) {
         let form = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
         let viewport = app.frame
@@ -619,6 +702,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let inside = before.minY >= upper && before.maxY <= lower
         var positioned = before
         var requestedTravel: CGFloat = 0
+        var rowExists: Bool?
+        var measuredRowFrame: CGRect?
+        var panStart: CGPoint?
+        var panEnd: CGPoint?
+        var panExecuted = false
+        func captureGeometry() {
+            let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel); rowExists=\(String(describing: rowExists)); row=\(String(describing: measuredRowFrame)); start=\(String(describing: panStart)); end=\(String(describing: panEnd)); panExecuted=\(panExecuted)")
+            geometry.name = "Task144 actual Name viewport before the sole focus tap"
+            geometry.lifetime = .keepAlways
+            add(geometry)
+        }
         if !inside {
             // Content moved less than the finger in the failing main run.
             // Aim at the inner edge, allowing the remaining band height for that
@@ -631,23 +725,42 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let top = upper + padding
             let bottom = scrollBottom - max(32, viewport.height * 0.06)
             guard bottom > top else {
+                captureGeometry()
                 XCTFail("No scrollable Form margin above the keyboard/accessory region")
                 return
             }
-            let startY = displacement > 0 ? bottom : top
+            let row = form.cells.containing(.textField, identifier: "task144.product.name").firstMatch
+            rowExists = row.exists
+            guard rowExists == true else {
+                captureGeometry()
+                XCTFail("The actual Name row must exist before the sole scroll gesture")
+                return
+            }
+            let rowFrame = row.frame
+            measuredRowFrame = rowFrame
+            let stripLeft = max(visibleForm.minX, rowFrame.minX)
+            let stripRight = min(rowFrame.maxX, before.minX)
+            let startX = (stripLeft + stripRight) / 2
+            let startY = before.midY
+            panStart = CGPoint(x: startX, y: startY)
+            guard stripRight > stripLeft, startY >= top, startY <= bottom,
+                  rowFrame.contains(CGPoint(x: startX, y: startY)) else {
+                captureGeometry()
+                XCTFail("The Name row must expose a visible leading padding strip outside its text field")
+                return
+            }
             let endY = min(bottom, max(top, startY - displacement))
             requestedTravel = endY - startY
-            // The inset Form gutter is outside its cells and below both toolbars.
+            panEnd = CGPoint(x: startX, y: endY)
+            // Begin inside the measured Name row, outside the editable field.
             let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
-                dx: visibleForm.minX - formFrame.minX + 8, dy: startY - formFrame.minY))
+                dx: startX - formFrame.minX, dy: startY - formFrame.minY))
+            panExecuted = true
             start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: endY - startY)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)
             positioned = field.frame
         }
-        let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel)")
-        geometry.name = "Task144 actual Name viewport before the sole focus tap"
-        geometry.lifetime = .keepAlways
-        add(geometry)
+        captureGeometry()
         XCTAssertTrue(positioned.minY >= upper && positioned.maxY <= lower,
                       "One controlled movement must put the complete Name field inside the usable band")
     }
