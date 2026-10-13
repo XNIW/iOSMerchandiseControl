@@ -206,6 +206,23 @@ Preservare tutti55ID, tutti corpi dei metodi test e tutte le asserzioni V5; help
 
 ## Execution
 
+### Esecuzione — 2026-10-13 00:16 UTC — Root9 sul primo campionamento immediato
+
+Review indipendente C del delta3beb/ad6 chiusa: campionatore e tutti i nove corpi/assert finali invariati, una sola lettura iniziale dopo arm e vero waiter per il residuo dello stesso deadline5s. Classe originale completa **9 PASS / 0 FAIL / 0 SKIP**, stesso ordine/ID; SavedDraft63,686s attraversa Save, bozza/focus e assert finali del cutover, Supplier/Category e History indipendente passano. Nessun esito storico riscritto.
+
+Officialreceipt48f996bd, summary1cff6580/tree0cb28270 e adjudication5ca9ccb8; source313 before/after esatti, processi primari50838/12799 invariati. Gruppo SDK39258 exit0/clone posseduto assente, release00:15:57.133940; reader6comandi EOF0/owner40720 release00:16:17.499049, zero input/install/test aggiuntivi sui primari. Nuovi SavedTXT FE1D12b4c1 e32DE559320: due snapshot completi/univoci/stabili, una query hit reale true, zero invalidi; il primo inizia meno di un microsecondo dopo arm, gli hit terminano con3,65545/3,35906s residui nello stesso budget5. Emissione after-wait; fallback fatale non esercitato. Si verifica l'eliminazione della pausa iniziale, non la causa sottostante di1001 o latenza ordinaria utente.
+
+BUILD/STATIC della nuova classe ESEGUITI; summaryruntimeWarnings vuoto, gate Analyze/CI sul nuovo HEAD ancora NON ESEGUITI. Vecchia CI383177/ac73 resta1543P/1F/36S: snapshot secondo fuori budget e zerohit. Nuova CI exact-head, ProperTEST/main/IDE/installazione e collaudo nativo autenticato restano aperti; criterio complessivo NON ESEGUITO integralmente, TASK FIX / NON DONE.
+
+
+### Esecuzione — 2026-10-13 00:03 UTC — primo campionamento immediato nello stesso budget
+
+**Failure corrente conservata:** CI `38317791360`, head `ac73ee41`, 1.543 PASS / 1 FAIL / 36 SKIP invariati per identità e motivazione. Il primo Save e la riapertura sono provati; SavedDraft si arresta prima della seconda selezione nativa. Nei quattro TXT originali del namespace `responsive-recovery-teardown-readiness-CI-one-failure-original-export-20261012-04`, `5D4BB1BE` conferma il primo replace completo, `B77D76F9` colloca Name nella banda dopo il singolo pan, `F1EAAF4F` mostra il primo snapshot completo/univoco e geometricamente valido. `477AC281` misura primo poll a +1,054573 s, prima acquisizione di 1,953368 s, secondo poll a +4,088206 s con 0,911794 s residui: snapshot XCTFuture1001 terminato oltre il deadline, geometria precedente azzerata e zero query hit. Il risultato resta FAIL; non prova campo coperto, perdita di focus, difetto di Save o causa specifica di XCTFuture1001.
+
+**Delta circoscritto:** solo `replaceText` in `LocalAvailabilityRootUITests.swift` e questa Execution. Il medesimo campionatore sincrono parte una volta subito dopo l'avvio della finestra monotona di cinque secondi; l'aspettativa originale prosegue con il solo tempo residuo fino allo stesso deadline, includendo il costo della prima acquisizione. Nessun campione prima dell'avvio, risultato sintetico, reset del budget, aumento del timeout, timer, dispatch, sleep, refocus, gesto o nuova dipendenza. Il primo campione da solo non può attestare stabilità. Restano obbligatori due snapshot freschi/completi/univoci, frame stabili e positivi sopra la tastiera, hit reale completato entro il deadline; snapshot invalido azzera la geometria. Buffer limitati, emissione differita e teardown registrato prima del primo campione restano invariati. I nove corpi originali e tutta la coda da registrazione del risultato ad assert/selezione/tipizzazione sono byte-identici.
+
+**Verifica e limite:** inversione del solo delta ricostruisce esattamente il sorgente `5d389558`; ogni altra sezione del task è invariata. Si elimina l'attesa iniziale misurata, senza attribuire la causa di XCTFuture1001 o promettere PASS. Review del delta, nuova Root9 sui byte modificati, CI, pacchetto TEST e accettazione nativa restano da eseguire. Prodotto recovery, layout, fixture e guardie di dati/autorità non modificati; nessun DONE.
+
 ### Esecuzione — 2026-10-12 22:34 UTC — recorder persistito e Root9 corrente
 
 **File modificati:** `LocalAvailabilityRootUITests.swift` — solo helper di readiness, emitter idempotente del medesimo buffer RAM dopo wait o in teardown se il getter fatale interrompe il caso; Task144 — solo Execution. Sorgente helper `5d389558`; prodotto recovery514/ContentViewd86/fixtureDC4/7unit/26static/2+2geometry invariati e relativi esiti riusati. Review indipendente C chiusa; nessuna nuova query AX, I/O nel budget, gesto, assert, timeout o dipendenza.

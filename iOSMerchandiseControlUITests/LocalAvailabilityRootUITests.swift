@@ -724,7 +724,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // failure with continueAfterFailure=false. Flush only existing RAM
             // facts if that failure prevented the normal post-wait emission.
             addTeardownBlock { emitReadinessDiagnostics("teardown") }
-            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let sampleReadiness: () -> Bool = {
                 guard let waitStartedUptime = readinessWaitStartedUptime else { return false }
                 let deadlineUptime = waitStartedUptime + 5
                 let pollStartedUptime = ProcessInfo.processInfo.systemUptime
@@ -805,10 +805,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 }
                 return geometryReady && hittable == true
                     && hitFinishedUptime <= deadlineUptime
-            }, object: nil)
+            }
             let waitStartedUptime = ProcessInfo.processInfo.systemUptime
             readinessWaitStartedUptime = waitStartedUptime
-            let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
+            // Include the first observation in the same five-second window,
+            // without waiting for the expectation's first scheduled poll.
+            _ = sampleReadiness()
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                sampleReadiness()
+            }, object: nil)
+            let remainingReadinessTime = max(
+                0, waitStartedUptime + 5 - ProcessInfo.processInfo.systemUptime)
+            let readinessResult = XCTWaiter.wait(for: [ready], timeout: remainingReadinessTime)
             readinessWaitFinishedUptime = ProcessInfo.processInfo.systemUptime
             recordedReadinessResult = readinessResult
             // Keep the same bounded diagnostics and order without writing
