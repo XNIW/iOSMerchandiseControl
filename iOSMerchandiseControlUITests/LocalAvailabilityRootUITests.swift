@@ -25,7 +25,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover() {
-        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
                       "The real recovery RPC must enter its held boundary before business input")
@@ -129,7 +128,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
         let row = app.staticTexts["Safe local baseline"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        let rowAppeared = row.waitForExistence(timeout: 5)
+        if !rowAppeared {
+            let result = XCTAttachment(string: "rowAppeared=\(rowAppeared); timeoutSeconds=5")
+            result.name = "Task144 ACK original initial row wait result before diagnostic queries"
+            result.lifetime = .keepAlways
+            add(result)
+            captureControlledAutomaticReadback()
+        }
+        XCTAssertTrue(rowAppeared); row.tap()
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         // Position the Name row with a bounded drag before the sole focus tap.
@@ -309,7 +316,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Safe local baseline"].exists)
         XCTAssertFalse(app.staticTexts["task144.controlled.activated-and-drained"].exists)
         app.buttons["task144.controlled.release"].press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20))
+        let activated = app.staticTexts["task144.controlled.activated"].waitForExistence(timeout: 20)
+        if !activated {
+            let waitResult = XCTAttachment(string: "activated=\(activated); timeoutSeconds=20")
+            waitResult.name = "Task144 PreviousShop original activation wait result before diagnostic queries"
+            waitResult.lifetime = .keepAlways
+            add(waitResult)
+            captureControlledAutomaticReadback()
+        }
+        XCTAssertTrue(activated)
     }
 
     func testDatabaseLabelsFollowNormalLanguageChangeWithoutLosingQueryOrFilter() {
@@ -637,6 +652,27 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                       "One controlled movement must put the complete Name field inside the usable band")
     }
 
+    private func readinessFrames(from root: XCUIElementSnapshot) ->
+        (field: CGRect, keyboard: CGRect, fieldCount: Int, keyboardCount: Int, complete: Bool) {
+        var pending = [root]
+        var fieldFrames: [CGRect] = []
+        var keyboardFrames: [CGRect] = []
+        var visited = 0
+        while let node = pending.popLast() {
+            visited += 1
+            guard visited <= 1_024 else {
+                return (.zero, .zero, fieldFrames.count, keyboardFrames.count, false)
+            }
+            if node.elementType == .textField && node.identifier == "task144.product.name" {
+                fieldFrames.append(node.frame)
+            }
+            if node.elementType == .keyboard { keyboardFrames.append(node.frame) }
+            pending.append(contentsOf: node.children)
+        }
+        return (fieldFrames.first ?? .zero, keyboardFrames.first ?? .zero,
+                fieldFrames.count, keyboardFrames.count, true)
+    }
+
     private func replaceText(in field: XCUIElement, with value: String) {
         field.tap()
         let current = field.value as? String ?? ""
@@ -647,31 +683,150 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             var previousKeyboardFrame: CGRect?
             var readinessSamples: [String] = []
             var readinessSampleCount = 0
-            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                let fieldFrame = field.frame
-                let keyboardFrame = keyboard.frame
-                let stable = previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
-                previousFieldFrame = fieldFrame
-                previousKeyboardFrame = keyboardFrame
-                if readinessSampleCount < 64 {
-                    let beforeHit = XCTAttachment(string: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable)")
-                    beforeHit.name = "Task144 actual readiness geometry before hit-point query"
-                    beforeHit.lifetime = .keepAlways
-                    self.add(beforeHit)
+            var readinessPollCount = 0
+            var hittabilityQueryCount = 0
+            var invalidSnapshotSampleCount = 0
+            var invalidSnapshotSamples: [String] = []
+            var deferredReadinessAttachments: [(name: String, contents: String)] = []
+            var readinessWaitStartedUptime: TimeInterval?
+            var readinessWaitFinishedUptime: TimeInterval?
+            var recordedReadinessResult: XCTWaiter.Result?
+            var latestHitStartedUptime: TimeInterval?
+            var latestHitFinishedUptime: TimeInterval?
+            var readinessDiagnosticsEmitted = false
+            let emitReadinessDiagnostics: (String) -> Void = { [weak self] phase in
+                guard let self, !readinessDiagnosticsEmitted else { return }
+                readinessDiagnosticsEmitted = true
+                let attachmentEmissionStartedUptime = ProcessInfo.processInfo.systemUptime
+                for deferred in deferredReadinessAttachments {
+                    let attachment = XCTAttachment(string: deferred.contents)
+                    attachment.name = deferred.name
+                    attachment.lifetime = .keepAlways
+                    self.add(attachment)
                 }
-                let hittable = field.isHittable
+                let attachmentEmissionFinishedUptime = ProcessInfo.processInfo.systemUptime
+                let result = recordedReadinessResult.map { String($0.rawValue) } ?? "NOT_RETURNED"
+                let waitStart = readinessWaitStartedUptime.map { String($0) } ?? "NOT_ARMED"
+                let waitEnd = readinessWaitFinishedUptime.map { String($0) } ?? "NOT_RETURNED"
+                let deadline = readinessWaitStartedUptime.map { String($0 + 5) } ?? "NOT_ARMED"
+                let hitStart = latestHitStartedUptime.map { String($0) } ?? "NOT_QUERIED"
+                let hitEnd = latestHitFinishedUptime.map { String($0) }
+                    ?? (latestHitStartedUptime == nil ? "NOT_QUERIED" : "NOT_RETURNED")
+                let hitRemaining = latestHitStartedUptime.flatMap { hitStart in
+                    readinessWaitStartedUptime.map { String($0 + 5 - hitStart) }
+                } ?? "NOT_QUERIED"
+                let readinessText = "result=\(result); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count)); polls=\(readinessPollCount); hit-queries=\(hittabilityQueryCount); invalid-snapshots=\(invalidSnapshotSampleCount); retained-invalid=\(invalidSnapshotSamples.count); later-invalid=\(max(0, invalidSnapshotSampleCount - invalidSnapshotSamples.count)); wait-start=\(waitStart); wait-end=\(waitEnd); deadline=\(deadline); latest-hit-start=\(hitStart); latest-hit-end=\(hitEnd); remaining-before-latest-hit=\(hitRemaining); hit-in-flight=\(latestHitStartedUptime != nil && latestHitFinishedUptime == nil); emission-phase=\(phase); attachment-emission-start=\(attachmentEmissionStartedUptime); attachment-emission-end=\(attachmentEmissionFinishedUptime); attachment-emission-seconds=\(attachmentEmissionFinishedUptime - attachmentEmissionStartedUptime)\n" + readinessSamples.joined(separator: "\n") + "\n" + invalidSnapshotSamples.joined(separator: "\n")
+                let readiness = XCTAttachment(string: readinessText)
+                readiness.name = "Task144 existing readiness predicate observations before assertion"
+                readiness.lifetime = .keepAlways
+                self.add(readiness)
+                print("TASK144_READINESS_OBSERVATIONS \(readinessText)")
+            }
+            // XCTest still runs teardown blocks when a native getter records a
+            // failure with continueAfterFailure=false. Flush only existing RAM
+            // facts if that failure prevented the normal post-wait emission.
+            addTeardownBlock { emitReadinessDiagnostics("teardown") }
+            let sampleReadiness: () -> Bool = {
+                guard let waitStartedUptime = readinessWaitStartedUptime else { return false }
+                let deadlineUptime = waitStartedUptime + 5
+                let pollStartedUptime = ProcessInfo.processInfo.systemUptime
+                guard pollStartedUptime < deadlineUptime else { return false }
+                readinessPollCount += 1
+                // Capture the geometry pair from one hierarchy. The latest CI
+                // returned a zero keyboard frame from separate queries while
+                // nearby video frames showed the keyboard. Hittability below
+                // still comes from the actual field's separate hit-point query.
+                let captureStartedUptime = ProcessInfo.processInfo.systemUptime
+                guard captureStartedUptime < deadlineUptime else { return false }
+                let captureResult = Result(catching: { try self.app.snapshot() })
+                let captureFinishedUptime = ProcessInfo.processInfo.systemUptime
+                let captureTiming = "poll-start=\(pollStartedUptime); capture-start=\(captureStartedUptime); capture-end=\(captureFinishedUptime); capture-seconds=\(captureFinishedUptime - captureStartedUptime); remaining-before-capture=\(deadlineUptime - captureStartedUptime); remaining-after-capture=\(deadlineUptime - captureFinishedUptime); capture-out-of-window=\(captureFinishedUptime > deadlineUptime)"
+                let snapshot: XCUIElementSnapshot
+                switch captureResult {
+                case .success(let captured):
+                    snapshot = captured
+                case .failure(let error):
+                    previousFieldFrame = nil
+                    previousKeyboardFrame = nil
+                    invalidSnapshotSampleCount += 1
+                    let snapshotError = error as NSError
+                    let invalidSample = "poll=\(readinessPollCount); uptime=\(ProcessInfo.processInfo.systemUptime); \(captureTiming); snapshot-error-type=\(String(reflecting: type(of: error))); domain=\(snapshotError.domain); code=\(snapshotError.code); prior-geometry-cleared=true"
+                    if invalidSnapshotSamples.count < 64 {
+                        invalidSnapshotSamples.append(invalidSample)
+                        deferredReadinessAttachments.append((
+                            name: "Task144 readiness snapshot failure before assertion",
+                            contents: invalidSample))
+                    }
+                    // An invalid observation cannot establish readiness or
+                    // carry stability into the next sample. The original
+                    // five-second waiter still requires two fresh valid samples.
+                    return false
+                }
+                let frames = self.readinessFrames(from: snapshot)
+                let fieldFrame = frames.field
+                let keyboardFrame = frames.keyboard
+                let geometryIsUnambiguous = frames.complete && frames.fieldCount == 1 && frames.keyboardCount == 1
+                let stable = geometryIsUnambiguous
+                    && previousFieldFrame == fieldFrame && previousKeyboardFrame == keyboardFrame
+                previousFieldFrame = geometryIsUnambiguous ? fieldFrame : nil
+                previousKeyboardFrame = geometryIsUnambiguous ? keyboardFrame : nil
+                let geometryReady = geometryIsUnambiguous && stable
+                    && fieldFrame.height > 0 && keyboardFrame.height > 0
+                    && fieldFrame.maxY < keyboardFrame.minY
+                if readinessSampleCount < 64 {
+                    deferredReadinessAttachments.append((
+                        name: "Task144 actual readiness geometry before conditional hit-point query",
+                        contents: "sample=\(readinessSampleCount + 1); field=\(fieldFrame); keyboard=\(keyboardFrame); stable=\(stable); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount); hit-query-planned=\(geometryReady); \(captureTiming)"))
+                }
+                // Geometry that is already negative cannot admit this sample.
+                // Query the actual hit point only for a candidate sample, keeping
+                // its result mandatory without spending the waiter on a query
+                // whose answer cannot change an unstable sample's verdict.
+                let hittable: Bool?
+                let hitStartedUptime = ProcessInfo.processInfo.systemUptime
+                let queryHit = geometryReady && hitStartedUptime < deadlineUptime
+                if queryHit {
+                    hittabilityQueryCount += 1
+                    latestHitStartedUptime = hitStartedUptime
+                    latestHitFinishedUptime = nil
+                    hittable = field.isHittable
+                } else {
+                    hittable = nil
+                }
+                let hitFinishedUptime = ProcessInfo.processInfo.systemUptime
+                if queryHit { latestHitFinishedUptime = hitFinishedUptime }
+                let hitTiming = queryHit
+                    ? "hit-start=\(hitStartedUptime); hit-end=\(hitFinishedUptime); hit-seconds=\(hitFinishedUptime - hitStartedUptime); hit-out-of-window=\(hitFinishedUptime > deadlineUptime)"
+                    : "hit-timing=NOT_QUERIED"
+                let hittableObservation = hittable.map { String($0) }
+                    ?? (geometryReady ? "NOT_QUERIED_DEADLINE_EXPIRED" : "NOT_QUERIED_GEOMETRY_NOT_READY")
                 readinessSampleCount += 1
                 if readinessSamples.count < 64 {
-                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(ProcessInfo.processInfo.systemUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittable); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY)")
+                    let pollFinishedUptime = ProcessInfo.processInfo.systemUptime
+                    readinessSamples.append("sample=\(readinessSampleCount); uptime=\(pollFinishedUptime); \(captureTiming); \(hitTiming); remaining-after-observation=\(deadlineUptime - pollFinishedUptime); field=\(fieldFrame); keyboard=\(keyboardFrame); hittable=\(hittableObservation); hit-query-performed=\(queryHit); stable=\(stable); field-height-positive=\(fieldFrame.height > 0); keyboard-height-positive=\(keyboardFrame.height > 0); field-above-keyboard=\(fieldFrame.maxY < keyboardFrame.minY); snapshot-complete=\(frames.complete); field-count=\(frames.fieldCount); keyboard-count=\(frames.keyboardCount)")
                 }
-                return hittable && fieldFrame.height > 0 && keyboardFrame.height > 0
-                    && fieldFrame.maxY < keyboardFrame.minY && stable
-            }, object: nil)
-            let readinessResult = XCTWaiter.wait(for: [ready], timeout: 5)
-            let readiness = XCTAttachment(string: "result=\(readinessResult.rawValue); observed=\(readinessSampleCount); retained=\(readinessSamples.count); later=\(max(0, readinessSampleCount - readinessSamples.count))\n" + readinessSamples.joined(separator: "\n"))
-            readiness.name = "Task144 existing readiness predicate observations before assertion"
-            readiness.lifetime = .keepAlways
-            add(readiness)
+                return geometryReady && hittable == true
+                    && hitFinishedUptime <= deadlineUptime
+            }
+            let ready = XCTestExpectation(description: "Name and keyboard are ready for native selection")
+            let waitStartedUptime = ProcessInfo.processInfo.systemUptime
+            readinessWaitStartedUptime = waitStartedUptime
+            // Each synchronous sample obtains a new hierarchy. Start the next
+            // one directly, without a predicate timer consuming the same budget.
+            while ProcessInfo.processInfo.systemUptime < waitStartedUptime + 5 {
+                if sampleReadiness() {
+                    ready.fulfill()
+                    break
+                }
+            }
+            let remainingReadinessTime = max(
+                0, waitStartedUptime + 5 - ProcessInfo.processInfo.systemUptime)
+            let readinessResult = XCTWaiter.wait(for: [ready], timeout: remainingReadinessTime)
+            readinessWaitFinishedUptime = ProcessInfo.processInfo.systemUptime
+            recordedReadinessResult = readinessResult
+            // Keep the same bounded diagnostics and order without writing
+            // attachments while the five-second readiness budget is running.
+            emitReadinessDiagnostics("after-wait")
             // A failed readiness may be observed after its deadline; diagnostic
             // AX queries must not consume the predicate's five-second budget.
             if readinessResult != .completed,

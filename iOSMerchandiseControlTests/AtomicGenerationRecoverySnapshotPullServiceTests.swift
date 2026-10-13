@@ -2392,6 +2392,73 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(reopened.controller.activeManifest?.generationID, publishedGeneration)
     }
 
+    func testSameScopeRefreshAfterPublicationReverifiesAnAdvancedRemoteCheckpoint() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpointA = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "published-refresh-before-remote-advance", products: [product], prices: [])
+        let checkpointB = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 42,
+            seed: "published-refresh-after-remote-advance", products: [product], prices: [])
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpointA, checkpointA, checkpointB, checkpointB], productRows: [product])
+        var refreshed = false
+        var firstPublishedGeneration: UUID?
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            guard event.progress.stage == .finalizing, !refreshed else { return }
+            refreshed = true
+            firstPublishedGeneration = fixture.controller.activeManifest?.generationID
+            XCTAssertNotNil(firstPublishedGeneration, "Exercise the real durable publication before refreshing its lease")
+            let selectedStore = SelectedShopStore(defaults: fixture.defaults)
+            guard let selected = selectedStore.selectedShop(accountHash: event.scope.accountHash) else {
+                XCTFail("The same-scope selection must exist"); return
+            }
+            selectedStore.markResolutionUnresolved(accountHash: event.scope.accountHash)
+            XCTAssertTrue(selectedStore.save(selected, accountHash: event.scope.accountHash))
+            // The server advances after the first complete archive is published.
+            // Its real marker DTO must reject the obsolete baseline; no error,
+            // activation, journal completion or READY state is injected.
+            transport.publishRemoteMarkerCheckpoint(checkpointB)
+        })
+        let summary: SyncRecoverySnapshotPullSummary
+        do {
+            summary = try await service.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        } catch {
+            let retained = AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal
+            let calls = transport.counts()
+            print("TASK144_PUBLISHED_REFRESH_ADVANCE refreshed=\(refreshed) marker-not-verified=\((error as? ShopSyncRecoveryContractError) == .markerNotVerified) published-retained=\(fixture.controller.activeManifest?.generationID == firstPublishedGeneration) journal-activated=\(retained?.phase == .activated) checkpoints=\(calls.checkpoints) pages=\(calls.pages)")
+            XCTAssertTrue(refreshed)
+            XCTAssertEqual(error as? ShopSyncRecoveryContractError, .markerNotVerified)
+            XCTAssertEqual(retained?.phase, .activated)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, firstPublishedGeneration)
+            XCTFail("A refreshed same-scope lease must verify the advanced checkpoint before completing recovery")
+            return
+        }
+        XCTAssertTrue(refreshed)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertNotEqual(manifest.generationID, firstPublishedGeneration)
+        XCTAssertEqual(manifest.checkpoint.maxEventID, 42)
+        XCTAssertEqual(manifest.checkpoint.catalog, checkpointB.catalog)
+        XCTAssertEqual(manifest.checkpoint.prices, checkpointB.prices)
+        XCTAssertEqual(manifest.checkpoint.history, checkpointB.history)
+        XCTAssertEqual(manifest.checkpoint.images, checkpointB.images)
+        XCTAssertEqual(summary.activatedGenerationID, manifest.generationID)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertTrue(try fixture.controller.isActiveRecoveryFinalized(scope: scope))
+        XCTAssertEqual(transport.counts().checkpoints, 4, "Use the existing two-attempt budget")
+        XCTAssertEqual(transport.counts().pages, ShopSyncRecoveryDomain.allCases.count * 2)
+        let reopened = try reopenFixture(fixture)
+        let qualified = await reopened.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        let context = ModelContext(reopened.controller.modelContainer)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).compactMap(\.remoteID), [product.id])
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()), 0)
+        XCTAssertEqual(reopened.controller.activeManifest?.generationID, manifest.generationID)
+    }
+
     func testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration() async throws {
         let fixture = try makeFixture()
         let product = localAvailabilityProduct(fixture: fixture)
@@ -8066,6 +8133,7 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
     private var markerBaselineIDs: [String] = []
     private var checkpointCallParameters: [AtomicRecoveryCheckpointCall] = []
     private var latestCheckpoint: ShopSyncRecoveryCheckpoint?
+    private var remoteMarkerCheckpoint: ShopSyncRecoveryCheckpoint?
     private let encoder = JSONEncoder()
 
     init(
@@ -8259,11 +8327,35 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
         ))
     }
 
+    func publishRemoteMarkerCheckpoint(_ checkpoint: ShopSyncRecoveryCheckpoint) {
+        remoteMarkerCheckpoint = checkpoint
+    }
+
     func marker(_ parameters: ShopSyncConvergenceMarkerParameters) async throws -> Data {
         try markerMutation?()
         if let markerFailure { throw markerFailure }
         markerBaselineIDs.append(parameters.verifiedBaselineID)
         if let rawMarker { return rawMarker }
+        if let checkpoint = remoteMarkerCheckpoint {
+            guard checkpoint.shopId == parameters.shopID,
+                  checkpoint.scope.key == parameters.expectedBaselineScopeKey else {
+                throw ShopSyncRecoveryContractError.invalidCheckpoint
+            }
+            // Match the existing controlled server: an advanced snapshot is
+            // returned as a real DTO, not a typed error injected by this mock.
+            // The production adapter must reject maxId42 for its baseline41.
+            return try encoder.encode(ShopSyncRecoveryConvergenceMarker(
+                schemaVersion: "shop-sync-convergence-marker-v1",
+                status: "ready", shopId: checkpoint.shopId, scope: checkpoint.scope,
+                syncEvents: .init(maxId: checkpoint.syncEvents.maxId,
+                    verifiedBaselineId: parameters.verifiedBaselineID, requiresFullRecovery: false,
+                    domainMaxIds: checkpoint.syncEvents.domainMaxIds),
+                catalog: checkpoint.catalog, prices: checkpoint.prices,
+                history: checkpoint.history, images: checkpoint.images,
+                integrity: .init(totalViolationCount: 0),
+                checkpointDigest: checkpoint.checkpointDigest, serverNoWorkEligible: true,
+                markerDigest: ShopSyncRecoveryCanonical.sha256("fixture-marker:\(checkpoint.syncEvents.maxId)")))
+        }
         guard let checkpoint = latestCheckpoint ?? checkpoints.first,
               checkpoint.shopId == parameters.shopID,
               checkpoint.scope.key == parameters.expectedBaselineScopeKey,
