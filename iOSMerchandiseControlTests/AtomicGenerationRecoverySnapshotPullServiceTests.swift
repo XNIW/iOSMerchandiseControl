@@ -11915,7 +11915,7 @@ extension AtomicGenerationRecoverySnapshotPullServiceTests {
                   kind == "save" ? (product.productName == lastName && pending == 1) : pending == 0 else {
                 throw MobileSyncPerformanceRecorder.RecorderError.invariant("readback_or_generation")
             }
-            return ["product_id": productID.uuidString, "product_name": product.productName,
+            return ["product_id": productID.uuidString, "product_name": product.productName as Any,
                     "pending": pending, "prices": 40_000, "products": 20_000,
                     "\(resultPrefix)_status": lastStatus,
                     "reconciliation_calls": remote.reconciliationFetchCallCount,
