@@ -1,4 +1,6 @@
 import Foundation
+import CoreFoundation
+import CryptoKit
 import Combine
 
 nonisolated enum SyncAutomaticRecoveryAttemptEligibility: Equatable, Sendable {
@@ -30,6 +32,14 @@ private nonisolated struct SyncAutomaticRecoveryAttemptRecord: Codable, Sendable
     let failure: AutomaticSyncFailure?
     let nextAllowedAt: TimeInterval
     let retryAfterUntil: TimeInterval?
+    var legacyContinuation: SyncLegacyRecoveryContinuation? = nil
+}
+
+private nonisolated struct SyncLegacyRecoveryClaimRecord: Codable, Equatable {
+    let schemaVersion: Int
+    let continuation: SyncLegacyRecoveryContinuation
+    let invocationID: UUID
+    let claimedAt: TimeInterval
 }
 
 private nonisolated struct SyncVerifiedProofRecord: Codable, Equatable {
@@ -131,6 +141,9 @@ final class SyncStateStore: ObservableObject {
     private var automaticRecoveryAttemptKey: String {
         "\(keyPrefix).automaticRecoveryAttempt.v2"
     }
+
+    private var legacyRecoveryAttemptKey: String { "\(keyPrefix).automaticRecoveryAttempt.v1" }
+    private var legacyRecoveryClaimKey: String { "\(keyPrefix).automaticRecoveryLegacyClaim.v1" }
 
     init(
         defaults: UserDefaults = .standard,
@@ -660,15 +673,115 @@ final class SyncStateStore: ObservableObject {
     ) -> SyncAutomaticRecoveryAttemptEligibility {
         guard Self.isRedactedIdentity(identity), now.timeIntervalSince1970.isFinite else { return .exhausted }
         guard defaults.object(forKey: automaticRecoveryAttemptKey) != nil else {
-            // v1 lacks typed failure and completion provenance. Preserve it;
-            // its diagnostics cannot authorize an automatic v2 migration.
-            return defaults.object(forKey: "\(keyPrefix).automaticRecoveryAttempt.v1") == nil ? .ready : .exhausted
+            if defaults.object(forKey: legacyRecoveryAttemptKey) != nil
+                || defaults.object(forKey: legacyRecoveryClaimKey) != nil {
+                return admitsNewJournalAfterLegacy(identity: identity) ? .ready : .exhausted
+            }
+            return .ready
         }
         guard let record = automaticRecoveryAttemptRecord() else { return .exhausted }
-        guard record.identity == identity else { return .ready }
+        guard record.identity == identity else {
+            if defaults.object(forKey: legacyRecoveryAttemptKey) != nil
+                || defaults.object(forKey: legacyRecoveryClaimKey) != nil {
+                return admitsNewJournalAfterLegacy(identity: identity) ? .ready : .exhausted
+            }
+            return .ready
+        }
+        if let continuation = record.legacyContinuation {
+            guard legacyContinuationIsCurrent(continuation) else { return .exhausted }
+        }
         guard record.lastCompletedAt != nil, record.failure?.disposition == .transient else { return .exhausted }
         let remaining = record.nextAllowedAt - now.timeIntervalSince1970
         return remaining > 0 ? .cooldown(remaining) : .ready
+    }
+
+    /// This authorizes local preflight only. Atomic must validate the accepted
+    /// prefix read-only before it invokes the durable attempt claim.
+    func legacyRecoveryContinuation(identity: String, now: Date) -> SyncLegacyRecoveryContinuation? {
+        guard let journal = pendingRecoveryJournal, journal.mode == .sameScopeRecovery,
+              journal.phase == .staging, let generationID = journal.generationID,
+              SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == identity else { return nil }
+        if defaults.object(forKey: automaticRecoveryAttemptKey) != nil {
+            guard let record = automaticRecoveryAttemptRecord(), record.identity == identity,
+                  let continuation = record.legacyContinuation,
+                  continuation.generationID == generationID,
+                  automaticRecoveryAttemptEligibility(identity: identity, now: now) == .ready else { return nil }
+            return continuation
+        }
+        guard defaults.object(forKey: legacyRecoveryClaimKey) == nil,
+              let legacy = legacyRecoveryBytes(), legacy.identity == identity,
+              now.timeIntervalSince1970.isFinite, legacy.deadline <= now.timeIntervalSince1970 else { return nil }
+        return SyncLegacyRecoveryContinuation(identity: identity,
+            legacySHA256: Self.legacyDigest(legacy.data), generationID: generationID)
+    }
+
+    private static func legacyDigest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// These two bounded schemas have disjoint key names, including the
+    /// continuation object. Foundation otherwise silently collapses duplicate
+    /// keys. Tokenize every complete string first, then decode only keys;
+    /// escaped text inside a value must never be mistaken for an object key.
+    private static func hasUniqueLegacyJSONKeys(_ data: Data) -> Bool {
+        guard let text = String(data: data, encoding: .utf8),
+              let tokens = try? NSRegularExpression(pattern: #""(?:[^"\\]|\\.)*""#) else { return false }
+        let source = text as NSString
+        var keys = Set<String>()
+        for token in tokens.matches(in: text, range: NSRange(location: 0, length: source.length)) {
+            var cursor = NSMaxRange(token.range)
+            while cursor < source.length, [9, 10, 13, 32].contains(Int(source.character(at: cursor))) { cursor += 1 }
+            guard cursor < source.length, source.character(at: cursor) == 58 else { continue }
+            let literal = source.substring(with: token.range)
+            guard let key = try? JSONDecoder().decode(String.self, from: Data(literal.utf8)),
+                  keys.insert(key).inserted else { return false }
+        }
+        return true
+    }
+
+    private func legacyRecoveryBytes() -> (data: Data, identity: String, deadline: TimeInterval)? {
+        guard let data = defaults.data(forKey: legacyRecoveryAttemptKey), data.count <= 1_024,
+              let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Self.hasUniqueLegacyJSONKeys(data),
+              Set(raw.keys) == ["schemaVersion", "identity", "attemptCount", "nextAllowedAt"],
+              let version = raw["schemaVersion"] as? NSNumber, CFGetTypeID(version) != CFBooleanGetTypeID(),
+              version.doubleValue == 1,
+              let identity = raw["identity"] as? String, Self.isRedactedIdentity(identity),
+              let count = raw["attemptCount"] as? NSNumber, CFGetTypeID(count) != CFBooleanGetTypeID(),
+              count.doubleValue == 3,
+              let deadline = raw["nextAllowedAt"] as? NSNumber, CFGetTypeID(deadline) != CFBooleanGetTypeID(),
+              deadline.doubleValue.isFinite, deadline.doubleValue > 0 else { return nil }
+        return (data, identity, deadline.doubleValue)
+    }
+
+    private func legacyRecoveryClaimRecord() -> SyncLegacyRecoveryClaimRecord? {
+        guard let data = defaults.data(forKey: legacyRecoveryClaimKey), data.count <= 1_024,
+              let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Self.hasUniqueLegacyJSONKeys(data),
+              Set(raw.keys) == ["schemaVersion", "continuation", "invocationID", "claimedAt"],
+              let nested = raw["continuation"] as? [String: Any],
+              Set(nested.keys) == ["identity", "legacySHA256", "generationID"],
+              let record = try? JSONDecoder().decode(SyncLegacyRecoveryClaimRecord.self, from: data),
+              record.schemaVersion == 1, record.claimedAt.isFinite,
+              let legacy = legacyRecoveryBytes(), record.claimedAt >= legacy.deadline,
+              record.continuation.identity == legacy.identity,
+              record.continuation.legacySHA256 == Self.legacyDigest(legacy.data) else { return nil }
+        return record
+    }
+
+    private func admitsNewJournalAfterLegacy(identity: String) -> Bool {
+        guard let claim = legacyRecoveryClaimRecord(), claim.continuation.identity != identity,
+              let journal = pendingRecoveryJournal,
+              SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == identity else { return false }
+        return true
+    }
+
+    private func legacyContinuationIsCurrent(_ continuation: SyncLegacyRecoveryContinuation) -> Bool {
+        guard legacyRecoveryClaimRecord()?.continuation == continuation,
+              let journal = pendingRecoveryJournal, journal.mode == .sameScopeRecovery,
+              journal.phase == .staging, journal.generationID == continuation.generationID,
+              SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == continuation.identity else { return false }
+        return true
     }
 
     @discardableResult
@@ -676,20 +789,40 @@ final class SyncStateStore: ObservableObject {
         claimAutomaticRecoveryAttempt(identity: identity, now: now)?.attemptInWindow
     }
 
-    func claimAutomaticRecoveryAttempt(identity: String, now: Date = Date()) -> SyncAutomaticRecoveryAttemptClaim? {
-        guard automaticRecoveryAttemptEligibility(identity: identity, now: now) == .ready else { return nil }
+    func claimAutomaticRecoveryAttempt(identity: String, now: Date = Date(),
+        legacyContinuation: SyncLegacyRecoveryContinuation? = nil) -> SyncAutomaticRecoveryAttemptClaim? {
+        let initialLegacy = legacyContinuation != nil && defaults.object(forKey: automaticRecoveryAttemptKey) == nil
+        if let legacyContinuation {
+            guard self.legacyRecoveryContinuation(identity: identity, now: now) == legacyContinuation else { return nil }
+        } else {
+            guard automaticRecoveryAttemptEligibility(identity: identity, now: now) == .ready,
+                  automaticRecoveryAttemptRecord().map({ $0.identity != identity || $0.legacyContinuation == nil }) ?? true else { return nil }
+        }
         let prior = automaticRecoveryAttemptRecord().flatMap { $0.identity == identity ? $0 : nil }
         let newWindow = prior?.attemptsInWindow == 3
         let attempt = newWindow ? 1 : (prior?.attemptsInWindow ?? 0) + 1
-        let priorTotal = prior?.totalAttempts ?? 0
-        let priorWindow = prior?.windowIndex ?? 1
+        let priorTotal = prior?.totalAttempts ?? (initialLegacy ? 3 : 0)
+        let priorWindow = prior?.windowIndex ?? (initialLegacy ? 2 : 1)
         guard priorTotal < Int.max, !newWindow || priorWindow < Int.max else { return nil }
         let invocationID = UUID()
-        let record = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: identity, invocationID: invocationID,
+        var record = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: identity, invocationID: invocationID,
             windowIndex: priorWindow + (newWindow ? 1 : 0), attemptsInWindow: attempt,
             totalAttempts: priorTotal + 1, lastAttemptAt: now.timeIntervalSince1970,
             lastCompletedAt: nil, failure: nil, nextAllowedAt: now.timeIntervalSince1970,
             retryAfterUntil: prior?.retryAfterUntil)
+        record.legacyContinuation = legacyContinuation
+        if initialLegacy, let legacyContinuation {
+            // Claim first, then retry metadata. A crash between these writes
+            // consumes the one-shot opportunity; no transport has started.
+            let claim = SyncLegacyRecoveryClaimRecord(schemaVersion: 1, continuation: legacyContinuation,
+                invocationID: invocationID, claimedAt: now.timeIntervalSince1970)
+            guard let bytes = try? JSONEncoder().encode(claim) else { return nil }
+            defaults.set(bytes, forKey: legacyRecoveryClaimKey)
+            // This one-shot claim must reach disk before any diagnostic RPC.
+            // A cache readback alone cannot establish that ordering.
+            guard defaults.synchronize(), defaults.data(forKey: legacyRecoveryClaimKey) == bytes,
+                  legacyRecoveryClaimRecord() == claim else { return nil }
+        }
         guard persistAutomaticRecoveryAttemptRecord(record) else { return nil }
         return SyncAutomaticRecoveryAttemptClaim(storageKey: automaticRecoveryAttemptKey,
             identity: identity, invocationID: invocationID, attemptInWindow: attempt)
@@ -705,14 +838,15 @@ final class SyncStateStore: ObservableObject {
         let retryAfter = [record.retryAfterUntil, suppliedRetryAfter].compactMap { $0 }.max()
         let sample = retryJitter()
         let jitter = sample.isFinite ? min(1.5, max(0.5, sample)) : 1
-        let localDelay = record.attemptsInWindow == 3 ? 300
+        let localDelay = record.legacyContinuation != nil || record.attemptsInWindow == 3 ? 300
             : min(60, 2 * pow(2, Double(record.attemptsInWindow - 1)) * jitter)
         let nextAllowedAt = max(completed + localDelay, retryAfter ?? 0)
-        let updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: record.identity, invocationID: record.invocationID,
+        var updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: record.identity, invocationID: record.invocationID,
             windowIndex: record.windowIndex, attemptsInWindow: record.attemptsInWindow,
             totalAttempts: record.totalAttempts, lastAttemptAt: record.lastAttemptAt,
             lastCompletedAt: completed, failure: failure, nextAllowedAt: nextAllowedAt,
             retryAfterUntil: retryAfter)
+        updated.legacyContinuation = record.legacyContinuation
         return persistAutomaticRecoveryAttemptRecord(updated)
     }
 
@@ -728,18 +862,22 @@ final class SyncStateStore: ObservableObject {
         guard requestedDelay.isFinite, requestedDelay >= 0 else { return .infinity }
         guard let record = automaticRecoveryAttemptRecord(), record.identity == identity else { return requestedDelay }
         let target = max(record.nextAllowedAt, now.timeIntervalSince1970 + requestedDelay)
-        let updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: record.schemaVersion,
+        var updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: record.schemaVersion,
             identity: record.identity, invocationID: record.invocationID, windowIndex: record.windowIndex,
             attemptsInWindow: record.attemptsInWindow, totalAttempts: record.totalAttempts,
             lastAttemptAt: record.lastAttemptAt, lastCompletedAt: record.lastCompletedAt,
             failure: record.failure, nextAllowedAt: target, retryAfterUntil: record.retryAfterUntil)
+        updated.legacyContinuation = record.legacyContinuation
         guard persistAutomaticRecoveryAttemptRecord(updated) else { return .infinity }
         return max(0, target - now.timeIntervalSince1970)
     }
 
-    func resetAutomaticRecoveryAttemptBudget() {
+    func resetAutomaticRecoveryAttemptBudget(preservingLegacyHistory: Bool = false) {
         defaults.removeObject(forKey: automaticRecoveryAttemptKey)
-        defaults.removeObject(forKey: "\(keyPrefix).automaticRecoveryAttempt.v1")
+        if !preservingLegacyHistory {
+            defaults.removeObject(forKey: legacyRecoveryAttemptKey)
+            defaults.removeObject(forKey: legacyRecoveryClaimKey)
+        }
     }
 
     private func automaticRecoveryAttemptRecord() -> SyncAutomaticRecoveryAttemptRecord? {
@@ -758,8 +896,17 @@ final class SyncStateStore: ObservableObject {
               (record.lastCompletedAt == nil) == (record.failure == nil),
               record.lastCompletedAt.map({ record.nextAllowedAt >= $0 }) ?? true,
               record.retryAfterUntil.map({ record.nextAllowedAt >= $0 }) ?? true else { return nil }
+        if let continuation = record.legacyContinuation {
+            guard continuation.identity == record.identity, record.totalAttempts >= 4,
+                  let claim = legacyRecoveryClaimRecord(), claim.continuation == continuation,
+                  record.lastAttemptAt >= claim.claimedAt,
+                  record.totalAttempts != 4 || record.invocationID == claim.invocationID else { return nil }
+        } else if defaults.object(forKey: legacyRecoveryAttemptKey) != nil
+            || defaults.object(forKey: legacyRecoveryClaimKey) != nil {
+            guard let claim = legacyRecoveryClaimRecord(), claim.continuation.identity != record.identity else { return nil }
+        }
         if let completed = record.lastCompletedAt, record.failure?.disposition == .transient {
-            let minimumDelay = record.attemptsInWindow == 3 ? 300 : pow(2, Double(record.attemptsInWindow - 1))
+            let minimumDelay = record.legacyContinuation != nil || record.attemptsInWindow == 3 ? 300 : pow(2, Double(record.attemptsInWindow - 1))
             guard record.nextAllowedAt >= completed + minimumDelay else { return nil }
         }
         if let serverMinimum = record.failure?.retryAfterUntil?.timeIntervalSince1970 {
@@ -773,6 +920,9 @@ final class SyncStateStore: ObservableObject {
     ) -> Bool {
         guard let data = try? JSONEncoder().encode(record) else { return false }
         defaults.set(data, forKey: automaticRecoveryAttemptKey)
+        // Preserve the same before-RPC persistence fence for later claims in
+        // this lineage; otherwise a crash could revive a completed predecessor.
+        if record.legacyContinuation != nil, !defaults.synchronize() { return false }
         return defaults.data(forKey: automaticRecoveryAttemptKey) == data
     }
 

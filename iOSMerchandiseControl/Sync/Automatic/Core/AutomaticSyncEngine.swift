@@ -116,13 +116,19 @@ actor AutomaticSyncEngine {
             } else {
                 steps = shouldRecoverReplacement ? [.bootstrap] : action.flattenedAutomaticSteps
             }
+            if AutomaticSyncAttemptContext.legacyContinuation != nil {
+                guard action == .fullRecovery, steps == [.fullRecovery],
+                      bindingStore.pendingRecoveryJournal?.mode == .sameScopeRecovery else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+            }
             let hasRemotePlan = steps.contains { step in
                 switch step {
                 case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery: true
                 default: false
                 }
             }
-            if hasRemotePlan,
+            if hasRemotePlan, AutomaticSyncAttemptContext.legacyContinuation == nil,
                let begin = AutomaticSyncAttemptContext.begin, !((await begin())) {
                 return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
                     observationSource: observationSource)

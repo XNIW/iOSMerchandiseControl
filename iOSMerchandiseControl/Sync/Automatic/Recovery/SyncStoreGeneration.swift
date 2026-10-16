@@ -401,6 +401,46 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         }
     }
 
+    /// Opens only the named persisted stage. Never creates, resets, quarantines
+    /// or publishes a generation while qualifying a legacy continuation.
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID) throws -> SyncStoreGenerationHandle {
+        lock.lock()
+        defer { lock.unlock() }
+        guard try decodeAndValidateManifestIfPresent()?.generationID != generationID else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        let relative = "generations/\(generationID.uuidString.lowercased())/store.store"
+        let url = baseDirectory.appendingPathComponent(relative)
+        let directory = url.deletingLastPathComponent()
+        let directoryValues = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        let fileValues = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        let progress = directory.appendingPathComponent("recovery-page-progress-v1.json")
+        let progressValues = try progress.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard directoryValues.isDirectory == true, directoryValues.isSymbolicLink != true,
+              fileValues.isRegularFile == true, fileValues.isSymbolicLink != true,
+              progressValues.isRegularFile == true, progressValues.isSymbolicLink != true,
+              !fileManager.fileExists(atPath: directory.appendingPathComponent("quarantined").path),
+              !fileManager.fileExists(atPath: directory.appendingPathComponent("recovery-page-prepared-v1.json").path) else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        let handle: SyncStoreGenerationHandle
+        if let currentStaging, currentStaging.generationID == generationID {
+            guard currentStaging.accountHash == scope.accountHash, currentStaging.shopID == scope.shopID,
+                  currentStaging.storeIdentity == scope.storeIdentity,
+                  currentStaging.deviceIdentityHash == scope.deviceIdentityHash else { throw SyncStoreGenerationError.invalidManifest }
+            handle = currentStaging
+        } else {
+            guard currentStaging == nil else { throw SyncStoreGenerationError.stagingAlreadyOpen }
+            handle = SyncStoreGenerationHandle(generationID: generationID, storeURL: url,
+                relativeStorePath: relative, accountHash: scope.accountHash, shopID: scope.shopID,
+                storeIdentity: scope.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                container: try SyncStoreSchema.makeFileBackedContainer(at: url))
+        }
+        try validateResourceBudget(for: handle)
+        currentStaging = handle
+        return handle
+    }
+
     func prepareStaging(
         accountHash: String,
         shopID: UUID,
@@ -1969,6 +2009,11 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     func awaitLocalBodyQualification() async -> Bool {
         if let localBodyQualificationTask { return await localBodyQualificationTask.value }
         return active.manifest == nil || Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container)
+    }
+
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID) throws -> SyncStoreGenerationHandle {
+        guard let repository else { throw SyncStoreGenerationError.unavailable }
+        return try repository.existingStaging(scope: scope, generationID: generationID)
     }
 
     func prepareStaging(

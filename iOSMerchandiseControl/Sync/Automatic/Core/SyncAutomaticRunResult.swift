@@ -4,6 +4,14 @@ nonisolated enum AutomaticSyncAttemptContext {
     /// The existing engine invokes this only after facade/admission gates and
     /// acquiring single-flight, before entering its remote action plan.
     @TaskLocal static var begin: (@Sendable () async -> Bool)?
+    @TaskLocal static var legacyContinuation: SyncLegacyRecoveryContinuation?
+}
+
+/// A fresh continuation of the exact old stage, never a historical failure classification.
+nonisolated struct SyncLegacyRecoveryContinuation: Codable, Equatable, Sendable {
+    let identity: String
+    let legacySHA256: String
+    let generationID: UUID
 }
 
 nonisolated enum SyncAutomaticRunStatus: String, Codable, CaseIterable, Equatable, Sendable, Hashable {
