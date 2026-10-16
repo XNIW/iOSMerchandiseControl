@@ -1,0 +1,95 @@
+{
+  "UTC": "2026-10-16T04:42:39.832193+00:00",
+  "mode": "read-only added lines; official sensitive patterns adapted POSIX-space for Python; no matching values emitted or written",
+  "patternSourceSHA256": "286f08d490924a5eb6926164d82ad0d322dba7af2189e91c61000fac626f3d7c",
+  "addedLines": 4001,
+  "hits": [
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt",
+      "line": 6204,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt",
+      "line": 6298,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 133,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 151,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 193,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 260,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 299,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 323,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 354,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 378,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 451,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 477,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 505,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    },
+    {
+      "path": "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "line": 515,
+      "patternIndex": 14,
+      "classification": "SYNTHETIC_RESERVED_DOMAIN_TEST_FIXTURE"
+    }
+  ],
+  "result": "PASS_WITH_SYNTHETIC_FIXTURE_NOTES",
+  "limits": "Scoped new-source/test diff only, no credentials/env reads; not a whole-repository or historical-evidence certification",
+  "unclassifiedHits": 0
+}

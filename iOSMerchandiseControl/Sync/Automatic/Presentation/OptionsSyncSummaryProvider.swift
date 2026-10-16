@@ -498,6 +498,7 @@ nonisolated enum OptionsPendingAttentionCounter {
         let terminalSuperseded = LocalPendingChangeStatus.superseded.rawValue
         let terminalAcknowledged = LocalPendingChangeStatus.acknowledged.rawValue
         let sent = SyncEventOutboxStatus.sent.rawValue
+        let localOnly = SyncEventOutboxStatus.localOnly.rawValue
         let pendingChanges = try context.fetchCount(FetchDescriptor<LocalPendingChange>(
             predicate: #Predicate<LocalPendingChange> { change in
                 change.statusRaw != terminalSuperseded
@@ -506,7 +507,7 @@ nonisolated enum OptionsPendingAttentionCounter {
         ))
         let eventOutbox = try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>(
             predicate: #Predicate<SyncEventOutboxEntry> { entry in
-                entry.statusRaw != sent
+                entry.statusRaw != sent && entry.statusRaw != localOnly
             }
         ))
         return pendingChanges + eventOutbox

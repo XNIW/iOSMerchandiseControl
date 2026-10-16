@@ -1,0 +1,13 @@
+{
+  "UTC": "2026-10-16T05:45:06.460864+00:00",
+  "status": "UNIT_PASSED_UI_RUNNING_NOT_FINAL",
+  "unitTotal": 1610,
+  "unitPassed": 1574,
+  "unitFailed": 0,
+  "unitSkipped": 36,
+  "unitDurationSeconds": 310.727,
+  "filePinsUnchanged": true,
+  "source": "ios-canonical-03.log",
+  "overallResult": "PENDING",
+  "limits": "No remote CI/installed/live acceptance inferred from the unit phase"
+}

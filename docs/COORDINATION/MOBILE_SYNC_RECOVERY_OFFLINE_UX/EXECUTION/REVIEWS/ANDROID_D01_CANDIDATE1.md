@@ -1,0 +1,3 @@
+# Review indipendente Android D01 candidata1
+
+UTC 2026-10-16T03:52:53.786033+00:00, reviewer `/root/android_r01_final_review`;4/4 pin D01 MATCH. **CHANGES_REQUIRED P2**: updateBusinessDataScopeState pubblica B prima dei clear outcomes; subscriber sincrono può pubblicare vera completionB e il clear vecchio elimina la nuova prova. Servono RED con witness reentrancy effettiva e CAS/serializzazione soltanto dopo la prova. Nessun altro difetto concreto nel subset: timestamp originale dalla flight, diagnostici non stampano date, holderstorico valida owner/shop/storeEpoch e capacitàlocale, revocaABAritira prova. Noedit/build dalreviewer; nessunGREENglobale.

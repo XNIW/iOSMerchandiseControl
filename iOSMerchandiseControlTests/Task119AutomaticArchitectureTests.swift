@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import iOSMerchandiseControl
 
@@ -837,29 +838,38 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(runtime.runCount, 3)
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
         XCTAssertEqual(stateStore.state.lastOutcome, .failed)
+        XCTAssertNil(defaults.object(forKey: "task139.busyRetry.lastRunObservation.v1"))
+        XCTAssertEqual(defaults.string(forKey: "task139.busyRetry.lastRunStatus"), "failed")
+        let legacyBefore = defaults.dictionaryRepresentation() as NSDictionary
         let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.busyRetry")
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
-        XCTAssertEqual(relaunched.state.lastOutcome, .failed)
+        // Raw busy-exhaustion history does not certify the current owner's outcome.
+        XCTAssertNil(relaunched.state.lastOutcome)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, legacyBefore)
     }
 
     @MainActor
-    func testOrchestratorPreservesRecoveryPhaseUntilExplicitRetryCTA() async {
-        let suiteName = "Task139OrchestratorRecovery-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let stateStore = SyncStateStore(defaults: defaults, keyPrefix: "task139.orchestrator")
-        stateStore.recordRunResult(.recoveryRequired())
-        let runtime = Task119RecordingRuntime()
+    func testOrchestratorPreservesRecoveryPhaseUntilExplicitRetryCTA() async throws {
+        let fixture = try await makeStableBlockedManualRecoveryFixture(keyPrefix: "task139.orchestrator")
+        let defaults = fixture.defaults
+        let stateStore = fixture.state
+        let completed = expectation(description: "The manual CTA completes a fresh actual atomic recovery")
+        let runtime = Task119RecordingRuntime(underlyingRuntime: fixture.runtime,
+            didComplete: { completed.fulfill() })
         let decisionProvider = Task119NoOpDecisionInputProvider()
         let orchestrator = SyncOrchestrator(
             automaticRuntime: runtime,
-            authViewModel: SupabaseAuthViewModel(authService: nil),
+            authViewModel: fixture.authViewModel,
             activityCenter: ForegroundCloudWorkflowActivityCenter(),
             syncEventSignalWatcher: nil,
             stateStore: stateStore,
+            storeGenerationController: fixture.controller,
+            storeGenerationLease: fixture.controller.captureLease(for: fixture.controller.modelContainer),
+            defaults: defaults,
             decisionInputProvider: decisionProvider,
             backgroundScheduler: SyncNoopBackgroundTaskScheduler()
         )
+        defer { orchestrator.stop() }
 
         orchestrator.submitForegroundTrigger(
             source: .foregroundPoll,
@@ -870,8 +880,16 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
         XCTAssertTrue(runtime.actions.isEmpty)
         XCTAssertEqual(callCountBeforeRetry, 0)
+        let journal = try XCTUnwrap(stateStore.pendingRecoveryJournal)
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+        XCTAssertEqual(stateStore.automaticRecoveryAttemptEligibility(identity: identity), .exhausted)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(decisionProvider.callCount, 0)
+        XCTAssertNotNil(stateStore.pendingRecoveryJournal)
 
         orchestrator.retryRootActionIfPossible()
+        await fulfillment(of: [completed], timeout: 2)
         for _ in 0..<100 where runtime.actions.isEmpty {
             await Task.yield()
         }
@@ -881,22 +899,31 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(runtime.sources, [.releaseCard])
         XCTAssertEqual(callCountAfterRetry, 1)
         XCTAssertEqual(stateStore.state.phase, .idle)
+        XCTAssertNil(stateStore.pendingRecoveryJournal)
+        let actual = try XCTUnwrap(runtime.results.last)
+        let origin = try XCTUnwrap(actual.verifiedFinalization)
+        XCTAssertTrue(actual.verifiedConvergence)
+        XCTAssertEqual(origin.generationID, fixture.controller.activeManifest?.generationID)
+        XCTAssertNotNil(stateStore.state.lastVerifiedAt)
     }
 
     @MainActor
-    func testForcedForegroundSafetyCheckUpgradesOnlyNoOpToLightReconcile() async {
-        let suiteName = "Task139ForcedForeground-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let stateStore = SyncStateStore(defaults: defaults, keyPrefix: "task139.forcedForeground")
-        stateStore.recordRunResult(.success(didWork: false, verifiedConvergence: true))
+    func testForcedForegroundSafetyCheckUpgradesOnlyNoOpToLightReconcile() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture(includesAuth: true)
+        let defaults = fixture.defaults
+        let stateStore = SyncStateStore(defaults: defaults, keyPrefix: "task139.forcedForeground",
+            storeGenerationController: fixture.controller)
+        stateStore.recordRunResult(fixture.result)
         let runtime = Task119RecordingRuntime()
         let orchestrator = SyncOrchestrator(
             automaticRuntime: runtime,
-            authViewModel: SupabaseAuthViewModel(authService: nil),
+            authViewModel: try XCTUnwrap(fixture.authViewModel),
             activityCenter: ForegroundCloudWorkflowActivityCenter(),
             syncEventSignalWatcher: nil,
             stateStore: stateStore,
+            storeGenerationController: fixture.controller,
+            storeGenerationLease: fixture.controller.captureLease(for: fixture.controller.modelContainer),
+            defaults: defaults,
             decisionInputProvider: Task119NoOpDecisionInputProvider(),
             backgroundScheduler: SyncNoopBackgroundTaskScheduler()
         )
@@ -943,28 +970,36 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
         XCTAssertEqual(stateStore.state.lastOutcome, .cancelled)
+        XCTAssertNil(defaults.object(forKey: "task139.cancel.lastRunObservation.v1"))
+        XCTAssertEqual(defaults.string(forKey: "task139.cancel.lastRunStatus"), "cancelled")
+        let legacyBefore = defaults.dictionaryRepresentation() as NSDictionary
         let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel")
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
-        XCTAssertEqual(relaunched.state.lastOutcome, .cancelled)
+        // The recovery phase survives; raw cancellation has no scoped current authority.
+        XCTAssertNil(relaunched.state.lastOutcome)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, legacyBefore)
     }
 
     @MainActor
-    func testOrchestratorAcceptsVerifiedTerminalCommitAfterOuterCancellation() async {
-        let suiteName = "Task139TerminalCancelOrchestrator-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testOrchestratorAcceptsVerifiedTerminalCommitAfterOuterCancellation() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture(includesAuth: true)
+        let defaults = fixture.defaults
         let stateStore = SyncStateStore(
             defaults: defaults,
-            keyPrefix: "task139.terminalCancel"
+            keyPrefix: "task139.terminalCancel",
+            storeGenerationController: fixture.controller
         )
         stateStore.recordRunResult(.recoveryRequired())
-        let runtime = Task139CommittedAfterCancelRuntime()
+        let runtime = Task139CommittedAfterCancelRuntime(verifiedResult: fixture.result)
         let orchestrator = SyncOrchestrator(
             automaticRuntime: runtime,
-            authViewModel: SupabaseAuthViewModel(authService: nil),
+            authViewModel: try XCTUnwrap(fixture.authViewModel),
             activityCenter: ForegroundCloudWorkflowActivityCenter(),
             syncEventSignalWatcher: nil,
             stateStore: stateStore,
+            storeGenerationController: fixture.controller,
+            storeGenerationLease: fixture.controller.captureLease(for: fixture.controller.modelContainer),
+            defaults: defaults,
             decisionInputProvider: Task119NoOpDecisionInputProvider(),
             backgroundScheduler: SyncNoopBackgroundTaskScheduler()
         )
@@ -984,30 +1019,56 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(stateStore.state.lastOutcome, .succeeded)
         let relaunched = SyncStateStore(
             defaults: defaults,
-            keyPrefix: "task139.terminalCancel"
+            keyPrefix: "task139.terminalCancel",
+            storeGenerationController: fixture.controller
         )
         XCTAssertEqual(relaunched.state.phase, .idle)
         XCTAssertEqual(relaunched.state.lastOutcome, .succeeded)
     }
 
     @MainActor
-    func testImmediateRetryAfterCancellationRunsWhenCancelledFlightFinishes() async {
-        let suiteName = "Task139OrchestratorCancelRetry-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let stateStore = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancelRetry")
+    func testImmediateRetryAfterCancellationRunsWhenCancelledFlightFinishes() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture(includesAuth: true)
+        let defaults = fixture.defaults
+        let stateStore = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancelRetry",
+            storeGenerationController: fixture.controller)
         stateStore.recordRunResult(.recoveryRequired())
-        let runtime = Task119DelayedCancellationRecoveryRuntime()
+        let runtime = Task119DelayedCancellationRecoveryRuntime(freshResult: fixture.freshResult)
         let decisionProvider = Task119NoOpDecisionInputProvider()
         let orchestrator = SyncOrchestrator(
             automaticRuntime: runtime,
-            authViewModel: SupabaseAuthViewModel(authService: nil),
+            authViewModel: try XCTUnwrap(fixture.authViewModel),
             activityCenter: ForegroundCloudWorkflowActivityCenter(),
             syncEventSignalWatcher: nil,
             stateStore: stateStore,
+            storeGenerationController: fixture.controller,
+            storeGenerationLease: fixture.controller.captureLease(for: fixture.controller.modelContainer),
+            defaults: defaults,
             decisionInputProvider: decisionProvider,
             backgroundScheduler: SyncNoopBackgroundTaskScheduler()
         )
+
+        addTeardownBlock {
+            await MainActor.run {
+                orchestrator.stop()
+                runtime.finishCancellation()
+            }
+            await runtime.cancelAndWait()
+        }
+        let freshCompleted = expectation(description: "The second real atomic recovery has completed")
+        let published = expectation(description: "The fresh recovery is published as idle and succeeded")
+        runtime.onFreshCompletion = { freshCompleted.fulfill() }
+        var publicationObserved = false
+        let subscription = stateStore.objectWillChange.sink {
+            Task { @MainActor in
+                guard !publicationObserved, runtime.hasFinishedFreshRun,
+                      stateStore.state.phase == .idle,
+                      stateStore.state.lastOutcome == .succeeded else { return }
+                publicationObserved = true
+                published.fulfill()
+            }
+        }
+        defer { subscription.cancel() }
 
         orchestrator.retryRootActionIfPossible()
         for _ in 0..<100 where runtime.runCount == 0 {
@@ -1023,9 +1084,9 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(stateStore.state.phase, .recoveryRequired)
 
         runtime.finishCancellation()
-        for _ in 0..<100 where runtime.runCount < 2 || stateStore.state.phase != .idle {
-            await Task.yield()
-        }
+        // The retry now performs actual disk-backed atomic recovery. Scheduling
+        // yields alone do not witness its completion or the later publication.
+        await fulfillment(of: [freshCompleted, published], timeout: 2)
         let finalDecisionCount = decisionProvider.callCount
 
         XCTAssertEqual(runtime.actions, [.requestRecovery, .requestRecovery])
@@ -1308,8 +1369,19 @@ private final class Task139OutboxOnlyRegistrationProvider: SyncActivityRegistrat
 
 @MainActor
 private final class Task119RecordingRuntime: SyncAutomaticRuntimeProviding {
+    private let verifiedResult: SyncAutomaticRunResult?
+    private let underlyingRuntime: (any SyncAutomaticRuntimeProviding)?
+    private let didComplete: (() -> Void)?
+    init(verifiedResult: SyncAutomaticRunResult? = nil,
+         underlyingRuntime: (any SyncAutomaticRuntimeProviding)? = nil,
+         didComplete: (() -> Void)? = nil) {
+        self.verifiedResult = verifiedResult
+        self.underlyingRuntime = underlyingRuntime
+        self.didComplete = didComplete
+    }
     private(set) var actions: [SyncAction] = []
     private(set) var sources: [SyncAutomaticTriggerSource] = []
+    private(set) var results: [SyncAutomaticRunResult] = []
 
     var isRunning: Bool { false }
 
@@ -1319,6 +1391,13 @@ private final class Task119RecordingRuntime: SyncAutomaticRuntimeProviding {
     ) async -> SyncAutomaticRunResult {
         actions.append(action)
         sources.append(source)
+        if let underlyingRuntime {
+            let result = await underlyingRuntime.run(action: action, source: source)
+            results.append(result)
+            didComplete?()
+            return result
+        }
+        if action == .requestRecovery, let verifiedResult { return verifiedResult }
         return .success(
             didWork: false,
             verifiedConvergence: action == .requestRecovery
@@ -1380,6 +1459,8 @@ private final class Task119BlockingRecoveryRuntime: SyncAutomaticRuntimeProvidin
 
 @MainActor
 private final class Task139CommittedAfterCancelRuntime: SyncAutomaticRuntimeProviding {
+    private let verifiedResult: SyncAutomaticRunResult
+    init(verifiedResult: SyncAutomaticRunResult) { self.verifiedResult = verifiedResult }
     private var continuation: CheckedContinuation<SyncAutomaticRunResult, Never>?
     private(set) var hasStarted = false
 
@@ -1404,21 +1485,23 @@ private final class Task139CommittedAfterCancelRuntime: SyncAutomaticRuntimeProv
     func resumeAfterStoreReplacement() async {}
 
     func finishDurableCommit() {
-        continuation?.resume(returning: .success(
-            didWork: true,
-            verifiedConvergence: true
-        ))
+        continuation?.resume(returning: verifiedResult)
         continuation = nil
     }
 }
 
 @MainActor
 private final class Task119DelayedCancellationRecoveryRuntime: SyncAutomaticRuntimeProviding {
+    private let freshResult: @MainActor () async -> SyncAutomaticRunResult
+    init(freshResult: @escaping @MainActor () async -> SyncAutomaticRunResult) { self.freshResult = freshResult }
     private var continuation: CheckedContinuation<SyncAutomaticRunResult, Never>?
+    private var freshRunTask: Task<SyncAutomaticRunResult, Never>?
+    private(set) var hasFinishedFreshRun = false
+    var onFreshCompletion: (@MainActor () -> Void)?
     private(set) var actions: [SyncAction] = []
     private(set) var runCount = 0
 
-    var isRunning: Bool { continuation != nil }
+    var isRunning: Bool { continuation != nil || freshRunTask != nil }
 
     func run(
         action: SyncAction,
@@ -1427,16 +1510,27 @@ private final class Task119DelayedCancellationRecoveryRuntime: SyncAutomaticRunt
         actions.append(action)
         runCount += 1
         guard runCount == 1 else {
-            return .success(didWork: false, verifiedConvergence: true)
+            let task = Task { @MainActor in await self.freshResult() }
+            freshRunTask = task
+            let result = await task.value
+            freshRunTask = nil
+            hasFinishedFreshRun = true
+            onFreshCompletion?()
+            return result
         }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
         }
     }
 
-    func cancel() {}
+    func cancel() { freshRunTask?.cancel() }
 
-    func cancelAndWait() async {}
+    func cancelAndWait() async {
+        finishCancellation()
+        let task = freshRunTask
+        task?.cancel()
+        if let task { _ = await task.value }
+    }
 
     func resumeAfterStoreReplacement() async {}
 

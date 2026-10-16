@@ -9,6 +9,8 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
     var activatedGenerationID: UUID?
     var completedRecoveryJournal: Bool
     var hasPendingLocalWork: Bool
+    // Captured from the original fsynced finalization, never callback-time scope.
+    var verifiedFinalization: SyncStoreRecoveryFinalization?
 
     init(
         catalog: SupabasePullApplyResult,
@@ -17,7 +19,8 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
         watermarkAfter: Int64,
         activatedGenerationID: UUID? = nil,
         completedRecoveryJournal: Bool = false,
-        hasPendingLocalWork: Bool = false
+        hasPendingLocalWork: Bool = false,
+        verifiedFinalization: SyncStoreRecoveryFinalization? = nil
     ) {
         self.catalog = catalog
         self.history = history
@@ -26,6 +29,7 @@ nonisolated struct SyncRecoverySnapshotPullSummary: Sendable, Equatable {
         self.activatedGenerationID = activatedGenerationID
         self.completedRecoveryJournal = completedRecoveryJournal
         self.hasPendingLocalWork = hasPendingLocalWork
+        self.verifiedFinalization = verifiedFinalization
     }
 
     var didWork: Bool {

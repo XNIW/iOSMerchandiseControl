@@ -5,7 +5,11 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
 
-**TASK-144 — ACTIVE / FIX — Mobile parity root-cause** (mandato utente 2026-09-28; planning coordinato autorizzato, executor iOS e reviewer indipendente). File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. Baseline `30d226d0fb9b8679a1dd034c6e82319645337f22`. R-I04/R-I05/R-I06 e oracle condiviso APPROVED; source326 `3c1ff005…`, gate canonici1.403 PASS/36 SKIP e Release/analyze/TEST PASS. PR11 integrata normalmente main `2322c5e1`; CI head `095e2110` e main `2322c5e1` PASS con checkout SHA esatti. Auth nativa finale verificata; recovery TEST, misure finali e convergenza restano da completare. Snapshot storici e harness Excel sospeso invariati; nessuna chiusura DONE o distribuzione inferita.
+**TASK-145 — BLOCKED / REVIEW — Sync automatica, recovery non bloccante e UX offline iOS.** File task: `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`; coordinamento `MOBILE_SYNC_RECOVERY_OFFLINE_UX`, controparte Android TASK-144. Execution locale conclusa: canonical03 con 1.593 PASS, 0 FAIL e 36 SKIP (UI19 PASS); Debug/Release per simulatore PASS; Analyze con 18 warning libxls e 8 nei test immutati, nessuno sulle righe aggiunte. Review indipendente APPROVED_LOCAL_DELTA_STATIC. Responsabile: COORDINATOR / REVIEWER-INTEGRATOR per review, integrazione e assegnazione della lane CI/app/TEST. CI sull'esatto SHA, pacchetto dispositivo firmato, upgrade, TEST, benchmark e legacy reale non qualificati. Nessun DONE, commit/push/installazione/reset/live write. [Handoff](COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/LOCAL_GATE_HANDOFF.md).
+
+TASK-144 sospeso **BLOCKED**, ultima fase FIX, non DONE; prove e criteri preservati. Le sezioni storiche sottostanti non assegnano ownership concorrente. Corrette in questa assegnazione le precedenti indicazioni discordanti TASK-132/nessun task; backlog e priorità estranei invariati.
+
+**TASK-144 — BLOCKED / ultima fase FIX — Mobile parity root-cause (snapshot storico seguente)** (mandato utente 2026-09-28; planning coordinato autorizzato, executor iOS e reviewer indipendente). File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. Baseline `30d226d0fb9b8679a1dd034c6e82319645337f22`. R-I04/R-I05/R-I06 e oracle condiviso APPROVED; source326 `3c1ff005…`, gate canonici1.403 PASS/36 SKIP e Release/analyze/TEST PASS. PR11 integrata normalmente main `2322c5e1`; CI head `095e2110` e main `2322c5e1` PASS con checkout SHA esatti. Auth nativa finale verificata; recovery TEST, misure finali e convergenza restano da completare. Snapshot storici e harness Excel sospeso invariati; nessuna chiusura DONE o distribuzione inferita.
 
 **TASK-143 — INTEGRATED / VALIDATION_LIMITS_RECORDED — Mobile Storefront product control (iOS)**
 *(2026-08-21: autorizzazione USER_APPROVER del release train
@@ -174,7 +178,9 @@ tree del merge è identico. CI pull request `31331876775` e CI push sul merge
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
-**ACTIVE — TASK-144 / FIX.** File `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-144 PR11 integrata normalmente main2322c5e1, CI exact-head36940178787/main36942886476 PASS1.403/36. Auth nativa verificata; recovery TEST, misure e convergenza ancora aperte. TASK-143 iOS resta integrato con PR10/main30d226d0 e CI verificata; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici invariati, senza riaperture.
+**ACTIVE — TASK-145 BLOCKED / REVIEW.** Fonte primaria: `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`. Gate locali completati, handoff finale disponibile. Mancano CI, app installate, TEST, upgrade e prestazioni; owner coordinator/reviewer-integrator. Execution conclusa, nessun DONE. Il precedente TASK-144 iOS resta BLOCKED, ultima fase FIX, con storia intatta.
+
+**Snapshot storico precedente, non ownership corrente:** file `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-144 PR11 integrata normalmente main2322c5e1, CI exact-head36940178787/main36942886476 PASS1.403/36. Auth nativa verificata; recovery TEST, misure e convergenza ancora aperte. TASK-143 iOS resta integrato con PR10/main30d226d0 e CI verificata; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici invariati, senza riaperture.
 
 **TASK-122 — DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING:** file **`docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-122/`**. Chiuso per override utente dopo TASK-123; local architecture execution e final remote-domain strangler accettati come baseline storica.
 
@@ -1024,12 +1030,13 @@ Il perimetro **TASK‑110** ha coperto audit/implementazione **Android + iOS + S
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** TASK-132 — Cross-platform sync forensics, cleanup e policy hardening
-- **File task attivo:** `docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md`
+- **Task attivo:** TASK-145 — Sync automatica, recovery non bloccante e UX offline iOS
+- **File task attivo:** `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`
 - **Stato globale progetto:** **ACTIVE**
-- **Stato TASK-130:** **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**
-- **Responsabile attuale:** **Claude / Reviewer**
-- **Ultimo aggiornamento task attivo:** 2026-06-17 — override utente TASK-132 eseguito da Codex; handoff a review con evidence `docs/TASKS/EVIDENCE/TASK-132/`.
+- **Stato task / fase:** **BLOCKED / REVIEW**
+- **Responsabile attuale:** **COORDINATOR / REVIEWER-INTEGRATOR — review, CI e app/TEST**
+- **Ultimo aggiornamento task attivo:** 2026-10-16T06:02:31.714364+00:00 — execution locale conclusa, canonical03/Debug/Release/analyze verificati; prove CI/app/TEST mancanti. Il precedente TASK-144 resta BLOCKED con prove preservate.
+- I riferimenti ai completamenti seguenti sono storico; non assegnano ownership corrente.
 - **Task precedente:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**.
 - **Ultimo completato:** **TASK-130 DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**
 - **File task ultimo completato:** `docs/TASKS/TASK-130-price-contract-current-previous-old.md`
@@ -1117,14 +1124,14 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** nessuno.
-- **File task attivo:** non applicabile.
-- **Stato task:** non applicabile.
-- **Fase attuale:** non applicabile.
-- **Responsabile attuale:** **USER_APPROVER**.
-- **Ultimo aggiornamento:** 2026-08-11 — TASK-141 chiuso `DONE` dopo conferma
-  esplicita; PR #4 merged in `c55e3a93`, CI sul merge `31332907006` `PASS`.
-- **Handoff corrente:** `USER_CONFIRMED_CLOSURE`.
+- **Task attivo corrente:** TASK-145.
+- **File task attivo:** `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`.
+- **Stato task:** **BLOCKED**.
+- **Fase attuale:** **REVIEW**.
+- **Responsabile attuale:** **COORDINATOR / REVIEWER-INTEGRATOR — CI e lane app/TEST**.
+- **Ultimo aggiornamento:** 2026-10-16T06:02:31.714364+00:00.
+- **Handoff corrente:** [Gate locali PASS, REVIEW e prove esterne BLOCKED](COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/LOCAL_GATE_HANDOFF.md). Nessun DONE o accettazione installata.
+- **Precedente TASK-144:** BLOCKED, ultima fase FIX, non DONE; nessun gate storico chiuso.
 - **Nota TASK-129:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; broad Android non e' PASS pieno.
 - **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-132 e' DONE per override utente finale** nel perimetro `CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED`. La closure storicamente etichettata **TASK-134** e' parte del sotto-scope `TASK-132 final live strict closure`; non esiste un task canonico separato TASK-134 in questa closure, e i riferimenti `TASK134_*` restano solo fixture/harness prefix storici. TASK-135 non e' aperto; nessun claim production-ready globale oltre il perimetro task.
 - **Ultimo completato:** **TASK-141** (`docs/TASKS/TASK-141-mobile-catalog-data-integrity-ios.md`) — **DONE / USER_CONFIRMED_CLOSURE**.
@@ -1233,6 +1240,8 @@ Task bloccati non attivi:
 5. Conferma finale utente → DONE
 
 ## Backlog
+
+Registrazione del solo nuovo task autorizzato 2026-10-15: **TASK-145 ACTIVE / PLANNING**, `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`; TASK-144 sospeso BLOCKED. Nessun riordino delle priorità sotto.
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
 Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; ora **DONE / Chiusura — SUPERSEDED** da TASK-053+ e legacy closure 2026-05-12). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background. **TASK-057** aggiunto 2026-05-06: post TASK-056 DONE — Slice E planning **local enqueue** verso outbox SwiftData da outcome push manuali; **no** network/RPC live/drain; file `docs/TASKS/TASK-057-supabase-sync-events-slice-e-local-enqueue-ios.md`. **TASK-058** aggiunto 2026-05-06: post TASK-057 DONE — Slice F recorder live isolato `record_sync_event` con mapper RPC puro e transport fakeable; **no** RPC live/Supabase live/live dataset validation/drain/UI; file `docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md`. **TASK-060** aggiunto 2026-05-07: post **TASK-059 DONE** — Slice **G2** drain outbox manuale; file `docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md`. **TASK-061** aggiunto 2026-05-07: post **TASK-060 DONE** — UI DEBUG drain manuale in `OptionsView` (`#if DEBUG`); planning, execution e review chiusi con **APPROVED_FIXED_DIRECTLY / DONE**; file `docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md`. **TASK-062** aggiunto 2026-05-07: post **TASK-061 DONE / Chiusura** — pianificazione **validazione operativa controllata** (smoke Simulator/manuale, matrice S62-01…S62-15, policy drain live opzionale); file `docs/TASKS/TASK-062-supabase-sync-events-manual-drain-operational-validation-ios.md`. **TASK-063** creato come **ACTIVE / PLANNING** (file `docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md`) — roadmap orchestratore production-safe dopo TASK-062, slice TASK-064+ solo proposta. **TASK-064** creato su user override come prima slice operativa post TASK-063: recovery iOS bounded/owner-scoped delle entry outbox `sending` stale; file `docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`.
 

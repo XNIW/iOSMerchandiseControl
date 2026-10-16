@@ -1,0 +1,787 @@
+{
+  "UTC": "2026-10-16T04:46:31.204246+00:00",
+  "exitCode": 0,
+  "fileChecks": {
+    "app/src/main/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplication.kt": {
+      "expected": "0d2e1c6401268999f899618e3b7556059b3c23661c14b5039df46bfc52cc53dc",
+      "actual": "0d2e1c6401268999f899618e3b7556059b3c23661c14b5039df46bfc52cc53dc"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt": {
+      "expected": "9cdba516c438947110911d721fe6bedf570841631b814aff47f790498b837476",
+      "actual": "9cdba516c438947110911d721fe6bedf570841631b814aff47f790498b837476"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt": {
+      "expected": "60a1726a178489181c7778a7151f8f7fa872257e59c56fb791e2d6486b5491c1",
+      "actual": "60a1726a178489181c7778a7151f8f7fa872257e59c56fb791e2d6486b5491c1"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSource.kt": {
+      "expected": "6c61dcce634f3674fce7027406c8b0646d481d1b16c272b44979b4cd756fdac8",
+      "actual": "6c61dcce634f3674fce7027406c8b0646d481d1b16c272b44979b4cd756fdac8"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifier.kt": {
+      "expected": "dc224cd18d4caba2a3f95cc712a474959063165559f20d2e36558d3ce29c41b2",
+      "actual": "dc224cd18d4caba2a3f95cc712a474959063165559f20d2e36558d3ce29c41b2"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModel.kt": {
+      "expected": "d601505d512d954883624ca697250bdf8d41cfefb3defea860ccb7e0ac9f3975",
+      "actual": "d601505d512d954883624ca697250bdf8d41cfefb3defea860ccb7e0ac9f3975"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt": {
+      "expected": "06eececef56785f4cd7122b62acbbba60208131799a4a1c0add585b904903df3",
+      "actual": "06eececef56785f4cd7122b62acbbba60208131799a4a1c0add585b904903df3"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinatorTest.kt": {
+      "expected": "f1f0081abd6177fc78eb79f1c4824e33079ebfa4c84b9796fe6af03bb25ea4d2",
+      "actual": "f1f0081abd6177fc78eb79f1c4824e33079ebfa4c84b9796fe6af03bb25ea4d2"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSourceTest.kt": {
+      "expected": "cef5cb7d2cef83dd5ada115010d044c943860888aa80ebcaff0b2899aef1798a",
+      "actual": "cef5cb7d2cef83dd5ada115010d044c943860888aa80ebcaff0b2899aef1798a"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifierTest.kt": {
+      "expected": "5135d88d8dc5f5566397bd510e144446beecc8b41339f21efaa08b4230878c2b",
+      "actual": "5135d88d8dc5f5566397bd510e144446beecc8b41339f21efaa08b4230878c2b"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt": {
+      "expected": "30add9441e8b7606d30560a64d5abbf5e51d18097e24b7a1ace93d6c57323327",
+      "actual": "30add9441e8b7606d30560a64d5abbf5e51d18097e24b7a1ace93d6c57323327"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncEventModels.kt": {
+      "expected": "074c702d81abd713ecc36a527bed65e2da4c93659fba79b237b6566856d12b08",
+      "actual": "074c702d81abd713ecc36a527bed65e2da4c93659fba79b237b6566856d12b08"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt": {
+      "expected": "1d66fe0759dbf8451062d71d01364cc6a895aec41422a3b3e04f4333ffc0b253",
+      "actual": "1d66fe0759dbf8451062d71d01364cc6a895aec41422a3b3e04f4333ffc0b253"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogSyncStateTracker.kt": {
+      "expected": "5e4f914bb147e82feb9d8c24a0d9fee9da3c735a2cf4903b4e5dc0a251a3b925",
+      "actual": "5e4f914bb147e82feb9d8c24a0d9fee9da3c735a2cf4903b4e5dc0a251a3b925"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt": {
+      "expected": "6f104f23b09d1029dc7c358651212a8058fb9f60bdc92df4eeee878a09576c66",
+      "actual": "6f104f23b09d1029dc7c358651212a8058fb9f60bdc92df4eeee878a09576c66"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointReadinessSnapshotTest.kt": {
+      "expected": "83a89612ae47c9e2cccf8d8e54c6bdab143a514b4e9395d577045af3f0d2bd76",
+      "actual": "83a89612ae47c9e2cccf8d8e54c6bdab143a514b4e9395d577045af3f0d2bd76"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointTraceActivityLifecycleTest.kt": {
+      "expected": "888690f89cd0fa01d8e8fa3e304c7cdb32ca303258d0751760b09bde758fe100",
+      "actual": "888690f89cd0fa01d8e8fa3e304c7cdb32ca303258d0751760b09bde758fe100"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplicationTest.kt": {
+      "expected": "cb412b45d7d9cbe4129ff6518c075bcbb97b693b02d4dd5adeaa4518aa93c32c",
+      "actual": "cb412b45d7d9cbe4129ff6518c075bcbb97b693b02d4dd5adeaa4518aa93c32c"
+    },
+    "app/src/test/java/com/example/merchandisecontrolsplitview/UnconfiguredTestApplication.kt": {
+      "expected": "eb53a9ceb9239912129e13f47b96de98244a5b5779ec4c39c60f8dfc8bec1c10",
+      "actual": "eb53a9ceb9239912129e13f47b96de98244a5b5779ec4c39c60f8dfc8bec1c10"
+    },
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseSyncEventRemoteDataSource.kt": {
+      "expected": "199bc154cfcfdd8eb513c0a4f6e1277361839b42829db54470cb537f77539617",
+      "actual": "199bc154cfcfdd8eb513c0a4f6e1277361839b42829db54470cb537f77539617"
+    }
+  },
+  "allUnchanged": true,
+  "gates": {
+    "testDebugUnitTest": "PASS",
+    "assembleDebug": "PASS",
+    "assembleRelease": "PASS_UNSIGNED_BUILD_ONLY",
+    "lint": "PASS_debug_report_release_vital_skipped"
+  },
+  "lintFindings": [
+    {
+      "ruleId": "ApplySharedPref",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 66,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "ApplySharedPref",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 76,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "ApplySharedPref",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 343,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "ApplySharedPref",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 347,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "OldTargetApi",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/build.gradle.kts",
+          "line": 39,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "AndroidGradlePluginVersion",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/wrapper/gradle-wrapper.properties",
+          "line": 3,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 4,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 5,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 5,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 7,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 8,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 9,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 10,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 10,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 10,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 10,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 11,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 11,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 21,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "GradleDependency",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 31,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 3,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 3,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 14,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 22,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 23,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 26,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 28,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 29,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "NewerVersionAvailable",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "gradle/libs.versions.toml",
+          "line": 32,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "ModifierParameter",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/DatabaseScreenComponents.kt",
+          "line": 399,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "ModifierParameter",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/DatabaseScreenComponents.kt",
+          "line": 514,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "PluralsCandidate",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values-en/strings.xml",
+          "line": 155,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "PluralsCandidate",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 157,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "PluralsCandidate",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values-en/strings.xml",
+          "line": 807,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "PluralsCandidate",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 822,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "TrustAllX509TrustManager",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": ".gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml/5.5.1/ff561a9cab46bfe95667d5085580fefb2353fdaf/poi-ooxml-5.5.1.jar",
+          "line": null,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "TrustAllX509TrustManager",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": ".gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml/5.5.1/ff561a9cab46bfe95667d5085580fefb2353fdaf/poi-ooxml-5.5.1.jar",
+          "line": null,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 97,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 574,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 599,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 605,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 607,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 611,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UnusedResources",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/res/values/strings.xml",
+          "line": 671,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UsableSpace",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt",
+          "line": 223,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UsableSpace",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt",
+          "line": 223,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 51,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 59,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 66,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/productimage/PendingStagedProductImageStore.kt",
+          "line": 76,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ProjectSessionPersistence.kt",
+          "line": 19,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ProjectSessionPersistence.kt",
+          "line": 25,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 322,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 326,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 343,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 347,
+          "onAddedLine": false
+        }
+      ]
+    },
+    {
+      "ruleId": "UseKtx",
+      "level": "warning",
+      "locations": [
+        {
+          "uri": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopContext.kt",
+          "line": 358,
+          "onAddedLine": false
+        }
+      ]
+    }
+  ],
+  "reports": [
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-results/lint-results-debug.sarif",
+      "SHA256": "9c93e348b3654debd2446d86a8c6ed7dda3e64476fbe23377db032c9e2f8bf7f"
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-results/lint-results-debug.txt",
+      "SHA256": "69f04a73c717fff47db412a37148614ff922be98483fd5667cfeef3034c3de3d"
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-results/lint-results-debug.xml",
+      "SHA256": "155c9f23cb70904e0af4009a13348a5b2edac73e16b0b611284bb37fdf63f314"
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-results/lint-results-debug.html",
+      "SHA256": "9317ad8ebea6ea376de9844a4e1ce42c378d6830d1079f369b25a145a7329734"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-artifacts/app-debug.apk",
+      "originalOutput": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/debug/app-debug.apk",
+      "SHA256": "a1751d3506f1e595f066bb13e3aac3774bed29f16281e1751ac623b59896cb6a",
+      "bytes": 129050388,
+      "deliverySignature": "DEBUG_SIGNED_NOT_INSTALLED"
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-artifacts/app-release-unsigned.apk",
+      "originalOutput": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/release/app-release-unsigned.apk",
+      "SHA256": "a50492a9c49b1eb080e5c1b0484cee254cb9a1508b412d7de70d5e2fd8106ade",
+      "bytes": 96061207,
+      "deliverySignature": "UNSIGNED_NOT_DEPLOYABLE"
+    }
+  ],
+  "warningCounts": {
+    "KotlinSource": 0,
+    "D8WechatExternalBytecode": 209,
+    "other": 0
+  },
+  "warningLimit": "No new Kotlin warnings emitted. D8 warnings originate unchanged third-party WeChat bytecode; no baseline dex warning-rate claim.",
+  "lintSeverityCounts": {
+    "warning": 57
+  },
+  "lintFindingsOnAddedLines": [],
+  "lintDeltaLimit": "Added-line correlation is not a baseline lint run. Remaining warnings retain their original reports; dependencies/build configuration preserved.",
+  "toolchainConfiguration": {
+    "localPreservedWIP": {
+      "Gradle": "9.6.0",
+      "AGP": "9.4.1",
+      "KSP": "2.3.6"
+    },
+    "HEADConfiguration": {
+      "Gradle": "9.5.1",
+      "AGP": "9.2.1",
+      "KSP": "2.3.4"
+    },
+    "SDKContract": "Supabase/Ktor versions unchanged by these existing WIP diffs",
+    "limit": "These local gates used the preserved working configuration; canonical final-SHA CI under repository configuration remains NOT_RUN. No config rollback or integration of user WIP."
+  },
+  "reviewDocument": {
+    "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/REVIEWS/ANDROID_FINAL_LOCAL_REVIEW.md",
+    "currentSHA256": "245fe072acc94cf63c206376d9fdc205ce232530914c7b90ff6fae35a7536e05",
+    "independentStaticOriginalSHA256": "a308adab4e7e372776b8010100553f3933776a712ec05363fffbaafa8b9d7edd",
+    "appendedRunnerResultsBy": "root executor"
+  }
+}

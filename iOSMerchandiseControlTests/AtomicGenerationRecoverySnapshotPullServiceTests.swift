@@ -6,6 +6,930 @@ import XCTest
 
 @MainActor
 final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
+    func testFirstVerifiedRecoveryKeepsEngineCompletionTimeWhenFirstPublicationIsDelayed() async throws {
+        let fixture = try makeFixture()
+        let prefix = "task145.first-success-source-time"
+        let proofKey = "\(prefix).lastVerifiedProof.v2"
+        let completedAt = Date(timeIntervalSince1970: 200_000)
+        let publishedAt = completedAt.addingTimeInterval(3_600)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        XCTAssertNil(fixture.defaults.data(forKey: proofKey))
+        XCTAssertNil(state.state.lastVerifiedAt)
+        let originalGeneration = fixture.controller.activeManifest?.generationID
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "task145-first-success-source-time")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint])
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedAt })
+
+        // Hold the actual Engine/Atomic result before its FIRST presentation.
+        // No helper publishes a proof, no blob is removed, and no result is restamped.
+        let heldResult = await engine.run(action: .bootstrap, source: .rootForeground,
+            ownerUserID: fixture.ownerUserID)
+        let finalization = try XCTUnwrap(heldResult.verifiedFinalization)
+        let observation = try XCTUnwrap(heldResult.observation)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let calls = transport.counts()
+        XCTAssertEqual(heldResult.status, .success)
+        XCTAssertTrue(heldResult.verifiedConvergence)
+        XCTAssertNil(heldResult.errorCode)
+        XCTAssertNil(heldResult.blockReason)
+        XCTAssertEqual(observation.completedAt, completedAt.timeIntervalSince1970)
+        XCTAssertTrue(observation.matches(heldResult))
+        XCTAssertTrue(observation.origin.isCurrent(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID))
+        XCTAssertTrue(finalization.exactlyMatches(manifest))
+        if let originalGeneration { XCTAssertNotEqual(finalization.generationID, originalGeneration) }
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer))
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertGreaterThan(calls.checkpoints, 0)
+        XCTAssertNil(fixture.defaults.data(forKey: proofKey),
+            "The finalization must never have been accepted before this delayed first publication")
+        XCTAssertNil(state.state.lastVerifiedAt)
+        _ = try XCTUnwrap(heldResult.status == .success && heldResult.verifiedConvergence
+            && observation.completedAt == completedAt.timeIntervalSince1970
+            && observation.origin.isCurrent(defaults: fixture.defaults, ownerUserID: fixture.ownerUserID)
+            && finalization.exactlyMatches(manifest)
+            && Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer)
+            && fixture.defaults.data(forKey: proofKey) == nil && state.state.lastVerifiedAt == nil
+            && calls.checkpoints > 0 ? true : nil,
+            "IOS_D01_FIRST_SUCCESS_NOT_QUALIFIED_DELAYED_PUBLICATION_NOT_REACHED")
+
+        state.recordRunResult(heldResult, now: publishedAt)
+        XCTAssertEqual(state.state.phase, .idle)
+        XCTAssertEqual(state.state.lastVerifiedAt, completedAt,
+            "First publication must retain the genuine Engine completion time, not callback time one hour later")
+        let proofData = try XCTUnwrap(fixture.defaults.data(forKey: proofKey))
+        let proofJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: proofData) as? [String: Any])
+        XCTAssertEqual(try XCTUnwrap(proofJSON["verifiedAt"] as? NSNumber).doubleValue,
+            completedAt.timeIntervalSince1970)
+        let finalizationJSON = try XCTUnwrap(proofJSON["finalization"] as? [String: Any])
+        let persistedFinalization = try JSONDecoder().decode(SyncStoreRecoveryFinalization.self,
+            from: JSONSerialization.data(withJSONObject: finalizationJSON))
+        XCTAssertEqual(persistedFinalization, finalization,
+            "The persisted date must refer to the original genuine finalization")
+        let reopened = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        XCTAssertEqual(reopened.state.lastVerifiedAt, completedAt)
+        XCTAssertEqual(fixture.defaults.data(forKey: proofKey), proofData)
+        XCTAssertEqual(transport.counts().checkpoints, calls.checkpoints)
+        XCTAssertEqual(transport.counts().pages, calls.pages)
+    }
+
+    func testObservedRecoveryFailureCannotOverwriteNewGenerationSuccessInSameEntity() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        proof.stateStore.recordRunResult(proof.result)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        let generationA = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let failedAt = proof.verifiedAt.addingTimeInterval(20)
+        let failing = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint], checkpointMutation: { _ in throw AutomaticSyncFailure.http(status: 503) })
+        let failingEngine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: failing, maximumAttempts: 1),
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { failedAt })
+        let resultA = await failingEngine.run(action: .bootstrap, source: .rootForeground, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(resultA.failure?.httpStatus, 503)
+        XCTAssertEqual(failing.counts().checkpoints, 1)
+        let observationA = try XCTUnwrap(resultA.observation)
+        XCTAssertEqual(observationA.origin.generationID, generationA)
+        XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+
+        let completedB = failedAt.addingTimeInterval(20)
+        let healthy = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint, proof.checkpoint, proof.checkpoint],
+            productRows: [ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)])
+        let healthyEngine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: healthy),
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedB })
+        let resultB = await healthyEngine.run(action: .bootstrap, source: .releaseCard, ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(resultB.verifiedConvergence)
+        let generationB = try XCTUnwrap(resultB.verifiedFinalization?.generationID)
+        XCTAssertNotEqual(generationB, generationA)
+        XCTAssertEqual(resultB.observation?.origin.generationID, generationB)
+        proof.stateStore.recordRunResult(resultB, now: completedB)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, completedB)
+        let stateB = proof.stateStore.state
+        let bytesB = NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("ri08.real-receipt.") })
+        let callsB = healthy.counts()
+        proof.stateStore.recordRunResult(resultA, now: completedB.addingTimeInterval(100))
+        XCTAssertEqual(proof.stateStore.state, stateB)
+        XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("ri08.real-receipt.") }), bytesB)
+        XCTAssertEqual(healthy.counts().checkpoints, callsB.checkpoints)
+        XCTAssertEqual(healthy.counts().pages, callsB.pages)
+        XCTAssertEqual(failing.counts().checkpoints, 1)
+    }
+
+    // IOS-D01 error proposal: a completed transport failure in A must not
+    // become the current error of B merely because diagnostics is reopened.
+    func testPreviousRealRecoveryErrorDoesNotFollowAnotherShopOrReappearAfterStateReopen() async throws {
+        let prefix = "sync.runtime.orchestrator"
+        let proof = try await makeRealContinuationProof(stateKeyPrefix: prefix)
+        let fixture = proof.fixture
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        let bindingA = try XCTUnwrap(binding.currentBinding)
+        let shopA = try XCTUnwrap(selection.selectedShop(accountHash: bindingA.accountHash))
+        let generationA = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        proof.stateStore.recordRunResult(proof.result, now: proof.verifiedAt.addingTimeInterval(10))
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        let cleanA = AutomaticSyncDiagnosticsSnapshot(syncState: proof.stateStore.state,
+            pendingCount: 0, baselineSummary: .absent, ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertNil(cleanA.lastError)
+        _ = try XCTUnwrap(proof.stateStore.state.phase == .idle
+            && proof.stateStore.state.lastVerifiedAt == proof.verifiedAt
+            && cleanA.lastError == nil ? true : nil,
+            "IOS_D01_ERROR_A_SUCCESS_NOT_QUALIFIED_FAILURE_NOT_REACHED")
+
+        let failingTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint], checkpointMutation: { _ in
+                throw AutomaticSyncFailure.http(status: 503)
+            })
+        let completedA = proof.verifiedAt.addingTimeInterval(20)
+        let failedEngine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture,
+                transport: failingTransport, maximumAttempts: 1),
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedA })
+        let failedA = await failedEngine.run(action: .bootstrap, source: .rootForeground,
+            ownerUserID: fixture.ownerUserID)
+        let errorCodeA = try XCTUnwrap(failedA.errorCode)
+        XCTAssertEqual(failedA.status, .failed)
+        XCTAssertFalse(failedA.verifiedConvergence)
+        XCTAssertEqual(failedA.failure?.httpStatus, 503)
+        XCTAssertEqual(failedA.failure?.disposition, .transient)
+        XCTAssertEqual(failingTransport.counts().checkpoints, 1)
+        XCTAssertEqual(failingTransport.counts().pages, 0)
+        proof.stateStore.recordRunResult(failedA, now: completedA)
+        let diagnosticsA = AutomaticSyncDiagnosticsSnapshot(syncState: proof.stateStore.state,
+            pendingCount: 0, baselineSummary: .absent, ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertEqual(diagnosticsA.shopSourceText, shopA.name)
+        XCTAssertEqual(diagnosticsA.lastError, errorCodeA)
+        XCTAssertEqual(diagnosticsA.errorObservedAt, completedA)
+        _ = try XCTUnwrap(failedA.status == .failed && failedA.failure?.httpStatus == 503
+            && failingTransport.counts().checkpoints == 1
+            && diagnosticsA.lastError == errorCodeA && diagnosticsA.errorObservedAt == completedA
+            ? true : nil, "IOS_D01_ERROR_A_TRANSPORT_FAILURE_NOT_PUBLISHED_SCOPE_B_NOT_REACHED")
+        let callsA = failingTransport.counts()
+        let eventReadsA = proof.remote.eventReads.count
+        let catalogReadsA = proof.remote.catalogFetchCallCount
+        let reconciliationReadsA = proof.remote.reconciliationFetchCallCount
+
+        let shopB = SelectedShop(shopID: UUID(), code: "TASK145_D01_ERROR_B", name: "D01 error shop B",
+            role: "owner", status: "active", selectable: true, canWrite: true)
+        XCTAssertTrue(selection.save(shopB, accountHash: bindingA.accountHash))
+        XCTAssertTrue(binding.saveBinding(accountHash: bindingA.accountHash,
+            storeIdentity: shopB.localStoreIdentity))
+        XCTAssertEqual(selection.selectedShop(accountHash: bindingA.accountHash)?.shopID, shopB.shopID)
+        XCTAssertEqual(binding.currentBinding?.storeIdentity, shopB.localStoreIdentity)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, generationA)
+        _ = try XCTUnwrap(selection.selectedShop(accountHash: bindingA.accountHash)?.shopID == shopB.shopID
+            && binding.currentBinding?.storeIdentity.hasSameProvenance(as: shopB.localStoreIdentity) == true
+            ? true : nil, "IOS_D01_ERROR_SCOPE_B_NOT_RESOLVED_DIAGNOSTICS_NOT_REACHED")
+        let diagnosticsB = AutomaticSyncDiagnosticsSnapshot(syncState: proof.stateStore.state,
+            pendingCount: 0, baselineSummary: .absent, ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertEqual(diagnosticsB.shopSourceText, shopB.name)
+        XCTAssertNil(diagnosticsB.lastError,
+            "Diagnostics for resolved B must not attribute A's completed HTTP503 to B")
+        XCTAssertNil(diagnosticsB.errorObservedAt,
+            "B has no completed error observation; it must not borrow A's completion time")
+        let reopenedB = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        let reopenedDiagnosticsB = AutomaticSyncDiagnosticsSnapshot(syncState: reopenedB.state,
+            pendingCount: 0, baselineSummary: .absent, ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertEqual(reopenedDiagnosticsB.shopSourceText, shopB.name)
+        XCTAssertNil(reopenedDiagnosticsB.lastError)
+        XCTAssertNil(reopenedDiagnosticsB.errorObservedAt)
+        XCTAssertEqual(failingTransport.counts().checkpoints, callsA.checkpoints)
+        XCTAssertEqual(failingTransport.counts().pages, callsA.pages)
+        XCTAssertEqual(failingTransport.counts().tailPages, callsA.tailPages)
+        XCTAssertEqual(proof.remote.eventReads.count, eventReadsA)
+        XCTAssertEqual(proof.remote.catalogFetchCallCount, catalogReadsA)
+        XCTAssertEqual(proof.remote.reconciliationFetchCallCount, reconciliationReadsA)
+    }
+
+    // IOS-D01 proposal: A is fully published before B is selected. No held
+    // callback or new remote result is involved in this scope transition.
+    func testQualifiedSuccessDateDoesNotFollowAnotherShopOrReappearAfterStateReopen() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        let bindingA = try XCTUnwrap(binding.currentBinding)
+        let shopA = try XCTUnwrap(selection.selectedShop(accountHash: bindingA.accountHash))
+        let manifestA = try XCTUnwrap(fixture.controller.activeManifest)
+        let scopeA = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+
+        // The helper performed the real atomic recovery through the engine,
+        // then the real ordinary incremental pipeline minted this receipt.
+        XCTAssertEqual(manifestA.accountHash, scopeA.accountHash)
+        XCTAssertEqual(manifestA.shopID, scopeA.shopID)
+        XCTAssertEqual(manifestA.storeIdentity, scopeA.storeIdentity)
+        XCTAssertEqual(manifestA.deviceIdentityHash, scopeA.deviceIdentityHash)
+        XCTAssertEqual(manifestA.checkpoint.maxEventID, 41)
+        XCTAssertTrue(try fixture.controller.isActiveRecoveryFinalized(scope: scopeA))
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+        XCTAssertNotNil(proof.result.continuationReceipt)
+        XCTAssertFalse(proof.result.verifiedConvergence,
+            "Ordinary continuation must preserve, never manufacture, the earlier canonical success")
+        proof.stateStore.recordRunResult(proof.result, now: proof.verifiedAt.addingTimeInterval(10))
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        let prefix = "ri08.real-receipt"
+        let reopenedA = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        XCTAssertEqual(reopenedA.state.lastVerifiedAt, proof.verifiedAt)
+        _ = try XCTUnwrap(proof.stateStore.state.phase == .idle
+            && proof.stateStore.state.lastVerifiedAt == proof.verifiedAt
+            && reopenedA.state.lastVerifiedAt == proof.verifiedAt ? true : nil,
+            "IOS_D01_A_SUCCESS_NOT_QUALIFIED_SCOPE_TRANSITION_NOT_REACHED")
+        let readsA = proof.remote.eventReads.count
+        let catalogReadsA = proof.remote.catalogFetchCallCount
+        let reconciliationReadsA = proof.remote.reconciliationFetchCallCount
+
+        let shopB = SelectedShop(shopID: UUID(), code: "TASK145_D01_B", name: "D01 shop B",
+            role: "owner", status: "active", selectable: true, canWrite: true)
+        XCTAssertTrue(selection.save(shopB, accountHash: bindingA.accountHash))
+        XCTAssertTrue(binding.saveBinding(accountHash: bindingA.accountHash,
+            storeIdentity: shopB.localStoreIdentity))
+        XCTAssertEqual(fixture.defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
+            bindingA.accountHash)
+        XCTAssertEqual(selection.selectedShop(accountHash: bindingA.accountHash)?.shopID, shopB.shopID)
+        XCTAssertEqual(binding.currentBinding?.storeIdentity, shopB.localStoreIdentity)
+        XCTAssertNotEqual(shopB.localStoreIdentity, manifestA.storeIdentity)
+        // Physical generation A remains preserved; B has no convergence proof.
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, manifestA.generationID)
+
+        XCTAssertNil(proof.stateStore.state.lastVerifiedAt,
+            "A's completed success date must not be presented as B's last success")
+        let reopenedB = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        XCTAssertNil(reopenedB.state.lastVerifiedAt,
+            "Recreating presentation state in B must not rehydrate A's versioned but unscoped date")
+        XCTAssertEqual(proof.remote.eventReads.count, readsA)
+        XCTAssertEqual(proof.remote.catalogFetchCallCount, catalogReadsA)
+        XCTAssertEqual(proof.remote.reconciliationFetchCallCount, reconciliationReadsA)
+        XCTAssertEqual(shopA.shopID, manifestA.shopID)
+    }
+
+    func testTransientRecoveryBudgetRenewsAfterFiveMinutesWithoutExplicitRetry() async throws {
+        try await assertRecoveryWindowReentry(failure: "timeout", changedOwner: false)
+    }
+
+    func testStableRecoveryFailureDoesNotRenewBudgetJustBecauseTimePasses() async throws {
+        try await assertRecoveryWindowReentry(failure: "invalid-checkpoint", changedOwner: false)
+    }
+
+    func testUnknownRecoveryFailureDoesNotRenewBudgetJustBecauseTimePasses() async throws {
+        try await assertRecoveryWindowReentry(failure: "unknown", changedOwner: false)
+    }
+
+    func testExhaustedRecoveryCannotResumeAfterOwnerScopeChanges() async throws {
+        try await assertRecoveryWindowReentry(failure: "timeout", changedOwner: true)
+    }
+
+    func testRecoveryTimerCoalescesForegroundSignalsAndRenewsWithoutAnotherTrigger() async throws {
+        try await assertSingleRecoveryTimer(scopeChange: "none")
+    }
+
+    func testRecoveryTimerRejectsOwnerChangeRevocationAndStop() async throws {
+        for scopeChange in ["owner", "revoked", "stopped"] {
+            try await assertSingleRecoveryTimer(scopeChange: scopeChange)
+        }
+    }
+
+    func testHeldVerifiedRecoveryCannotPublishAfterOwnerOrShopAuthorityChanges() async throws {
+        for change in ["owner", "shop"] { try await assertHeldVerifiedCompletion(change: change) }
+    }
+
+    func testHeldVerifiedRecoveryCannotPublishAfterBindingStoreEpochChangesInSameOwnerShopAndDevice() async throws {
+        try await assertHeldVerifiedCompletion(change: "binding-epoch")
+    }
+
+    func testHeldVerifiedRecoveryPublishesForSameEntityAfterLegitimateLeaseReplacement() async throws {
+        try await assertHeldVerifiedCompletion(change: "same-entity")
+    }
+
+    func testRejectedHeldTerminalReleasesOnlyItsForegroundSlotAndCoalescesNextAdmission() async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initialBinding = try XCTUnwrap(binding.currentBinding)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        let initialShop = try XCTUnwrap(selection.selectedShop(accountHash: initialBinding.accountHash))
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity, reason: "TASK145_REJECTED_TERMINAL_LIVENESS",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let prefix = "task145.rejected-terminal-liveness"
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        state.recordRunResult(.recoveryRequired())
+        let originalContainer = fixture.controller.modelContainer
+        let originalLease = try XCTUnwrap(fixture.controller.captureLease(for: originalContainer))
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-terminal-liveness")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint])
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let facade = AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+            catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: nil, recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(originalLease) } })
+        let terminalHeld = expectation(description: "Real verified A is held after facade completion")
+        let initialRuntime = Task145HeldTerminalRuntime(facade: facade, entered: terminalHeld)
+        defer { initialRuntime.release() }
+        let nextEntered = expectation(description: "A new legitimate ordinary trigger enters admission B")
+        let runtime = Task145LivenessAdmissionRuntime(initial: initialRuntime, nextEntered: nextEntered)
+        defer { runtime.releaseNext() }
+        let provider = Task145CurrentGenerationDecisionProvider(controller: fixture.controller, defaults: fixture.defaults)
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: originalLease,
+            defaults: fixture.defaults, decisionInputProvider: provider,
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [terminalHeld], timeout: 2)
+        XCTAssertTrue(initialRuntime.heldResult?.verifiedConvergence == true)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertFalse(fixture.controller.modelContainer === originalContainer)
+        XCTAssertThrowsError(try fixture.controller.validateLease(originalLease))
+        let counts = transport.counts()
+
+        let shopB = SelectedShop(shopID: UUID(), code: "TASK145_LIVENESS_B", name: "Liveness scope B",
+            role: "owner", status: "active", selectable: true, canWrite: true)
+        XCTAssertTrue(selection.save(shopB, accountHash: initialBinding.accountHash))
+        XCTAssertTrue(binding.saveBinding(accountHash: initialBinding.accountHash, storeIdentity: shopB.localStoreIdentity))
+        // This is an actual admission failure with the retired physical lease,
+        // never a fabricated cloud success for the next entity.
+        let deniedB = await facade.run(action: .lightReconcile, source: .rootForeground)
+        XCTAssertEqual(deniedB.status, .failed)
+        XCTAssertFalse(deniedB.verifiedConvergence)
+        orchestrator.handleShopContextChanged()
+        state.recordRunResult(deniedB)
+        let stateB = state.state
+        let bytesB = fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2")
+        let noOldPublication = expectation(description: "Rejected A cannot publish over B")
+        noOldPublication.isInverted = true
+        let observation = state.objectWillChange.sink { noOldPublication.fulfill() }
+        initialRuntime.release()
+        await fulfillment(of: [noOldPublication], timeout: 2)
+        observation.cancel()
+        XCTAssertTrue(initialRuntime.didReturn)
+        XCTAssertEqual(state.state, stateB)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), bytesB)
+
+        XCTAssertTrue(selection.save(initialShop, accountHash: initialBinding.accountHash))
+        XCTAssertTrue(binding.saveBinding(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity))
+        fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let qualified = await fixture.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(qualified)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        let nextSnapshot = await provider.makeSnapshot(triggerSource: .rootForeground,
+            isAuthenticated: auth.viewModel.isSignedIn, ownerUserID: fixture.ownerUserID, isSyncBusy: false)
+        XCTAssertTrue(nextSnapshot.accountBindingMatches && nextSnapshot.isNetworkAvailable)
+        XCTAssertFalse(nextSnapshot.hasStateReadFailure)
+        let currentLease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        XCTAssertNoThrow(try fixture.controller.validateLease(currentLease))
+
+        // The same orchestrator still owns its retired physical lease. This
+        // witness stops at runtime admission B, before that facade boundary;
+        // it proves slot liveness and coalescing, not another cloud PASS.
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [nextEntered], timeout: 2)
+        XCTAssertEqual(runtime.runCount, 2)
+        XCTAssertTrue(runtime.isNextHeld)
+        guard runtime.isNextHeld else {
+            return XCTFail("A rejected terminal result stranded its completed foreground task")
+        }
+        orchestrator.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
+        orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(runtime.runCount, 2, "Repeated signals must not consume the held successor slot")
+        XCTAssertEqual(transport.counts().checkpoints, counts.checkpoints)
+        XCTAssertEqual(transport.counts().pages, counts.pages)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        XCTAssertNil(state.state.lastVerifiedAt)
+        orchestrator.stop()
+        runtime.releaseNext()
+    }
+
+    private func assertHeldVerifiedCompletion(change: String) async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initialBinding = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity, reason: "TASK145_HELD_TERMINAL_RESULT",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let prefix = "task145.held-terminal.\(change)"
+        let clock = Task145RecoveryClock(Date(timeIntervalSince1970: 130_000))
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        state.recordRunResult(.recoveryRequired(), now: clock.value)
+        let originalContainer = fixture.controller.modelContainer
+        let originalLease = try XCTUnwrap(fixture.controller.captureLease(for: originalContainer))
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-held-terminal")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint])
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let entered = expectation(description: "A real verified terminal result is held outside the facade/engine")
+        let runtime = Task145HeldTerminalRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(originalLease) } }),
+            entered: entered)
+        defer { runtime.release() }
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: originalLease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value })
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [entered], timeout: 2)
+        let terminal = try XCTUnwrap(runtime.heldResult)
+        XCTAssertEqual(terminal.status, .success)
+        XCTAssertTrue(terminal.verifiedConvergence)
+        let originalObservation = try XCTUnwrap(terminal.observation)
+        XCTAssertTrue(originalObservation.completedAt.isFinite && originalObservation.completedAt > 0)
+        XCTAssertTrue(originalObservation.matches(terminal))
+        let completionDate = Date(timeIntervalSince1970: originalObservation.completedAt)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertEqual(originalObservation.origin.generationID, manifest.generationID)
+        XCTAssertTrue(originalObservation.origin.isCurrent(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID))
+        XCTAssertFalse(fixture.controller.modelContainer === originalContainer)
+        XCTAssertThrowsError(try fixture.controller.validateLease(originalLease),
+            "The positive control must traverse a genuinely replaced lease")
+        let publishedLease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        XCTAssertNoThrow(try fixture.controller.validateLease(publishedLease))
+        let counts = transport.counts()
+        XCTAssertGreaterThan(counts.checkpoints, 0)
+        XCTAssertNil(state.state.lastVerifiedAt, "The wrapper holds the result before presentation publication")
+
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        if change == "owner" {
+            let newAccount = AccountBindingStore.accountHash(for: UUID())
+            let otherShop = SelectedShop(shopID: UUID(), code: "TASK145_OWNER_B", name: "Owner B shop",
+                role: "owner", status: "active", selectable: true, canWrite: true)
+            selection.noteActiveAccount(newAccount)
+            XCTAssertTrue(selection.save(otherShop, accountHash: newAccount))
+            XCTAssertTrue(binding.saveBinding(accountHash: newAccount, storeIdentity: otherShop.localStoreIdentity))
+            orchestrator.handleAuthPresentationChanged()
+        } else if change == "shop" {
+            let otherShop = SelectedShop(shopID: UUID(), code: "TASK145_SHOP_B", name: "Shop B",
+                role: "owner", status: "active", selectable: true, canWrite: true)
+            XCTAssertTrue(selection.save(otherShop, accountHash: initialBinding.accountHash))
+            XCTAssertTrue(binding.saveBinding(accountHash: initialBinding.accountHash,
+                storeIdentity: otherShop.localStoreIdentity))
+            orchestrator.handleShopContextChanged()
+        } else if change == "binding-epoch" {
+            let before = try XCTUnwrap(binding.currentBinding)
+            let origin = before.storeIdentity
+            let scopeBeforeEpochChange = try Task126OwnerStoreGate.captureAutomaticScope(
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+            XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(
+                scopeBeforeEpochChange, defaults: fixture.defaults))
+            let successor = LocalStoreIdentity(rawValue: origin.rawValue,
+                defaultStoreId: origin.defaultStoreId, localStoreId: origin.localStoreId,
+                schemaVersion: origin.schemaVersion, syncProtocolVersion: origin.syncProtocolVersion,
+                storeEpoch: origin.storeEpoch + 1)
+            // The canonical binding writer invalidates the automatic scope
+            // fence. Keep owner/shop/device and raw store ID unchanged.
+            XCTAssertTrue(binding.saveBinding(accountHash: before.accountHash,
+                storeIdentity: successor, boundAt: before.boundAt))
+            let decoded = try XCTUnwrap(binding.currentBinding)
+            XCTAssertEqual(decoded.accountHash, before.accountHash)
+            XCTAssertEqual(decoded.storeIdentity.rawValue, origin.rawValue)
+            XCTAssertEqual(decoded.storeIdentity.defaultStoreId, origin.defaultStoreId)
+            XCTAssertEqual(decoded.storeIdentity.localStoreId, origin.localStoreId)
+            XCTAssertEqual(decoded.storeIdentity.schemaVersion, origin.schemaVersion)
+            XCTAssertEqual(decoded.storeIdentity.syncProtocolVersion, origin.syncProtocolVersion)
+            XCTAssertEqual(decoded.storeIdentity.storeEpoch, origin.storeEpoch + 1)
+            XCTAssertNotEqual(decoded.storeIdentity.storeEpoch, manifest.storeIdentity.storeEpoch,
+                "The decoded full store identity must actually differ from A's finalized generation")
+            XCTAssertEqual(selection.selectedShop(accountHash: before.accountHash)?.shopID, fixture.shopID)
+            XCTAssertEqual(auth.viewModel.sessionInfo?.userID, fixture.ownerUserID)
+            XCTAssertEqual(try DeviceInstallIDStore(defaults: fixture.defaults).requireDeviceInstallID(),
+                fixture.deviceInstallID)
+            XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(
+                scopeBeforeEpochChange, defaults: fixture.defaults),
+                "The canonical epoch mutation must retire the previously admitted automatic scope")
+            let bodyStillQualified = Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer)
+            XCTAssertTrue(bodyStillQualified, "This case must not be rejected merely because the physical body proof was removed")
+            guard decoded.storeIdentity.storeEpoch == origin.storeEpoch + 1,
+                  decoded.storeIdentity.storeEpoch != manifest.storeIdentity.storeEpoch,
+                  bodyStillQualified else {
+                return XCTFail("NOT_TRAVERSED: the full-epoch change and retained physical body proof were not established")
+            }
+            orchestrator.handleShopContextChanged()
+        } else {
+            // Cancellation after durable completion remains valid when the
+            // same authorized entity owns the freshly published generation.
+            orchestrator.cancelForegroundCheck()
+        }
+        if change == "same-entity" {
+            // The canonical date belongs to the original engine completion,
+            // even when the held callback is deliberately published later.
+            clock.value = completionDate.addingTimeInterval(10)
+            XCTAssertNotEqual(clock.value, completionDate)
+        } else {
+            clock.value = clock.value.addingTimeInterval(10)
+        }
+        if change != "same-entity" {
+            state.recordRunResult(.failed(errorCode: "TEST_CURRENT_SCOPE_B"),
+                preserveRecoveryRequired: true, now: clock.value)
+        }
+        let stateB = state.state
+        let persistedB = NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("\(prefix).") })
+        let currentBinding = binding.currentBinding
+        let published = expectation(description: "Only a current entity may publish the held verified result")
+        published.isInverted = change != "same-entity"
+        let observation = state.objectWillChange.sink { published.fulfill() }
+        defer { observation.cancel() }
+        runtime.release()
+        await fulfillment(of: [published], timeout: 2)
+        XCTAssertTrue(runtime.didReturn)
+        XCTAssertEqual(runtime.runCount, 1)
+        XCTAssertEqual(transport.counts().checkpoints, counts.checkpoints)
+        XCTAssertEqual(transport.counts().pages, counts.pages)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        XCTAssertEqual(binding.currentBinding, currentBinding)
+        if change == "binding-epoch" {
+            XCTAssertEqual(binding.currentBinding?.storeIdentity.storeEpoch,
+                currentBinding?.storeIdentity.storeEpoch,
+                "A's retired callback cannot rewrite B's decoded full store identity")
+        }
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        if change == "same-entity" {
+            XCTAssertEqual(state.state.phase, .idle)
+            XCTAssertEqual(state.state.lastVerifiedAt, completionDate)
+            let proofData = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"))
+            let proofRecord = try XCTUnwrap(JSONSerialization.jsonObject(with: proofData) as? [String: Any])
+            XCTAssertEqual(proofRecord["schemaVersion"] as? Int, 2)
+            XCTAssertEqual(proofRecord["verifiedAt"] as? Double, originalObservation.completedAt)
+            XCTAssertNil(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+        } else {
+            XCTAssertEqual(state.state, stateB, "The held result A cannot overwrite the current scope B")
+            XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+                .filter { $0.key.hasPrefix("\(prefix).") }), persistedB,
+                "Timestamps, proof and retry metadata of B must remain unchanged")
+        }
+    }
+
+    func testHugeRetryAfterUsesConvertibleSleepChunkWithoutAnticipatingDurableDeadline() async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initialBinding = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity, reason: "TASK145_HUGE_RETRY_AFTER",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+        let prefix = "task145.huge-retry-after"
+        let clock = Task145RecoveryClock(Date(timeIntervalSince1970: 110_000))
+        let serverMinimum: TimeInterval = 20_000_000_000
+        let serverDeadline = clock.value.addingTimeInterval(serverMinimum)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, retryJitter: { 1 }, storeGenerationController: fixture.controller)
+        let claim = state.claimAutomaticRecoveryAttempt(identity: identity, now: clock.value)
+        XCTAssertEqual(claim?.attemptInWindow, 1)
+        state.recordRunResult(.failed(errorCode: "HTTP429",
+            failure: .http(status: 429, retryAfterUntil: serverDeadline)),
+            preserveRecoveryRequired: true, automaticRecoveryClaim: claim, now: clock.value)
+        let budget = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+        XCTAssertEqual(state.automaticRecoveryAttemptEligibility(identity: identity, now: clock.value),
+            .cooldown(serverMinimum))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-huge-retry-after")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint])
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults))
+        let entered = expectation(description: "Observe the sleep argument without performing a potentially trapping conversion")
+        let sleeper = Task145RecoverySleeper(entered: entered)
+        defer { sleeper.release() }
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value },
+            foregroundRetryDelay: { delay in await sleeper.wait(delay) })
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [entered], timeout: 2)
+        let firstChunk = try XCTUnwrap(sleeper.delays.first)
+        XCTAssertGreaterThan(firstChunk, 0)
+        XCTAssertLessThanOrEqual(firstChunk, Double(UInt64.max) / 1_000_000_000 - 1,
+            "The default sleeper must receive a nanosecond-convertible chunk, not the full server minimum")
+        let relaunched = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        XCTAssertEqual(relaunched.automaticRecoveryAttemptEligibility(identity: identity,
+            now: serverDeadline.addingTimeInterval(-1)), .cooldown(1))
+        XCTAssertNil(relaunched.beginAutomaticRecoveryAttempt(identity: identity,
+            now: serverDeadline.addingTimeInterval(-1)))
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budget,
+            "Chunking must preserve the original deadline rather than capping Retry-After")
+        orchestrator.stop()
+        sleeper.release()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(transport.counts().checkpoints, 0)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budget)
+    }
+
+    func testLegacyExhaustedRecoveryBudgetNeverAutomaticallyReplaysOrMutatesRealLocalBody() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let originalBinding = try XCTUnwrap(binding.currentBinding)
+        let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: proof.scope.accountHash,
+            storeIdentity: manifest.storeIdentity, reason: "TASK145_LEGACY_WRITER_FIXTURE",
+            deviceIdentityHash: proof.scope.deviceIdentityHash))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+        let prefix = "task145.legacy-real-orchestrator"
+        let legacyBytes = try JSONSerialization.data(withJSONObject: [
+            "schemaVersion": 1, "identity": identity, "attemptCount": 3,
+            "nextAllowedAt": Date().addingTimeInterval(-3_600).timeIntervalSince1970
+        ])
+        fixture.defaults.set(legacyBytes, forKey: "\(prefix).automaticRecoveryAttempt.v1")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        state.recordRunResult(.recoveryRequired())
+        fixture.defaults.set("HTTP500 timeout networkError", forKey: "\(prefix).lastRunErrorCode")
+        let bodyBefore = try completedRecoveryBusinessSnapshot(fixture)
+        let storeURL = try XCTUnwrap(fixture.controller.modelContainer.configurations.first?.url)
+        let storeBytes = try Data(contentsOf: storeURL)
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint], productRows: [ordinaryContinuationProduct(
+                fixture: fixture, id: proof.productID, stock: 0)])
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+        let neverRuns = expectation(description: "Legacy error text does not authorize remote replay")
+        neverRuns.isInverted = true
+        runtime.expectedCompletions = [neverRuns]
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect, .foregroundPoll] {
+            orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+        }
+        await fulfillment(of: [neverRuns], timeout: 2)
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(transport.counts().checkpoints, 0)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        XCTAssertEqual(binding.currentBinding, originalBinding)
+        XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+        XCTAssertEqual(fixture.controller.activeManifest, manifest)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), bodyBefore)
+        XCTAssertEqual(try Data(contentsOf: storeURL), storeBytes)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v1"), legacyBytes)
+        XCTAssertEqual(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode"), "HTTP500 timeout networkError")
+        XCTAssertNil(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+        XCTAssertEqual(state.state.phase, .recoveryRequired)
+    }
+
+    private func assertSingleRecoveryTimer(scopeChange: String) async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initialBinding = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity, reason: "TASK145_TIMER_SYNTHETIC",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: try XCTUnwrap(binding.pendingRecoveryJournal))
+        let prefix = "task145.single-timer.\(scopeChange)"
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, retryJitter: { 1 }, storeGenerationController: fixture.controller)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-single-timer")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint], checkpointMutation: { call in
+                if call <= 3 { throw URLError(.timedOut) }
+            })
+        let recovery = makeService(fixture: fixture, transport: transport, maximumAttempts: 1)
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil, recoverySnapshotPullProvider: recovery,
+            activityRegistrationProvider: nil, defaults: fixture.defaults)
+        let completedAt = Date(timeIntervalSince1970: 70_006)
+        for (attempt, offset) in [(1, -6.0), (2, -4.0), (3, 0.0)] {
+            let attemptAt = completedAt.addingTimeInterval(offset)
+            let claim = state.claimAutomaticRecoveryAttempt(identity: identity, now: attemptAt)
+            XCTAssertEqual(claim?.attemptInWindow, attempt)
+            let failure = await engine.run(action: .bootstrap, source: .rootForeground, ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(failure.status, .failed)
+            state.recordRunResult(failure, preserveRecoveryRequired: true, automaticRecoveryClaim: claim, now: attemptAt)
+        }
+        XCTAssertEqual(transport.counts().checkpoints, 3)
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let budget = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+        let clock = Task145RecoveryClock(completedAt)
+        let entered = expectation(description: "One future opportunity is scheduled")
+        let sleeper = Task145RecoverySleeper(entered: entered)
+        defer { sleeper.release() }
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil, recoverySnapshotPullProvider: recovery,
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value },
+            foregroundRetryDelay: { delay in await sleeper.wait(delay) })
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [entered], timeout: 2)
+        XCTAssertEqual(sleeper.delays, [300])
+        orchestrator.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
+        clock.value = completedAt.addingTimeInterval(299.999)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        XCTAssertEqual(sleeper.delays, [300], "Signals in one scope must share the existing timer")
+        XCTAssertTrue(runtime.actions.isEmpty)
+        XCTAssertEqual(transport.counts().checkpoints, 3)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budget)
+        if scopeChange == "owner" {
+            SelectedShopStore(defaults: fixture.defaults).noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+        } else if scopeChange == "revoked" {
+            XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(
+                .init(status: "revoked", code: "TASK145_DENIAL", canWrite: false,
+                    serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "none", checkedAt: Date()),
+                ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        } else if scopeChange == "stopped" { orchestrator.stop() }
+        let finished = expectation(description: "Timer alone reenters only its current authorized scope")
+        finished.isInverted = scopeChange != "none"
+        runtime.expectedCompletions = [finished]
+        clock.value = completedAt.addingTimeInterval(300)
+        sleeper.release()
+        await fulfillment(of: [finished], timeout: 2)
+        XCTAssertEqual(sleeper.delays, [300])
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        if scopeChange == "none" {
+            XCTAssertEqual(runtime.results.count, 1)
+            XCTAssertFalse(runtime.sources.contains(.releaseCard))
+            XCTAssertTrue(runtime.results.first?.verifiedConvergence == true)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertNotNil(fixture.controller.activeManifest)
+        } else {
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(transport.counts().checkpoints, 3)
+            XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+            XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budget)
+            XCTAssertNil(fixture.controller.activeManifest)
+        }
+    }
+
+    private func assertRecoveryWindowReentry(failure: String, changedOwner: Bool) async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initialBinding = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initialBinding.accountHash,
+            storeIdentity: initialBinding.storeIdentity, reason: "TASK145_SYNTHETIC_RETRY_WINDOW",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+        let prefix = "task145.retry-window.\(failure).\(changedOwner)"
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-retry-window")
+        let attemptLimit = failure == "timeout" ? 3 : 1
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint], checkpointMutation: { call in
+                if call <= attemptLimit {
+                    if failure == "timeout" { throw URLError(.timedOut) }
+                    if failure == "unknown" { throw URLError(.badURL) }
+                    throw ShopSyncRecoveryContractError.invalidCheckpoint
+                }
+            })
+        let recovery = makeService(fixture: fixture, transport: transport, maximumAttempts: 1)
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: recovery, activityRegistrationProvider: nil,
+            defaults: fixture.defaults)
+        // Transient failures consume all three attempts; a stable/unknown
+        // failure stops after one. Only their timestamps are controlled; no
+        // user defaults
+        // record is fabricated and no explicit Retry resets the window.
+        let startedAt = Date().addingTimeInterval(-600)
+        for attempt in 1...attemptLimit {
+            let attemptAt = startedAt.addingTimeInterval(Double((attempt - 1) * 10))
+            let claim = state.claimAutomaticRecoveryAttempt(identity: identity, now: attemptAt)
+            XCTAssertEqual(claim?.attemptInWindow, attempt)
+            let result = await engine.run(action: .bootstrap, source: .rootForeground,
+                ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(result.status, .failed, "The controlled transport must actually fail before reentry")
+            state.recordRunResult(result, preserveRecoveryRequired: true,
+                automaticRecoveryClaim: claim, now: attemptAt.addingTimeInterval(1))
+        }
+        XCTAssertEqual(transport.counts().checkpoints, attemptLimit)
+        XCTAssertNotNil(binding.pendingRecoveryJournal)
+        XCTAssertNil(fixture.controller.activeManifest)
+        let completedAt = Date(timeIntervalSince1970: fixture.defaults.double(forKey: "\(prefix).lastRunCompletedAt"))
+        XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(completedAt), 300)
+        let budgetBefore = fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2")
+        XCTAssertNotNil(budgetBefore)
+
+        // Reconstruct the presentation store to include the durable-relaunch
+        // boundary, then submit the ordinary foreground event, never a CTA.
+        let relaunchedState = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+        XCTAssertEqual(relaunchedState.state.phase, .recoveryRequired)
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        if changedOwner {
+            SelectedShopStore(defaults: fixture.defaults).noteActiveAccount(
+                AccountBindingStore.accountHash(for: UUID()))
+        }
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: recovery, activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+        let shouldResume = failure == "timeout" && !changedOwner
+        let finished = expectation(description: "Only transient current-scope recovery renews after five minutes")
+        finished.isInverted = !shouldResume
+        runtime.expectedCompletions = [finished]
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: relaunchedState, storeGenerationController: fixture.controller,
+            storeGenerationLease: lease, defaults: fixture.defaults,
+            decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [finished], timeout: 2)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+        if shouldResume {
+            XCTAssertEqual(runtime.results.count, 1)
+            XCTAssertEqual(runtime.sources, [.rootForeground])
+            XCTAssertTrue(runtime.results.first?.verifiedConvergence == true)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertNotNil(fixture.controller.activeManifest)
+            XCTAssertEqual(relaunchedState.state.phase, .idle)
+            XCTAssertGreaterThan(transport.counts().checkpoints, attemptLimit)
+        } else {
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(transport.counts().checkpoints, attemptLimit)
+            XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+            XCTAssertNil(fixture.controller.activeManifest)
+            XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budgetBefore)
+        }
+    }
+
     func testEmptyRootActiveCatchupPreservesValidProofAndRejectsStoppedOrForeignAuthority() async throws {
         for change in ["valid", "stopped", "cancelled", "shop", "device", "journal", "denial"] {
             let fixture = try makeFixture()
@@ -15,7 +939,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             let originalBinding = try XCTUnwrap(binding.currentBinding)
             let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
             defer { auth.close() }
-            let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-negative.\(change)")
+            let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-negative.\(change)", storeGenerationController: fixture.controller)
             state.recordRunResult(.recoveryRequired())
             let phase = state.state.phase
             let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-active-negative")
@@ -129,7 +1053,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let originalBinding = try XCTUnwrap(binding.currentBinding)
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
         defer { auth.close() }
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-catchup")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-active-catchup", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let phase = state.state.phase
         let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-active-catchup")
@@ -338,7 +1262,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
         defer { auth.close() }
         XCTAssertTrue(auth.viewModel.isSignedIn)
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-postpublication-fence")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-postpublication-fence", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let phase = state.state.phase
         let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-postpublication-fence")
@@ -511,7 +1435,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
         defer { auth.close() }
         XCTAssertTrue(auth.viewModel.isSignedIn)
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-hidden-fence")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.empty-hidden-fence", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let phase = state.state.phase
         let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "empty-hidden-fence")
@@ -1050,7 +1974,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let auth = try RI08SyntheticAuth(ownerUserID: reopened.ownerUserID)
         defer { auth.close() }
         XCTAssertTrue(auth.viewModel.isSignedIn)
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-refresh")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-refresh", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let phaseBefore = state.state.phase
         let runtime = makeOrdinaryRuntime(fixture: reopened, auth: auth, remote: proof.remote)
@@ -1179,7 +2103,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let auth = try RI08SyntheticAuth(ownerUserID: reopened.ownerUserID)
         defer { auth.close() }
         XCTAssertTrue(auth.viewModel.isSignedIn)
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-refresh-after-false")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-refresh-after-false", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let phaseBefore = state.state.phase
         let runtime = makeOrdinaryRuntime(fixture: reopened, auth: auth, remote: proof.remote)
@@ -1460,7 +2384,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         defer { readbackGate.release() }
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
         defer { auth.close() }
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-journal-progress")
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "task144.manifest-journal-progress", storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         var observedPhase = state.state.phase
         var qualificationStarts = 0
@@ -1779,7 +2703,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         defer { auth.close() }
         XCTAssertTrue(auth.viewModel.isSignedIn)
         let prefix = "task144.populated-qualification-resume.\(change)"
-        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
         state.recordRunResult(.recoveryRequired())
         let lease = try XCTUnwrap(controller.captureLease(for: container))
         let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
@@ -1808,7 +2732,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let premature = expectation(description: "No runtime attempt before actual body proof: \(change)")
         premature.isInverted = true
         runtime.expectedCompletions = [premature]
-        let budgetKey = "\(prefix).automaticRecoveryAttempt.v1"
+        let budgetKey = "\(prefix).automaticRecoveryAttempt.v2"
         let budgetBefore = fixture.defaults.data(forKey: budgetKey)
         await orchestrator.bootstrap(scenePhase: .active)
         await fulfillment(of: [premature], timeout: 2)
@@ -1836,10 +2760,17 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
             let past = Date().addingTimeInterval(-100)
             for attempt in 1...3 {
-                XCTAssertEqual(state.beginAutomaticRecoveryAttempt(identity: identity,
-                    now: past.addingTimeInterval(Double(attempt * 10))), attempt)
+                let attemptedAt = past.addingTimeInterval(Double(attempt * 10))
+                let claim = state.claimAutomaticRecoveryAttempt(identity: identity, now: attemptedAt)
+                XCTAssertEqual(claim?.attemptInWindow, attempt)
+                state.recordRunResult(.blocked(.networkUnavailable), preserveRecoveryRequired: true,
+                    automaticRecoveryClaim: claim, now: attemptedAt)
             }
-            XCTAssertEqual(state.automaticRecoveryAttemptEligibility(identity: identity), .exhausted)
+            // The previous fixture intentionally has a closed window less
+            // than five minutes old; it must not resume at body publication.
+            guard case .cooldown = state.automaticRecoveryAttemptEligibility(identity: identity) else {
+                return XCTFail("Expected the durable exhausted-window cooldown")
+            }
         }
         let budgetAtPublication = fixture.defaults.data(forKey: budgetKey)
         let editingToken = UUID()
@@ -2082,12 +3013,14 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             let beforeRun: @MainActor () async throws -> Void
             let isTerminal: @MainActor (SyncAutomaticRunResult) -> Bool
             let finished: XCTestExpectation
+            let firstResult: XCTestExpectation
+            private(set) var firstResultValue: SyncAutomaticRunResult?
             private(set) var finalizationFailed = false
             private var fulfilled = false
             init(underlying: RI08ObservedRealRuntime, finished: XCTestExpectation,
-                 isTerminal: @escaping @MainActor (SyncAutomaticRunResult) -> Bool,
+                 firstResult: XCTestExpectation, isTerminal: @escaping @MainActor (SyncAutomaticRunResult) -> Bool,
                  beforeRun: @escaping @MainActor () async throws -> Void) {
-                self.underlying = underlying; self.finished = finished
+                self.underlying = underlying; self.finished = finished; self.firstResult = firstResult
                 self.isTerminal = isTerminal; self.beforeRun = beforeRun
             }
             var isRunning: Bool { underlying.isRunning }
@@ -2095,6 +3028,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 do { try await beforeRun() }
                 catch { finalizationFailed = true; return .failed(errorCode: "test_finalizer_failed") }
                 let result = await underlying.run(action: action, source: source)
+                if firstResultValue == nil {
+                    firstResultValue = result
+                    firstResult.fulfill()
+                }
                 if !fulfilled, isTerminal(result) { fulfilled = true; finished.fulfill() }
                 return result
             }
@@ -2132,6 +3069,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(journal.mode, .sameScopeRecovery)
             XCTAssertEqual(journal.generationID, manifest.generationID)
             proof.stateStore.recordRunResult(.recoveryRequired())
+            fixture.controller.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+            let bodyQualified = await fixture.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(bodyQualified, "The race must begin with a physically qualified current body")
+            XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(originalContainer))
+            guard bodyQualified else { return XCTFail("NOT_TRAVERSED: physical qualification failed before runtime admission") }
             let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
             defer { auth.close() }
             let decisionProvider = completedRecoveryDecisionProvider(fixture)
@@ -2168,8 +3110,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } })
             let observed = RI08ObservedRealRuntime(facade: facade)
             let finished = expectation(description: "The real automatic plan finishes after prior journal completion")
+            let journalFinalized = expectation(description: "beforeRun really completes the same-entity journal")
+            let firstResult = expectation(description: "The first actual facade/engine result is observed")
             var completion: SyncRecoverySnapshotPullSummary?
-            let runtime = CompletingRuntime(underlying: observed, finished: finished, isTerminal: { result in
+            let runtime = CompletingRuntime(underlying: observed, finished: finished, firstResult: firstResult, isTerminal: { result in
                 (result.status == .success || result.status == .noWork)
                     && proof.remote.catalogPushCallCount == 1 && proof.remote.recordRequests.count == 1
             }) {
@@ -2201,6 +3145,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 XCTAssertEqual(finalizerTransport.counts().pages, 0)
                 XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
                 XCTAssertEqual(proof.remote.recordRequests.count, 0)
+                journalFinalized.fulfill()
             }
             let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
                 activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
@@ -2208,8 +3153,14 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 storeGenerationLease: lease, defaults: fixture.defaults, decisionInputProvider: decisionProvider,
                 backgroundScheduler: SyncNoopBackgroundTaskScheduler())
             defer { orchestrator.stop() }
+            orchestrator.handleScenePhaseChanged(.active)
             orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
-            await fulfillment(of: [finished], timeout: 2)
+            await fulfillment(of: [journalFinalized, firstResult, finished], timeout: 2)
+            if let first = runtime.firstResultValue {
+                print("TASK145_COMPLETED_JOURNAL_FIRST_RESULT source=\(source.rawValue) status=\(first.status.rawValue) error=\(first.errorCode ?? "none") beforeRun-finalized=\(completion?.completedRecoveryJournal == true)")
+                XCTAssertTrue(first.status == .success || first.status == .noWork,
+                    "The qualified same-entity finalized plan must not fail its first runtime admission: \(first.errorCode ?? "none")")
+            } else { XCTFail("NOT_TRAVERSED: no first runtime outcome after qualified admission") }
 
             // Read the original file-backed container with a fresh context:
             // a replacement cannot conceal whether real ACK/outbox succeeded.
@@ -3905,6 +4856,84 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(try read.fetchCount(FetchDescriptor<ProductPrice>()), 2)
         XCTAssertEqual(final.controller.activeManifest?.localVerification.prices, checkpoint.prices)
     }
+    func testCommittedPricePrefixResumesSameGenerationAfterTypedTimeoutThroughRealAdapterAndReopen() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let prices = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"].map { rawID in
+            RemoteInventoryProductPriceRow(id: UUID(uuidString: rawID)!, ownerUserID: fixture.ownerUserID,
+                shopID: fixture.shopID, productID: product.id, type: "RETAIL", price: 12.34,
+                priceCanonical: "12.34", effectiveAt: "2026-07-21 12:00:00", source: "fixture", note: nil,
+                createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "accepted-price-prefix-typed-timeout", products: [product], prices: prices)
+        let timeout = AutomaticSyncFailure.classify(URLError(.timedOut))
+        var failedSecondPage = false
+        var acceptedGenerationID: UUID?
+        var acceptedProgressData: Data?
+        let firstTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], productRows: [product], priceRows: prices,
+            pageInterception: { parameters in
+                guard parameters.domain == ShopSyncRecoveryDomain.prices.rawValue,
+                      parameters.afterID != nil else { return }
+                let generationID = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults)
+                    .pendingRecoveryJournal?.generationID)
+                let progressURL = fixture.temporaryRoot.appendingPathComponent(
+                    "generation-root/generations/\(generationID.uuidString.lowercased())/recovery-page-progress-v1.json")
+                acceptedProgressData = try Data(contentsOf: progressURL)
+                acceptedGenerationID = generationID
+                failedSecondPage = true
+                // This is the structured error emitted by the production RPC
+                // transport; makeService still uses the real recovery adapter.
+                throw timeout
+            })
+        do {
+            _ = try await makeService(fixture: fixture, transport: firstTransport,
+                maximumAttempts: 1, pageLimit: 1).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTFail("The typed timeout must interrupt only the second price page")
+        } catch {
+            XCTAssertEqual(error as? AutomaticSyncFailure, timeout)
+        }
+        XCTAssertTrue(failedSecondPage, "The typed fault must follow a durably committed first page")
+        XCTAssertEqual(firstTransport.pageCursors(domain: .prices), [nil, prices[0].id.uuidString.lowercased()])
+        let stagedID = try XCTUnwrap(acceptedGenerationID)
+        let progressData = try XCTUnwrap(acceptedProgressData)
+        let progress = try XCTUnwrap(JSONSerialization.jsonObject(with: progressData) as? [String: Any])
+        let domains = try XCTUnwrap(progress["domains"] as? [String: Any])
+        let priceProgress = try XCTUnwrap(domains[ShopSyncRecoveryDomain.prices.rawValue] as? [String: Any])
+        XCTAssertEqual(priceProgress["afterID"] as? String, prices[0].id.uuidString.lowercased())
+        XCTAssertEqual((priceProgress["processed"] as? NSNumber)?.intValue, 1)
+        XCTAssertEqual(priceProgress["complete"] as? Bool, false)
+        let progressURL = fixture.temporaryRoot.appendingPathComponent(
+            "generation-root/generations/\(stagedID.uuidString.lowercased())/recovery-page-progress-v1.json")
+        XCTAssertEqual(try? Data(contentsOf: progressURL), progressData,
+                       "A typed transient timeout must retain the accepted stage and cursor, not quarantine them")
+        XCTAssertEqual(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal?.generationID, stagedID)
+        XCTAssertNil(fixture.controller.activeManifest, "The accepted prefix must never publish a partial generation")
+
+        let resumed = try reopenFixture(fixture)
+        let nextTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint], productRows: [product], priceRows: prices)
+        let summary = try await makeService(fixture: resumed, transport: nextTransport,
+            maximumAttempts: 1, pageLimit: 1).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(summary.completedRecoveryJournal)
+        XCTAssertEqual(summary.activatedGenerationID, stagedID,
+                       "Reopen must finish the original accepted generation rather than silently restage")
+        XCTAssertEqual(nextTransport.pageCursors(domain: .prices), [prices[0].id.uuidString.lowercased()],
+                       "The first accepted price page must not be downloaded again")
+        let final = try reopenFixture(resumed)
+        XCTAssertEqual(final.controller.activeManifest?.generationID, stagedID)
+        XCTAssertEqual(final.controller.activeManifest?.localVerification.prices, checkpoint.prices)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        let read = ModelContext(final.controller.modelContainer)
+        let storedProducts = try read.fetch(FetchDescriptor<Product>())
+        let storedPrices = try read.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(storedProducts.count, 1)
+        XCTAssertEqual(storedProducts.first?.remoteID, product.id)
+        XCTAssertEqual(storedPrices.count, 2)
+        XCTAssertEqual(Set(storedPrices.compactMap(\.remoteID)), Set(prices.map(\.id)))
+    }
+
     func testUnexplainedCleanBodyCorruptionIsNotLocalAvailabilityAfterReopenOrFreshBinding() async throws {
         let fixture = try makeFixture()
         let product = localAvailabilityProduct(fixture: fixture)
@@ -4393,7 +5422,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint, checkpoint],
             productRows: products
         )
-        let store = SyncStateStore(defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
         store.updatePhase(.reconciling)
         let invocationID = store.beginRecoveryProgressReporting()
         let observation = AtomicRecoveryProgressObservation()
@@ -4440,7 +5469,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
             allowsPendingSameScopeRecovery: true
         )
-        let store = SyncStateStore(defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
         store.updatePhase(.reconciling)
         let previousID = store.beginRecoveryProgressReporting()
         let currentID = store.beginRecoveryProgressReporting()
@@ -4511,7 +5540,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
             allowsPendingSameScopeRecovery: true
         )
-        let store = SyncStateStore(defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
         store.updatePhase(.reconciling)
         let invocationID = store.beginRecoveryProgressReporting()
         let event = SyncRecoveryProgressEvent(
@@ -4550,7 +5579,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
             allowsPendingSameScopeRecovery: true
         )
-        let store = SyncStateStore(defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
         store.updatePhase(.reconciling)
         let previousID = store.beginRecoveryProgressReporting()
         var terminalPublicationObserved = false
@@ -4590,7 +5619,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, defaults: fixture.defaults,
             allowsPendingSameScopeRecovery: true
         )
-        let store = SyncStateStore(defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
         store.updatePhase(.reconciling)
         let invocationID = store.beginRecoveryProgressReporting()
         let event = SyncRecoveryProgressEvent(
@@ -4632,12 +5661,324 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         )
     }
 
+    func testRejectedOldContinuationCannotRetireBootstrapSuccessorHeldAfterRealActivation() async throws {
+        @MainActor final class ObservedHeldBootstrapRuntime: SyncAutomaticRuntimeProviding {
+            let held: Task145HeldTerminalRuntime
+            let returned: XCTestExpectation
+            private(set) var actions: [SyncAction] = []
+            private(set) var sources: [SyncAutomaticTriggerSource] = []
+            private(set) var results: [SyncAutomaticRunResult] = []
+            var returnWaitStarted = false
+            init(held: Task145HeldTerminalRuntime, returned: XCTestExpectation) {
+                self.held = held
+                self.returned = returned
+            }
+            var isRunning: Bool { held.isRunning }
+            func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+                actions.append(action)
+                sources.append(source)
+                let result = await held.run(action: action, source: source)
+                results.append(result)
+                returned.fulfill()
+                return result
+            }
+            func cancel() { held.cancel() }
+            func cancelAndWait() async { await held.cancelAndWait() }
+            func resumeAfterStoreReplacement() async { await held.resumeAfterStoreReplacement() }
+        }
+
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let state = proof.stateStore
+        let staleA = proof.result
+        let staleObservation = try XCTUnwrap(staleA.observation)
+        let generationA = try XCTUnwrap(staleObservation.origin.generationID)
+        XCTAssertNotNil(staleA.continuationReceipt)
+        XCTAssertFalse(staleA.verifiedConvergence)
+        let manifestA = try XCTUnwrap(fixture.controller.activeManifest)
+        XCTAssertEqual(manifestA.generationID, generationA)
+        let originalContainer = fixture.controller.modelContainer
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let bindingA = try XCTUnwrap(binding.currentBinding)
+        let prefix = "ri08.real-receipt"
+        let observationKey = "\(prefix).lastRunObservation.v1"
+        let proofKey = "\(prefix).lastVerifiedProof.v2"
+        let budgetKey = "\(prefix).automaticRecoveryAttempt.v2"
+        let envelopeA = try XCTUnwrap(fixture.defaults.data(forKey: observationKey))
+        let proofBytesA = try XCTUnwrap(fixture.defaults.data(forKey: proofKey))
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: bindingA.accountHash,
+            storeIdentity: bindingA.storeIdentity, reason: "TASK145_HELD_BOOTSTRAP_SUCCESSOR",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journalB = try XCTUnwrap(binding.pendingRecoveryJournal)
+        XCTAssertEqual(journalB.mode, .sameScopeRecovery)
+        let retryIdentityB = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journalB)
+        state.recordRunResult(.recoveryRequired())
+        let scopeBeforeBootstrap = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults, allowsPendingSameScopeRecovery: true)
+        let originBeforeBootstrap = try XCTUnwrap(SyncAutomaticRunObservationSource.capture(
+            scope: scopeBeforeBootstrap, defaults: fixture.defaults)?.origin)
+        XCTAssertEqual(originBeforeBootstrap.generationID, generationA)
+        let admissionLease = try XCTUnwrap(fixture.controller.captureLease(for: originalContainer))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        addTeardownBlock { await MainActor.run { auth.close() } }
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint, proof.checkpoint, proof.checkpoint],
+            productRows: [ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)])
+        let progress = AtomicRecoveryProgressObservation()
+        let service = makeService(fixture: fixture, transport: transport, progressReporter: { event in
+            progress.events.append(event)
+            state.recordRecoveryProgress(event)
+        })
+        let controller = fixture.controller
+        let facade = AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+            catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: nil, recoverySnapshotPullProvider: service,
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try controller.validateLease(admissionLease) } })
+        let heldAfterCommit = expectation(description: "Real bootstrap B is held after engine commit and before StateStore completion")
+        let held = Task145HeldTerminalRuntime(facade: facade, entered: heldAfterCommit)
+        let returnedB = expectation(description: "The owned B forwarding invocation returns before fixture teardown")
+        let runtime = ObservedHeldBootstrapRuntime(held: held, returned: returnedB)
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: controller, storeGenerationLease: admissionLease,
+            defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        addTeardownBlock {
+            let shouldWaitForReturn = await MainActor.run {
+                orchestrator.stop()
+                held.release() // Latched even if setup failed before the hold was installed.
+                guard !runtime.actions.isEmpty, !runtime.returnWaitStarted else { return false }
+                runtime.returnWaitStarted = true
+                return true
+            }
+            if shouldWaitForReturn {
+                // Early-exit cleanup claims the wait only when normal flow
+                // never started it. Every expectation is waited at most once.
+                await self.fulfillment(of: [returnedB], timeout: 2)
+            }
+        }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [heldAfterCommit], timeout: 2)
+        let terminalB = try XCTUnwrap(held.heldResult)
+        let finalizationB = try XCTUnwrap(terminalB.verifiedFinalization)
+        let terminalObservationB = try XCTUnwrap(terminalB.observation)
+        let manifestB = try XCTUnwrap(controller.activeManifest)
+        let generationB = manifestB.generationID
+        XCTAssertEqual(terminalB.status, .success)
+        XCTAssertTrue(terminalB.verifiedConvergence)
+        XCTAssertNotEqual(generationB, generationA)
+        XCTAssertTrue(finalizationB.exactlyMatches(manifestB))
+        XCTAssertTrue(finalizationB.storeIdentity.hasSameProvenance(as: manifestB.storeIdentity))
+        XCTAssertEqual(terminalObservationB.origin.generationID, generationB)
+        XCTAssertNotEqual(terminalObservationB.invocationID, staleObservation.invocationID)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertFalse(controller.modelContainer === originalContainer)
+        XCTAssertThrowsError(try controller.validateLease(admissionLease))
+        let publishedLeaseB = try XCTUnwrap(controller.captureLease(for: controller.modelContainer))
+        let currentScopeB = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertEqual(currentScopeB.ownerUserID, scopeBeforeBootstrap.ownerUserID)
+        XCTAssertEqual(currentScopeB.accountHash, scopeBeforeBootstrap.accountHash)
+        XCTAssertEqual(currentScopeB.shopID, scopeBeforeBootstrap.shopID)
+        XCTAssertTrue(currentScopeB.storeIdentity.hasSameProvenance(as: scopeBeforeBootstrap.storeIdentity))
+        XCTAssertEqual(currentScopeB.deviceIdentityHash, scopeBeforeBootstrap.deviceIdentityHash)
+        XCTAssertNoThrow(try controller.validateLease(publishedLeaseB))
+        XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(currentScopeB, defaults: fixture.defaults))
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer))
+        XCTAssertTrue(try controller.isActiveRecoveryFinalized(scope: currentScopeB))
+        XCTAssertFalse(originBeforeBootstrap.isCurrent(defaults: fixture.defaults),
+            "B's own successful generation transition retires its pre-bootstrap generation without retiring B")
+        let finalizing = try XCTUnwrap(progress.events.last)
+        let progressInvocationB = try XCTUnwrap(finalizing.invocationID)
+        XCTAssertEqual(finalizing.progress.stage, .finalizing)
+        XCTAssertEqual(state.state.recoveryProgress, finalizing.progress)
+        let stateB = state.state
+        let ownsHeldSuccessorB = runtime.actions == [.bootstrap] && runtime.sources == [.rootForeground]
+            && runtime.results.isEmpty && held.runCount == 1 && !held.didReturn
+            && stateB.phase.isAutomaticWorkActive && stateB.recoveryProgress?.stage == .finalizing
+        XCTAssertTrue(ownsHeldSuccessorB,
+            "A real orchestrator B, not runtime.isRunning after facade return, must own the held active projection")
+        guard ownsHeldSuccessorB, finalizationB.exactlyMatches(manifestB),
+              generationB != generationA, terminalB.verifiedConvergence else {
+            return XCTFail("NOT_TRAVERSED: real generation B commit and still-owned presentation were not qualified")
+        }
+        XCTAssertTrue(progress.events.allSatisfy { $0.invocationID == progressInvocationB })
+        XCTAssertEqual(fixture.defaults.data(forKey: observationKey), envelopeA,
+            "B's terminal observation has not been presented yet")
+        XCTAssertEqual(fixture.defaults.data(forKey: proofKey), proofBytesA)
+        let budgetBytesB = try XCTUnwrap(fixture.defaults.data(forKey: budgetKey))
+        let budgetB = try XCTUnwrap(JSONSerialization.jsonObject(with: budgetBytesB) as? [String: Any])
+        XCTAssertEqual(budgetB["identity"] as? String, retryIdentityB)
+        _ = try XCTUnwrap(budgetB["invocationID"] as? String)
+        XCTAssertEqual((budgetB["attemptsInWindow"] as? NSNumber)?.intValue, 1)
+        XCTAssertNil(budgetB["lastCompletedAt"], "B's claim cannot be completed before its held callback returns")
+        let finalizationBytesB = try Data(contentsOf: fixture.recoveryFinalizationURL)
+        let defaultsB = NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation())
+        let callsB = transport.counts()
+        let parametersB = transport.checkpointCallsForTesting().map {
+            [$0.verifiedBaselineID, $0.expectedBaselineScopeKey ?? "<absent>"]
+        }
+        let eventReadsB = proof.remote.eventReads.count
+        XCTAssertGreaterThan(callsB.checkpoints, 0)
+        XCTAssertGreaterThan(callsB.pages, 0)
+
+        state.recordRunResult(staleA)
+
+        XCTAssertEqual(state.state, stateB, "Rejected A cannot retire B after B's own generation transition")
+        XCTAssertEqual(state.state.recoveryProgress, finalizing.progress)
+        XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()), defaultsB,
+            "Rejected A cannot mutate any durable metadata, including B's in-flight claim, errors or canonical proof")
+        XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budgetBytesB)
+        XCTAssertEqual(fixture.defaults.data(forKey: observationKey), envelopeA)
+        XCTAssertEqual(fixture.defaults.data(forKey: proofKey), proofBytesA)
+        XCTAssertEqual(controller.activeManifest, manifestB)
+        XCTAssertEqual(try Data(contentsOf: fixture.recoveryFinalizationURL), finalizationBytesB)
+        XCTAssertEqual(transport.counts().checkpoints, callsB.checkpoints)
+        XCTAssertEqual(transport.counts().pages, callsB.pages)
+        XCTAssertEqual(transport.counts().tailPages, callsB.tailPages)
+        XCTAssertEqual(transport.checkpointCallsForTesting().map {
+            [$0.verifiedBaselineID, $0.expectedBaselineScopeKey ?? "<absent>"]
+        }, parametersB)
+        XCTAssertEqual(proof.remote.eventReads.count, eventReadsB)
+        XCTAssertEqual(held.runCount, 1)
+        XCTAssertFalse(held.didReturn)
+        XCTAssertTrue(runtime.results.isEmpty)
+        XCTAssertNoThrow(try controller.validateLease(publishedLeaseB))
+        XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(currentScopeB, defaults: fixture.defaults))
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+
+        let publishedB = expectation(description: "Releasing the original B callback publishes its own canonical proof and outcome")
+        var didObserveB = false
+        let publication = state.objectWillChange.sink {
+            Task { @MainActor in
+                guard !didObserveB,
+                      SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+                        keyPrefix: prefix, ownerUserID: fixture.ownerUserID)?.invocationID == terminalObservationB.invocationID,
+                      state.state.phase == .idle, state.state.lastVerifiedAt != nil else { return }
+                didObserveB = true
+                publishedB.fulfill()
+            }
+        }
+        defer { publication.cancel() }
+        held.release()
+        runtime.returnWaitStarted = true
+        await fulfillment(of: [publishedB, returnedB], timeout: 2)
+        XCTAssertTrue(held.didReturn)
+        XCTAssertEqual(runtime.actions, [.bootstrap])
+        XCTAssertEqual(runtime.results, [terminalB])
+        XCTAssertEqual(state.state.phase, .idle)
+        XCTAssertEqual(state.state.lastOutcome, .succeeded)
+        XCTAssertNotNil(state.state.lastVerifiedAt)
+        let acceptedB = try XCTUnwrap(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            keyPrefix: prefix, ownerUserID: fixture.ownerUserID))
+        XCTAssertEqual(acceptedB.invocationID, terminalObservationB.invocationID)
+        XCTAssertEqual(acceptedB.origin.generationID, generationB)
+        XCTAssertEqual(acceptedB.completedAt, terminalObservationB.completedAt)
+        let acceptedProofBytesB = try XCTUnwrap(fixture.defaults.data(forKey: proofKey))
+        let acceptedProofB = try XCTUnwrap(JSONSerialization.jsonObject(with: acceptedProofBytesB) as? [String: Any])
+        let acceptedOriginB = try XCTUnwrap(acceptedProofB["finalization"] as? [String: Any])
+        XCTAssertEqual(acceptedOriginB["generationID"] as? String, generationB.uuidString)
+        XCTAssertNil(fixture.defaults.data(forKey: budgetKey), "The legitimate B completion retires its own finished retry claim")
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertEqual(controller.activeManifest, manifestB)
+        XCTAssertEqual(try Data(contentsOf: fixture.recoveryFinalizationURL), finalizationBytesB)
+        XCTAssertEqual(transport.counts().checkpoints, callsB.checkpoints)
+        XCTAssertEqual(transport.counts().pages, callsB.pages)
+        XCTAssertEqual(transport.counts().tailPages, callsB.tailPages)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+    }
+
+    func testRejectedOldContinuationCannotRetireQualifiedSuccessorStillInFlight() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let staleA = proof.result
+        let generationA = try XCTUnwrap(staleA.observation?.origin.generationID)
+        let observationKey = "ri08.real-receipt.lastRunObservation.v1"
+        let previousEnvelope = try XCTUnwrap(fixture.defaults.data(forKey: observationKey))
+        let healthy = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint, proof.checkpoint, proof.checkpoint],
+            productRows: [ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)])
+        let recoveredB = try await makeService(fixture: fixture, transport: healthy)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recoveredB.completedRecoveryJournal)
+        let generationB = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        XCTAssertNotEqual(generationB, generationA)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        let scopeB = try Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        let leaseB = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        XCTAssertNoThrow(try fixture.controller.validateLease(leaseB))
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let entered = expectation(description: "Real successor B is held at admission before any completion")
+        let finished = expectation(description: "Held successor B exits during owned teardown")
+        let gate = AtomicRecoveryHeldPage()
+        let controller = fixture.controller
+        let facade = AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+            catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: SyncEventIncrementalPullService(modelContainer: controller.modelContainer,
+                remote: proof.remote, defaults: fixture.defaults, storeGenerationController: controller),
+            activityRegistrationProvider: nil, deviceAuthorization: proof.remote, defaults: fixture.defaults,
+            runAdmissionValidator: {
+                try await MainActor.run {
+                    try controller.validateLease(leaseB)
+                    entered.fulfill()
+                }
+                await gate.wait()
+            })
+        let runtime = RI08ObservedRealRuntime(facade: facade)
+        runtime.expectedCompletions = [finished]
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: proof.stateStore, storeGenerationController: controller, storeGenerationLease: leaseB,
+            defaults: fixture.defaults,
+            decisionInputProvider: Task145CurrentGenerationDecisionProvider(controller: controller, defaults: fixture.defaults),
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop(); gate.release() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [entered], timeout: 2)
+        let reachedOwnedAdmissionB = runtime.actions.count == 1 && runtime.results.isEmpty
+            && runtime.isRunning && proof.stateStore.state.phase.isAutomaticWorkActive
+        XCTAssertTrue(reachedOwnedAdmissionB, "B must own a real admission before stale A is delivered")
+        guard reachedOwnedAdmissionB else {
+            return XCTFail("NOT_TRAVERSED: qualified in-flight B was not established")
+        }
+        XCTAssertTrue(runtime.results.isEmpty, "B has not produced any terminal result/envelope")
+        XCTAssertEqual(fixture.defaults.data(forKey: observationKey), previousEnvelope)
+        XCTAssertNil(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            keyPrefix: "ri08.real-receipt", ownerUserID: fixture.ownerUserID))
+        XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(scopeB, defaults: fixture.defaults))
+        let stateB = proof.stateStore.state
+        let bytesB = NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation())
+        let callsB = proof.remote.eventReads.count
+        proof.stateStore.recordRunResult(staleA)
+        XCTAssertEqual(proof.stateStore.state, stateB,
+            "Rejected A must not retire B's still-owned active phase or progress")
+        XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()), bytesB,
+            "Rejected A must not change B's budget, envelope, lease or any durable metadata")
+        XCTAssertTrue(runtime.results.isEmpty)
+        XCTAssertEqual(proof.remote.eventReads.count, callsB)
+        XCTAssertNoThrow(try fixture.controller.validateLease(leaseB))
+        XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(scopeB, defaults: fixture.defaults))
+        orchestrator.stop()
+        gate.release()
+        await fulfillment(of: [finished], timeout: 2)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+    }
+
     func testOrdinaryContinuationReceiptRejectsChangedAuthority() async throws {
         let mutations = ["lease", "owner", "shop", "device", "binding", "watermark", "generation",
                          "fenceMissing", "fenceTampered", "fenceDifferent", "finalization", "manifest", "journal"]
         for mutation in mutations {
             let proof = try await makeRealContinuationProof()
             let fixture = proof.fixture
+            let canonicalBytes = try XCTUnwrap(fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"))
             switch mutation {
             case "lease": Task126OwnerStoreGate.invalidateAutomaticScopeLease()
             case "owner": fixture.defaults.set(AccountBindingStore.accountHash(for: UUID()),
@@ -4674,7 +6015,16 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             }
             proof.stateStore.recordRunResult(proof.result)
             XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, mutation)
-            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation)
+            if ["owner", "shop", "device", "binding", "generation", "manifest"].contains(mutation) {
+                if mutation == "manifest" {
+                    XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer))
+                }
+                XCTAssertNil(proof.stateStore.state.lastVerifiedAt, mutation)
+            } else {
+                XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation)
+            }
+            XCTAssertEqual(fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"), canonicalBytes,
+                "The canonical original date/proof remains unchanged: \(mutation)")
             XCTAssertFalse(proof.result.verifiedConvergence)
             if mutation == "journal" {
                 XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).hasPendingReplacementJournal)
@@ -4686,6 +6036,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         for mutation in ["pending", "blocked", "staleBaseline", "sent", "unknownPending", "cap", "foreignPending",
                          "outbox", "unknownOutbox", "dirtyHistory", "localCountDrift"] {
             let proof = try await makeRealContinuationProof()
+            let canonicalBytes = try XCTUnwrap(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"))
             let context = ModelContext(proof.fixture.controller.modelContainer)
             context.autosaveEnabled = false
             if mutation == "outbox" || mutation == "unknownOutbox" {
@@ -4711,9 +6062,12 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 context.insert(change)
             }
             try context.save()
+            XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(proof.fixture.controller.modelContainer),
+                "This fixture saved directly outside the legitimate local-write fence: \(mutation)")
             proof.stateStore.recordRunResult(proof.result)
             XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, mutation)
-            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation)
+            XCTAssertNil(proof.stateStore.state.lastVerifiedAt, mutation)
+            XCTAssertEqual(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"), canonicalBytes)
         }
     }
 
@@ -4736,9 +6090,33 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         }
     }
 
+    func testLegitimateSameScopePendingWorkPreservesHistoricalVerifiedDate() async throws {
+        let proof = try await makeRealContinuationProof()
+        let fixture = proof.fixture
+        let key = "ri08.real-receipt.lastVerifiedProof.v2"
+        let originalBytes = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            context.insert(LocalPendingChange(ownerUserID: fixture.ownerUserID,
+                storeId: proof.scope.storeIdentity.storeId, entityKind: .product, operation: .update,
+                origin: .manualCatalogSave, logicalKey: "task145:legitimate-pending"))
+            try context.save()
+        }
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer))
+        proof.stateStore.recordRunResult(proof.result)
+        XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), originalBytes)
+        let reopened = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.real-receipt",
+            storeGenerationController: fixture.controller)
+        XCTAssertEqual(reopened.state.lastVerifiedAt, proof.verifiedAt)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), originalBytes)
+    }
+
     func testOrdinaryContinuationReceiptRevalidatesOnReadAfterPublication() async throws {
         for mutation in ["lease", "runCancellation", "pending"] {
             let proof = try await makeRealContinuationProof()
+            let canonicalBytes = try XCTUnwrap(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"))
             proof.stateStore.recordRunResult(proof.result)
             XCTAssertEqual(proof.stateStore.state.phase, .idle)
             if mutation == "lease" { Task126OwnerStoreGate.invalidateAutomaticScopeLease() }
@@ -4749,9 +6127,12 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                     storeId: proof.scope.storeIdentity.storeId, entityKind: .product, operation: .update,
                     origin: .manualCatalogSave, logicalKey: "ri08:post-publication"))
                 try context.save()
+                XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(proof.fixture.controller.modelContainer))
             }
             XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, mutation)
-            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation)
+            if mutation == "pending" { XCTAssertNil(proof.stateStore.state.lastVerifiedAt) }
+            else { XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation) }
+            XCTAssertEqual(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"), canonicalBytes)
         }
     }
 
@@ -4873,7 +6254,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         proof.stateStore.recordRunResult(proof.result)
         XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired)
         let otherFixture = try makeFixture()
-        let otherState = SyncStateStore(defaults: otherFixture.defaults, keyPrefix: "ri08.other-context")
+        let otherState = SyncStateStore(defaults: otherFixture.defaults, keyPrefix: "ri08.other-context", storeGenerationController: otherFixture.controller)
         otherState.updatePhase(.checking)
         otherState.recordRunResult(proof.result)
         XCTAssertEqual(otherState.state.phase, .recoveryRequired)
@@ -5205,9 +6586,12 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             })
             XCTAssertNil(proof.result.continuationReceipt, mutation)
             XCTAssertFalse(proof.result.verifiedConvergence)
+            let canonicalBytes = try XCTUnwrap(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"))
             proof.stateStore.recordRunResult(proof.result)
             XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired, mutation)
-            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation)
+            if mutation == "missingGeneration" { XCTAssertNil(proof.stateStore.state.lastVerifiedAt) }
+            else { XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt, mutation) }
+            XCTAssertEqual(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"), canonicalBytes)
         }
     }
 
@@ -5256,6 +6640,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         for mutation in ["missing", "corrupt"] {
             let setup = try await makeReopenedEmptyZeroRecovery()
             let fixture = setup.fixture
+            let canonicalBytes = try XCTUnwrap(fixture.defaults.data(forKey: "ri08.zero.lastVerifiedProof.v2"))
             let controller = fixture.controller
             let scope = try Task126OwnerStoreGate.captureAutomaticScope(
                 ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
@@ -5300,7 +6685,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 historySessionProvider: nil, incrementalPullProvider: pull, activityRegistrationProvider: nil,
                 defaults: fixture.defaults,
                 runAdmissionValidator: { try await MainActor.run { try controller.validateLease(lease) } })
-            let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.zero")
+            let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.zero", storeGenerationController: fixture.controller)
             stateStore.updatePhase(.pullingEvents)
             let result = await Task126OwnerStoreGate.withAutomaticScope(scope) {
                 await engine.run(action: .drainEvents, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
@@ -5311,7 +6696,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertFalse(result.verifiedConvergence)
             stateStore.recordRunResult(result)
             XCTAssertEqual(stateStore.state.phase, .recoveryRequired, mutation)
-            XCTAssertEqual(stateStore.state.lastVerifiedAt, setup.verifiedAt, mutation)
+            XCTAssertNil(stateStore.state.lastVerifiedAt, mutation)
+            XCTAssertEqual(fixture.defaults.data(forKey: "ri08.zero.lastVerifiedProof.v2"), canonicalBytes)
             XCTAssertEqual(ordinaryWatermark(fixture: fixture), 0)
             XCTAssertTrue(try controller.isActiveRecoveryFinalized(scope: scope))
             XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
@@ -5329,7 +6715,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
     private func assertOrdinaryZeroContinuation(includeFirstCanonicalDelta: Bool) async throws {
         let setup = try await makeReopenedEmptyZeroRecovery()
         let fixture = setup.fixture
-        let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.zero")
+        let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.zero", storeGenerationController: fixture.controller)
         XCTAssertEqual(stateStore.state.phase, .idle)
         XCTAssertEqual(stateStore.state.lastVerifiedAt, setup.verifiedAt)
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
@@ -5483,7 +6869,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 "ZERO_RECOVERY_NOT_ACTIVATED_CONTINUATION_NOT_REACHED")
             generationID = try XCTUnwrap(original.controller.activeManifest?.generationID)
             binding = try XCTUnwrap(AccountBindingStore(defaults: original.defaults).currentBinding)
-            let store = SyncStateStore(defaults: original.defaults, keyPrefix: "ri08.zero")
+            let store = SyncStateStore(defaults: original.defaults, keyPrefix: "ri08.zero", storeGenerationController: original.controller)
             store.recordRunResult(actual,
                 now: Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down)))
             verifiedAt = try XCTUnwrap(store.state.lastVerifiedAt)
@@ -5507,12 +6893,12 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(controller.activeManifest?.generationID, generationID)
         XCTAssertEqual(AccountBindingStore(defaults: reopened.defaults).currentBinding, binding)
         try assertZeroRecoveryAuthority(reopened, generationID: generationID, stage: "reopened-zero")
-        XCTAssertEqual(SyncStateStore(defaults: reopened.defaults, keyPrefix: "ri08.zero").state.lastVerifiedAt, verifiedAt)
         controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
         let qualified = await controller.awaitLocalBodyQualification()
         let hasCurrentBodyProof = Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer)
         _ = try XCTUnwrap(qualified && hasCurrentBodyProof ? true : nil,
             "ZERO_SETUP_LOCAL_BODY_UNQUALIFIED qualified=\(qualified);hasCurrentBodyProof=\(hasCurrentBodyProof)")
+        XCTAssertEqual(SyncStateStore(defaults: reopened.defaults, keyPrefix: "ri08.zero", storeGenerationController: reopened.controller).state.lastVerifiedAt, verifiedAt)
         return (reopened, checkpoint, generationID, binding, verifiedAt)
     }
 
@@ -5578,7 +6964,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         configure: ((RI08OrdinaryIncrementalRemote, AtomicRecoveryFixture, UUID) throws -> Void)? = nil,
         transform: ((SyncIncrementalPullSummary) -> SyncIncrementalPullSummary)? = nil,
         afterAtomicMutation: (@Sendable () async throws -> Void)? = nil,
-        beforeRecovery: ((AtomicRecoveryFixture) -> Void)? = nil
+        beforeRecovery: ((AtomicRecoveryFixture) -> Void)? = nil,
+        stateKeyPrefix: String = "ri08.real-receipt"
     ) async throws -> RI08RealContinuationProof {
         let fixture = try makeFixture()
         beforeRecovery?(fixture)
@@ -5596,7 +6983,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                                                  ownerUserID: fixture.ownerUserID)
         XCTAssertEqual(recovered.status, .success)
         XCTAssertTrue(recovered.verifiedConvergence)
-        let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: "ri08.real-receipt")
+        let stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: stateKeyPrefix, storeGenerationController: fixture.controller)
         stateStore.recordRunResult(recovered)
         let verifiedAt = try XCTUnwrap(stateStore.state.lastVerifiedAt)
         let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
@@ -5669,7 +7056,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
         let statePrefix = "ri08.ordinary"
-        var stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: statePrefix)
+        var stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: statePrefix, storeGenerationController: fixture.controller)
         stateStore.recordRunResult(verifiedRecovery,
             now: Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down)))
         let verifiedAt = try XCTUnwrap(stateStore.state.lastVerifiedAt)
@@ -5759,7 +7146,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 let locallyQualified = await fixture.controller.awaitLocalBodyQualification()
                 XCTAssertTrue(locallyQualified, "The fresh application controller must finish its actual off-main current-body readback before ordinary writes")
                 try recordOrdinaryReopenMetadata("after-fresh-open", fixture: fixture)
-                stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: statePrefix)
+                stateStore = SyncStateStore(defaults: fixture.defaults, keyPrefix: statePrefix, storeGenerationController: fixture.controller)
                 XCTAssertEqual(stateStore.state.lastVerifiedAt, verifiedAt)
                 XCTAssertEqual(fixture.controller.activeManifest?.generationID, generationID)
                 runtime = makeOrdinaryRuntime(fixture: fixture, auth: auth, remote: remote)
@@ -7712,93 +9099,9 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertNotNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
     }
 
-    private func makeService(
-        fixture: AtomicRecoveryFixture,
-        transport: AtomicRecoveryTestTransport,
-        maximumAttempts: Int = 2,
-        pageLimit: Int = 25,
-        progressReporter: SyncRecoveryProgressReporter? = nil,
-        pageCommitProbe: @escaping @Sendable (ShopSyncRecoveryDomain) throws -> Void = { _ in }
-    ) -> AtomicGenerationRecoverySnapshotPullService {
-        AtomicGenerationRecoverySnapshotPullService(
-            storeGenerationController: fixture.controller,
-            recoveryRemote: ShopSyncRecoveryRemoteAdapter(
-                transport: transport,
-                defaults: fixture.defaults
-            ),
-            defaults: fixture.defaults,
-            pageLimit: pageLimit,
-            maximumAttempts: maximumAttempts,
-            progressReporter: progressReporter,
-            pageCommitProbe: pageCommitProbe
-        )
-    }
 
-    private func makeFixture(
-        activationBoundaryProbe: @escaping @Sendable (SyncStoreActivationBoundary) -> Void = { _ in }
-    ) throws -> AtomicRecoveryFixture {
-        let suiteName = "AtomicGenerationRecoverySnapshotPullServiceTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defaults.removePersistentDomain(forName: suiteName)
-        let temporaryRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("AtomicGenerationRecovery-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
 
-        let ownerUserID = UUID()
-        let shopID = UUID()
-        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
-        let selectedShop = SelectedShop(
-            shopID: shopID,
-            code: "TASK139",
-            name: "Atomic recovery fixture",
-            role: "owner",
-            status: "active",
-            selectable: true,
-            canWrite: true
-        )
-        let selectedShopStore = SelectedShopStore(defaults: defaults)
-        selectedShopStore.noteActiveAccount(accountHash)
-        XCTAssertTrue(selectedShopStore.save(selectedShop, accountHash: accountHash))
-        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
-            accountHash: accountHash,
-            storeIdentity: selectedShop.localStoreIdentity
-        ))
-        XCTAssertEqual(
-            defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
-            accountHash
-        )
-        let deviceInstallID = DeviceInstallIDStore(defaults: defaults).deviceInstallID
-        let legacyStoreURL = temporaryRoot.appendingPathComponent("legacy-default.store")
-        let repository = try SyncStoreGenerationRepository(
-            baseDirectory: temporaryRoot.appendingPathComponent("generation-root"),
-            legacyDefaultStoreURL: legacyStoreURL,
-            defaults: defaults,
-            activationBoundaryProbe: activationBoundaryProbe
-        )
-        let controller = try SyncStoreGenerationController(
-            repository: repository,
-            defaults: defaults
-        )
-        XCTAssertEqual(
-            defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
-            accountHash
-        )
-        addTeardownBlock { [defaults, suiteName, temporaryRoot] in
-            defaults.removePersistentDomain(forName: suiteName)
-            try? FileManager.default.removeItem(at: temporaryRoot)
-        }
-        return AtomicRecoveryFixture(
-            controller: controller,
-            defaults: defaults,
-            suiteName: suiteName,
-            temporaryRoot: temporaryRoot,
-            recoveryJournalURL: repository.recoveryJournalURL,
-            recoveryFinalizationURL: repository.recoveryFinalizationURL,
-            ownerUserID: ownerUserID,
-            shopID: shopID,
-            deviceInstallID: deviceInstallID
-        )
-    }
+
 
     private func reopenFixture(_ fixture: AtomicRecoveryFixture) throws -> AtomicRecoveryFixture {
         let repository = try SyncStoreGenerationRepository(
@@ -7825,107 +9128,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         )
     }
 
-    private func makeCheckpoint(
-        fixture: AtomicRecoveryFixture,
-        maxEventID: Int64,
-        seed: String,
-        historyRow: AtomicRecoveryHistoryRowPayload? = nil,
-        historyTimestampOverride: String? = nil
-    ) -> ShopSyncRecoveryCheckpoint {
-        let emptyHash = ShopSyncRecoveryCanonical.checkpointChainInitialDigest
-        let empty = ShopSyncRecoveryEntityDigest(
-            activeCount: 0,
-            tombstoneCount: 0,
-            idSetDigest: emptyHash,
-            versionDigest: emptyHash
-        )
-        let products = ShopSyncRecoveryEntityDigest(
-            activeCount: 0,
-            tombstoneCount: 0,
-            idSetDigest: emptyHash,
-            versionDigest: emptyHash,
-            identityDigest: emptyHash
-        )
-        let deviceKey = ShopSyncRecoveryCanonical.sha256(fixture.deviceInstallID)
-        let scope = ShopSyncRecoveryScope(
-            kind: "shop_scoped",
-            key: ShopSyncRecoveryCanonical.sha256(
-                fixture.shopID.uuidString.lowercased() + ":shop_scoped:-:" + deviceKey
-            ),
-            legacyOwnerKey: nil,
-            accountKey: AccountBindingStore.accountHash(for: fixture.ownerUserID),
-            deviceKey: deviceKey
-        )
-        let history: ShopSyncRecoveryEntityDigest
-        if let historyRow {
-            let id = historyRow.remoteID.uuidString.lowercased()
-            let suffix: [String]
-            if historyRow.deletedAt != nil {
-                suffix = [ShopSyncRecoveryCanonical.null]
-            } else {
-                suffix = [
-                    historyTimestampOverride ?? historyRow.timestamp,
-                    ShopSyncRecoveryCanonical.sha256(historyRow.supplier),
-                    ShopSyncRecoveryCanonical.sha256(historyRow.category),
-                    historyRow.isManualEntry ? "true" : "false",
-                    ShopSyncRecoveryCanonical.sha256(historyRow.displayName),
-                    historyRow.dataCheckpointDigest ?? ShopSyncRecoveryCanonical.null,
-                    historyRow.overlayCheckpointDigest ?? ShopSyncRecoveryCanonical.null
-                ]
-            }
-            let versionLine = (
-                [
-                    id,
-                    historyRow.updatedAt ?? ShopSyncRecoveryCanonical.null,
-                    historyRow.deletedAt ?? ShopSyncRecoveryCanonical.null,
-                    String(historyRow.payloadVersion)
-                ] + suffix
-            ).joined(separator: ShopSyncRecoveryCanonical.separator)
-            history = ShopSyncRecoveryEntityDigest(
-                activeCount: historyRow.deletedAt == nil ? 1 : 0,
-                tombstoneCount: historyRow.deletedAt == nil ? 0 : 1,
-                idSetDigest: ShopSyncRecoveryCanonical.checkpointChainDigest([id]),
-                versionDigest: ShopSyncRecoveryCanonical.checkpointChainDigest([versionLine])
-            )
-        } else {
-            history = empty
-        }
-        return ShopSyncRecoveryCheckpoint(
-            schemaVersion: "shop-sync-recovery-checkpoint-v1",
-            shopId: fixture.shopID,
-            scope: scope,
-            syncEvents: ShopSyncRecoveryEventCheckpoint(
-                maxId: String(maxEventID),
-                verifiedBaselineId: "0",
-                requiresFullRecovery: true,
-                domainMaxIds: ShopSyncRecoveryDomainEventMaxIDs(
-                    catalog: String(maxEventID),
-                    prices: String(maxEventID),
-                    history: String(maxEventID)
-                )
-            ),
-            catalog: ShopSyncRecoveryCatalogDigest(
-                suppliers: empty,
-                categories: empty,
-                products: products,
-                digest: ShopSyncRecoveryCanonical.sha256(
-                    emptyHash + "\n" + emptyHash + "\n" + emptyHash
-                )
-            ),
-            prices: empty,
-            history: history,
-            images: empty,
-            integrity: ShopSyncRecoveryIntegrity(
-                productCategoryViolationCount: 0,
-                productSupplierViolationCount: 0,
-                priceProductViolationCount: 0,
-                primaryImageViolationCount: 0,
-                historyIdViolationCount: 0,
-                totalViolationCount: 0
-            ),
-            checkpointDigest: ShopSyncRecoveryCanonical.sha256(seed)
-        )
-    }
+
 
     private func makeCatalogPriceCheckpoint(
         fixture: AtomicRecoveryFixture,
@@ -8126,6 +9329,350 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             overlayCheckpointDigest: overlayCheckpointDigest,
             updatedAt: updatedAt,
             deletedAt: nil
+        )
+    }
+}
+
+@MainActor
+extension XCTestCase {
+    func makeObservedRecoveryFailureFixture(completedAt: Date) async throws -> (
+        defaults: UserDefaults, controller: SyncStoreGenerationController, state: SyncStateStore,
+        result: SyncAutomaticRunResult, ownerUserID: UUID
+    ) {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "task145-observed-initial-failure")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], checkpointMutation: { _ in
+                throw ShopSyncRecoveryCheckpointDenial.resourceExceeded
+            })
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport, maximumAttempts: 1),
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedAt })
+        let result = await engine.run(action: .bootstrap, source: .rootForeground, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(result.status, .failed)
+        XCTAssertEqual(result.errorCode, "checkpoint_resource_exceeded")
+        XCTAssertEqual(transport.counts().checkpoints, 1)
+        XCTAssertEqual(transport.counts().pages, 0)
+        XCTAssertNil(fixture.controller.activeManifest)
+        let observation = try XCTUnwrap(result.observation)
+        XCTAssertEqual(observation.origin.generationKind, .absent)
+        XCTAssertNil(observation.origin.generationID)
+        XCTAssertEqual(observation.completedAt, completedAt.timeIntervalSince1970)
+        let state = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        state.recordRunResult(result, now: completedAt)
+        return (fixture.defaults, fixture.controller, state, result, fixture.ownerUserID)
+    }
+
+    func makeObservedDeviceBlockThenSuccessFixture() async throws -> (
+        defaults: UserDefaults, controller: SyncStoreGenerationController, ownerUserID: UUID,
+        blocked: SyncAutomaticRunResult, success: SyncAutomaticRunResult
+    ) {
+        let fixture = try await makeQualifiedSyncStateFixture(includesAuth: true)
+        let auth = try XCTUnwrap(fixture.authViewModel)
+        let owner = try XCTUnwrap(auth.sessionInfo?.userID)
+        func runtime(status: String, canWrite: Bool) -> AutomaticSyncRuntimeFacade {
+            AutomaticSyncRuntimeFacade(authViewModel: auth, catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil, activityRegistrationProvider: nil,
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: status, canWrite: canWrite),
+                defaults: fixture.defaults)
+        }
+        let blocked = await runtime(status: "revoked", canWrite: false).run(action: .noOp, source: .foregroundPoll)
+        XCTAssertEqual(blocked.status, .blocked)
+        XCTAssertEqual(blocked.blockReason, .deviceNotActive)
+        _ = try XCTUnwrap(blocked.observation)
+        let success = await runtime(status: "active", canWrite: true).run(action: .noOp, source: .foregroundPoll)
+        XCTAssertEqual(success.status, .noWork)
+        _ = try XCTUnwrap(success.observation)
+        return (fixture.defaults, fixture.controller, owner, blocked, success)
+    }
+
+    /// An actual stable failed replacement has no ordinary completion proof.
+    /// Its next successful result is produced only when the caller runs CTA.
+    func makeStableBlockedManualRecoveryFixture(keyPrefix: String) async throws -> (
+        defaults: UserDefaults, controller: SyncStoreGenerationController, state: SyncStateStore,
+        authViewModel: SupabaseAuthViewModel, runtime: AutomaticSyncRuntimeFacade
+    ) {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let target = try XCTUnwrap(binding.currentBinding)
+        XCTAssertTrue(binding.beginReplacement(accountHash: target.accountHash,
+            storeIdentity: target.storeIdentity,
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+        let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: keyPrefix,
+            storeGenerationController: fixture.controller)
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "task145-stable-manual-recovery")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint], checkpointMutation: { call in
+                if call == 1 { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+            })
+        let recovery = makeService(fixture: fixture, transport: transport, maximumAttempts: 1)
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: recovery, activityRegistrationProvider: nil,
+            defaults: fixture.defaults)
+        let attemptedAt = Date().addingTimeInterval(-600)
+        let claim = try XCTUnwrap(state.claimAutomaticRecoveryAttempt(identity: identity, now: attemptedAt))
+        let failure = await engine.run(action: .bootstrap, source: .rootForeground, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(failure.status, .failed)
+        XCTAssertEqual(failure.failure?.disposition, .stable)
+        state.recordRunResult(failure, preserveRecoveryRequired: true,
+            automaticRecoveryClaim: claim, now: attemptedAt.addingTimeInterval(1))
+        _ = try XCTUnwrap(failure.failure?.disposition == .stable
+            && state.automaticRecoveryAttemptEligibility(identity: identity) == .exhausted
+            && binding.hasPendingReplacementJournal && fixture.controller.activeManifest == nil ? true : nil,
+            "MANUAL_ONLY_RECOVERY_REQUIREMENT_NOT_QUALIFIED")
+        XCTAssertEqual(transport.counts().checkpoints, 1)
+        XCTAssertEqual(state.state.phase, .recoveryRequired)
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        addTeardownBlock { await MainActor.run { auth.close() } }
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let runtime = AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+            catalogPushProvider: nil, productPriceProvider: nil, historySessionProvider: nil,
+            incrementalPullProvider: nil, recoverySnapshotPullProvider: recovery,
+            activityRegistrationProvider: nil,
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } })
+        return (fixture.defaults, fixture.controller, state, auth.viewModel, runtime)
+    }
+
+    /// Shared real recovery setup. The invoking testcase owns the existing
+    /// temporary/defaults teardown; no synthetic presenter authority is used.
+    func makeQualifiedSyncStateFixture(includesAuth: Bool = false) async throws -> (
+        defaults: UserDefaults, controller: SyncStoreGenerationController, result: SyncAutomaticRunResult,
+        authViewModel: SupabaseAuthViewModel?, freshResult: @MainActor () async -> SyncAutomaticRunResult
+    ) {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "task145-state-proof")
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint])
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil, defaults: fixture.defaults)
+        let result = await engine.run(action: .bootstrap, source: .rootForeground,
+            ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(result.status, .success)
+        XCTAssertTrue(result.verifiedConvergence)
+        _ = try XCTUnwrap(result.verifiedFinalization,
+            "Qualified store tests require the actual fsynced atomic finalization")
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(fixture.controller.modelContainer))
+        let auth = includesAuth ? try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID) : nil
+        if let auth {
+            addTeardownBlock { await MainActor.run { auth.close() } }
+        }
+        let freshResult: @MainActor () async -> SyncAutomaticRunResult = {
+            // A later retry must execute again in this exact authority. The
+            // original setup result and its observation remain unchanged.
+            let freshTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint, checkpoint, checkpoint])
+            let freshEngine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil,
+                recoverySnapshotPullProvider: self.makeService(fixture: fixture, transport: freshTransport),
+                activityRegistrationProvider: nil, defaults: fixture.defaults)
+            let fresh = await freshEngine.run(action: .bootstrap, source: .releaseCard,
+                ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(fresh.status, .success)
+            XCTAssertTrue(fresh.verifiedConvergence)
+            XCTAssertNotNil(fresh.verifiedFinalization)
+            XCTAssertNotEqual(fresh.verifiedFinalization?.generationID, result.verifiedFinalization?.generationID)
+            XCTAssertNotNil(fresh.observation)
+            XCTAssertNotEqual(fresh.observation?.invocationID, result.observation?.invocationID)
+            return fresh
+        }
+        return (fixture.defaults, fixture.controller, result, auth?.viewModel, freshResult)
+    }
+
+    fileprivate func makeService(
+        fixture: AtomicRecoveryFixture,
+        transport: AtomicRecoveryTestTransport,
+        maximumAttempts: Int = 2,
+        pageLimit: Int = 25,
+        progressReporter: SyncRecoveryProgressReporter? = nil,
+        pageCommitProbe: @escaping @Sendable (ShopSyncRecoveryDomain) throws -> Void = { _ in }
+    ) -> AtomicGenerationRecoverySnapshotPullService {
+        AtomicGenerationRecoverySnapshotPullService(
+            storeGenerationController: fixture.controller,
+            recoveryRemote: ShopSyncRecoveryRemoteAdapter(
+                transport: transport,
+                defaults: fixture.defaults
+            ),
+            defaults: fixture.defaults,
+            pageLimit: pageLimit,
+            maximumAttempts: maximumAttempts,
+            progressReporter: progressReporter,
+            pageCommitProbe: pageCommitProbe
+        )
+    }
+
+    fileprivate func makeFixture(
+        activationBoundaryProbe: @escaping @Sendable (SyncStoreActivationBoundary) -> Void = { _ in }
+    ) throws -> AtomicRecoveryFixture {
+        let suiteName = "AtomicGenerationRecoverySnapshotPullServiceTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let temporaryRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AtomicGenerationRecovery-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
+
+        let ownerUserID = UUID()
+        let shopID = UUID()
+        let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
+        let selectedShop = SelectedShop(
+            shopID: shopID,
+            code: "TASK139",
+            name: "Atomic recovery fixture",
+            role: "owner",
+            status: "active",
+            selectable: true,
+            canWrite: true
+        )
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(selectedShop, accountHash: accountHash))
+        XCTAssertTrue(AccountBindingStore(defaults: defaults).saveBinding(
+            accountHash: accountHash,
+            storeIdentity: selectedShop.localStoreIdentity
+        ))
+        XCTAssertEqual(
+            defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
+            accountHash
+        )
+        let deviceInstallID = DeviceInstallIDStore(defaults: defaults).deviceInstallID
+        let legacyStoreURL = temporaryRoot.appendingPathComponent("legacy-default.store")
+        let repository = try SyncStoreGenerationRepository(
+            baseDirectory: temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: legacyStoreURL,
+            defaults: defaults,
+            activationBoundaryProbe: activationBoundaryProbe
+        )
+        let controller = try SyncStoreGenerationController(
+            repository: repository,
+            defaults: defaults
+        )
+        XCTAssertEqual(
+            defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
+            accountHash
+        )
+        addTeardownBlock { [defaults, suiteName, temporaryRoot] in
+            defaults.removePersistentDomain(forName: suiteName)
+            try? FileManager.default.removeItem(at: temporaryRoot)
+        }
+        return AtomicRecoveryFixture(
+            controller: controller,
+            defaults: defaults,
+            suiteName: suiteName,
+            temporaryRoot: temporaryRoot,
+            recoveryJournalURL: repository.recoveryJournalURL,
+            recoveryFinalizationURL: repository.recoveryFinalizationURL,
+            ownerUserID: ownerUserID,
+            shopID: shopID,
+            deviceInstallID: deviceInstallID
+        )
+    }
+
+    fileprivate func makeCheckpoint(
+        fixture: AtomicRecoveryFixture,
+        maxEventID: Int64,
+        seed: String,
+        historyRow: AtomicRecoveryHistoryRowPayload? = nil,
+        historyTimestampOverride: String? = nil
+    ) -> ShopSyncRecoveryCheckpoint {
+        let emptyHash = ShopSyncRecoveryCanonical.checkpointChainInitialDigest
+        let empty = ShopSyncRecoveryEntityDigest(
+            activeCount: 0,
+            tombstoneCount: 0,
+            idSetDigest: emptyHash,
+            versionDigest: emptyHash
+        )
+        let products = ShopSyncRecoveryEntityDigest(
+            activeCount: 0,
+            tombstoneCount: 0,
+            idSetDigest: emptyHash,
+            versionDigest: emptyHash,
+            identityDigest: emptyHash
+        )
+        let deviceKey = ShopSyncRecoveryCanonical.sha256(fixture.deviceInstallID)
+        let scope = ShopSyncRecoveryScope(
+            kind: "shop_scoped",
+            key: ShopSyncRecoveryCanonical.sha256(
+                fixture.shopID.uuidString.lowercased() + ":shop_scoped:-:" + deviceKey
+            ),
+            legacyOwnerKey: nil,
+            accountKey: AccountBindingStore.accountHash(for: fixture.ownerUserID),
+            deviceKey: deviceKey
+        )
+        let history: ShopSyncRecoveryEntityDigest
+        if let historyRow {
+            let id = historyRow.remoteID.uuidString.lowercased()
+            let suffix: [String]
+            if historyRow.deletedAt != nil {
+                suffix = [ShopSyncRecoveryCanonical.null]
+            } else {
+                suffix = [
+                    historyTimestampOverride ?? historyRow.timestamp,
+                    ShopSyncRecoveryCanonical.sha256(historyRow.supplier),
+                    ShopSyncRecoveryCanonical.sha256(historyRow.category),
+                    historyRow.isManualEntry ? "true" : "false",
+                    ShopSyncRecoveryCanonical.sha256(historyRow.displayName),
+                    historyRow.dataCheckpointDigest ?? ShopSyncRecoveryCanonical.null,
+                    historyRow.overlayCheckpointDigest ?? ShopSyncRecoveryCanonical.null
+                ]
+            }
+            let versionLine = (
+                [
+                    id,
+                    historyRow.updatedAt ?? ShopSyncRecoveryCanonical.null,
+                    historyRow.deletedAt ?? ShopSyncRecoveryCanonical.null,
+                    String(historyRow.payloadVersion)
+                ] + suffix
+            ).joined(separator: ShopSyncRecoveryCanonical.separator)
+            history = ShopSyncRecoveryEntityDigest(
+                activeCount: historyRow.deletedAt == nil ? 1 : 0,
+                tombstoneCount: historyRow.deletedAt == nil ? 0 : 1,
+                idSetDigest: ShopSyncRecoveryCanonical.checkpointChainDigest([id]),
+                versionDigest: ShopSyncRecoveryCanonical.checkpointChainDigest([versionLine])
+            )
+        } else {
+            history = empty
+        }
+        return ShopSyncRecoveryCheckpoint(
+            schemaVersion: "shop-sync-recovery-checkpoint-v1",
+            shopId: fixture.shopID,
+            scope: scope,
+            syncEvents: ShopSyncRecoveryEventCheckpoint(
+                maxId: String(maxEventID),
+                verifiedBaselineId: "0",
+                requiresFullRecovery: true,
+                domainMaxIds: ShopSyncRecoveryDomainEventMaxIDs(
+                    catalog: String(maxEventID),
+                    prices: String(maxEventID),
+                    history: String(maxEventID)
+                )
+            ),
+            catalog: ShopSyncRecoveryCatalogDigest(
+                suppliers: empty,
+                categories: empty,
+                products: products,
+                digest: ShopSyncRecoveryCanonical.sha256(
+                    emptyHash + "\n" + emptyHash + "\n" + emptyHash
+                )
+            ),
+            prices: empty,
+            history: history,
+            images: empty,
+            integrity: ShopSyncRecoveryIntegrity(
+                productCategoryViolationCount: 0,
+                productSupplierViolationCount: 0,
+                priceProductViolationCount: 0,
+                primaryImageViolationCount: 0,
+                historyIdViolationCount: 0,
+                totalViolationCount: 0
+            ),
+            checkpointDigest: ShopSyncRecoveryCanonical.sha256(seed)
         )
     }
 }
@@ -9193,6 +10740,93 @@ private final class Task144HeldRealDecisionProvider: SyncDecisionInputProviding 
 }
 
 @MainActor
+private final class Task145CurrentGenerationDecisionProvider: SyncDecisionInputProviding {
+    private let controller: SyncStoreGenerationController
+    private let defaults: UserDefaults
+    private var network: AutomaticSyncNetworkStatus = .satisfied
+    init(controller: SyncStoreGenerationController, defaults: UserDefaults) {
+        self.controller = controller
+        self.defaults = defaults
+    }
+    func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async { network = status }
+    func recordRealtimeEvent() async {}
+    func makeSnapshot(triggerSource: SyncAutomaticTriggerSource, isAuthenticated: Bool,
+        ownerUserID: UUID?, isSyncBusy: Bool) async -> SyncDecisionInputSnapshot {
+        await SyncDecisionInputProvider(modelContainer: controller.modelContainer,
+            initialNetworkStatus: network, bindingStore: AccountBindingStore(defaults: defaults),
+            selectedShopStore: SelectedShopStore(defaults: defaults))
+            .makeSnapshot(triggerSource: triggerSource, isAuthenticated: isAuthenticated,
+                ownerUserID: ownerUserID, isSyncBusy: isSyncBusy)
+    }
+}
+
+@MainActor
+private final class Task145LivenessAdmissionRuntime: SyncAutomaticRuntimeProviding {
+    private let initial: Task145HeldTerminalRuntime
+    private let nextEntered: XCTestExpectation
+    private var nextContinuation: CheckedContinuation<Void, Never>?
+    private(set) var runCount = 0
+    var isNextHeld: Bool { nextContinuation != nil }
+    var isRunning: Bool { initial.isRunning || isNextHeld }
+    init(initial: Task145HeldTerminalRuntime, nextEntered: XCTestExpectation) {
+        self.initial = initial
+        self.nextEntered = nextEntered
+    }
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        runCount += 1
+        if runCount == 1 { return await initial.run(action: action, source: source) }
+        await withCheckedContinuation { continuation in
+            nextContinuation = continuation
+            nextEntered.fulfill()
+        }
+        return .blocked(.localStateUnavailable)
+    }
+    func releaseNext() { nextContinuation?.resume(); nextContinuation = nil }
+    func cancel() { initial.cancel() }
+    func cancelAndWait() async { await initial.cancelAndWait() }
+    func resumeAfterStoreReplacement() async { await initial.resumeAfterStoreReplacement() }
+}
+
+@MainActor
+private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
+    private let facade: AutomaticSyncRuntimeFacade
+    private let entered: XCTestExpectation
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var releaseRequested = false
+    private(set) var heldResult: SyncAutomaticRunResult?
+    private(set) var didReturn = false
+    private(set) var runCount = 0
+    init(facade: AutomaticSyncRuntimeFacade, entered: XCTestExpectation) {
+        self.facade = facade
+        self.entered = entered
+    }
+    var isRunning: Bool { facade.isRunning }
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        runCount += 1
+        let result = await facade.run(action: action, source: source)
+        heldResult = result
+        await withCheckedContinuation { continuation in
+            if releaseRequested {
+                continuation.resume()
+            } else {
+                self.continuation = continuation
+            }
+            entered.fulfill()
+        }
+        didReturn = true
+        return result
+    }
+    func release() {
+        releaseRequested = true
+        continuation?.resume()
+        continuation = nil
+    }
+    func cancel() { facade.cancel() }
+    func cancelAndWait() async { await facade.cancelAndWait() }
+    func resumeAfterStoreReplacement() async { await facade.resumeAfterStoreReplacement() }
+}
+
+@MainActor
 private final class RI08ObservedRealRuntime: SyncAutomaticRuntimeProviding {
     private let facade: AutomaticSyncRuntimeFacade
     private(set) var results: [SyncAutomaticRunResult] = []
@@ -9280,6 +10914,32 @@ private nonisolated final class RI08NetworkBlocker: URLProtocol, @unchecked Send
         client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
     }
     override func stopLoading() {}
+}
+
+private nonisolated final class Task145RecoveryClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var instant: Date
+    init(_ instant: Date) { self.instant = instant }
+    var value: Date {
+        get { lock.withLock { instant } }
+        set { lock.withLock { instant = newValue } }
+    }
+}
+
+@MainActor
+private final class Task145RecoverySleeper {
+    private let entered: XCTestExpectation
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var delays: [TimeInterval] = []
+    init(entered: XCTestExpectation) { self.entered = entered }
+    func wait(_ delay: TimeInterval) async {
+        delays.append(delay)
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            entered.fulfill()
+        }
+    }
+    func release() { continuation?.resume(); continuation = nil }
 }
 
 private struct AtomicRecoveryHistoryRowPayload: Encodable {

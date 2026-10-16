@@ -1,0 +1,166 @@
+{
+  "captured_at_utc": "2026-10-16T04:40:09.278362+00:00",
+  "network": "NOT_RUN",
+  "cached_primary_sources": [
+    {
+      "library": "postgrest",
+      "cached_source_jar": "/Users/minxiang/.gradle/caches/modules-2/files-2.1/io.github.jan-tennert.supabase/postgrest-kt-android/3.6.0/ff3dc9f0778d64bcbcdf2ff4374a95a5493e3f66/postgrest-kt-android-3.6.0-sources.jar",
+      "sha256": "8fd181af5724598d8fadd53b22762ad938d724a26b34e9aa44a978a542164280",
+      "proof": [
+        {
+          "member": "commonMain/io/github/jan/supabase/postgrest/query/PostgrestRequestBuilder.kt",
+          "excerpts": [
+            {
+              "start": 49,
+              "end": 57,
+              "lines": "49:      * The HTTP method to use.\n50:      */\n51:     internal var httpMethod: HttpMethod = HttpMethod.Get\n52: \n53:     private var shouldStripNulls: Boolean = false\n54:     private var acceptHeader: AcceptHeader = AcceptHeader.Json\n55:     private var explainData: ExplainData? = null\n56:     @PublishedApi internal var body: JsonElement? = null\n57: "
+            },
+            {
+              "start": 231,
+              "end": 263,
+              "lines": "231:     internal fun HttpRequestBuilder.apply() {\n232: \n233:         //\n234:         this.method = httpMethod\n235:         contentType(ContentType.Application.Json)\n236:         this@PostgrestRequestBuilder.body?.let { setBody(it) }\n237: \n238:         // Schema\n239:         if (schema.isNotBlank()) {\n240:             when (httpMethod) {\n241:                 HttpMethod.Get, HttpMethod.Head -> header(\"Accept-Profile\", schema)\n242:                 else -> header(\"Content-Profile\", schema)\n243:             }\n244:         }\n245: \n246:         val mediaType = when(acceptHeader) {\n247:             AcceptHeader.CSV -> AcceptHeader.CSV()\n248:             AcceptHeader.GeoJson -> AcceptHeader.GeoJson()\n249:             AcceptHeader.Json -> AcceptHeader.Json(shouldStripNulls)\n250:             AcceptHeader.Single -> AcceptHeader.Single(shouldStripNulls)\n251:         }\n252: \n253:         // Accept header\n254:         header(\n255:             HttpHeaders.Accept,\n256:             if(explainData != null) explainData!!(mediaType) else mediaType\n257:         )\n258: \n259:         header(PostgrestQueryBuilder.HEADER_PREFER, buildPrefer().joinToString(\",\"))\n260: \n261:         // Url params & headers\n262:         url.parameters.appendAll(params.mapToFirstValue())\n263:         headers.appendAll(this@PostgrestRequestBuilder.headers)"
+            }
+          ]
+        },
+        {
+          "member": "commonMain/io/github/jan/supabase/postgrest/PostgrestImpl.kt",
+          "excerpts": [
+            {
+              "start": 28,
+              "end": 35,
+              "lines": "28:     override var serializer = config.serializer ?: supabaseClient.defaultSerializer\n29: \n30:     @OptIn(SupabaseInternal::class)\n31:     val api = supabaseClient.authenticatedSupabaseApi(this, urlLengthLimit = config.urlLengthLimit).withDefaultRequest {\n32:         timeout {\n33:             this.requestTimeoutMillis = config.timeout.inWholeMilliseconds\n34:         }\n35:     }"
+            },
+            {
+              "start": 52,
+              "end": 73,
+              "lines": "52:     override suspend fun parseErrorResponse(response: HttpResponse): RestException {\n53:         val body = supabaseClient.bodyOrNull<PostgrestErrorResponse>(response) ?: PostgrestErrorResponse(\"Unknown error\")\n54:         return PostgrestRestException(body.message, body.hint, body.details, body.code, response)\n55:     }\n56: \n57:     override suspend fun rpc(\n58:         function: String,\n59:         parameters: JsonObject,\n60:         request: RpcRequestBuilder.() -> Unit\n61:     ): PostgrestResult = rpcRequest(function, parameters, request)\n62: \n63:     override suspend fun rpc(function: String, request: RpcRequestBuilder.() -> Unit): PostgrestResult = rpcRequest(function, null, request)\n64: \n65:     private suspend fun rpcRequest(function: String, body: JsonObject? = null, request: RpcRequestBuilder.() -> Unit): PostgrestResult {\n66:         val requestBuilder = RpcRequestBuilder(config.defaultSchema, config.propertyConversionMethod).apply {\n67:             this.body = body\n68:             if(method != RpcMethod.POST && body != null) {\n69:                 params.putAll(body.mapValues { listOf(it.value.toString()) })\n70:             }\n71:             request()\n72:         }\n73:         return RestRequestExecutor.execute(postgrest = this, path = \"rpc/$function\", request = requestBuilder)"
+            }
+          ]
+        },
+        {
+          "member": "commonMain/io/github/jan/supabase/postgrest/result/PostgrestResult.kt",
+          "excerpts": [
+            {
+              "start": 14,
+              "end": 34,
+              "lines": "14: class PostgrestResult(val data: String, val headers: Headers, @PublishedApi internal val postgrest: Postgrest) {\n15: \n16:     private val contentRange = headers[\"Content-Range\"]\n17: \n18:     /**\n19:      * Returns the total amount of items in the database, or null if no [Count] option was set in the [PostgrestRequestBuilder]\n20:      */\n21:     fun countOrNull(): Long? = contentRange?.substringAfter(\"/\")?.toLongOrNull()\n22: \n23:     /**\n24:      * Returns the range of items returned\n25:      */\n26:     fun rangeOrNull(): LongRange? = contentRange?.substringBefore(\"/\")?.let {\n27:         val (start, end) = it.split(\"-\")\n28:         LongRange(start.toLong(), end.toLong())\n29:     }\n30: \n31:     /**\n32:      * Decodes [data] as [T] using\n33:      */\n34:     inline fun <reified T> decodeAs(): T = postgrest.serializer.decode(data)"
+            }
+          ]
+        },
+        {
+          "member": "commonMain/io/github/jan/supabase/postgrest/executor/RestRequestExecutor.kt",
+          "excerpts": [
+            {
+              "start": 14,
+              "end": 39,
+              "lines": "14: internal data object RestRequestExecutor : RequestExecutor {\n15: \n16:     private val RETRYABLE_METHODS = setOf(HttpMethod.Get, HttpMethod.Head)\n17:     private const val HTTP_SERVICE_UNAVAILABLE = 503\n18:     private const val HTTP_UNKNOWN_ERROR = 520\n19:     private val RETRYABLE_STATUS_CODES = setOf(HTTP_SERVICE_UNAVAILABLE, HTTP_UNKNOWN_ERROR)\n20:     private const val MAX_RETRY_DELAY_MS = 30_000L\n21:     private const val BASE_DELAY_MS = 1000L\n22:     private const val BACKOFF_MULTIPLIER = 2.0\n23:     private const val RETRY_COUNT_HEADER = \"x-retry-count\"\n24: \n25:     override suspend fun execute(\n26:         postgrest: Postgrest,\n27:         path: String,\n28:         request: PostgrestRequestBuilder\n29:     ): PostgrestResult {\n30:         val maxRetries = postgrest.config.maxRetries\n31:         val shouldRetry = request.retry && request.httpMethod in RETRYABLE_METHODS\n32:         val retryCount = if (shouldRetry) maxRetries else 0\n33: \n34:         val authenticatedSupabaseApi = (postgrest as PostgrestImpl).api\n35: \n36:         var lastException: Exception? = null\n37:         for (attempt in 0..retryCount) {\n38:             try {\n39:                 val response = authenticatedSupabaseApi.request(path) {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "library": "core",
+      "cached_source_jar": "/Users/minxiang/.gradle/caches/modules-2/files-2.1/io.github.jan-tennert.supabase/supabase-kt-android/3.6.0/6d67ac9410b6e50e4925d118e57b7db6587b92c9/supabase-kt-android-3.6.0-sources.jar",
+      "sha256": "d28d9ed6d23f48e8363763dff1d0923a7c1da372eedd4a9d4671b78b757704ef",
+      "proof": [
+        {
+          "member": "commonMain/io/github/jan/supabase/network/KtorSupabaseHttpClient.kt",
+          "excerpts": [
+            {
+              "start": 131,
+              "end": 144,
+              "lines": "131:     private fun HttpClientConfig<*>.applyDefaultConfiguration(modifiers: List<HttpClientConfig<*>.() -> Unit>) {\n132:         install(DefaultRequest) {\n133:             headers {\n134:                 defaultHeaders()\n135:             }\n136:             port = HTTPS_PORT\n137:         }\n138:         install(ContentNegotiation) {\n139:             json(supabaseJson)\n140:         }\n141:         install(HttpTimeout) {\n142:             requestTimeoutMillis = requestTimeout.inWholeMilliseconds\n143:         }\n144:         modifiers.forEach { it.invoke(this) }"
+            }
+          ]
+        },
+        {
+          "member": "commonMain/io/github/jan/supabase/network/SupabaseApi.kt",
+          "excerpts": [
+            {
+              "start": 20,
+              "end": 42,
+              "lines": "20:     override suspend fun getDefaultHeaders(): Headers {\n21:         return httpClient.getDefaultHeaders()\n22:     }\n23: \n24:     final override suspend fun request(url: String, builder: HttpRequestBuilder.() -> Unit): HttpResponse {\n25:         return rawRequest(resolveUrl(url), builder)\n26:     }\n27: \n28:     open suspend fun rawRequest(url: String, builder: HttpRequestBuilder.() -> Unit): HttpResponse {\n29:         return httpClient.request(url, builder).also {\n30:             if(!it.status.isSuccess() && parseErrorResponse != null) throw parseErrorResponse.invoke(it)\n31:         }\n32:     }\n33: \n34:     override suspend fun prepareRequest(\n35:         url: String,\n36:         builder: HttpRequestBuilder.() -> Unit\n37:     ): HttpStatement = httpClient.prepareRequest(resolveUrl(url), builder)\n38: \n39:     suspend fun prepareRequest(builder: HttpRequestBuilder.() -> Unit): HttpStatement = prepareRequest(\"\", builder)\n40: \n41: }\n42: "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "library": "auth",
+      "cached_source_jar": "/Users/minxiang/.gradle/caches/modules-2/files-2.1/io.github.jan-tennert.supabase/auth-kt-android/3.6.0/56b0615d21e068b67ef51f662cb709d4f13f510b/auth-kt-android-3.6.0-sources.jar",
+      "sha256": "c06a0ef4c04027d0cb1b78991c1e45790d3b18c449df41fa95d302b61cb62fde",
+      "proof": [
+        {
+          "member": "commonMain/io/github/jan/supabase/auth/api/AuthenticatedApiExtensions.kt",
+          "excerpts": [
+            {
+              "start": 49,
+              "end": 79,
+              "lines": "49: @SupabaseInternal\n50: fun <C> SupabaseClient.authenticatedSupabaseApi(\n51:     plugin: MainPlugin<C>,\n52:     defaultRequest: (HttpRequestBuilder.() -> Unit)? = null,\n53:     requireSession: Boolean = plugin.config.requireValidSession,\n54:     urlLengthLimit: Int? = null\n55: ): AuthenticatedSupabaseApi where C : MainConfig, C : AuthDependentPluginConfig =\n56:     authenticatedSupabaseApi(plugin, requireSession) {\n57:         this.defaultRequest = defaultRequest\n58:         this.urlLengthLimit = urlLengthLimit\n59:     }\n60: \n61: /**\n62:  * Creates a [AuthenticatedSupabaseApi] for the given [plugin]. Requires [Auth] to authenticate requests.\n63:  * All requests will be resolved using the [MainPlugin.resolveUrl] function.\n64:  */\n65: @SupabaseInternal\n66: fun <C> SupabaseClient.authenticatedSupabaseApi(\n67:     plugin: MainPlugin<C>,\n68:     requireSession: Boolean = plugin.config.requireValidSession,\n69:     configure: AuthenticatedApiConfig.Builder.() -> Unit\n70: ): AuthenticatedSupabaseApi where C : MainConfig, C : AuthDependentPluginConfig {\n71:     val client = this\n72:     return authenticatedSupabaseApi(\n73:         resolveUrl = plugin::resolveUrl,\n74:         parseErrorResponse = plugin::parseErrorResponse,\n75:         requireSession = requireSession\n76:     ) {\n77:         jwtToken = plugin.config.jwtToken\n78:         getAccessToken = Auth.defaultResolveAccessToken(client)\n79:         configure()"
+            }
+          ]
+        },
+        {
+          "member": "commonMain/io/github/jan/supabase/auth/api/AuthenticatedSupabaseApi.kt",
+          "excerpts": [
+            {
+              "start": 34,
+              "end": 53,
+              "lines": "34:             appendAll(clientHeaders)\n35:             set(\"Authorization\", \"Bearer $accessToken\")\n36:         }\n37:     }\n38: \n39:     override suspend fun rawRequest(url: String, builder: HttpRequestBuilder.() -> Unit): HttpResponse {\n40:         val accessToken = config.auth.getAccessToken.resolve(jwtToken, !requireSession)\n41:             ?: throw SessionRequiredException(url)\n42:         return super.rawRequest(url) {\n43:             bearerAuth(accessToken)\n44:             defaultRequest?.invoke(this)\n45:             builder()\n46:             checkUrlLength()\n47:         }\n48:     }\n49: \n50:     suspend fun rawRequest(builder: HttpRequestBuilder.() -> Unit): HttpResponse = rawRequest(\"\", builder)\n51: \n52:     override suspend fun prepareRequest(\n53:         url: String,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "library": "ktor_okhttp",
+      "cached_source_jar": "/Users/minxiang/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-okhttp-jvm/3.5.0/378aa3310ece5829bcdd501674248d54d9ddbac0/ktor-client-okhttp-jvm-3.5.0-sources.jar",
+      "sha256": "b921702a37ff77195009e53da17898a0a5acfd5a2756dbb64b4d06f10a6e3429",
+      "proof": [
+        {
+          "member": "jvmMain/io/ktor/client/engine/okhttp/OkHttpEngine.kt",
+          "excerpts": [
+            {
+              "start": 211,
+              "end": 224,
+              "lines": "211: internal fun OutgoingContent.convertToOkHttpBody(\n212:     callContext: CoroutineContext,\n213:     config: OkHttpConfig,\n214: ): RequestBody = when (this) {\n215:     is OutgoingContent.ByteArrayContent -> bytes().let {\n216:         it.toRequestBody(contentType.toString().toMediaTypeOrNull(), 0, it.size)\n217:     }\n218: \n219:     is OutgoingContent.ReadChannelContent -> {\n220:         StreamRequestBody(\n221:             callContext,\n222:             contentLength,\n223:             config.duplexStreamingEnabled,\n224:         ) { readFrom() }"
+            }
+          ]
+        },
+        {
+          "member": "jvmMain/io/ktor/client/engine/okhttp/StreamRequestBody.kt",
+          "excerpts": [
+            {
+              "start": 53,
+              "end": 57,
+              "lines": "53:     override fun contentLength(): Long = contentLength ?: -1\n54: \n55:     override fun isOneShot(): Boolean = true\n56: \n57:     override fun isDuplex(): Boolean = duplex"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "library": "okhttp",
+      "cached_source_jar": "/Users/minxiang/.gradle/caches/modules-2/files-2.1/com.squareup.okhttp3/okhttp-android/5.3.2/cc8097048190917e6d6f13ff230534a3b970ac65/okhttp-android-5.3.2-sources.jar",
+      "sha256": "e37a981890f3baf8357cde2b0b3ef021da13ddd7dee5c97847a82e801605872a",
+      "proof": [
+        {
+          "member": "commonJvmAndroid/okhttp3/internal/http/RetryAndFollowUpInterceptor.kt",
+          "excerpts": [
+            {
+              "start": 101,
+              "end": 111,
+              "lines": "101:           closeActiveExchange = false\n102:           call.eventListener.followUpDecision(call, response, null)\n103:           return response\n104:         }\n105: \n106:         val followUpBody = followUp.body\n107:         if (followUpBody != null && followUpBody.isOneShot()) {\n108:           closeActiveExchange = false\n109:           call.eventListener.followUpDecision(call, response, null)\n110:           return response\n111:         }"
+            },
+            {
+              "start": 256,
+              "end": 267,
+              "lines": "256:       HTTP_UNAVAILABLE -> {\n257:         val priorResponse = userResponse.priorResponse\n258:         if (priorResponse != null && priorResponse.code == HTTP_UNAVAILABLE) {\n259:           // We attempted to retry and got another timeout. Give up.\n260:           return null\n261:         }\n262: \n263:         if (retryAfter(userResponse, Integer.MAX_VALUE) == 0) {\n264:           // specifically received an instruction to retry without delay.\n265:           return userResponse.request\n266:         }\n267: "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

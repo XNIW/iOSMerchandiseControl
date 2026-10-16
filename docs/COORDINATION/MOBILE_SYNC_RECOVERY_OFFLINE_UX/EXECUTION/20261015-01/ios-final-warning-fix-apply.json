@@ -1,0 +1,10 @@
+{
+  "UTC": "2026-10-16T05:34:24.708901+00:00",
+  "patchSHA256": "c59964f766c568f428344d2f3be8cc51d079d1457a49c79a6ac47f4b679d8f76",
+  "fileAfter": {
+    "iOSMerchandiseControl/Sync/SyncOrchestrator.swift": "dd7f6d702aac2bed6b418caa32af9d93d6cc677b63e25a4e936249906806c32e",
+    "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift": "04c87a0bf68bb6048fa6a0bc1e3d2ed59201bae12af6fdb05a4b094552b0f75c"
+  },
+  "review": "Independent bounded checks2/2base+expectedMATCH; no finding, formal report pending",
+  "testSourceChanged": false
+}

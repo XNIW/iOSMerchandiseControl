@@ -1,0 +1,14 @@
+{
+  "UTC": "2026-10-16T05:35:01.435179+00:00",
+  "wrapper": "mc_ios_xcodebuild_timed",
+  "timeoutSeconds": 1200,
+  "action": "build",
+  "project": "iOSMerchandiseControl.xcodeproj",
+  "scheme": "iOSMerchandiseControl",
+  "configuration": "Release",
+  "destination": "platform=iOS Simulator,id=0674B959-5A88-49CA-AD70-33075F40CE9D",
+  "derivedData": "/tmp/mobile145-20261015-01-DerivedData",
+  "CODE_SIGNING_ALLOWED": "NO",
+  "purpose": "Release simulator compilation of application changes; unsigned, not installed or deployable",
+  "sourceManifest": "ios-final-local-input.json"
+}

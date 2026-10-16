@@ -2031,22 +2031,15 @@ struct AutomaticSyncDiagnosticsSnapshot {
         self.deviceCanWrite = defaults.bool(forKey: "sync.runtime.device.canWrite")
         self.pendingCount = pendingCount
         self.retryCount = defaults.integer(forKey: "sync.runtime.incremental.attemptWindow.count")
-        // The orchestrator records outcomes in both Release and Debug. Legacy
-        // DEBUG-only errors can survive upgrades and must not override this run.
-        self.lastError = Self.string(
-            defaults,
-            keys: [
-                "sync.runtime.orchestrator.lastRunErrorCode",
-                "sync.runtime.orchestrator.lastRunBlockReason"
-            ]
-        )
-        self.errorObservedAt = Self.date(
-            defaults,
-            keys: ["sync.runtime.orchestrator.lastRunCompletedAt"]
-        )
+        // The immutable envelope joins the originating scope, outcome and
+        // completion time. Raw legacy diagnostics cannot supply current facts.
+        let observation = SyncStateStore.currentRunObservation(defaults: defaults, ownerUserID: ownerUserID)
+        self.lastError = observation?.currentError
+        self.errorObservedAt = observation?.errorObservedAt
         self.cloudEventsIncompleteWithAlignedCatalog = Self.cloudEventsIncompleteWithAlignedCatalog(
             defaults: defaults,
-            lastError: lastError
+            lastError: lastError,
+            blockReason: observation?.blockReason
         )
 
         _ = baselineSummary
@@ -2167,9 +2160,9 @@ struct AutomaticSyncDiagnosticsSnapshot {
 
     private static func cloudEventsIncompleteWithAlignedCatalog(
         defaults: UserDefaults,
-        lastError: String?
+        lastError: String?,
+        blockReason: String?
     ) -> Bool {
-        let blockReason = defaults.string(forKey: "sync.runtime.orchestrator.lastRunBlockReason")
         let hasLastError = lastError.map { !$0.isEmpty } ?? false
         let hasCloudEventFailure = blockReason == "networkUnavailable"
             || hasLastError

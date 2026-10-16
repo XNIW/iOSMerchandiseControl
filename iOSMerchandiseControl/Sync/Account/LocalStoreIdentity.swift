@@ -48,6 +48,17 @@ nonisolated struct LocalStoreIdentity: RawRepresentable, Codable, Equatable, Has
         rawValue.isEmpty ? defaultStoreId : rawValue
     }
 
+    /// Provenance includes the schema/protocol/epoch boundary. The existing
+    /// RawRepresentable equality contract remains unchanged for other callers.
+    func hasSameProvenance(as other: LocalStoreIdentity) -> Bool {
+        rawValue == other.rawValue
+            && defaultStoreId == other.defaultStoreId
+            && localStoreId == other.localStoreId
+            && schemaVersion == other.schemaVersion
+            && syncProtocolVersion == other.syncProtocolVersion
+            && storeEpoch == other.storeEpoch
+    }
+
     var needsLegacyRepair: Bool {
         rawValue.isEmpty || localStoreId.isEmpty || schemaVersion < Task126SyncPolicy.localSchemaVersion
             || syncProtocolVersion < Task126SyncPolicy.syncProtocolVersion

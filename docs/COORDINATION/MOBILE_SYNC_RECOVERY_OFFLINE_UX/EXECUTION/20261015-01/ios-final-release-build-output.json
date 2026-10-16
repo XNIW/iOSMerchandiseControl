@@ -1,0 +1,90 @@
+{
+  "UTC": "2026-10-16T05:37:57.677129+00:00",
+  "exitCode": 0,
+  "action": "build",
+  "configuration": "Release",
+  "sourceManifest": "ios-final-local-input.json",
+  "fileChecks": {
+    "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift": {
+      "expected": "0e0918d6246905e2d07a59371bc56f07b9a6b109e4f0a8fa9de89a1735423f68",
+      "actual": "0e0918d6246905e2d07a59371bc56f07b9a6b109e4f0a8fa9de89a1735423f68"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift": {
+      "expected": "acdcf7dd7c5abb59e9f90e148cbf96fa11e9b730505ebba7843a345577ba5578",
+      "actual": "acdcf7dd7c5abb59e9f90e148cbf96fa11e9b730505ebba7843a345577ba5578"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift": {
+      "expected": "5d5850ff7d137128c88898db808df66c8ec88a5bbda1bd236b964ba6674e8a48",
+      "actual": "5d5850ff7d137128c88898db808df66c8ec88a5bbda1bd236b964ba6674e8a48"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift": {
+      "expected": "208a237c01ca48f2a0c175836f6fe85fd8a079ef7105cb28e419aa6ba1787b39",
+      "actual": "208a237c01ca48f2a0c175836f6fe85fd8a079ef7105cb28e419aa6ba1787b39"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift": {
+      "expected": "04c87a0bf68bb6048fa6a0bc1e3d2ed59201bae12af6fdb05a4b094552b0f75c",
+      "actual": "04c87a0bf68bb6048fa6a0bc1e3d2ed59201bae12af6fdb05a4b094552b0f75c"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift": {
+      "expected": "a85289ea2a85b1626c37ebbc51264ea75a1d8ba2e86a0d78d5acf0f4a10dcce4",
+      "actual": "a85289ea2a85b1626c37ebbc51264ea75a1d8ba2e86a0d78d5acf0f4a10dcce4"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift": {
+      "expected": "56abba1bb1f4cc35a9d36d247281bf286ee29317da39fee90a158913ac6cc8de",
+      "actual": "56abba1bb1f4cc35a9d36d247281bf286ee29317da39fee90a158913ac6cc8de"
+    },
+    "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift": {
+      "expected": "f076989c5e68e7b31e9f794084683eba228c6429879eeeab9f379771b8fd4e89",
+      "actual": "f076989c5e68e7b31e9f794084683eba228c6429879eeeab9f379771b8fd4e89"
+    },
+    "iOSMerchandiseControl/Sync/SyncOrchestrator.swift": {
+      "expected": "dd7f6d702aac2bed6b418caa32af9d93d6cc677b63e25a4e936249906806c32e",
+      "actual": "dd7f6d702aac2bed6b418caa32af9d93d6cc677b63e25a4e936249906806c32e"
+    },
+    "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift": {
+      "expected": "26602662f9e6ac27dca82c9cb08c41730c4663714eed14eff33b295cf164fdb0",
+      "actual": "26602662f9e6ac27dca82c9cb08c41730c4663714eed14eff33b295cf164fdb0"
+    },
+    "iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests.swift": {
+      "expected": "607e32c7c1062c4e9c0f61eebd88ebfa4cdc035a5f3fc6254efb1050df9e02bf",
+      "actual": "607e32c7c1062c4e9c0f61eebd88ebfa4cdc035a5f3fc6254efb1050df9e02bf"
+    },
+    "iOSMerchandiseControlTests/RecoveryRemoteSupabaseAdapterScopeTests.swift": {
+      "expected": "0583622f3f77ea2b843c53d6d6f5ee745ee66fbfd429145563078fd6aa38c172",
+      "actual": "0583622f3f77ea2b843c53d6d6f5ee745ee66fbfd429145563078fd6aa38c172"
+    },
+    "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift": {
+      "expected": "715f6f5b228a4529c6875b1f951ff1e3125f3573361ff5742a98ebf5068d590f",
+      "actual": "715f6f5b228a4529c6875b1f951ff1e3125f3573361ff5742a98ebf5068d590f"
+    },
+    "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift": {
+      "expected": "159fe230a4a61d76a48c5ee4069a0bdd0b9d9f4f2e8ea30712fdab377c8b9faa",
+      "actual": "159fe230a4a61d76a48c5ee4069a0bdd0b9d9f4f2e8ea30712fdab377c8b9faa"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/AutomaticRecoverySnapshotPullService.swift": {
+      "expected": "f30b9086aa02898e771349bf31151bbf42008dc212e8f358b7e4920fcb3cce0c",
+      "actual": "f30b9086aa02898e771349bf31151bbf42008dc212e8f358b7e4920fcb3cce0c"
+    },
+    "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift": {
+      "expected": "f756218ba7ac4c622c997e102cf0e3b6b796591f05e588bf3db2730d7edd36ce",
+      "actual": "f756218ba7ac4c622c997e102cf0e3b6b796591f05e588bf3db2730d7edd36ce"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift": {
+      "expected": "7c6660adf178a9772e90fb938408216933b012bd357d0e8794e2f93fb533634a",
+      "actual": "7c6660adf178a9772e90fb938408216933b012bd357d0e8794e2f93fb533634a"
+    },
+    "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift": {
+      "expected": "c24a6a03d72ffb9a3e35f7901282cc4896f05bee2a5e3fa4c50bdff755236953",
+      "actual": "c24a6a03d72ffb9a3e35f7901282cc4896f05bee2a5e3fa4c50bdff755236953"
+    },
+    "iOSMerchandiseControl/OptionsView.swift": {
+      "expected": "1954a0c9791781d7262952b3b8911b9a9136c29d48b0ebb962fd324274dfe33e",
+      "actual": "1954a0c9791781d7262952b3b8911b9a9136c29d48b0ebb962fd324274dfe33e"
+    }
+  },
+  "allUnchanged": true,
+  "compilerWarningCount": 0,
+  "compilerWarnings": [],
+  "signing": "CODE_SIGNING_ALLOWED=NO; Release simulator only, not signed device distribution",
+  "installation": "NOT_RUN"
+}

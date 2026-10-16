@@ -58,6 +58,60 @@ actor SupabaseTransportClient {
     nonisolated static let stablePageOrderColumn = "id"
     nonisolated static let maximumRPCRequestBytes = 64 * 1_024
 
+    /// Retry-After is a remote minimum, not a delay capped by local backoff.
+    nonisolated static func retryAfterUntil(_ raw: String?, now: Date) -> Date? {
+        guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else { return nil }
+        if value.utf8.allSatisfy({ (48...57).contains($0) }) {
+            guard let seconds = TimeInterval(value), seconds.isFinite else { return nil }
+            let deadline = now.addingTimeInterval(seconds)
+            return deadline.timeIntervalSinceReferenceDate.isFinite ? deadline : nil
+        }
+
+        // Accept the three HTTP-date forms; strict shapes reject trailing
+        // text and non-HTTP dates before DateFormatter sees the value.
+        let formats = [
+            (#"^[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$"#,
+             "EEE, dd MMM yyyy HH:mm:ss 'GMT'"),
+            (#"^[A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$"#,
+             "EEEE, dd-MMM-yy HH:mm:ss 'GMT'"),
+            (#"^[A-Za-z]{3} [A-Za-z]{3} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$"#,
+             "EEE MMM d HH:mm:ss yyyy")
+        ]
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.isLenient = false
+        formatter.twoDigitStartDate = formatter.calendar.date(byAdding: .year, value: -50, to: now)
+        for (shape, format) in formats where value.range(of: shape, options: .regularExpression) != nil {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: value) { return max(now, date) }
+        }
+        return nil
+    }
+
+    nonisolated static func validateRPCResponse(_ response: HTTPURLResponse, now: Date = Date()) throws {
+        guard (200..<300).contains(response.statusCode) else {
+            throw AutomaticSyncFailure.http(
+                status: response.statusCode,
+                retryAfterUntil: retryAfterUntil(response.value(forHTTPHeaderField: "Retry-After"), now: now)
+            )
+        }
+    }
+
+    nonisolated static func recoveryFailure(for error: PostgrestError) -> AutomaticSyncFailure {
+        let disposition: AutomaticSyncFailure.Disposition
+        let category: AutomaticSyncFailure.Category
+        switch error.code {
+        case "42501": disposition = .stable; category = .authorization
+        case "42P01", "42703", "PGRST204": disposition = .stable; category = .schema
+        default: disposition = .unknown; category = .unknown
+        }
+        // In particular, 57014 by itself does not prove statement timeout.
+        return AutomaticSyncFailure(disposition: disposition, category: category, sqlState: error.code)
+    }
+
     private let clientProvider: SupabaseClientProvider
     private let rpcSessionConfiguration: URLSessionConfiguration
 
@@ -85,7 +139,7 @@ actor SupabaseTransportClient {
         guard !function.isEmpty,
               function.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }),
               maximumResponseBytes > 0 else {
-            throw SupabaseTransportClientError.invalidConfig
+            throw AutomaticSyncFailure(disposition: .stable, category: .payload)
         }
         let session: Session
         do {
@@ -106,13 +160,10 @@ actor SupabaseTransportClient {
         do {
             body = try JSONEncoder().encode(parameters)
         } catch {
-            throw SupabaseTransportClientError.unknown(message: "RPC request encoding failed.")
+            throw AutomaticSyncFailure(disposition: .stable, category: .payload)
         }
         guard body.count <= Self.maximumRPCRequestBytes else {
-            throw SupabaseTransportClientError.networkError(
-                statusCode: nil,
-                message: "RPC request exceeded the local byte limit."
-            )
+            throw AutomaticSyncFailure(disposition: .stable, category: .payload)
         }
 
         let url = clientProvider.config.projectURL
@@ -135,25 +186,19 @@ actor SupabaseTransportClient {
                 configuration: rpcSessionConfiguration,
                 maximumBytes: maximumResponseBytes
             ) { response in
-                guard (200..<300).contains(response.statusCode) else {
-                    throw SupabaseTransportClientError.networkError(
-                        statusCode: response.statusCode,
-                        message: nil
-                    )
-                }
+                try Self.validateRPCResponse(response)
             }
             return bounded.0
         } catch is CancellationError {
             throw CancellationError()
+        } catch let error as AutomaticSyncFailure {
+            throw error
         } catch is BoundedHTTPBodyError {
-            throw SupabaseTransportClientError.networkError(
-                statusCode: nil,
-                message: "RPC response exceeded the local byte limit."
-            )
+            throw AutomaticSyncFailure(disposition: .stable, category: .integrity)
         } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as URLError {
-            throw networkError(error)
+            throw AutomaticSyncFailure.classify(error)
         } catch {
             throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }

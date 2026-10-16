@@ -1,0 +1,35 @@
+{
+  "UTC": "2026-10-16T04:42:04.895972+00:00",
+  "fileSHA256": {
+    "app/src/main/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplication.kt": "0d2e1c6401268999f899618e3b7556059b3c23661c14b5039df46bfc52cc53dc",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt": "9cdba516c438947110911d721fe6bedf570841631b814aff47f790498b837476",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt": "60a1726a178489181c7778a7151f8f7fa872257e59c56fb791e2d6486b5491c1",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSource.kt": "6c61dcce634f3674fce7027406c8b0646d481d1b16c272b44979b4cd756fdac8",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifier.kt": "dc224cd18d4caba2a3f95cc712a474959063165559f20d2e36558d3ce29c41b2",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModel.kt": "d601505d512d954883624ca697250bdf8d41cfefb3defea860ccb7e0ac9f3975",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt": "06eececef56785f4cd7122b62acbbba60208131799a4a1c0add585b904903df3",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinatorTest.kt": "f1f0081abd6177fc78eb79f1c4824e33079ebfa4c84b9796fe6af03bb25ea4d2",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSourceTest.kt": "cef5cb7d2cef83dd5ada115010d044c943860888aa80ebcaff0b2899aef1798a",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifierTest.kt": "5135d88d8dc5f5566397bd510e144446beecc8b41339f21efaa08b4230878c2b",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt": "30add9441e8b7606d30560a64d5abbf5e51d18097e24b7a1ace93d6c57323327",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncEventModels.kt": "074c702d81abd713ecc36a527bed65e2da4c93659fba79b237b6566856d12b08",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt": "1d66fe0759dbf8451062d71d01364cc6a895aec41422a3b3e04f4333ffc0b253",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogSyncStateTracker.kt": "5e4f914bb147e82feb9d8c24a0d9fee9da3c735a2cf4903b4e5dc0a251a3b925",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt": "6f104f23b09d1029dc7c358651212a8058fb9f60bdc92df4eeee878a09576c66",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointReadinessSnapshotTest.kt": "83a89612ae47c9e2cccf8d8e54c6bdab143a514b4e9395d577045af3f0d2bd76",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointTraceActivityLifecycleTest.kt": "888690f89cd0fa01d8e8fa3e304c7cdb32ca303258d0751760b09bde758fe100",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplicationTest.kt": "cb412b45d7d9cbe4129ff6518c075bcbb97b693b02d4dd5adeaa4518aa93c32c",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/UnconfiguredTestApplication.kt": "eb53a9ceb9239912129e13f47b96de98244a5b5779ec4c39c60f8dfc8bec1c10",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseSyncEventRemoteDataSource.kt": "199bc154cfcfdd8eb513c0a4f6e1277361839b42829db54470cb537f77539617"
+  },
+  "ownedFrozen": [
+    "app/src/main/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplication.kt",
+    "app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinatorTest.kt",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointReadinessSnapshotTest.kt",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointTraceActivityLifecycleTest.kt",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplicationTest.kt",
+    "app/src/test/java/com/example/merchandisecontrolsplitview/UnconfiguredTestApplication.kt"
+  ],
+  "scenario": "Final all Debug unit + assembleDebug + unsigned assembleRelease + lint on schema-parity candidate"
+}

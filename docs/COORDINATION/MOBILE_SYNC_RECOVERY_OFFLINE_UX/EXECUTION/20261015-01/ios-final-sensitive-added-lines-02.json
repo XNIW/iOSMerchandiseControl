@@ -1,0 +1,11 @@
+{
+  "UTC": "2026-10-16T05:21:30.939278+00:00",
+  "mode": "read-only added lines; all official POSIX space occurrences adapted to Python, no matching values emitted or written",
+  "supersedesIncompletePatternTranslation": "ios-final-sensitive-added-lines.json",
+  "patternSourceSHA256": "34183a019ae6ca8511979b5dcbc7203f6360d661429be8983003bbe66c68a1e7",
+  "addedLines": 4435,
+  "hits": [],
+  "unclassifiedHits": 0,
+  "result": "PASS",
+  "limits": "19 source/test pins only, no env/credential file read, no repository/history/evidence-wide certification"
+}

@@ -5,6 +5,20 @@ import XCTest
 final class Task118AutomaticDomainTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
+    @MainActor
+    private func qualifiedOriginalCompletionDate(
+        _ result: SyncAutomaticRunResult, defaults: UserDefaults,
+        file: StaticString = #filePath, line: UInt = #line
+    ) throws -> Date {
+        let observation = try XCTUnwrap(result.observation,
+            "A genuine recovery must carry its original Engine completion observation", file: file, line: line)
+        _ = try XCTUnwrap(observation.hasValidPersistentFacts && observation.matches(result)
+            && observation.origin.isCurrent(defaults: defaults)
+            && observation.completedAt.isFinite && observation.completedAt > 0 ? true : nil,
+            "ORIGINAL_ENGINE_COMPLETION_NOT_QUALIFIED_DATE_ASSERTIONS_NOT_REACHED", file: file, line: line)
+        return Date(timeIntervalSince1970: observation.completedAt)
+    }
+
     func testRunResultOutcomesAreExplicitAndDistinct() {
         let results: [SyncAutomaticRunResult] = [
             .success(didWork: true),
@@ -61,14 +75,13 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStoreRecordsEveryAutomaticRunOutcome() {
-        let suiteName = "Task118AutomaticDomainTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testStateStoreRecordsEveryAutomaticRunOutcome() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let defaults = fixture.defaults
 
-        let store = SyncStateStore(defaults: defaults, keyPrefix: "task118")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task118", storeGenerationController: fixture.controller)
 
-        store.recordRunResult(.success(didWork: true, verifiedConvergence: true))
+        store.recordRunResult(fixture.result)
         XCTAssertEqual(store.state.phase, .idle)
         XCTAssertEqual(store.state.lastOutcome, .succeeded)
         XCTAssertNotNil(store.state.lastVerifiedAt)
@@ -101,12 +114,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStoreDoesNotPromoteDecisionNoWorkToVerifiedSuccess() {
-        let suiteName = "Task136NoWork-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testStateStoreDoesNotPromoteDecisionNoWorkToVerifiedSuccess() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let defaults = fixture.defaults
 
-        let store = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task136", storeGenerationController: fixture.controller)
 
         store.recordRunResult(.failed(errorCode: "networkError(redacted)"))
         XCTAssertEqual(defaults.string(forKey: "task136.lastRunErrorCode"), "networkError(redacted)")
@@ -118,25 +130,28 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertNil(defaults.string(forKey: "task136.lastRunErrorCode"))
         XCTAssertNil(defaults.string(forKey: "task136.lastRunBlockReason"))
 
-        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task136", storeGenerationController: fixture.controller)
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
         XCTAssertNil(relaunched.state.lastVerifiedAt)
 
-        let verifiedAt = Date(timeIntervalSince1970: 1_000)
+        let verifiedAt = try qualifiedOriginalCompletionDate(fixture.result, defaults: defaults)
         relaunched.recordRunResult(
-            .success(didWork: false, verifiedConvergence: true),
-            now: verifiedAt
+            fixture.result,
+            now: verifiedAt.addingTimeInterval(1_000)
         )
         XCTAssertEqual(relaunched.state.phase, .idle)
         XCTAssertEqual(relaunched.state.lastVerifiedAt, verifiedAt)
+        var repeatedProof = fixture.result
+        repeatedProof.status = .noWork
+        repeatedProof.didWork = false
         relaunched.recordRunResult(
-            .noWork(verifiedConvergence: true),
-            now: verifiedAt.addingTimeInterval(100)
+            repeatedProof,
+            now: verifiedAt.addingTimeInterval(1_100)
         )
         XCTAssertEqual(relaunched.state.phase, .idle)
         XCTAssertEqual(relaunched.state.lastVerifiedAt, verifiedAt)
 
-        let verifiedRelaunch = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        let verifiedRelaunch = SyncStateStore(defaults: defaults, keyPrefix: "task136", storeGenerationController: fixture.controller)
         XCTAssertEqual(verifiedRelaunch.state.phase, .idle)
         XCTAssertEqual(verifiedRelaunch.state.lastVerifiedAt, verifiedAt)
     }
@@ -149,11 +164,251 @@ final class Task118AutomaticDomainTests: XCTestCase {
         defaults.set("success", forKey: "task139.legacy.lastRunStatus")
         defaults.set("idle", forKey: "task139.legacy.phase")
         defaults.set(500.0, forKey: "task139.legacy.lastVerifiedAt")
+        let rawBefore = NSDictionary(dictionary: defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("task139.legacy.") })
 
         let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.legacy")
 
-        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertEqual(store.state.phase, .idle,
+            "Untrusted legacy success alone cannot create a recovery latch")
+        XCTAssertNil(store.state.lastOutcome)
         XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertEqual(NSDictionary(dictionary: defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("task139.legacy.") }), rawBefore,
+            "Reading the typed-only projection must preserve all raw legacy values")
+    }
+
+    @MainActor
+    func testVerifiedProofReplayPreservesFirstDateAndHistoricalSuccessAfterFailure() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.verified-replay"
+        let store = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        let firstDate = try qualifiedOriginalCompletionDate(fixture.result, defaults: fixture.defaults)
+        store.recordRunResult(fixture.result, now: firstDate.addingTimeInterval(1_000))
+        let acceptedBytes = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"))
+        XCTAssertEqual(store.state.lastVerifiedAt, firstDate)
+        store.recordRunResult(fixture.result, now: firstDate.addingTimeInterval(4_600))
+        XCTAssertEqual(store.state.lastVerifiedAt, firstDate)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"), acceptedBytes)
+        store.recordRunResult(.failed(errorCode: "subsequent_failure"), now: firstDate.addingTimeInterval(7_200))
+        XCTAssertEqual(store.state.phase, .failed)
+        XCTAssertEqual(store.state.lastVerifiedAt, firstDate)
+        let reopened = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        XCTAssertEqual(reopened.state.lastVerifiedAt, firstDate)
+        XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"), acceptedBytes)
+    }
+
+    @MainActor
+    func testBoolOnlyVerificationCannotBorrowAnAlreadyQualifiedGeneration() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.bool-only"
+        let store = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        store.recordRunResult(.success(didWork: true, verifiedConvergence: true))
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertEqual(store.state.phase, .recoveryRequired)
+        XCTAssertNil(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"))
+        XCTAssertNil(SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller).state.lastVerifiedAt)
+    }
+
+    @MainActor
+    func testLegacyVersionOneAndCorruptVerifiedProofRemainPreservedAndUntrusted() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.legacy-proof"
+        fixture.defaults.set("success", forKey: "\(prefix).lastRunStatus")
+        fixture.defaults.set("idle", forKey: "\(prefix).phase")
+        fixture.defaults.set(500.0, forKey: "\(prefix).lastVerifiedAt")
+        fixture.defaults.set(1, forKey: "\(prefix).lastVerifiedProofVersion")
+        let rawBefore = NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("\(prefix).") })
+        let legacy = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        XCTAssertNil(legacy.state.lastVerifiedAt)
+        XCTAssertEqual(legacy.state.phase, .idle,
+            "Untrusted version-one diagnostics alone cannot create a recovery latch")
+        XCTAssertNil(legacy.state.lastOutcome)
+        XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
+            .filter { $0.key.hasPrefix("\(prefix).") }), rawBefore,
+            "Hydration must preserve all raw version-one diagnostics")
+        XCTAssertEqual(fixture.defaults.double(forKey: "\(prefix).lastVerifiedAt"), 500)
+        XCTAssertEqual(fixture.defaults.integer(forKey: "\(prefix).lastVerifiedProofVersion"), 1)
+
+        let verifiedAt = try qualifiedOriginalCompletionDate(fixture.result, defaults: fixture.defaults)
+        legacy.recordRunResult(fixture.result, now: verifiedAt.addingTimeInterval(1_000))
+        let valid = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"))
+        var unknownVersion = try XCTUnwrap(JSONSerialization.jsonObject(with: valid) as? [String: Any])
+        unknownVersion["schemaVersion"] = 99
+        var invalidDate = try XCTUnwrap(JSONSerialization.jsonObject(with: valid) as? [String: Any])
+        invalidDate["verifiedAt"] = -1
+        for corrupt in [Data("{broken".utf8), try JSONSerialization.data(withJSONObject: unknownVersion),
+                        try JSONSerialization.data(withJSONObject: invalidDate)] {
+            fixture.defaults.set(corrupt, forKey: "\(prefix).lastVerifiedProof.v2")
+            XCTAssertNil(legacy.state.lastVerifiedAt)
+            let reopened = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                storeGenerationController: fixture.controller)
+            XCTAssertNil(reopened.state.lastVerifiedAt)
+            XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).lastVerifiedProof.v2"), corrupt)
+            XCTAssertEqual(fixture.defaults.double(forKey: "\(prefix).lastVerifiedAt"), 500)
+            XCTAssertEqual(fixture.defaults.integer(forKey: "\(prefix).lastVerifiedProofVersion"), 1)
+        }
+    }
+
+    @MainActor
+    func testOriginProofCannotBeReassignedToAnotherAlreadyQualifiedGeneration() async throws {
+        let a = try await makeQualifiedSyncStateFixture()
+        let b = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.two-qualified-generations"
+        let key = "\(prefix).lastVerifiedProof.v2"
+        let stateA = SyncStateStore(defaults: a.defaults, keyPrefix: prefix,
+            storeGenerationController: a.controller)
+        let stateB = SyncStateStore(defaults: b.defaults, keyPrefix: prefix,
+            storeGenerationController: b.controller)
+        let completedA = try qualifiedOriginalCompletionDate(a.result, defaults: a.defaults)
+        let completedB = try qualifiedOriginalCompletionDate(b.result, defaults: b.defaults)
+        stateA.recordRunResult(a.result, now: completedA.addingTimeInterval(1_000))
+        stateB.recordRunResult(b.result, now: completedB.addingTimeInterval(2_000))
+        XCTAssertEqual(stateA.state.lastVerifiedAt, completedA)
+        XCTAssertEqual(stateB.state.lastVerifiedAt, completedB)
+        let bytesA = try XCTUnwrap(a.defaults.data(forKey: key))
+        let bytesB = try XCTUnwrap(b.defaults.data(forKey: key))
+        stateB.recordRunResult(a.result, now: completedB.addingTimeInterval(3_000))
+        XCTAssertEqual(stateB.state.lastVerifiedAt, completedB)
+        XCTAssertEqual(b.defaults.data(forKey: key), bytesB)
+        b.defaults.set(bytesA, forKey: key)
+        XCTAssertNil(stateB.state.lastVerifiedAt,
+            "B's own qualified manifest cannot supply provenance for A's date")
+        XCTAssertNil(SyncStateStore(defaults: b.defaults, keyPrefix: prefix,
+            storeGenerationController: b.controller).state.lastVerifiedAt)
+        XCTAssertEqual(b.defaults.data(forKey: key), bytesA)
+    }
+
+    @MainActor
+    func testVerifiedDateRequiresEveryOriginFieldAndCurrentQualifiedLocalBody() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.proof-identity"
+        let key = "\(prefix).lastVerifiedProof.v2"
+        let store = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        let completedAt = try qualifiedOriginalCompletionDate(fixture.result, defaults: fixture.defaults)
+        store.recordRunResult(fixture.result, now: completedAt.addingTimeInterval(1_000))
+        let bytes = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        let record = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        let original = try XCTUnwrap(record["finalization"] as? [String: Any])
+        for field in ["accountHash", "shopID", "deviceIdentityHash", "generationID", "checkpointDigest", "baselineRunID", "storeIdentity"] {
+            var changed = record
+            var origin = original
+            switch field {
+            case "accountHash", "deviceIdentityHash", "checkpointDigest": origin[field] = String(repeating: "f", count: 64)
+            case "storeIdentity":
+                var identity = try XCTUnwrap(origin[field] as? [String: Any])
+                let originalEpoch = try XCTUnwrap(identity["storeEpoch"] as? Int,
+                    "The mutator must change a real encoded field, never add an ignored key")
+                identity["storeEpoch"] = originalEpoch + 1
+                origin[field] = identity
+            default: origin[field] = UUID().uuidString
+            }
+            changed["finalization"] = origin
+            let mutated = try JSONSerialization.data(withJSONObject: changed)
+            if field == "storeIdentity" {
+                let decoded = try JSONDecoder().decode(SyncStoreRecoveryFinalization.self,
+                    from: JSONSerialization.data(withJSONObject: origin))
+                let actualOrigin = try XCTUnwrap(fixture.result.verifiedFinalization)
+                XCTAssertEqual(decoded.storeIdentity.rawValue, actualOrigin.storeIdentity.rawValue)
+                XCTAssertEqual(decoded.storeIdentity.defaultStoreId, actualOrigin.storeIdentity.defaultStoreId)
+                XCTAssertEqual(decoded.storeIdentity.localStoreId, actualOrigin.storeIdentity.localStoreId)
+                XCTAssertEqual(decoded.storeIdentity.schemaVersion, actualOrigin.storeIdentity.schemaVersion)
+                XCTAssertEqual(decoded.storeIdentity.syncProtocolVersion, actualOrigin.storeIdentity.syncProtocolVersion)
+                _ = try XCTUnwrap(decoded.storeIdentity.storeEpoch == actualOrigin.storeIdentity.storeEpoch + 1
+                    ? true : nil, "FULL_STORE_EPOCH_MUTATION_NOT_QUALIFIED_DATE_PROJECTION_NOT_REACHED")
+                print("TASK145_D01_FULL_STORE_MUTATION originalEpoch=\(actualOrigin.storeIdentity.storeEpoch) decodedEpoch=\(decoded.storeIdentity.storeEpoch) rawSame=\(decoded.storeIdentity.rawValue == actualOrigin.storeIdentity.rawValue) typedEquality=\(decoded.storeIdentity == actualOrigin.storeIdentity)")
+            }
+            fixture.defaults.set(mutated, forKey: key)
+            XCTAssertNil(store.state.lastVerifiedAt, field)
+            XCTAssertNil(SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                storeGenerationController: fixture.controller).state.lastVerifiedAt, field)
+            XCTAssertEqual(fixture.defaults.data(forKey: key), mutated)
+        }
+        fixture.defaults.set(bytes, forKey: key)
+        XCTAssertEqual(store.state.lastVerifiedAt, completedAt)
+        XCTAssertNil(SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix).state.lastVerifiedAt,
+            "Custom defaults cannot borrow the application's shared controller")
+        Task126OwnerStoreGate.configureLocalBodyFence(container: fixture.controller.modelContainer,
+            proven: false, provider: { nil })
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertNil(SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller).state.lastVerifiedAt)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), bytes)
+    }
+
+    @MainActor
+    func testVerifiedProofV2RejectsLegacyScalarAndIncompleteNestedStoreIdentity() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let prefix = "task145.nested-proof-strictness"
+        let key = "\(prefix).lastVerifiedProof.v2"
+        let store = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+            storeGenerationController: fixture.controller)
+        let verifiedAt = try qualifiedOriginalCompletionDate(fixture.result, defaults: fixture.defaults)
+        store.recordRunResult(fixture.result, now: verifiedAt.addingTimeInterval(1_000))
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAt)
+        let validBytes = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        let validRecord = try XCTUnwrap(JSONSerialization.jsonObject(with: validBytes) as? [String: Any])
+        let validOrigin = try XCTUnwrap(validRecord["finalization"] as? [String: Any])
+        let validIdentity = try XCTUnwrap(validOrigin["storeIdentity"] as? [String: Any])
+        let realOrigin = try XCTUnwrap(fixture.result.verifiedFinalization)
+        for mutation in ["legacyScalar", "storeEpoch", "schemaVersion", "syncProtocolVersion", "defaultStoreId", "localStoreId",
+                         "emptyLocalStoreId", "whitespaceLocalStoreId", "emptyDefaultStoreId", "whitespaceDefaultStoreId", "spacedRawValue"] {
+            var record = validRecord
+            var origin = validOrigin
+            if mutation == "legacyScalar" {
+                origin["storeIdentity"] = realOrigin.storeIdentity.rawValue
+            } else if ["emptyLocalStoreId", "whitespaceLocalStoreId", "emptyDefaultStoreId", "whitespaceDefaultStoreId", "spacedRawValue"].contains(mutation) {
+                var malformed = validIdentity
+                let field: String
+                let value: String
+                switch mutation {
+                case "emptyLocalStoreId": field = "localStoreId"; value = ""
+                case "whitespaceLocalStoreId": field = "localStoreId"; value = " \t "
+                case "emptyDefaultStoreId": field = "defaultStoreId"; value = ""
+                case "whitespaceDefaultStoreId": field = "defaultStoreId"; value = " \t "
+                default: field = "rawValue"; value = " \(realOrigin.storeIdentity.rawValue) "
+                }
+                let actualOriginalValue = try XCTUnwrap(validIdentity[field] as? String)
+                _ = try XCTUnwrap(value != actualOriginalValue ? true : nil,
+                    "RAW_NESTED_INPUT_UNCHANGED_NORMALIZATION_NOT_REACHED: \(mutation)")
+                malformed[field] = value
+                origin["storeIdentity"] = malformed
+            } else {
+                var incomplete = validIdentity
+                _ = try XCTUnwrap(incomplete.removeValue(forKey: mutation),
+                    "The negative must remove a mandatory field actually encoded by the real origin")
+                origin["storeIdentity"] = incomplete
+            }
+            record["finalization"] = origin
+            // Qualify the reason for strict v2 parsing: the legacy product
+            // decoder infers all missing/default fields and returns the same
+            // concrete values. No fabricated scope or result is involved.
+            let decoded = try JSONDecoder().decode(SyncStoreRecoveryFinalization.self,
+                from: JSONSerialization.data(withJSONObject: origin))
+            let identity = decoded.storeIdentity
+            let real = realOrigin.storeIdentity
+            _ = try XCTUnwrap(identity.rawValue == real.rawValue
+                && identity.defaultStoreId == real.defaultStoreId
+                && identity.localStoreId == real.localStoreId
+                && identity.schemaVersion == real.schemaVersion
+                && identity.syncProtocolVersion == real.syncProtocolVersion
+                && identity.storeEpoch == real.storeEpoch ? true : nil,
+                "NESTED_LEGACY_INFERENCE_NOT_QUALIFIED: \(mutation)")
+            let mutated = try JSONSerialization.data(withJSONObject: record)
+            XCTAssertNotEqual(mutated, validBytes)
+            fixture.defaults.set(mutated, forKey: key)
+            XCTAssertNil(store.state.lastVerifiedAt, mutation)
+            XCTAssertNil(SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                storeGenerationController: fixture.controller).state.lastVerifiedAt, mutation)
+            XCTAssertEqual(fixture.defaults.data(forKey: key), mutated)
+        }
     }
 
     @MainActor
@@ -164,12 +419,16 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let identity = String(repeating: "a", count: 64)
         let start = Date(timeIntervalSince1970: 10_000)
 
-        var store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
+        var store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget", retryJitter: { 1 })
         XCTAssertEqual(
             store.automaticRecoveryAttemptEligibility(identity: identity, now: start),
             .ready
         )
-        XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identity, now: start), 1)
+        let firstClaim = store.claimAutomaticRecoveryAttempt(identity: identity, now: start)
+        XCTAssertEqual(firstClaim?.attemptInWindow, 1)
+        XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity, now: start), .exhausted,
+            "An unfinished attempt has no completed transient proof")
+        store.recordRunResult(.blocked(.networkUnavailable), automaticRecoveryClaim: firstClaim, now: start)
         guard case .cooldown(let firstDelay) = store.automaticRecoveryAttemptEligibility(
             identity: identity,
             now: start
@@ -178,7 +437,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         }
         XCTAssertEqual(firstDelay, 2, accuracy: 0.001)
 
-        store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
+        store = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget", retryJitter: { 1 })
         XCTAssertEqual(
             store.automaticRecoveryAttemptEligibility(
                 identity: identity,
@@ -186,20 +445,12 @@ final class Task118AutomaticDomainTests: XCTestCase {
             ),
             .ready
         )
-        XCTAssertEqual(
-            store.beginAutomaticRecoveryAttempt(
-                identity: identity,
-                now: start.addingTimeInterval(2)
-            ),
-            2
-        )
-        XCTAssertEqual(
-            store.beginAutomaticRecoveryAttempt(
-                identity: identity,
-                now: start.addingTimeInterval(6)
-            ),
-            3
-        )
+        let secondClaim = store.claimAutomaticRecoveryAttempt(identity: identity, now: start.addingTimeInterval(2))
+        XCTAssertEqual(secondClaim?.attemptInWindow, 2)
+        store.recordRunResult(.blocked(.networkUnavailable), automaticRecoveryClaim: secondClaim, now: start.addingTimeInterval(2))
+        let thirdClaim = store.claimAutomaticRecoveryAttempt(identity: identity, now: start.addingTimeInterval(6))
+        XCTAssertEqual(thirdClaim?.attemptInWindow, 3)
+        store.recordRunResult(.blocked(.networkUnavailable), automaticRecoveryClaim: thirdClaim, now: start.addingTimeInterval(6))
 
         let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.budget")
         XCTAssertEqual(
@@ -207,8 +458,10 @@ final class Task118AutomaticDomainTests: XCTestCase {
                 identity: identity,
                 now: start.addingTimeInterval(60)
             ),
-            .exhausted
+            .cooldown(246)
         )
+        XCTAssertEqual(relaunched.automaticRecoveryAttemptEligibility(identity: identity,
+            now: start.addingTimeInterval(306)), .ready)
     }
 
     @MainActor
@@ -231,6 +484,246 @@ final class Task118AutomaticDomainTests: XCTestCase {
             store.automaticRecoveryAttemptEligibility(identity: firstIdentity, now: now),
             .ready
         )
+    }
+
+    @MainActor
+    func testAutomaticRecoveryCooldownNeverAnticipatesRequestedServerMinimum() {
+        let suiteName = "Task145RecoveryServerMinimum-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let identity = String(repeating: "8", count: 64)
+        let now = Date(timeIntervalSince1970: 30_000)
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task145.server-minimum")
+        let claim = store.claimAutomaticRecoveryAttempt(identity: identity, now: now)
+        XCTAssertEqual(claim?.attemptInWindow, 1)
+        let completedAt = now.addingTimeInterval(1)
+        let requestedServerMinimum: TimeInterval = 600
+        store.recordRunResult(.blocked(.networkUnavailable), preserveRecoveryRequired: true, automaticRecoveryClaim: claim, now: completedAt)
+
+        let actualDelay = store.extendAutomaticRecoveryAttemptCooldown(identity: identity,
+            requestedDelay: requestedServerMinimum, now: completedAt)
+
+        XCTAssertEqual(actualDelay, requestedServerMinimum, accuracy: 0.001,
+            "A server minimum is not subject to the local busy/backoff cap")
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task145.server-minimum")
+        guard case .cooldown(let remaining) = relaunched.automaticRecoveryAttemptEligibility(
+            identity: identity, now: completedAt.addingTimeInterval(599)) else {
+            return XCTFail("The durable cooldown must still prohibit the request one second before its minimum")
+        }
+        XCTAssertEqual(remaining, 1, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testCorruptAutomaticRecoveryBudgetRemainsFailClosedAfterTimeAndRelaunch() {
+        let suiteName = "Task145RecoveryCorruptBudget-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let prefix = "task145.corrupt-budget"
+        let identity = String(repeating: "9", count: 64)
+        let corrupt = Data("{\"schemaVersion\":1,\"identity\":\"truncated".utf8)
+        defaults.set(corrupt, forKey: "\(prefix).automaticRecoveryAttempt.v1")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+        let now = Date(timeIntervalSince1970: 40_000)
+        XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity, now: now), .exhausted)
+        XCTAssertNil(store.beginAutomaticRecoveryAttempt(identity: identity, now: now))
+
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+        XCTAssertEqual(relaunched.automaticRecoveryAttemptEligibility(identity: identity,
+            now: now.addingTimeInterval(86_400)), .exhausted)
+        XCTAssertNil(relaunched.beginAutomaticRecoveryAttempt(identity: identity,
+            now: now.addingTimeInterval(86_400)))
+        XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v1"), corrupt,
+            "Fail-closed admission must preserve the original metadata as evidence")
+    }
+
+    @MainActor
+    func testLegacyAutomaticRecoveryBudgetNeverInfersRetryabilityFromErrorText() throws {
+        let suiteName = "Task145LegacyRecoveryBudget-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let prefix = "task145.legacy-budget"
+        let identity = String(repeating: "7", count: 64)
+        let legacy = try JSONSerialization.data(withJSONObject: [
+            "schemaVersion": 1, "identity": identity, "attemptCount": 3, "nextAllowedAt": 20_000
+        ])
+        defaults.set(legacy, forKey: "\(prefix).automaticRecoveryAttempt.v1")
+        defaults.set("networkError(statusCode:503,message:timeout)", forKey: "\(prefix).lastRunErrorCode")
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+        let now = Date(timeIntervalSince1970: 50_000)
+        XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity, now: now), .exhausted)
+        XCTAssertNil(store.beginAutomaticRecoveryAttempt(identity: identity, now: now))
+        XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v1"), legacy)
+        XCTAssertNil(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"),
+            "Legacy diagnostics do not prove a typed transient failure and cannot create a new window")
+    }
+
+    @MainActor
+    func testRecoveryWindowJitterAndExactFiveMinuteBoundaryPersistCumulativeAttempts() throws {
+        for jitter in [0.5, 1.0, 1.5] {
+            let suiteName = "Task145RetryJitter-\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suiteName)!
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let prefix = "task145.jitter"
+            let identity = String(repeating: "6", count: 64)
+            let store = SyncStateStore(defaults: defaults, keyPrefix: prefix, retryJitter: { jitter })
+            var completedAt = Date(timeIntervalSince1970: 60_000)
+            for attempt in 1...3 {
+                let claim = store.claimAutomaticRecoveryAttempt(identity: identity, now: completedAt)
+                XCTAssertEqual(claim?.attemptInWindow, attempt)
+                store.recordRunResult(.blocked(.networkUnavailable), preserveRecoveryRequired: true,
+                    automaticRecoveryClaim: claim, now: completedAt)
+                let delay = attempt == 3 ? 300 : 2 * pow(2, Double(attempt - 1)) * jitter
+                XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity, now: completedAt),
+                    .cooldown(delay))
+                if attempt < 3 { completedAt.addTimeInterval(delay) }
+            }
+            let relaunched = SyncStateStore(defaults: defaults, keyPrefix: prefix, retryJitter: { jitter })
+            guard case .cooldown(let remaining) = relaunched.automaticRecoveryAttemptEligibility(identity: identity,
+                now: completedAt.addingTimeInterval(299.999)) else { return XCTFail("The five-minute floor is strict") }
+            XCTAssertEqual(remaining, 0.001, accuracy: 0.00001)
+            XCTAssertNil(relaunched.beginAutomaticRecoveryAttempt(identity: identity,
+                now: completedAt.addingTimeInterval(299.999)))
+            XCTAssertEqual(relaunched.beginAutomaticRecoveryAttempt(identity: identity,
+                now: completedAt.addingTimeInterval(300)), 1)
+            let data = try XCTUnwrap(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+            let record = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(record["windowIndex"] as? Int, 2)
+            XCTAssertEqual(record["attemptsInWindow"] as? Int, 1)
+            XCTAssertEqual(record["totalAttempts"] as? Int, 4)
+            let unfinished = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+            XCTAssertEqual(unfinished.automaticRecoveryAttemptEligibility(identity: identity,
+                now: completedAt.addingTimeInterval(86_400)), .exhausted)
+        }
+    }
+
+    @MainActor
+    func testCorruptV2DoesNotFallBackToLegacyOrAuthorizeAnotherIdentity() {
+        let suiteName = "Task145CorruptV2-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let prefix = "task145.corrupt-v2"
+        let corrupt = Data("{\"schemaVersion\":2,\"totalAttempts\":999".utf8)
+        defaults.set(corrupt, forKey: "\(prefix).automaticRecoveryAttempt.v2")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+        for identity in [String(repeating: "4", count: 64), String(repeating: "5", count: 64)] {
+            XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity), .exhausted)
+            XCTAssertNil(store.beginAutomaticRecoveryAttempt(identity: identity))
+        }
+        XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), corrupt)
+    }
+
+    @MainActor
+    func testOrdinaryNoWorkCannotCompleteInflightRecoveryAttempt() throws {
+        let suiteName = "Task145OrdinaryCompletionOwnership-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let prefix = "task145.ordinary-completion-owner"
+        let store = SyncStateStore(defaults: defaults, keyPrefix: prefix)
+        let identity = String(repeating: "1", count: 64)
+        let startedAt = Date(timeIntervalSince1970: 80_000)
+        XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identity, now: startedAt), 1)
+        let inflight = try XCTUnwrap(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+
+        store.recordRunResult(.noWork(), now: startedAt.addingTimeInterval(10))
+
+        XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), inflight,
+            "An ordinary result has no claim over an in-flight recovery attempt")
+        XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity,
+            now: startedAt.addingTimeInterval(86_400)), .exhausted)
+    }
+
+    @MainActor
+    func testUnrelatedTransientResultCannotAuthorizeInflightRecoveryRetry() throws {
+        let suiteName = "Task145TransientCompletionOwnership-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let prefix = "task145.transient-completion-owner"
+        let store = SyncStateStore(defaults: defaults, keyPrefix: prefix, retryJitter: { 1 })
+        let identity = String(repeating: "2", count: 64)
+        let startedAt = Date(timeIntervalSince1970: 90_000)
+        XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identity, now: startedAt), 1)
+        let inflight = try XCTUnwrap(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+
+        store.recordRunResult(.failed(errorCode: "TEST_UNRELATED_RESULT",
+            failure: AutomaticSyncFailure.classify(URLError(.timedOut))), now: startedAt.addingTimeInterval(10))
+
+        XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), inflight,
+            "Typed retryability is insufficient without ownership of this invocation")
+        XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identity,
+            now: startedAt.addingTimeInterval(86_400)), .exhausted)
+    }
+
+    @MainActor
+    func testStaleRecoveryCompletionCannotFinishNewAttemptEvenWhenIdentityIsReused() throws {
+        for reuseIdentity in [false, true] {
+            let suiteName = "Task145StaleCompletionOwnership-\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suiteName)!
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let prefix = "task145.stale-completion-owner"
+            let store = SyncStateStore(defaults: defaults, keyPrefix: prefix, retryJitter: { 1 })
+            let identityA = String(repeating: "3", count: 64)
+            let identityB = reuseIdentity ? identityA : String(repeating: "4", count: 64)
+            let startedAt = Date(timeIntervalSince1970: 100_000)
+            XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identityA, now: startedAt), 1)
+            // An explicit fresh Retry may reuse the journal identity. A late
+            // callback still belongs to invocation A, not its successor B.
+            if reuseIdentity { store.resetAutomaticRecoveryAttemptBudget() }
+            XCTAssertEqual(store.beginAutomaticRecoveryAttempt(identity: identityB,
+                now: startedAt.addingTimeInterval(10)), 1)
+            let attemptB = try XCTUnwrap(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+
+            store.recordRunResult(.failed(errorCode: "TEST_LATE_CALLBACK_A",
+                failure: AutomaticSyncFailure.http(status: 503)), now: startedAt.addingTimeInterval(20))
+
+            XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), attemptB,
+                "Completion must correlate the exact claim, including when identity A equals B")
+            XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identityB,
+                now: startedAt.addingTimeInterval(86_400)), .exhausted)
+        }
+    }
+
+    @MainActor
+    func testOwnedStaleClaimCannotPublishOverSuccessorStateAndCurrentClaimCompletesOnce() throws {
+        for reuseIdentity in [false, true] {
+            let suiteName = "Task145OwnedStaleClaim-\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suiteName)!
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let prefix = "task145.owned-stale-claim"
+            let store = SyncStateStore(defaults: defaults, keyPrefix: prefix, retryJitter: { 1 })
+            let identityA = String(repeating: "a", count: 64)
+            let identityB = reuseIdentity ? identityA : String(repeating: "b", count: 64)
+            let startedAt = Date(timeIntervalSince1970: 120_000)
+            let claimA = try XCTUnwrap(store.claimAutomaticRecoveryAttempt(identity: identityA, now: startedAt))
+            if reuseIdentity { store.resetAutomaticRecoveryAttemptBudget() }
+            let claimB = try XCTUnwrap(store.claimAutomaticRecoveryAttempt(identity: identityB,
+                now: startedAt.addingTimeInterval(10)))
+            store.recordRunResult(.failed(errorCode: "TEST_CURRENT_B"), preserveRecoveryRequired: true,
+                now: startedAt.addingTimeInterval(11))
+            let stateB = store.state
+            let attemptB = try XCTUnwrap(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+
+            store.recordRunResult(.failed(errorCode: "TEST_OWNED_LATE_A", failure: .http(status: 503)),
+                preserveRecoveryRequired: true, automaticRecoveryClaim: claimA,
+                now: startedAt.addingTimeInterval(20))
+
+            XCTAssertEqual(store.state, stateB)
+            XCTAssertEqual(defaults.string(forKey: "\(prefix).lastRunErrorCode"), "TEST_CURRENT_B")
+            XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), attemptB)
+            XCTAssertFalse(store.ownsAutomaticRecoveryAttempt(claimA))
+            XCTAssertTrue(store.ownsAutomaticRecoveryAttempt(claimB))
+            store.recordRunResult(.failed(errorCode: "TEST_CURRENT_B_COMPLETED", failure: .http(status: 503)),
+                preserveRecoveryRequired: true, automaticRecoveryClaim: claimB,
+                now: startedAt.addingTimeInterval(21))
+            XCTAssertEqual(store.automaticRecoveryAttemptEligibility(identity: identityB,
+                now: startedAt.addingTimeInterval(21)), .cooldown(2))
+            let completedB = store.state
+            let completedBytes = defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2")
+            store.recordRunResult(.noWork(), automaticRecoveryClaim: claimB,
+                now: startedAt.addingTimeInterval(30))
+            XCTAssertEqual(store.state, completedB, "A duplicate completion cannot republish or change provenance")
+            XCTAssertEqual(defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), completedBytes)
+        }
     }
 
     @MainActor
@@ -295,12 +788,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStorePersistsRecoveryRequiredAcrossNoOpAndRelaunch() {
-        let suiteName = "Task139RecoveryRequired-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testStateStorePersistsRecoveryRequiredAcrossNoOpAndRelaunch() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let defaults = fixture.defaults
 
-        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139", storeGenerationController: fixture.controller)
         store.recordRunResult(.recoveryRequired())
 
         XCTAssertEqual(store.state.phase, .recoveryRequired)
@@ -312,22 +804,25 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.phase, .recoveryRequired)
         XCTAssertEqual(defaults.string(forKey: "task139.lastRunStatus"), "recoveryRequired")
 
-        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139")
+        XCTAssertNil(defaults.object(forKey: "task139.lastRunObservation.v1"))
+        let legacyBefore = defaults.dictionaryRepresentation() as NSDictionary
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139", storeGenerationController: fixture.controller)
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
-        XCTAssertEqual(relaunched.state.lastOutcome, .noWork)
+        // The durable recovery latch survives; an unscoped raw outcome is history only.
+        XCTAssertNil(relaunched.state.lastOutcome)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, legacyBefore)
 
         relaunched.updatePhase(.reconciling)
-        relaunched.recordRunResult(.success(didWork: false, verifiedConvergence: true))
+        relaunched.recordRunResult(fixture.result)
         XCTAssertEqual(relaunched.state.phase, .idle)
     }
 
     @MainActor
-    func testRecoveryOriginPreservesCancellationFailureAndBlockUntilVerifiedSuccess() {
-        let suiteName = "Task139RecoveryCancellation-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testRecoveryOriginPreservesCancellationFailureAndBlockUntilVerifiedSuccess() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let defaults = fixture.defaults
 
-        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel")
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel", storeGenerationController: fixture.controller)
         store.recordRunResult(.recoveryRequired())
         store.updatePhase(.reconciling)
         store.recordRunResult(.cancelled(), preserveRecoveryRequired: true)
@@ -337,9 +832,13 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "task139.cancel.phase"), "recoveryRequired")
         XCTAssertEqual(defaults.string(forKey: "task139.cancel.lastRunStatus"), "cancelled")
 
-        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel")
+        XCTAssertNil(defaults.object(forKey: "task139.cancel.lastRunObservation.v1"))
+        let legacyBefore = defaults.dictionaryRepresentation() as NSDictionary
+        let relaunched = SyncStateStore(defaults: defaults, keyPrefix: "task139.cancel", storeGenerationController: fixture.controller)
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
-        XCTAssertEqual(relaunched.state.lastOutcome, .cancelled)
+        // Cancellation remains in raw history, without inventing current scoped provenance.
+        XCTAssertNil(relaunched.state.lastOutcome)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, legacyBefore)
 
         relaunched.updatePhase(.reconciling)
         relaunched.recordRunResult(
@@ -359,7 +858,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         relaunched.updatePhase(.reconciling)
         relaunched.recordRunResult(
-            .success(didWork: false, verifiedConvergence: true),
+            fixture.result,
             preserveRecoveryRequired: true
         )
         XCTAssertEqual(relaunched.state.phase, .idle)
@@ -367,18 +866,19 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
-    func testDurableRecoveryJournalDominatesEveryNonTerminalResultAndRelaunch() {
-        let suiteName = "Task139JournalLatch-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testDurableRecoveryJournalDominatesEveryNonTerminalResultAndRelaunch() async throws {
+        let fixture = try await makeQualifiedSyncStateFixture()
+        let defaults = fixture.defaults
+        let origin = try XCTUnwrap(fixture.result.verifiedFinalization)
         let journalStore = AccountBindingStore(defaults: defaults)
         XCTAssertTrue(journalStore.beginReplacement(
-            accountHash: String(repeating: "a", count: 64),
-            storeIdentity: LocalStoreIdentity(rawValue: "shop:journal-latch")
+            accountHash: origin.accountHash,
+            storeIdentity: origin.storeIdentity
         ))
         let store = SyncStateStore(
             defaults: defaults,
-            keyPrefix: "task139.journal"
+            keyPrefix: "task139.journal",
+            storeGenerationController: fixture.controller
         )
 
         XCTAssertEqual(store.state.phase, .recoveryRequired)
@@ -398,35 +898,208 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         let relaunched = SyncStateStore(
             defaults: defaults,
-            keyPrefix: "task139.journal"
+            keyPrefix: "task139.journal",
+            storeGenerationController: fixture.controller
         )
         XCTAssertEqual(relaunched.state.phase, .recoveryRequired)
 
         journalStore.clearPendingReplacement()
         relaunched.updatePhase(.reconciling)
-        relaunched.recordRunResult(.success(didWork: true, verifiedConvergence: true))
+        relaunched.recordRunResult(fixture.result)
         XCTAssertEqual(relaunched.state.phase, .idle)
         XCTAssertEqual(relaunched.state.lastOutcome, .succeeded)
     }
 
     @MainActor
-    func testStateStoreHydratesPersistedNetworkFailureWithoutRestoringActivePhase() {
-        let suiteName = "Task136Hydrate-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testLegacyOrCorruptTerminalObservationCannotHydrateForeignOutcomeAfterResolvedAccountSwitch() async throws {
+        for mutation in ["missing", "corrupt"] {
+            let ownerA = UUID()
+            let fixture = try makeAutomaticScopeFixture(ownerUserID: ownerA)
+            defer { fixture.cleanup() }
+            let deviceID = DeviceInstallIDStore(defaults: fixture.defaults).deviceInstallID
+            XCTAssertEqual(try DeviceInstallIDStore(defaults: fixture.defaults).requireDeviceInstallID(), deviceID)
+            let completedAt = Date(timeIntervalSince1970: 2_000)
+            let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil,
+                activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedAt })
+            let resultA = await engine.run(action: .blocked(.networkUnavailable),
+                source: .foregroundPoll, ownerUserID: ownerA)
+            XCTAssertEqual(resultA.status, .blocked, mutation)
+            XCTAssertEqual(resultA.blockReason, .networkUnavailable, mutation)
+            let observationA = try XCTUnwrap(resultA.observation)
+            XCTAssertEqual(observationA.origin.accountHash, AccountBindingStore.accountHash(for: ownerA), mutation)
+            XCTAssertEqual(observationA.origin.shopID, fixture.shopID, mutation)
+            XCTAssertEqual(observationA.completedAt, completedAt.timeIntervalSince1970, mutation)
+            let stateA = SyncStateStore(defaults: fixture.defaults)
+            stateA.recordRunResult(resultA, now: completedAt)
+            XCTAssertEqual(stateA.state.phase, .blocked(.networkUnavailable), mutation)
+            XCTAssertEqual(stateA.state.lastOutcome, .blocked(.networkUnavailable), mutation)
+            let key = "sync.runtime.orchestrator.lastRunObservation.v1"
+            _ = try XCTUnwrap(fixture.defaults.data(forKey: key))
+            if mutation == "missing" { fixture.defaults.removeObject(forKey: key) }
+            else { fixture.defaults.set(Data("invalid-observation-envelope".utf8), forKey: key) }
 
+            let ownerB = UUID()
+            let accountB = AccountBindingStore.accountHash(for: ownerB)
+            let shopB = SelectedShop(shopID: UUID(), code: "TASK145B", name: "Resolved B fixture",
+                role: "owner", status: "active", selectable: true, canWrite: true)
+            let selection = SelectedShopStore(defaults: fixture.defaults)
+            selection.noteActiveAccount(accountB)
+            XCTAssertTrue(selection.save(shopB, accountHash: accountB), mutation)
+            XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).saveBinding(
+                accountHash: accountB, storeIdentity: shopB.localStoreIdentity), mutation)
+            let scopeB = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerB, defaults: fixture.defaults)
+            XCTAssertEqual(scopeB.accountHash, accountB, mutation)
+            XCTAssertEqual(scopeB.shopID, shopB.shopID, mutation)
+            XCTAssertTrue(scopeB.storeIdentity.hasSameProvenance(as: shopB.localStoreIdentity), mutation)
+            XCTAssertNotEqual(scopeB.accountHash, observationA.origin.accountHash, mutation)
+            let rawBefore = fixture.defaults.dictionaryRepresentation() as NSDictionary
+            let envelopeBefore = fixture.defaults.data(forKey: key)
+            let reopened = SyncStateStore(defaults: fixture.defaults)
+            XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal, mutation)
+            XCTAssertEqual(reopened.state.phase, .idle, mutation)
+            XCTAssertNil(reopened.state.lastOutcome, mutation)
+            XCTAssertNil(reopened.state.startedAt, mutation)
+            let diagnostics = AutomaticSyncDiagnosticsSnapshot(syncState: reopened.state, pendingCount: 0,
+                baselineSummary: .absent, ownerUserID: ownerB, defaults: fixture.defaults)
+            XCTAssertNil(diagnostics.lastError, mutation)
+            XCTAssertNil(diagnostics.errorObservedAt, mutation)
+            XCTAssertNil(SyncStateStore.currentRunObservation(defaults: fixture.defaults, ownerUserID: ownerB), mutation)
+            XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.orchestrator.lastRunStatus"), "blocked", mutation)
+            XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.orchestrator.lastRunBlockReason"), "networkUnavailable", mutation)
+            XCTAssertEqual(fixture.defaults.double(forKey: "sync.runtime.orchestrator.lastRunCompletedAt"), 2_000, mutation)
+            XCTAssertEqual(fixture.defaults.data(forKey: key), envelopeBefore, mutation)
+            XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, rawBefore,
+                "Projection/reopen must preserve all legacy diagnostics and missing/corrupt envelope bytes: \(mutation)")
+        }
+    }
+
+    @MainActor
+    func testCurrentTypedTerminalObservationStillHydratesItsOriginalOutcomeAndTime() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let deviceID = DeviceInstallIDStore(defaults: fixture.defaults).deviceInstallID
+        XCTAssertEqual(try DeviceInstallIDStore(defaults: fixture.defaults).requireDeviceInstallID(), deviceID)
+        let completedAt = Date(timeIntervalSince1970: 2_000)
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedAt })
+        let result = await engine.run(action: .blocked(.networkUnavailable), source: .foregroundPoll, ownerUserID: owner)
+        XCTAssertEqual(result.status, .blocked)
+        let observation = try XCTUnwrap(result.observation)
+        let state = SyncStateStore(defaults: fixture.defaults)
+        state.recordRunResult(result, now: completedAt)
+        let rawBefore = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        let reopened = SyncStateStore(defaults: fixture.defaults)
+        XCTAssertEqual(reopened.state.phase, .blocked(.networkUnavailable))
+        XCTAssertEqual(reopened.state.lastOutcome, .blocked(.networkUnavailable))
+        XCTAssertEqual(reopened.state.lastProgressAt, completedAt)
+        let current = try XCTUnwrap(SyncStateStore.currentRunObservation(defaults: fixture.defaults, ownerUserID: owner))
+        XCTAssertEqual(current.invocationID, observation.invocationID)
+        XCTAssertEqual(current.errorObservedAt, completedAt)
+        let diagnostics = AutomaticSyncDiagnosticsSnapshot(syncState: reopened.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertEqual(diagnostics.lastError, "networkUnavailable")
+        XCTAssertEqual(diagnostics.errorObservedAt, completedAt)
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, rawBefore)
+    }
+
+    @MainActor
+    func testCurrentTypedNoWorkHydrationDoesNotBorrowOlderRawFailureAfterInterruptedPersistence() async throws {
+        let failedAt = Date(timeIntervalSince1970: 2_000)
+        let completedAt = Date(timeIntervalSince1970: 3_000)
+        let fixture = try await makeObservedRecoveryFailureFixture(completedAt: failedAt)
+        XCTAssertEqual(fixture.result.status, .failed)
+        XCTAssertEqual(fixture.result.errorCode, "checkpoint_resource_exceeded")
+        XCTAssertEqual(fixture.state.state.lastOutcome, .failed)
+        let prefix = "sync.runtime.orchestrator"
+        let rawKeys = ["phase", "lastRunStatus", "lastRunDidWork", "lastRunVerifiedConvergence",
+            "lastRunCompletedAt", "lastRunErrorCode", "lastRunBlockReason", "activeStartedAt", "lastProgressAt"]
+            .map { "\(prefix).\($0)" }
+        let rawA = fixture.defaults.dictionaryRepresentation().filter { rawKeys.contains($0.key) }
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedAt })
+        let resultB = await engine.run(action: .noOp, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(resultB.status, .noWork)
+        let observationB = try XCTUnwrap(resultB.observation)
+        XCTAssertEqual(observationB.completedAt, completedAt.timeIntervalSince1970)
+        fixture.state.recordRunResult(resultB, now: completedAt)
+        let acceptedB = try XCTUnwrap(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID))
+        XCTAssertEqual(acceptedB.invocationID, observationB.invocationID)
+        XCTAssertEqual(acceptedB.status, .noWork)
+        XCTAssertEqual(acceptedB.completedAt, completedAt.timeIntervalSince1970)
+        let key = "\(prefix).lastRunObservation.v1"
+        let typedB = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        // Simulate a crash after accepting the newer immutable envelope but
+        // before applyRunResult replaces the prior raw diagnostics. The real
+        // pending recovery journal remains intact throughout this scenario.
+        for rawKey in rawKeys {
+            if let value = rawA[rawKey] { fixture.defaults.set(value, forKey: rawKey) }
+            else { fixture.defaults.removeObject(forKey: rawKey) }
+        }
+        XCTAssertEqual(fixture.defaults.string(forKey: "\(prefix).lastRunStatus"), "failed")
+        XCTAssertEqual(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode"), "checkpoint_resource_exceeded")
+        XCTAssertEqual(fixture.defaults.data(forKey: key), typedB)
+        let rawBefore = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        let reopened = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        let current = try XCTUnwrap(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID))
+        XCTAssertEqual(current.invocationID, observationB.invocationID)
+        XCTAssertEqual(current.status, .noWork)
+        XCTAssertEqual(current.completedAt, completedAt.timeIntervalSince1970)
+        XCTAssertTrue(reopened.recoveryJournalIsPending, "A current noWork result cannot clear the actual recovery latch")
+        XCTAssertEqual(reopened.state.phase, .recoveryRequired)
+        XCTAssertEqual(reopened.state.lastOutcome, .noWork,
+            "Hydration must derive current outcome from typed B rather than raw failure A")
+        XCTAssertEqual(reopened.state.lastProgressAt, completedAt,
+            "Hydration must retain B's original completion time, without borrowing A's raw completion")
+        let diagnostics = AutomaticSyncDiagnosticsSnapshot(syncState: reopened.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        XCTAssertNil(diagnostics.lastError)
+        XCTAssertNil(diagnostics.errorObservedAt)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), typedB)
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, rawBefore)
+    }
+
+    @MainActor
+    func testStateStoreHydratesPersistedNetworkFailureWithoutRestoringActivePhase() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let defaults = fixture.defaults
+        let deviceID = DeviceInstallIDStore(defaults: defaults).deviceInstallID
+        XCTAssertEqual(try DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(), deviceID)
+        let completedAt = Date(timeIntervalSince1970: 120)
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            activityRegistrationProvider: nil, defaults: defaults, now: { completedAt })
+        let result = await engine.run(action: .blocked(.networkUnavailable), source: .foregroundPoll, ownerUserID: owner)
+        XCTAssertEqual(result.status, .blocked)
+        XCTAssertEqual(result.blockReason, .networkUnavailable)
+        let observation = try XCTUnwrap(result.observation)
+        XCTAssertEqual(observation.origin.accountHash, AccountBindingStore.accountHash(for: owner))
+        XCTAssertEqual(observation.origin.shopID, fixture.shopID)
+        XCTAssertEqual(observation.completedAt, completedAt.timeIntervalSince1970)
+        let original = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+        original.recordRunResult(result, now: completedAt)
+        // A stale active-phase marker cannot override the actual current typed block.
         defaults.set("pullingEvents", forKey: "task136.phase")
-        defaults.set("noWork", forKey: "task136.lastRunStatus")
-        defaults.set("networkUnavailable", forKey: "task136.lastRunBlockReason")
-        defaults.set("networkError(redacted)", forKey: "task136.lastRunErrorCode")
-        defaults.set(Date(timeIntervalSince1970: 100).timeIntervalSince1970, forKey: "task136.activeStartedAt")
-        defaults.set(Date(timeIntervalSince1970: 120).timeIntervalSince1970, forKey: "task136.lastProgressAt")
-
+        defaults.set(100.0, forKey: "task136.activeStartedAt")
+        let rawBefore = defaults.dictionaryRepresentation() as NSDictionary
         let store = SyncStateStore(defaults: defaults, keyPrefix: "task136")
 
         XCTAssertEqual(store.state.phase, .blocked(.networkUnavailable))
         XCTAssertEqual(store.state.lastOutcome, .blocked(.networkUnavailable))
         XCTAssertNil(store.state.startedAt)
+        XCTAssertEqual(store.state.lastProgressAt, completedAt)
+        let current = try XCTUnwrap(SyncStateStore.currentRunObservation(defaults: defaults,
+            keyPrefix: "task136", ownerUserID: owner))
+        XCTAssertEqual(current.invocationID, observation.invocationID)
+        XCTAssertEqual(current.errorObservedAt, completedAt)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, rawBefore)
     }
 
     func testAutomaticRuntimeSourceDoesNotExposeManualPushBoundary() throws {
@@ -1234,12 +1907,10 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
     @MainActor
     func testDiagnosticsCurrentRecoveryErrorSupersedesHistoricalDebugError() async throws {
-        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
-        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let fixture = try await makeObservedRecoveryFailureFixture(completedAt: Date(timeIntervalSince1970: 2_000))
         fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
-        let store = SyncStateStore(defaults: fixture.defaults)
-        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: Date(timeIntervalSince1970: 2_000))
-        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: fixture.state.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
         XCTAssertEqual(snapshot.lastError, "checkpoint_resource_exceeded")
         XCTAssertFalse(snapshot.lastErrorText.contains("keyNotFound"))
         XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.automatic.lastError"), "old keyNotFound catalog")
@@ -1247,28 +1918,28 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
     @MainActor
     func testDiagnosticsCurrentBlockAndSuccessNeverResurrectHistoricalError() async throws {
-        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
-        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let fixture = try await makeObservedDeviceBlockThenSuccessFixture()
         fixture.defaults.set("old keyNotFound catalog", forKey: "sync.runtime.automatic.lastError")
-        let store = SyncStateStore(defaults: fixture.defaults)
-        store.recordRunResult(.blocked(.deviceNotActive), now: Date(timeIntervalSince1970: 2_000))
-        let blocked = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        let store = SyncStateStore(defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        store.recordRunResult(fixture.blocked, now: Date(timeIntervalSince1970: 2_000))
+        let blocked = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
         XCTAssertEqual(blocked.lastError, "deviceNotActive")
-        store.recordRunResult(.success(didWork: false, verifiedConvergence: true), now: Date(timeIntervalSince1970: 3_000))
-        let success = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        store.recordRunResult(fixture.success, now: Date(timeIntervalSince1970: 3_000))
+        let success = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
         XCTAssertNil(success.lastError)
         XCTAssertFalse(success.hasLastError)
     }
 
     @MainActor
     func testDiagnosticsErrorKeepsItsCompletedTimestampDuringLaterProgress() async throws {
-        let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
-        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
         let observedAt = Date(timeIntervalSince1970: 2_000)
-        let store = SyncStateStore(defaults: fixture.defaults)
-        store.recordRunResult(.failed(errorCode: "checkpoint_resource_exceeded"), now: observedAt)
+        let fixture = try await makeObservedRecoveryFailureFixture(completedAt: observedAt)
+        let store = fixture.state
         store.updatePhase(.checking, now: Date(timeIntervalSince1970: 8_000))
-        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
+        let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: store.state, pendingCount: 0,
+            baselineSummary: .absent, ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
         XCTAssertEqual(snapshot.lastErrorText, String(format: L("options.supabase.automaticSync.diagnostics.errorObserved"), "checkpoint_resource_exceeded", observedAt.formatted(date: .abbreviated, time: .shortened)))
     }
 
@@ -1277,8 +1948,101 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let fixture = try makeAutomaticScopeFixture(ownerUserID: UUID())
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
         fixture.defaults.set("checkpoint_resource_exceeded", forKey: "sync.runtime.orchestrator.lastRunErrorCode")
+        let bytesBefore = fixture.defaults.dictionaryRepresentation() as NSDictionary
         let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: SyncState(phase: .failed, lastProgressAt: Date(timeIntervalSince1970: 8_000)), pendingCount: 0, baselineSummary: .absent, defaults: fixture.defaults)
-        XCTAssertEqual(snapshot.lastErrorText, "checkpoint_resource_exceeded")
+        XCTAssertNil(snapshot.lastError)
+        XCTAssertNil(snapshot.errorObservedAt)
+        XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.orchestrator.lastRunErrorCode"), "checkpoint_resource_exceeded")
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, bytesBefore)
+    }
+
+    @MainActor
+    func testScopedErrorObservationReplayAndOlderOrEqualCompletionsCannotReplaceCurrentOutcome() async throws {
+        let fixture = try await makeObservedRecoveryFailureFixture(completedAt: Date(timeIntervalSince1970: 2_000))
+        let key = "sync.runtime.orchestrator.lastRunObservation.v1"
+        let original = try XCTUnwrap(fixture.result.observation)
+        let firstBytes = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        fixture.state.recordRunResult(fixture.result, now: Date(timeIntervalSince1970: 8_000))
+        XCTAssertEqual(fixture.defaults.data(forKey: key), firstBytes)
+        XCTAssertEqual(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID)?.errorObservedAt, Date(timeIntervalSince1970: 2_000))
+
+        var altered = fixture.result
+        altered.errorCode = "changed_same_invocation"
+        altered.observation = SyncAutomaticRunObservation(schemaVersion: original.schemaVersion,
+            invocationID: original.invocationID, origin: original.origin, status: original.status,
+            errorCode: altered.errorCode, blockReason: original.blockReason,
+            failure: original.failure, completedAt: original.completedAt)
+        fixture.state.recordRunResult(altered)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), firstBytes)
+        let completedB = Date(timeIntervalSince1970: 3_000)
+        func newEngine() -> AutomaticSyncEngine {
+            AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil,
+                activityRegistrationProvider: nil, defaults: fixture.defaults, now: { completedB })
+        }
+        let resultB = await newEngine().run(action: .noOp, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(resultB.status, .noWork)
+        XCTAssertNotEqual(resultB.observation?.invocationID, original.invocationID)
+        fixture.state.recordRunResult(resultB)
+        let acceptedB = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        XCTAssertNotEqual(acceptedB, firstBytes)
+        XCTAssertNil(SyncStateStore.currentRunObservation(defaults: fixture.defaults,
+            ownerUserID: fixture.ownerUserID)?.currentError)
+        let beforeStale = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        fixture.state.recordRunResult(fixture.result, now: Date(timeIntervalSince1970: 9_000))
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, beforeStale)
+        let equalTime = await newEngine().run(action: .noOp, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(equalTime.observation?.completedAt, resultB.observation?.completedAt)
+        XCTAssertNotEqual(equalTime.observation?.invocationID, resultB.observation?.invocationID)
+        let beforeEqual = fixture.defaults.dictionaryRepresentation() as NSDictionary
+        fixture.state.recordRunResult(equalTime)
+        XCTAssertEqual(fixture.defaults.dictionaryRepresentation() as NSDictionary, beforeEqual)
+        XCTAssertEqual(fixture.defaults.data(forKey: key), acceptedB)
+    }
+
+    @MainActor
+    func testCorruptScopedObservationCannotBorrowLegacyErrorOrTimestamp() async throws {
+        let fixture = try await makeObservedRecoveryFailureFixture(completedAt: Date(timeIntervalSince1970: 2_000))
+        let key = "sync.runtime.orchestrator.lastRunObservation.v1"
+        let validBytes = try XCTUnwrap(fixture.defaults.data(forKey: key))
+        let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: validBytes) as? [String: Any])
+        let originalOrigin = try XCTUnwrap(envelope["origin"] as? [String: Any])
+        let originalIdentity = try XCTUnwrap(originalOrigin["storeIdentity"] as? [String: Any])
+        for mutation in ["scalar", "missingEpoch", "emptyLocalStoreId"] {
+            var changed = envelope
+            var origin = originalOrigin
+            if mutation == "scalar" {
+                origin["storeIdentity"] = try XCTUnwrap(originalIdentity["rawValue"] as? String)
+            } else {
+                var identity = originalIdentity
+                if mutation == "missingEpoch" { identity.removeValue(forKey: "storeEpoch") }
+                else { identity["localStoreId"] = "" }
+                origin["storeIdentity"] = identity
+            }
+            changed["origin"] = origin
+            let bytes = try JSONSerialization.data(withJSONObject: changed)
+            fixture.defaults.set(bytes, forKey: key)
+            let snapshot = AutomaticSyncDiagnosticsSnapshot(syncState: fixture.state.state,
+                pendingCount: 0, baselineSummary: .absent, ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults)
+            XCTAssertNil(snapshot.lastError, mutation)
+            XCTAssertNil(snapshot.errorObservedAt, mutation)
+            XCTAssertEqual(fixture.defaults.data(forKey: key), bytes)
+            XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.orchestrator.lastRunErrorCode"), "checkpoint_resource_exceeded")
+            XCTAssertEqual(fixture.defaults.double(forKey: "sync.runtime.orchestrator.lastRunCompletedAt"), 2_000)
+        }
+        fixture.defaults.set(validBytes, forKey: key)
+        let origin = try XCTUnwrap(fixture.result.observation?.origin)
+        let watermarks = WatermarkStore(defaults: fixture.defaults)
+        let scope = WatermarkStore.Scope(accountHash: origin.accountHash, storeIdentity: origin.storeIdentity)
+        XCTAssertEqual(watermarks.generationProvenance(for: scope), .absent)
+        let corruptGeneration = Data("invalid-generation".utf8)
+        fixture.defaults.set(corruptGeneration, forKey: watermarks.key(for: scope) + ".generation")
+        XCTAssertEqual(watermarks.generationProvenance(for: scope), .invalid)
+        XCTAssertNil(SyncStateStore.currentRunObservation(defaults: fixture.defaults, ownerUserID: fixture.ownerUserID))
+        XCTAssertEqual(fixture.defaults.data(forKey: key), validBytes)
+        XCTAssertEqual(fixture.defaults.data(forKey: watermarks.key(for: scope) + ".generation"), corruptGeneration)
     }
 
     @MainActor

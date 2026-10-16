@@ -6,6 +6,100 @@ import XCTest
 final class OptionsSyncSummaryProviderTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
+    func testAcknowledgedIntentsAndLocalBodyProofsDoNotCountAsPendingCloudWork() throws {
+        let context = try makeContext()
+        let owner = UUID()
+        let now = Date(timeIntervalSince1970: 1_000)
+        for index in 0..<6 {
+            context.insert(LocalPendingChange(
+                ownerUserID: owner,
+                entityKind: index < 2 ? .product : .productPrice,
+                operation: index < 2 ? .create : .upsert,
+                status: .acknowledged,
+                origin: index < 2 ? .manualCatalogSave : .productPriceSave,
+                logicalKey: "fixture-ack-\(index)",
+                createdAt: now,
+                updatedAt: now
+            ))
+        }
+        for index in 0..<9 {
+            let isProof = index >= 3
+            let id = "fixture-event-\(index)"
+            context.insert(SyncEventOutboxEntry(
+                id: id,
+                ownerUserID: owner.uuidString.lowercased(),
+                clientEventID: id,
+                domain: isProof ? LocalCatalogBodyProofStore.domain : "catalog",
+                eventType: isProof ? "local_catalog_body_v1" : "updated",
+                changedCount: 1,
+                entityIDsShape: "fixture-entity-shape-\(index)",
+                metadataShape: "fixture-metadata-shape-\(index)",
+                entityIDsPayloadJSON: "{\"id\":\"\(id)\"}",
+                metadataPayloadJSON: "{\"fixture\":\(index)}",
+                status: isProof ? .localOnly : .sent,
+                nextRetryAt: now,
+                createdAt: now,
+                updatedAt: now,
+                sentAt: isProof ? nil : now
+            ))
+        }
+        try context.save()
+        let before = try outboxSnapshot(context)
+
+        XCTAssertEqual(try OptionsPendingAttentionCounter.countAll(context: context), 0)
+
+        context.insert(LocalPendingChange(
+            ownerUserID: owner,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: "fixture-real-pending",
+            changedFields: ["productName"],
+            createdAt: now,
+            updatedAt: now
+        ))
+        try context.save()
+        XCTAssertEqual(try OptionsPendingAttentionCounter.countAll(context: context), 1)
+        XCTAssertEqual(try outboxSnapshot(context), before, "Counting must retain every event and local proof unchanged.")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 7)
+    }
+
+    func testPendingAttentionStillIncludesBlockedAndDeadCloudEvents() throws {
+        let context = try makeContext()
+        let now = Date(timeIntervalSince1970: 1_000)
+        let attentionStatuses: [SyncEventOutboxStatus] = [
+            .pending, .sending, .failedRetryable, .blockedContract, .blockedAuth, .blockedSchema, .dead
+        ]
+        for status in attentionStatuses {
+            context.insert(SyncEventOutboxEntry(
+                ownerUserID: UUID().uuidString.lowercased(),
+                domain: "catalog",
+                eventType: "updated",
+                changedCount: 1,
+                entityIDsShape: "fixture",
+                metadataShape: "fixture",
+                status: status,
+                nextRetryAt: now,
+                createdAt: now,
+                updatedAt: now
+            ))
+        }
+        try context.save()
+
+        XCTAssertEqual(try OptionsPendingAttentionCounter.countAll(context: context), attentionStatuses.count)
+    }
+
+    private func outboxSnapshot(_ context: ModelContext) throws -> [[String]] {
+        try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+            .sorted { $0.id < $1.id }
+            .map { entry in
+                [entry.id, entry.clientEventID, entry.ownerUserID, entry.domain, entry.eventType,
+                 entry.statusRaw, entry.entityIDsShape, entry.metadataShape,
+                 entry.entityIDsPayloadJSON ?? "", entry.metadataPayloadJSON ?? "",
+                 String(entry.attemptCount), String(entry.updatedAt.timeIntervalSince1970)]
+            }
+    }
+
     func testRefreshIsDebouncedAndCoalescesRepeatedAppearNotifications() async throws {
         let context = try makeContext()
         context.insert(Product(barcode: "TASK127_PRODUCT"))

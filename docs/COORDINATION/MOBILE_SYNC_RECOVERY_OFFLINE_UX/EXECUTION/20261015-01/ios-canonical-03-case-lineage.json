@@ -1,0 +1,44 @@
+{
+  "UTC": "2026-10-16T05:56:30.415587+00:00",
+  "priorCount": 1623,
+  "finalCount": 1629,
+  "priorIDsMissing": [],
+  "priorFailedCases": [
+    {
+      "id": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testOrdinaryContinuationReceiptRejectsChangedAuthority",
+      "before": "Failed",
+      "after": "Passed"
+    },
+    {
+      "id": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testOrdinaryContinuationRejectsReplacementContainerAndOtherDefaults",
+      "before": "Failed",
+      "after": "Passed"
+    },
+    {
+      "id": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testRejectedHeldTerminalReleasesOnlyItsForegroundSlotAndCoalescesNextAdmission",
+      "before": "Failed",
+      "after": "Passed"
+    },
+    {
+      "id": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testImmediateRetryAfterCancellationRunsWhenCancelledFlightFinishes",
+      "before": "Failed",
+      "after": "Passed"
+    },
+    {
+      "id": "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testOrchestratorAcceptsVerifiedTerminalCommitAfterOuterCancellation",
+      "before": "Failed",
+      "after": "Passed"
+    }
+  ],
+  "priorSkipsCount": 36,
+  "priorSkipStatusChanged": [],
+  "addedIDs": [
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testFirstVerifiedRecoveryKeepsEngineCompletionTimeWhenFirstPublicationIsDelayed",
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testRejectedOldContinuationCannotRetireBootstrapSuccessorHeldAfterRealActivation",
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testRejectedOldContinuationCannotRetireQualifiedSuccessorStillInFlight",
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests/testCurrentTypedNoWorkHydrationDoesNotBorrowOlderRawFailureAfterInterruptedPersistence",
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests/testCurrentTypedTerminalObservationStillHydratesItsOriginalOutcomeAndTime",
+    "test://com.apple.xcode/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests/testLegacyOrCorruptTerminalObservationCannotHydrateForeignOutcomeAfterResolvedAccountSwitch"
+  ],
+  "result": "PASS_ALL_ORIGINAL_IDS_PRESERVED_5_FAILS_NOW_PASSED_36_SKIPS_UNCHANGED"
+}

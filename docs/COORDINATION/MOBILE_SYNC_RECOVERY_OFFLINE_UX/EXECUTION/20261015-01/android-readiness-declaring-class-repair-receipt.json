@@ -1,0 +1,16 @@
+{
+  "UTC": "2026-10-16T04:35:06.338628+00:00",
+  "checkout": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView",
+  "revision": "4b74ed5cfb4e4bce024513561e7dc1b6998003ae",
+  "file": "app/src/main/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplication.kt",
+  "beforeSHA256": "49a41227068d3cd9591263a803a57dda5257f4ea65fbc11388d0fcfcbe82b70b",
+  "afterSHA256": "0d2e1c6401268999f899618e3b7556059b3c23661c14b5039df46bfc52cc53dc",
+  "sourceRED": "android-regression-02-results: MerchandiseControlApplicationTest.checkpointReadinessLocalSnapshotReadsNoWritesOrNetworkAndDoesNotConsume",
+  "observedRED": "Local scope guard actual BLOCKED_UNAVAILABLE, localScopeGuard UNKNOWN before the first local fence. Full regression02:1328 tests/1319PASS/2FAIL/7SKIP; other FAIL is physical-event wire, owned separately.",
+  "firstDivergence": "javaClass is UnconfiguredTestApplication, which does not declare Application compiler-generated lazy fields. getDeclaredField throws; the existing fail-closed catch returns null, so the initialized synthetic database is unavailable to the observer.",
+  "decision": "Read only compiler-generated fields from their actual declaring class MerchandiseControlApplication. Preserve lazy.isInitialized/value checks, exception catches, no initializer invocation and every existing guard.",
+  "authorizedDelta": "One expression replacement javaClass\u2192MerchandiseControlApplication::class.java; before-hash reconstructed and verified exactly. No fixture, assertion, retry/admission policy or event transport edit.",
+  "gitDiffCheck": "PASS",
+  "newTestResult": "NOT_RUN",
+  "freeze": "App source frozen pending root runner"
+}

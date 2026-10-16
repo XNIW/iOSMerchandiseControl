@@ -767,12 +767,16 @@ struct SupabaseShopSyncRecoveryRPCTransport: ShopSyncRecoveryRPCTransporting {
             )
         } catch is CancellationError {
             throw CancellationError()
+        } catch let error as AutomaticSyncFailure {
+            throw error
         } catch let error as DecodingError {
-            throw await remote.mapDecodingError(error)
+            throw AutomaticSyncFailure.classify(error)
         } catch let error as PostgrestError {
-            throw await remote.mapPostgrestError(error)
+            throw SupabaseTransportClient.recoveryFailure(for: error)
         } catch let error as URLError {
-            throw await remote.networkError(error)
+            throw AutomaticSyncFailure.classify(error)
+        } catch let error as SupabaseTransportClientError {
+            throw AutomaticSyncFailure.classify(error)
         } catch {
             throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
