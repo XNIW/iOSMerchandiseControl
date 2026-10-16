@@ -541,14 +541,15 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try revalidate(scope, ownerUserID: ownerUserID)
                 try await reportProgress(.finalizing, scope: scope)
-                _ = try await storeGenerationController.markRecoveryFinalized(scope: scope)
+                let finalizedManifest = try await storeGenerationController.markRecoveryFinalized(scope: scope)
                 guard try await completeRecoveryJournal(scope: scope) else {
                     throw AtomicGenerationRecoveryError.journalCompletionRejected
                 }
 
                 return try await makeSummary(
                     checkpoint: checkpointB,
-                    generationID: prepared.generationID
+                    generationID: prepared.generationID,
+                    finalizedManifest: finalizedManifest
                 )
             } catch is CancellationError {
                 if let ledger { try? ledger.closeWrites() }
@@ -787,7 +788,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             }
             return .completed(try await makeSummary(
                 checkpoint: manifest.checkpoint,
-                generationID: manifest.generationID
+                generationID: manifest.generationID,
+                finalizedManifest: manifest
             ))
         }
         do {
@@ -808,11 +810,12 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             return .restage(manifest, journal)
         }
         try revalidate(refreshedScope, ownerUserID: ownerUserID)
-        _ = try await storeGenerationController.markRecoveryFinalized(scope: refreshedScope)
+        let finalizedManifest = try await storeGenerationController.markRecoveryFinalized(scope: refreshedScope)
         guard try await completeRecoveryJournal(scope: refreshedScope) else {
             throw AtomicGenerationRecoveryError.journalCompletionRejected
         }
-        return .completed(try await makeSummary(checkpoint: manifest.checkpoint, generationID: manifest.generationID))
+        return .completed(try await makeSummary(checkpoint: manifest.checkpoint,
+            generationID: manifest.generationID, finalizedManifest: finalizedManifest))
     }
 
     @MainActor
@@ -1217,6 +1220,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
     }
 
     private nonisolated static func isResumableTransportFailure(_ error: Error) -> Bool {
+        if let failure = error as? AutomaticSyncFailure {
+            return failure.disposition == .transient && failure.hasValidPersistentFacts
+        }
         if error is URLError { return true }
         if case SupabaseTransportClientError.networkError = error { return true }
         return false
@@ -2262,8 +2268,15 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
 
     private func makeSummary(
         checkpoint: ShopSyncRecoveryCheckpoint,
-        generationID: UUID
+        generationID: UUID,
+        finalizedManifest: SyncStoreGenerationManifest
     ) async throws -> SyncRecoverySnapshotPullSummary {
+        let finalization = try SyncStoreRecoveryFinalization(manifest: finalizedManifest)
+        guard finalization.generationID == generationID,
+              finalization.checkpointDigest == checkpoint.checkpointDigest,
+              finalization.watermark == checkpoint.maxEventID else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
         let container = await storeGenerationController.modelContainer
         let hasPendingLocalWork = try await Task.detached(priority: .utility) {
             try !SameScopeRecoveryActiveWorkInspector.isContinuationDrained(container: container)
@@ -2288,7 +2301,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             watermarkAfter: checkpoint.maxEventID ?? 0,
             activatedGenerationID: generationID,
             completedRecoveryJournal: true,
-            hasPendingLocalWork: hasPendingLocalWork
+            hasPendingLocalWork: hasPendingLocalWork,
+            verifiedFinalization: finalization
         )
     }
 }

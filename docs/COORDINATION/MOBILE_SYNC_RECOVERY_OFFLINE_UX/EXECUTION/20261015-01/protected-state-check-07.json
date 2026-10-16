@@ -1,0 +1,202 @@
+{
+  "UTC": "2026-10-16T06:04:12.418868+00:00",
+  "sourcePins": [
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Recovery/AtomicGenerationRecoverySnapshotPullService.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Recovery/ShopSyncRecoveryContract.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/RecoveryRemoteSupabaseAdapterScopeTests.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Recovery/AutomaticRecoverySnapshotPullService.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/OptionsView.swift",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplication.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinator.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSource.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifier.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModel.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/ShopSyncRecoveryCoordinatorTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/SupabaseShopSyncReadRemoteDataSourceTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/SyncErrorClassifierTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/viewmodel/CatalogSyncViewModelTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/SyncEventModels.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogSyncStateTracker.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointReadinessSnapshotTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/CheckpointTraceActivityLifecycleTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/MerchandiseControlApplicationTest.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/UnconfiguredTestApplication.kt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseSyncEventRemoteDataSource.kt",
+      "unchanged": true
+    }
+  ],
+  "repositories": [
+    {
+      "root": "/Users/minxiang/Desktop/iOSMerchandiseControl",
+      "HEADUnchanged": true,
+      "indexUnchanged": true,
+      "stashUnchanged": true,
+      "worktreesUnchanged": true
+    },
+    {
+      "root": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView",
+      "HEADUnchanged": true,
+      "indexUnchanged": true,
+      "stashUnchanged": true,
+      "worktreesUnchanged": true
+    }
+  ],
+  "tracking": [
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md",
+      "finalSHA256": "8e4b8b73844aa11081514838121d5c1cedc9ab24c604a25e02b857258cc6ef1d",
+      "expectedReceiptMatched": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/docs/TASKS/TASK-144-mobile-sync-recovery-offline-ux-android.md",
+      "finalSHA256": "1f10665aa44e1a8060da1daad7c983acab0a1037c9236c5cc750a8f4e50b722e",
+      "expectedReceiptMatched": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/MASTER-PLAN.md",
+      "finalSHA256": "512b070aa46ea2bac25cb72f4d52045e8ec79c4fda1d2df36c930996f7b9df2a",
+      "expectedReceiptMatched": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/docs/MASTER-PLAN.md",
+      "finalSHA256": "0707782566f9d37a585c1997f184cf238d7f1a3c6ffeda804372be6853e0b2a3",
+      "expectedReceiptMatched": true
+    }
+  ],
+  "DONE": false,
+  "localGates": "PASS",
+  "externalAcceptance": "BLOCKED_REQUIRED_PROOFS"
+}

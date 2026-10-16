@@ -1,0 +1,19 @@
+{
+  "UTC": "2026-10-16T05:27:45.976183+00:00",
+  "wrapper": "mc_ios_xcodebuild_timed",
+  "timeoutSeconds": 1200,
+  "scheme": "iOSMerchandiseControl",
+  "configuration": "Debug",
+  "destination": "platform=iOS Simulator,id=0674B959-5A88-49CA-AD70-33075F40CE9D",
+  "parallelTesting": false,
+  "collectTestDiagnostics": "never",
+  "onlyTesting": [
+    "Task118AutomaticDomainTests",
+    "Task119AutomaticArchitectureTests",
+    "AtomicGenerationRecoverySnapshotPullServiceTests",
+    "RecoveryRemoteSupabaseAdapterScopeTests",
+    "OptionsSyncSummaryProviderTests"
+  ],
+  "CODE_SIGNING_ALLOWED": "NO",
+  "sourceMutationDuringRun": false
+}

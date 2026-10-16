@@ -1,0 +1,88 @@
+{
+  "UTC": "2026-10-16T05:26:00.637856+00:00",
+  "source": "ios-d01-final-regression-01-summary.json and original log",
+  "count": 10,
+  "originalFailuresPreserved": true,
+  "entries": [
+    {
+      "case": "AtomicGenerationRecoverySnapshotPullServiceTests/testHeldVerifiedRecoveryPublishesForSameEntityAfterLegitimateLeaseReplacement",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:20:46 +0000)\") is not equal to (\"Optional(1970-01-02 12:06:50 +0000)\")",
+      "proposalSHA256": "4790cee6db80676d399f1e91d0a64901b77f4b1f639d84d876b514a00e18ef6a",
+      "evidence": "Original held Engine/Atomic success/current generation and lease replacement qualified; only date expected callback130010, actual original sourcecompletion. Proposal qualifies originalT0 and asserts state+JSON atT0 with callbackT0+10.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task119AutomaticArchitectureTests/testImmediateRetryAfterCancellationRunsWhenCancelledFlightFinishes",
+      "classification": "EVENT_COMPLETION_NOT_WITNESSED_BY_100_YIELDS",
+      "firstFailure": "XCTAssertEqual failed: (\"reconciling\") is not equal to (\"idle\")",
+      "proposalSHA256": "e40102ace3c6fd91e463e7cd07341c3cf29da1c0cde04319e0409fec509100ff",
+      "evidence": "Run/actions/decision2 pass; final phase/outcome checked in0.100s while real second Atomic recovery still active. Proposal awaits actual fresh completion and publication using existing2s pattern; all final assertions retained, owned cleanup awaited.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testLegacyUnversionedVerifiedTimestampIsNotTrustedAfterRelaunch",
+      "classification": "INTENTIONAL_TYPED_ONLY_HYDRATION_CONTRACT_FIXTURE",
+      "firstFailure": "XCTAssertEqual failed: (\"idle\") is not equal to (\"recoveryRequired\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Raw success/idle with no journal and no typed current observation cannot invent recoveryRequired. Proposal idle/niloutcome/nildate and exact raw preservation; genuine journal and scoped positive remain separate preserved tests.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testLegacyVersionOneAndCorruptVerifiedProofRemainPreservedAndUntrusted",
+      "classification": "INTENTIONAL_TYPED_ONLY_HYDRATION_CONTRACT_FIXTURE",
+      "firstFailure": "XCTAssertEqual failed: (\"idle\") is not equal to (\"recoveryRequired\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Raw success/idle with no journal and no typed current observation cannot invent recoveryRequired. Proposal idle/niloutcome/nildate and exact raw preservation; genuine journal and scoped positive remain separate preserved tests.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task119AutomaticArchitectureTests/testOrchestratorAcceptsVerifiedTerminalCommitAfterOuterCancellation",
+      "classification": "LATE_ASSERTIONS_FROM_PREVIOUS_TEST_OWNED_FRESH_RUN",
+      "firstFailure": "XCTAssertEqual failed: (\"failed\") is not equal to (\"success\")",
+      "proposalSHA256": "e40102ace3c6fd91e463e7cd07341c3cf29da1c0cde04319e0409fec509100ff",
+      "evidence": "Only logged failures are Atomic helper9463-65 inside freshResult closure, whose Task119 caller is previous ImmediateRetry, not this case. They appear after previous methodreturn/fileunlink and inside next test window. Original failure remains; exact lower-level reason for fresh failure not asserted. Proper completion must be verified in ordered full-class rerun before closure.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testOriginProofCannotBeReassignedToAnotherAlreadyQualifiedGeneration",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:21:55 +0000)\") is not equal to (\"Optional(1970-01-01 00:16:40 +0000)\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Real Engine/Atomic fixture has original observation time; old test used callback1000/2000 as expected. Proposal qualifies original time before presentation, delays callback>=1000, preserves all identity/corrupt/body/proof assertions.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testStateStoreDoesNotPromoteDecisionNoWorkToVerifiedSuccess",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:21:55 +0000)\") is not equal to (\"Optional(1970-01-01 00:16:40 +0000)\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Real Engine/Atomic fixture has original observation time; old test used callback1000/2000 as expected. Proposal qualifies original time before presentation, delays callback>=1000, preserves all identity/corrupt/body/proof assertions.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testVerifiedDateRequiresEveryOriginFieldAndCurrentQualifiedLocalBody",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:21:56 +0000)\") is not equal to (\"Optional(1970-01-01 00:16:40 +0000)\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Real Engine/Atomic fixture has original observation time; old test used callback1000/2000 as expected. Proposal qualifies original time before presentation, delays callback>=1000, preserves all identity/corrupt/body/proof assertions.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testVerifiedProofReplayPreservesFirstDateAndHistoricalSuccessAfterFailure",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:21:56 +0000)\") is not equal to (\"Optional(1970-01-01 00:16:40 +0000)\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Real Engine/Atomic fixture has original observation time; old test used callback1000/2000 as expected. Proposal qualifies original time before presentation, delays callback>=1000, preserves all identity/corrupt/body/proof assertions.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    },
+    {
+      "case": "Task118AutomaticDomainTests/testVerifiedProofV2RejectsLegacyScalarAndIncompleteNestedStoreIdentity",
+      "classification": "REAL_SOURCE_TIME_VS_SYNTHETIC_CALLBACK_EXPECTATION",
+      "firstFailure": "XCTAssertEqual failed: (\"Optional(2026-10-16 05:21:56 +0000)\") is not equal to (\"Optional(1970-01-01 00:16:40 +0000)\")",
+      "proposalSHA256": "b4992de2798a1eb57bff1e5ea4b436eea4999b3b607cee4166c2cd3858199629",
+      "evidence": "Real Engine/Atomic fixture has original observation time; old test used callback1000/2000 as expected. Proposal qualifies original time before presentation, delays callback>=1000, preserves all identity/corrupt/body/proof assertions.",
+      "disposition": "OPEN_UNTIL_REVIEWED_PATCH_AND_ORDERED_GREEN"
+    }
+  ]
+}

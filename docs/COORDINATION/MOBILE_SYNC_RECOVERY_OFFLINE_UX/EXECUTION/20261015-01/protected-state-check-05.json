@@ -1,0 +1,51 @@
+{
+  "UTC": "2026-10-16T05:28:53.556093+00:00",
+  "baselineSHA256": "1af17cc40054c432fd73011dc52d16120c2f3fb6dc1860caaa4f3625c22a1911",
+  "repositories": [
+    {
+      "root": "/Users/minxiang/Desktop/iOSMerchandiseControl",
+      "HEADUnchanged": true,
+      "indexUnchanged": true,
+      "stashBaselineExactMatch": true,
+      "stashCurrentSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "worktreesBaselineExactMatch": true,
+      "worktreesCurrentSHA256": "d51d0d8f7ecd1402f37dd239eae6ae732f5a63ba80b71f5f3f8f87a425698e1f"
+    },
+    {
+      "root": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView",
+      "HEADUnchanged": true,
+      "indexUnchanged": true,
+      "stashBaselineExactMatch": true,
+      "stashCurrentSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "worktreesBaselineExactMatch": true,
+      "worktreesCurrentSHA256": "675ca11b1e22d4a8ffc11c82acf575df6f42378bd8851d8c831bb173ed59a26a"
+    }
+  ],
+  "protected": [
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "unchanged": true,
+      "baselineHashAvailable": true
+    },
+    {
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj/xcshareddata/xcschemes/iOSMerchandiseControl.xcscheme",
+      "unchanged": true,
+      "baselineHashAvailable": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/gradle/libs.versions.toml",
+      "unchanged": true,
+      "baselineHashAvailable": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/gradle/wrapper/gradle-wrapper.properties",
+      "unchanged": true,
+      "baselineHashAvailable": true
+    },
+    {
+      "path": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task140FNativeNavigationSmokeTest.kt",
+      "unchanged": true,
+      "baselineHashAvailable": true
+    }
+  ]
+}

@@ -81,6 +81,12 @@ nonisolated enum AccountStoreReplacementRuntimeError: Error, Equatable {
 }
 
 @MainActor
+private final class ForegroundRecoveryInvocation {
+    var claim: SyncAutomaticRecoveryAttemptClaim?
+    nonisolated deinit {}
+}
+
+@MainActor
 final class SyncOrchestrator: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
 
@@ -97,14 +103,20 @@ final class SyncOrchestrator: ObservableObject {
 
     private var currentScenePhase: ScenePhase = .inactive
     private var foregroundTask: Task<Void, Never>?
+    private var foregroundInvocationID: UUID?
+    private var foregroundObservationSource: SyncAutomaticRunObservationSource?
+    private var foregroundOwnerStoreScope: Task126VerifiedOwnerStoreScope?
     private var didReachInteractiveUI = false
     private var hasDeferredForegroundCheck = false
     private var deferredForegroundSource: SyncAutomaticTriggerSource?
     private var deferredForegroundForceIncremental = false
+    private var deferredStartsNewRetryWindow = false
     private var syncEventSafetyLoopTask: Task<Void, Never>?
     private var reconnectScheduler: AutomaticSyncReconnectScheduler?
     private var reconnectObserver: AutomaticSyncNetworkReachabilityObserver?
     private var scheduledForegroundRetryTask: Task<Void, Never>?
+    private var scheduledForegroundRetryIdentity: String?
+    private var scheduledForegroundRetryToken: UUID?
     private var foregroundBusyRetryAttempt = 0
     private var isAccountStoreReplacementInProgress = false
     private var foregroundStartedFromRecoveryRequired = false
@@ -115,6 +127,7 @@ final class SyncOrchestrator: ObservableObject {
     private var pendingPopulatedQualificationScope: Task126VerifiedOwnerStoreScope?
     private let foregroundRetryDelay: @Sendable (TimeInterval) async -> Void
     private let maximumForegroundBusyRetryAttempts: Int
+    private let now: @Sendable () -> Date
 
     init(
         automaticRuntime: any SyncAutomaticRuntimeProviding,
@@ -128,6 +141,7 @@ final class SyncOrchestrator: ObservableObject {
         decisionInputProvider: any SyncDecisionInputProviding,
         backgroundScheduler: (any SyncBackgroundTaskScheduling)? = nil,
         maximumForegroundBusyRetryAttempts: Int = 3,
+        now: @escaping @Sendable () -> Date = { Date() },
         foregroundRetryDelay: @escaping @Sendable (TimeInterval) async -> Void = { delay in
             let nanoseconds = UInt64(max(0, delay) * 1_000_000_000)
             try? await Task.sleep(nanoseconds: nanoseconds)
@@ -145,6 +159,7 @@ final class SyncOrchestrator: ObservableObject {
         self.backgroundScheduler = backgroundScheduler ?? SyncBackgroundTaskScheduler.shared
         self.maximumForegroundBusyRetryAttempts = max(0, maximumForegroundBusyRetryAttempts)
         self.foregroundRetryDelay = foregroundRetryDelay
+        self.now = now
         lastResumedLocalQualificationRevision = storeGenerationController?.localBodyQualificationRevision ?? 0
         localQualificationSubscription = storeGenerationController?.objectWillChange.sink { [weak self] _ in
             self?.scheduleLocalQualificationReadback()
@@ -305,12 +320,7 @@ final class SyncOrchestrator: ObservableObject {
             scheduleLocalQualificationReadback()
             return
         }
-        let source = deferredForegroundSource ?? .rootForeground
-        hasDeferredForegroundCheck = false
-        deferredForegroundSource = nil
-        let forceIncremental = deferredForegroundForceIncremental
-        deferredForegroundForceIncremental = false
-        submitForegroundTrigger(source: source, forceIncremental: forceIncremental)
+        runDeferredForegroundCheckIfNeeded()
     }
 
     func handleLocalPendingChanges() {
@@ -366,7 +376,13 @@ final class SyncOrchestrator: ObservableObject {
         source: SyncAutomaticTriggerSource = .rootForeground,
         forceIncremental: Bool = false
     ) {
+        requestForegroundTrigger(source: source, forceIncremental: forceIncremental, isDeferredReplay: false)
+    }
+
+    private func requestForegroundTrigger(source: SyncAutomaticTriggerSource,
+        forceIncremental: Bool, isDeferredReplay: Bool) {
         guard !isStopped else { return }
+        let startsNewRetryWindow = source == .releaseCard && !isDeferredReplay
         if source == .releaseCard {
             pendingPopulatedQualificationScope = nil
         }
@@ -379,7 +395,7 @@ final class SyncOrchestrator: ObservableObject {
             return
         }
         guard !isAccountStoreReplacementInProgress else {
-            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+            deferForegroundCheck(source: source, forceIncremental: forceIncremental, startsNewRetryWindow: startsNewRetryWindow)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_store_replacement")
             return
         }
@@ -394,12 +410,12 @@ final class SyncOrchestrator: ObservableObject {
             return
         }
         guard foregroundTask == nil else {
-            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+            deferForegroundCheck(source: source, forceIncremental: forceIncremental, startsNewRetryWindow: startsNewRetryWindow)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_existing_task")
             return
         }
         guard !activityCenter.isBusy else {
-            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+            deferForegroundCheck(source: source, forceIncremental: forceIncremental, startsNewRetryWindow: startsNewRetryWindow)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_busy")
             return
         }
@@ -428,19 +444,29 @@ final class SyncOrchestrator: ObservableObject {
 
         let isExplicitRecoveryRetry = source == .releaseCard
         if isExplicitRecoveryRetry {
-            stateStore.resetAutomaticRecoveryAttemptBudget()
+            cancelScheduledForegroundRetry(resetBusyBudget: startsNewRetryWindow)
+            if startsNewRetryWindow { stateStore.resetAutomaticRecoveryAttemptBudget() }
         }
         let automaticRecoveryIdentity = automaticRecoveryResumeIdentityIfAllowed(source: source)
+        let automaticRecoveryScope: Task126VerifiedOwnerStoreScope?
         let isAutomaticRecoveryResume: Bool
         if let automaticRecoveryIdentity {
+            guard let owner = authViewModel.sessionInfo?.userID, authViewModel.isSignedIn,
+                  let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    defaults: defaults, allowsPendingReplacement: true),
+                  isRecoveryTimerScopeCurrent(scope) else {
+                recordRuntimeDiagnostic("foreground.outcome", "recovery_scope_unavailable")
+                return
+            }
+            automaticRecoveryScope = scope
             switch stateStore.automaticRecoveryAttemptEligibility(
-                identity: automaticRecoveryIdentity
+                identity: automaticRecoveryIdentity, now: now()
             ) {
             case .ready:
                 isAutomaticRecoveryResume = true
             case .cooldown(let remaining):
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-                if scheduleDeferredForegroundRetry(after: remaining) {
+                if scheduleDeferredForegroundRetry(after: remaining, recoveryIdentity: automaticRecoveryIdentity) {
                     recordRuntimeDiagnostic("foreground.outcome", "recovery_resume_backoff")
                 } else {
                     clearDeferredForegroundCheck()
@@ -452,6 +478,7 @@ final class SyncOrchestrator: ObservableObject {
                 return
             }
         } else {
+            automaticRecoveryScope = nil
             isAutomaticRecoveryResume = false
         }
         let isRecoveryRetry = isExplicitRecoveryRetry || isAutomaticRecoveryResume
@@ -466,19 +493,43 @@ final class SyncOrchestrator: ObservableObject {
 
         foregroundStartedFromRecoveryRequired = isRecoveryRetry
         let preserveRecoveryRequired = isRecoveryRetry
+        let invocationID = UUID()
+        let ownerScope = (authViewModel.sessionInfo?.userID).flatMap {
+            try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: $0, defaults: defaults,
+                allowsPendingReplacement: true, allowsPendingSameScopeRecovery: true)
+        }
+        let observationSource = ownerScope.flatMap {
+            SyncAutomaticRunObservationSource.capture(scope: $0, defaults: defaults)
+        }
+        foregroundInvocationID = invocationID
+        foregroundObservationSource = observationSource
+        foregroundOwnerStoreScope = ownerScope
+        // Install before the decision's first await. A later owner B must
+        // never be replaced by A merely because A's decision finishes late.
+        stateStore.beginPresentationInvocation(invocationID)
         foregroundTask = Task { @MainActor in
             let (decidedAction, hasPendingLocalChanges) = await decideAction(
                 source: source,
                 forceLightReconcile: forceIncremental
             )
+            guard foregroundInvocationID == invocationID,
+                  stateStore.ownsPresentationInvocation(invocationID) else {
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
             guard !Task.isCancelled else {
-                completeForegroundTask()
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
+            if let automaticRecoveryScope, !isRecoveryTimerScopeCurrent(automaticRecoveryScope) {
+                recordRuntimeDiagnostic("foreground.outcome", "recovery_scope_changed_before_runtime")
+                completeForegroundTask(invocationID: invocationID, runDeferred: false)
                 return
             }
             if let completedRecoveryScope,
                !isCompletedRecoveryForegroundScopeCurrent(completedRecoveryScope) {
                 recordRuntimeDiagnostic("foreground.outcome", "completed_recovery_scope_changed")
-                completeForegroundTask()
+                completeForegroundTask(invocationID: invocationID)
                 return
             }
             if let capturedPopulatedScope {
@@ -487,13 +538,13 @@ final class SyncOrchestrator: ObservableObject {
                 guard currentPopulatedRecoveryScope() == capturedPopulatedScope,
                       let controller = storeGenerationController else {
                     discardPopulatedQualificationWait(includingUnstartedRequest: true)
-                    completeForegroundTask(runDeferred: false)
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     if deferredForegroundSource == .releaseCard { runDeferredForegroundCheckIfNeeded() }
                     return
                 }
                 if deferredForegroundSource == .releaseCard {
                     pendingPopulatedQualificationScope = nil
-                    completeForegroundTask(runDeferred: false)
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     runDeferredForegroundCheckIfNeeded()
                     return
                 }
@@ -504,17 +555,17 @@ final class SyncOrchestrator: ObservableObject {
                     pendingPopulatedQualificationScope = capturedPopulatedScope
                     deferForegroundCheck(source: .rootForeground, forceIncremental: forceIncremental)
                     controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: capturedPopulatedScope.ownerUserID)
-                    completeForegroundTask(runDeferred: false)
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     scheduleLocalQualificationReadback()
                     return
                 }
                 guard !beganWithoutBodyProof || currentScenePhase == .active else {
-                    completeForegroundTask(runDeferred: false)
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     return
                 }
                 if activityCenter.isBusy || automaticRuntime.isRunning || decidedAction == .retryAfterBusy {
                     deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-                    completeForegroundTask(runDeferred: false)
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     if !activityCenter.isBusy, !automaticRuntime.isRunning {
                         resumeDeferredForegroundCheckIfReady()
                     }
@@ -526,86 +577,121 @@ final class SyncOrchestrator: ObservableObject {
             let action = isExplicitRecoveryRetry
                 ? Self.explicitRecoveryAction(afterGates: decidedAction)
                 : decidedAction
-            stateStore.recordDecision(trigger: source.syncTrigger, action: action)
+            stateStore.recordDecision(trigger: source.syncTrigger, action: action,
+                presentationInvocationID: invocationID)
             switch action {
             case .blocked(let reason):
                 stateStore.recordRunResult(
-                    .blocked(reason),
-                    preserveRecoveryRequired: preserveRecoveryRequired
+                    observationSource?.completed(.blocked(reason), now: now()) ?? .blocked(reason),
+                    preserveRecoveryRequired: preserveRecoveryRequired,
+                    presentationInvocationID: invocationID
                 )
                 recordRuntimeDiagnostic("foreground.outcome", "blocked_\(reason)")
-                completeForegroundTask()
+                completeForegroundTask(invocationID: invocationID)
                 return
             case .retryAfterBusy:
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-                var retryDelay: TimeInterval = 2
-                if let automaticRecoveryIdentity {
-                    guard stateStore.beginAutomaticRecoveryAttempt(
-                        identity: automaticRecoveryIdentity
-                    ) != nil else {
-                        clearDeferredForegroundCheck()
-                        stateStore.recordRunResult(
-                            .failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
-                            preserveRecoveryRequired: true
-                        )
-                        completeForegroundTask()
-                        return
-                    }
-                    retryDelay = stateStore.extendAutomaticRecoveryAttemptCooldown(
-                        identity: automaticRecoveryIdentity,
-                        requestedDelay: retryDelay
-                    )
-                }
+                let retryDelay: TimeInterval = 2
                 completeBusyForegroundAttempt(
                     source: source,
                     preserveRecoveryRequired: preserveRecoveryRequired,
-                    requestedDelay: retryDelay,
+                    requestedDelay: retryDelay, invocationID: invocationID,
                     diagnostic: "deferred_decision_busy"
                 )
                 return
             case .noOp:
                 stateStore.recordRunResult(
-                    .noWork(),
-                    preserveRecoveryRequired: preserveRecoveryRequired
+                    observationSource?.completed(.noWork(), now: now()) ?? .noWork(),
+                    preserveRecoveryRequired: preserveRecoveryRequired,
+                    presentationInvocationID: invocationID
                 )
                 recordRuntimeDiagnostic("foreground.outcome", "decision_noop")
-                completeForegroundTask()
+                completeForegroundTask(invocationID: invocationID)
                 return
             case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery, .sequence:
-                if let automaticRecoveryIdentity,
-                   stateStore.beginAutomaticRecoveryAttempt(
-                    identity: automaticRecoveryIdentity
-                   ) == nil {
-                    stateStore.recordRunResult(
-                        .failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
-                        preserveRecoveryRequired: true
-                    )
-                    recordRuntimeDiagnostic(
-                        "foreground.outcome",
-                        "recovery_resume_budget_unavailable"
-                    )
-                    completeForegroundTask()
-                    return
-                }
-                stateStore.updatePhase(action.runningPhase)
+                stateStore.updatePhase(action.runningPhase, presentationInvocationID: invocationID)
             }
             recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
-            let progressInvocationID = stateStore.beginRecoveryProgressReporting()
-            let result = await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
-                await automaticRuntime.run(action: action, source: source)
+            let progressInvocationID = stateStore.beginRecoveryProgressReporting(presentationInvocationID: invocationID)
+            let recoveryInvocation = ForegroundRecoveryInvocation()
+            let beginAttempt: (@Sendable () async -> Bool)?
+            if let identity = automaticRecoveryIdentity {
+                beginAttempt = { @Sendable [weak orchestrator = self] in
+                    await MainActor.run { [weak orchestrator] in
+                        guard let orchestrator, !orchestrator.isStopped, orchestrator.foregroundInvocationID == invocationID,
+                              orchestrator.stateStore.ownsPresentationInvocation(invocationID),
+                              let automaticRecoveryScope else { return false }
+                        if orchestrator.stateStore.pendingRecoveryJournal == nil {
+                            // A same-entity finalizer may retire the journal
+                            // after the decision and before engine admission.
+                            // This is ordinary current-generation work, never
+                            // a new claim or reset of the retired journal.
+                            guard orchestrator.isRecoveryCompletionEntityCurrent(automaticRecoveryScope, verifiedConvergence: true),
+                                  let fresh = try? Task126OwnerStoreGate.captureAutomaticScope(
+                                    ownerUserID: automaticRecoveryScope.ownerUserID, defaults: orchestrator.defaults),
+                                  orchestrator.isCompletedRecoveryForegroundScopeCurrent(fresh) else { return false }
+                            return true
+                        }
+                        guard orchestrator.isRecoveryTimerScopeCurrent(automaticRecoveryScope),
+                              orchestrator.stateStore.pendingRecoveryJournal.map(Self.automaticRecoveryResumeIdentity(for:)) == identity else { return false }
+                        recoveryInvocation.claim = orchestrator.stateStore.claimAutomaticRecoveryAttempt(identity: identity, now: orchestrator.now())
+                        return recoveryInvocation.claim != nil
+                    }
+                }
+            } else {
+                beginAttempt = nil
+            }
+            guard foregroundInvocationID == invocationID,
+                  stateStore.ownsPresentationInvocation(invocationID) else {
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
+            let result = await AutomaticSyncAttemptContext.$begin.withValue(beginAttempt) {
+                await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
+                    await automaticRuntime.run(action: action, source: source)
+                }
+            }
+            guard foregroundInvocationID == invocationID,
+                  stateStore.ownsPresentationInvocation(invocationID) else {
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
+            let completionAuthority: (@MainActor @Sendable () -> Bool)?
+            if let scope = automaticRecoveryScope {
+                completionAuthority = { @MainActor @Sendable [weak orchestrator = self] in
+                    orchestrator?.isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: result.verifiedConvergence) ?? false
+                }
+            } else {
+                completionAuthority = nil
+            }
+            guard completionAuthority?() != false else {
+                recordRuntimeDiagnostic("foreground.outcome", "recovery_completion_entity_changed")
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
+            if let claim = recoveryInvocation.claim, !stateStore.ownsAutomaticRecoveryAttempt(claim) {
+                recordRuntimeDiagnostic("foreground.outcome", "stale_recovery_completion_ignored")
+                completeForegroundTask(invocationID: invocationID)
+                return
             }
             guard !Task.isCancelled || result.verifiedConvergence else {
-                completeForegroundTask()
+                completeForegroundTask(invocationID: invocationID)
                 return
             }
             stateStore.recordRunResult(
                 result,
-                preserveRecoveryRequired: preserveRecoveryRequired
+                preserveRecoveryRequired: preserveRecoveryRequired,
+                presentationInvocationID: invocationID,
+                automaticRecoveryClaim: recoveryInvocation.claim,
+                automaticRecoveryAuthority: completionAuthority, now: now()
             )
-            foregroundTask = nil
-            foregroundStartedFromRecoveryRequired = false
-            objectWillChange.send()
+            guard completionAuthority?() != false else {
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
+            guard foregroundInvocationID == invocationID else { return }
             if result.status == .busy || result.status == .scheduledRetry {
+                stateStore.abandonPresentationInvocation(invocationID)
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                 var requestedDelay = result.scheduledRetryAfter ?? 2
                 if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending {
@@ -619,18 +705,32 @@ final class SyncOrchestrator: ObservableObject {
                 } else {
                     clearDeferredForegroundCheck()
                     stateStore.recordRunResult(
-                        .failed(errorCode: "sync_busy_retry_exhausted"),
+                        observationSource?.completed(.failed(errorCode: "sync_busy_retry_exhausted"), now: now())
+                            ?? .failed(errorCode: "sync_busy_retry_exhausted"),
                         preserveRecoveryRequired: preserveRecoveryRequired
                     )
                     recordRuntimeDiagnostic("foreground.outcome", "busy_retry_exhausted")
                 }
+                completeForegroundTask(invocationID: invocationID, runDeferred: false)
                 return
             }
             if !stateStore.recoveryJournalIsPending {
                 stateStore.resetAutomaticRecoveryAttemptBudget()
             }
             resetForegroundBusyRetryBudget()
-            runDeferredForegroundCheckIfNeeded()
+            if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending,
+               case .cooldown(let remaining) = stateStore.automaticRecoveryAttemptEligibility(
+                identity: automaticRecoveryIdentity, now: now()) {
+                deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                if scheduleDeferredForegroundRetry(after: remaining, recoveryIdentity: automaticRecoveryIdentity) {
+                    recordRuntimeDiagnostic("foreground.outcome", "recovery_transient_retry_scheduled")
+                } else {
+                    clearDeferredForegroundCheck()
+                }
+                completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                return
+            }
+            completeForegroundTask(invocationID: invocationID)
         }
     }
 
@@ -643,10 +743,15 @@ final class SyncOrchestrator: ObservableObject {
         automaticRuntime.cancel()
         foregroundTask?.cancel()
         if stateStore.state.phase.isAutomaticWorkActive {
-            stateStore.recordRunResult(
-                .cancelled(),
-                preserveRecoveryRequired: preserveRecoveryRequired
-            )
+            stateStore.recordCancellationRequest(presentationInvocationID: foregroundInvocationID,
+                preserveRecoveryRequired: preserveRecoveryRequired, now: now())
+        }
+        if let scope = foregroundOwnerStoreScope,
+           !isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: false),
+           let invocationID = foregroundInvocationID {
+            // A different entity revokes A. A same-entity durable generation
+            // change alone does not surrender its held operation claim.
+            stateStore.abandonPresentationInvocation(invocationID)
         }
         foregroundStartedFromRecoveryRequired = false
         objectWillChange.send()
@@ -673,7 +778,12 @@ final class SyncOrchestrator: ObservableObject {
         if let runningTask {
             await runningTask.value
         }
+        if let invocationID = foregroundInvocationID {
+            stateStore.abandonPresentationInvocation(invocationID)
+        }
         foregroundTask = nil
+        foregroundInvocationID = nil
+        foregroundOwnerStoreScope = nil
 
         do {
             let result = try operation()
@@ -792,7 +902,8 @@ final class SyncOrchestrator: ObservableObject {
 
     private func deferForegroundCheck(
         source: SyncAutomaticTriggerSource,
-        forceIncremental: Bool
+        forceIncremental: Bool,
+        startsNewRetryWindow: Bool = false
     ) {
         var preferredSource = Self.preferredDeferredSource(
             current: deferredForegroundSource,
@@ -827,6 +938,7 @@ final class SyncOrchestrator: ObservableObject {
         hasDeferredForegroundCheck = true
         deferredForegroundSource = preferredSource
         deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
+        deferredStartsNewRetryWindow = deferredStartsNewRetryWindow || startsNewRetryWindow
     }
 
     static func preferredDeferredSource(
@@ -843,20 +955,25 @@ final class SyncOrchestrator: ObservableObject {
         hasDeferredForegroundCheck = false
         deferredForegroundSource = nil
         deferredForegroundForceIncremental = false
+        deferredStartsNewRetryWindow = false
     }
 
     private func completeBusyForegroundAttempt(
         source: SyncAutomaticTriggerSource,
         preserveRecoveryRequired: Bool,
         requestedDelay: TimeInterval,
+        invocationID: UUID,
         diagnostic: String
     ) {
+        guard foregroundInvocationID == invocationID else { return }
         let scheduled = scheduleDeferredForegroundRetry(after: requestedDelay)
         stateStore.recordRunResult(
-            scheduled
+            foregroundObservationSource?.completed(scheduled
                 ? .scheduledRetry(after: requestedDelay)
-                : .failed(errorCode: "sync_busy_retry_exhausted"),
-            preserveRecoveryRequired: preserveRecoveryRequired
+                : .failed(errorCode: "sync_busy_retry_exhausted"), now: now())
+                ?? (scheduled ? .scheduledRetry(after: requestedDelay) : .failed(errorCode: "sync_busy_retry_exhausted")),
+            preserveRecoveryRequired: preserveRecoveryRequired,
+            presentationInvocationID: invocationID
         )
         recordRuntimeDiagnostic(
             "foreground.outcome",
@@ -865,37 +982,137 @@ final class SyncOrchestrator: ObservableObject {
         if !scheduled {
             clearDeferredForegroundCheck()
         }
-        completeForegroundTask(runDeferred: false)
+        completeForegroundTask(invocationID: invocationID, runDeferred: false)
     }
 
-    private func scheduleDeferredForegroundRetry(after requestedDelay: TimeInterval) -> Bool {
-        guard scheduledForegroundRetryTask == nil,
-              foregroundBusyRetryAttempt < maximumForegroundBusyRetryAttempts else {
-            return false
+    private func scheduleDeferredForegroundRetry(after requestedDelay: TimeInterval,
+        recoveryIdentity: String? = nil) -> Bool {
+        guard requestedDelay.isFinite, requestedDelay >= 0 else { return false }
+        if scheduledForegroundRetryTask != nil {
+            // Repeated foreground/reconnect signals share the existing timer
+            // and must not erase the deferred request that it will execute.
+            return recoveryIdentity != nil && scheduledForegroundRetryIdentity == recoveryIdentity
         }
-        let attempt = foregroundBusyRetryAttempt
-        foregroundBusyRetryAttempt += 1
-        let boundedDelay = min(max(0, requestedDelay) * pow(2, Double(attempt)), 30)
+        let capturedScope: Task126VerifiedOwnerStoreScope?
+        if let recoveryIdentity {
+            guard let owner = authViewModel.sessionInfo?.userID, authViewModel.isSignedIn,
+                  let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
+                    defaults: defaults, allowsPendingReplacement: true),
+                  automaticRecoveryResumeIdentityIfAllowed(source: .rootForeground) == recoveryIdentity,
+                  isRecoveryTimerScopeCurrent(scope) else { return false }
+            capturedScope = scope
+        } else {
+            guard foregroundBusyRetryAttempt < maximumForegroundBusyRetryAttempts else { return false }
+            capturedScope = nil
+        }
+        let delaySeconds: TimeInterval
+        if recoveryIdentity != nil {
+            delaySeconds = requestedDelay
+        } else {
+            delaySeconds = min(requestedDelay * pow(2, Double(foregroundBusyRetryAttempt)), 30)
+            foregroundBusyRetryAttempt += 1
+        }
+        let token = UUID()
+        scheduledForegroundRetryToken = token
+        scheduledForegroundRetryIdentity = recoveryIdentity
         let delay = foregroundRetryDelay
+        let recoveryDeadline = recoveryIdentity == nil ? nil : now().addingTimeInterval(delaySeconds)
         scheduledForegroundRetryTask = Task { @MainActor [weak self] in
-            await delay(boundedDelay)
-            guard !Task.isCancelled, let self else { return }
+            if let recoveryDeadline {
+                while true {
+                    guard !Task.isCancelled, let self, self.scheduledForegroundRetryToken == token else { return }
+                    guard let capturedScope, let recoveryIdentity,
+                          self.automaticRecoveryResumeIdentityIfAllowed(source: .rootForeground) == recoveryIdentity,
+                          self.currentScenePhase != .background,
+                          self.isRecoveryTimerScopeCurrent(capturedScope) else {
+                        self.cancelScheduledForegroundRetry()
+                        self.clearDeferredForegroundCheck()
+                        return
+                    }
+                    let remaining = recoveryDeadline.timeIntervalSince(self.now())
+                    guard remaining > 0 else { break }
+                    // The server deadline is unchanged. Only each individual
+                    // sleep is bounded, so nanosecond conversion cannot trap.
+                    await delay(min(remaining, 300))
+                }
+            } else {
+                await delay(delaySeconds)
+            }
+            guard !Task.isCancelled, let self, self.scheduledForegroundRetryToken == token else { return }
             self.scheduledForegroundRetryTask = nil
+            self.scheduledForegroundRetryToken = nil
+            self.scheduledForegroundRetryIdentity = nil
+            if let capturedScope, let recoveryIdentity {
+                guard self.automaticRecoveryResumeIdentityIfAllowed(source: .rootForeground) == recoveryIdentity,
+                      self.currentScenePhase != .background,
+                      self.isRecoveryTimerScopeCurrent(capturedScope) else {
+                    self.clearDeferredForegroundCheck()
+                    return
+                }
+            }
             self.runDeferredForegroundCheckIfNeeded()
         }
         return true
     }
 
-    private func cancelScheduledForegroundRetry() {
+    private func isRecoveryTimerScopeCurrent(_ scope: Task126VerifiedOwnerStoreScope) -> Bool {
+        guard !isStopped, authViewModel.isSignedIn, authViewModel.sessionInfo?.userID == scope.ownerUserID,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: scope.ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true), current == scope,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash) else { return false }
+        if let storeGenerationController {
+            guard let storeGenerationLease,
+                  (try? storeGenerationController.validateLease(storeGenerationLease)) != nil else { return false }
+        }
+        return true
+    }
+
+    /// A committed recovery replaces its physical lease and clears its
+    /// journal. Verify the current entity, not the retired pre-run lease, and
+    /// do not turn cancellation into loss of a legitimate durable completion.
+    private func isRecoveryCompletionEntityCurrent(_ scope: Task126VerifiedOwnerStoreScope,
+        verifiedConvergence: Bool) -> Bool {
+        let selection = SelectedShopStore(defaults: defaults)
+        let binding = AccountBindingStore(defaults: defaults)
+        guard !isStopped, authViewModel.isSignedIn, !authViewModel.isTransitioning,
+              authViewModel.sessionInfo?.userID == scope.ownerUserID,
+              authViewModel.localMutationOwnerUserID == scope.ownerUserID,
+              defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == scope.accountHash,
+              selection.isResolutionReady(accountHash: scope.accountHash),
+              let shop = selection.selectedShop(accountHash: scope.accountHash),
+              shop.shopID == scope.shopID, shop.localStoreIdentity.hasSameProvenance(as: scope.storeIdentity),
+              LinkedShop(shopID: shop.shopID, code: shop.code, name: shop.name, role: shop.role,
+                status: shop.status, selectable: shop.selectable, canWrite: shop.canWrite).isValidSelection,
+              let currentBinding = binding.currentBinding,
+              currentBinding.accountHash == scope.accountHash,
+              currentBinding.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+              let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+              device == scope.deviceInstallID, DeviceInstallIDStore.identityHash(for: device) == scope.deviceIdentityHash,
+              !selection.hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash) else { return false }
+        guard verifiedConvergence else { return true }
+        guard !binding.hasPendingReplacementJournal,
+              let controller = storeGenerationController, let manifest = controller.activeManifest,
+              manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+              manifest.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+              manifest.deviceIdentityHash == scope.deviceIdentityHash,
+              (try? controller.isActiveRecoveryFinalized(scope: scope)) == true,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: scope.ownerUserID, defaults: defaults) else { return false }
+        return true
+    }
+
+    private func cancelScheduledForegroundRetry(resetBusyBudget: Bool = true) {
         scheduledForegroundRetryTask?.cancel()
         scheduledForegroundRetryTask = nil
-        foregroundBusyRetryAttempt = 0
+        scheduledForegroundRetryToken = nil
+        scheduledForegroundRetryIdentity = nil
+        if resetBusyBudget { foregroundBusyRetryAttempt = 0 }
     }
 
     private func resetForegroundBusyRetryBudget() {
-        scheduledForegroundRetryTask?.cancel()
-        scheduledForegroundRetryTask = nil
-        foregroundBusyRetryAttempt = 0
+        cancelScheduledForegroundRetry()
     }
 
     private func runDeferredForegroundCheckIfNeeded() {
@@ -906,15 +1123,20 @@ final class SyncOrchestrator: ObservableObject {
         }
         let source = deferredForegroundSource ?? .rootForeground
         let forceIncremental = deferredForegroundForceIncremental
-        hasDeferredForegroundCheck = false
-        deferredForegroundSource = nil
-        deferredForegroundForceIncremental = false
-        submitForegroundTrigger(source: source, forceIncremental: forceIncremental)
+        let startsNewRetryWindow = deferredStartsNewRetryWindow
+        clearDeferredForegroundCheck()
+        requestForegroundTrigger(source: source, forceIncremental: forceIncremental,
+            isDeferredReplay: !startsNewRetryWindow)
     }
 
-    private func completeForegroundTask(runDeferred: Bool = true) {
+    private func completeForegroundTask(invocationID: UUID, runDeferred: Bool = true) {
+        guard foregroundInvocationID == invocationID else { return }
         backgroundScheduler.schedule(reason: .foregroundCompletion)
+        stateStore.abandonPresentationInvocation(invocationID)
         foregroundTask = nil
+        foregroundInvocationID = nil
+        foregroundObservationSource = nil
+        foregroundOwnerStoreScope = nil
         foregroundStartedFromRecoveryRequired = false
         objectWillChange.send()
         if runDeferred, !isStopped {

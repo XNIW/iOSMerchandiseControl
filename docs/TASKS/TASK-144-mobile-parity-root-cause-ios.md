@@ -3,13 +3,17 @@
 ## Stato
 
 - File task: `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`
-- Stato: `FIX`
-- Fase: `FIX`
-- Responsabile: `CODEX_EXECUTOR_IOS`; orchestratore parent, reviewer indipendente separato.
+- Stato: `BLOCKED`
+- Fase: sospesa; ultima fase operativa `FIX`
+- Responsabile: `UTENTE / coordinatore nuova TASK-145` per il passaggio di ownership; nessun executor autorizzato da questa sospensione.
 - Data: 2026-09-28
 - Baseline: `30d226d0fb9b8679a1dd034c6e82319645337f22`
 - Branch corrente: `codex/ios-incremental-sync-state` da PR13 HEAD `414c4a34`; R-I08 in diagnosi RED, R-I07/main e prove precedenti preservati
 - Coordination key: `MERCHANDISECONTROL_MOBILE_PARITY_ROOT_CAUSE`
+
+## Sospensione coordinata — 2026-10-15
+
+Il nuovo mandato utente `MOBILE_SYNC_RECOVERY_OFFLINE_UX` assegna planning cross-platform a Codex e richiede task nuovi con executor successivo distinto. TASK-144 resta aperto, ora **BLOCKED**, ultima fase FIX; evidenze, FAIL/UNKNOWN, criteri, review e handoff storici sotto sono conservati. Unico task operativo attuale: [TASK-145](TASK-145-mobile-sync-recovery-offline-ux-ios.md), PLANNING. Questa è sospensione di ownership, non chiusura funzionale né autorizzazione a patch concorrenti. I branch e gli stati descritti sotto sono snapshot storici; baseline corrente nel nuovo dossier. Ripresa di questo task solo con assegnazione esplicita senza duplicare executor sulle stesse aree.
 
 ## Scopo / Obiettivo
 

@@ -1,0 +1,93 @@
+{
+  "coordination_key": "MOBILE_SYNC_RECOVERY_OFFLINE_UX",
+  "checked_at_utc": "2026-10-16T00:15:51.172465+00:00",
+  "scope": "Planning documents and preservation only; not application acceptance",
+  "repositories": {
+    "ios": {
+      "foreign_files_checked": 14,
+      "foreign_file_mismatches": [],
+      "head_unchanged": true,
+      "branch_unchanged": true,
+      "origin_main_unchanged": true,
+      "index_unchanged": true,
+      "worktrees_unchanged": true,
+      "stash_unchanged": true,
+      "diff_check_pass": true,
+      "unexpected_tracked_changes": [],
+      "unexpected_untracked_files": []
+    },
+    "android": {
+      "foreign_files_checked": 6,
+      "foreign_file_mismatches": [],
+      "head_unchanged": true,
+      "branch_unchanged": true,
+      "origin_main_unchanged": true,
+      "index_unchanged": true,
+      "worktrees_unchanged": true,
+      "stash_unchanged": true,
+      "diff_check_pass": true,
+      "unexpected_tracked_changes": [],
+      "unexpected_untracked_files": []
+    }
+  },
+  "documents": {
+    "markdown_files_checked": 11,
+    "local_links_checked": 44,
+    "broken_links": [],
+    "invalid_json": [],
+    "credential_pattern_matches": [],
+    "acceptance_criteria": [
+      "CA01",
+      "CA02",
+      "CA03",
+      "CA04",
+      "CA05",
+      "CA06",
+      "CA07",
+      "CA08",
+      "CA09",
+      "CA10",
+      "CA11",
+      "CA12"
+    ],
+    "test_cases": [
+      "T01",
+      "T02",
+      "T03",
+      "T04",
+      "T05",
+      "T06",
+      "T07",
+      "T08",
+      "T09",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T15",
+      "T16",
+      "T17",
+      "T18",
+      "T19",
+      "T20"
+    ],
+    "sha256": {
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/CONTRACT.md": "c0118b2f527ba47954eb580bc114767cdccf973970a64a6e83d9c2fff9e8e9ee",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION_HANDOFF.md": "81f9451fd405d88a8fb08abb374ea5025d3d47e9605fb16ba4d464624c377549",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/IMPLEMENTATION_PLAN.md": "7efd814bc4e3a3acf969e339e6db9cac4a60d26fc4f7668743bdc36609d26748",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/PLANNING_VALIDATION.md": "075f22c85e42f5e831c07612c7625679b81abf735664266cf04310579cec23f3",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/README.md": "6323190b1d88dbfc47eb3e63bc820de8b75723596544f2c940aac30114fb35f1",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/REVIEW_CHECKLIST.md": "a0e7ba9394fb63459b98d599e963492e03af94a1c8cbab6e15e1c5e518c70ae9",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/ROOT_CAUSE_ANALYSIS.md": "5acb0db9fa67d639ad608406ac95707a446620253c8a397e628c5f2f5524e5fb",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/TEST_MATRIX.md": "9811f2cb7abad36d1c143f8f250536c2662c52c2ddaeaf99f067a98556eac172",
+      "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md": "ae3fd4e45e42702f5424bd9d5d771d3c88676904620f658f94d52fb92c0dc5c1",
+      "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/docs/TASKS/TASK-144-mobile-sync-recovery-offline-ux-android.md": "bb87f3f74df3aa4acb36ece52e630f57c88df5ebcbb4d4dfc684f303154d0069",
+      "/Users/minxiang/Desktop/MerchandiseControlSupabase/docs/mobile_sync_recovery_offline_ux_planning_reference.md": "a97cf883487935cb97feed7200b652d3ede8ae2ce1ca55771fc74341e44b9df3"
+    }
+  },
+  "application_build_tests_runtime": "NOT_RUN",
+  "independent_document_audit": "No blocking document corrections remaining in checked scope; not application review",
+  "failures": [],
+  "result": "PASS"
+}

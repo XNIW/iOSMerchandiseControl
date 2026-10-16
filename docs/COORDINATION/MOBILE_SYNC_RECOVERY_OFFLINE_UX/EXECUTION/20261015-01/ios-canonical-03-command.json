@@ -1,0 +1,13 @@
+{
+  "timeoutSeconds": 1200,
+  "parallelTesting": false,
+  "collectTestDiagnostics": "never after owned candidate1 post-run diagnostics hang",
+  "scheme": "iOSMerchandiseControl",
+  "configuration": "Debug",
+  "destination": "platform=iOS Simulator,id=0674B959-5A88-49CA-AD70-33075F40CE9D",
+  "derivedData": "/tmp/mobile145-20261015-01-DerivedData",
+  "testSelection": "full scheme, no only-testing or skip-testing",
+  "CODE_SIGNING_ALLOWED": "NO",
+  "UTC": "2026-10-16T05:39:27.536978+00:00",
+  "sourceManifest": "ios-canonical-03-input.json"
+}

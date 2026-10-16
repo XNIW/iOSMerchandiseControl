@@ -1,0 +1,14 @@
+{
+  "UTC": "2026-10-16T05:37:57.677676+00:00",
+  "wrapper": "mc_ios_xcodebuild_timed",
+  "timeoutSeconds": 1200,
+  "action": "analyze",
+  "project": "iOSMerchandiseControl.xcodeproj",
+  "scheme": "iOSMerchandiseControl",
+  "configuration": "Debug",
+  "destination": "platform=iOS Simulator,id=0674B959-5A88-49CA-AD70-33075F40CE9D",
+  "derivedData": "/tmp/mobile145-20261015-01-DerivedData",
+  "CODE_SIGNING_ALLOWED": "NO",
+  "purpose": "Verify compiler correction on final local candidate; no installation or live acceptance",
+  "sourceManifest": "ios-final-local-input.json"
+}

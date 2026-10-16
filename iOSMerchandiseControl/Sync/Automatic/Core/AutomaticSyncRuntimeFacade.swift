@@ -104,12 +104,17 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
         } catch {
             return .blocked(.accountDecisionRequired)
         }
+        let observationSource = SyncAutomaticRunObservationSource.capture(scope: scope, defaults: defaults)
+        func observed(_ result: SyncAutomaticRunResult) -> SyncAutomaticRunResult {
+            guard result.observation == nil, let observationSource else { return result }
+            return observationSource.completed(result)
+        }
         if let deviceAuthorization {
             do {
                 let snapshot = try await deviceAuthorization.ensureActiveForCloudWrite(
                     reason: "automatic_\(source.rawValue)"
                 )
-                guard authenticatedOwnerProvider() == ownerUserID else { return .blocked(.authRequired) }
+                guard authenticatedOwnerProvider() == ownerUserID else { return observed(.blocked(.authRequired)) }
                 // The callback may update durable device authorization and
                 // invalidate the lease. Re-capture only the identical entity
                 // scope; never carry a pre-request shop/identity into a writer.
@@ -117,13 +122,13 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
                     defaults: defaults,
                     allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
                     allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery)
-                guard sameEntityScope(current, scope) else { return .blocked(.accountDecisionRequired) }
+                guard sameEntityScope(current, scope) else { return observed(.blocked(.accountDecisionRequired)) }
                 recordDeviceAuthorization(snapshot, scope: current, reason: source.rawValue)
                 scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID,
                     defaults: defaults,
                     allowsPendingReplacement: pendingRecovery?.mode == .accountOrShopReplacement,
                     allowsPendingSameScopeRecovery: pendingRecovery?.mode == .sameScopeRecovery)
-                guard sameEntityScope(current, scope) else { return .blocked(.accountDecisionRequired) }
+                guard sameEntityScope(current, scope) else { return observed(.blocked(.accountDecisionRequired)) }
             } catch {
                 if let blocked = error as? ShopDeviceAuthorizationBlockedError {
                     if authenticatedOwnerProvider() == ownerUserID,
@@ -135,16 +140,16 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
                         recordDeviceAuthorization(blocked.snapshot, scope: current, reason: source.rawValue)
                     }
                 }
-                return .blocked(.deviceNotActive)
+                return observed(.blocked(.deviceNotActive))
             }
         }
         guard authenticatedOwnerProvider() == ownerUserID else {
-            return .blocked(.authRequired)
+            return observed(.blocked(.authRequired))
         }
         do {
             try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
         } catch {
-            return .blocked(.accountDecisionRequired)
+            return observed(.blocked(.accountDecisionRequired))
         }
         facadeIsRunning = true
         defer {
@@ -197,7 +202,8 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
 
     private func sameEntityScope(_ lhs: Task126VerifiedOwnerStoreScope, _ rhs: Task126VerifiedOwnerStoreScope) -> Bool {
         lhs.ownerUserID == rhs.ownerUserID && lhs.accountHash == rhs.accountHash && lhs.shopID == rhs.shopID
-            && lhs.storeIdentity == rhs.storeIdentity && lhs.deviceIdentityHash == rhs.deviceIdentityHash
+            && lhs.storeIdentity.hasSameProvenance(as: rhs.storeIdentity)
+            && lhs.deviceInstallID == rhs.deviceInstallID && lhs.deviceIdentityHash == rhs.deviceIdentityHash
             && lhs.pendingReplacement == rhs.pendingReplacement
     }
 }

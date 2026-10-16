@@ -1,0 +1,38 @@
+{
+  "captured_at_utc": "2026-10-16T04:40:34.336033+00:00",
+  "owner": "classifier_readonly",
+  "state": "SOURCE_FROZEN_ROOT_REG03_RUNNING",
+  "source": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/src/main/java/com/example/merchandisecontrolsplitview/data/SupabaseSyncEventRemoteDataSource.kt",
+  "source_sha256": "021884c131f81e7aa49c6f9880d71c2332152a0e222bf87f7972de8fd8a45f6e",
+  "source_proposed_after_schema_parity_sha256": "199bc154cfcfdd8eb513c0a4f6e1277361839b42829db54470cb537f77539617",
+  "patch": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-event-schema-blank-parity-proposal.patch",
+  "patch_sha256": "2477b7997391f6990d0307022b6cb35491bf0f5b92c49bc2c1ae08f145a8974e",
+  "cached_primary_proof": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-event-one-shot-cached-primary-proof.json",
+  "cached_primary_proof_sha256": "68af9af10310aab8a7fc5da7e3a14b2a2755ce2c076e9ee2c858911ce44901df",
+  "implementation": {
+    "exact_function": "record_sync_event_v6",
+    "other_functions": "Existing postgrest.rpc(functionName, payload).decodeAs<SyncEventRemoteRow>() path preserved.",
+    "client": "Capture GenerationOwnedSupabaseClient once per invoker operation, use same concrete client for postgrest/config/auth/error/decode.",
+    "auth_url_error": "SDK authenticatedSupabaseApi(postgrest, urlLengthLimit=postgrest.config.urlLengthLimit) preserves plugin.resolveUrl, plugin.parseErrorResponse, requireValidSession, jwtToken, defaultResolveAccessToken and URL length check.",
+    "request_serializer": "Cached SDK KtorSupabaseHttpClient installs ContentNegotiation json(supabaseJson); JsonObject is encoded through that global JSON converter, not mutable Postgrest.serializer used for response decode. Explicit supabaseJson.encodeToString(JsonObject.serializer(), payload) matches converter representation.",
+    "response": "SDK api.request handles original non-success response through parseErrorResponse before bodyAsText success decode. Success PostgrestResult(bodyAsText, headers, postgrest).decodeAs retains postgrest.serializer.",
+    "body": "Immutable UTF-8 byte array captured as ReadChannelContent; Ktor OkHttp maps to StreamRequestBody whose isOneShot is true. readFrom guard also prevents second channel open without a transport retry loop.",
+    "headers_map": {
+      "Content-Type": "application/json, matching unchanged SDK builder and TextContent application/json charset behavior.",
+      "Content-Length": "UTF-8 byte count same body bytes, now known ReadChannelContent contentLength.",
+      "Content-Profile": "SDK schema when not blank; frozen reg03 initially unconditionally writes it. External parity patch restores exact omission for blank schema after runner release.",
+      "Accept": "application/json, SDK default AcceptHeader.Json with shouldStripNulls=false.",
+      "Prefer": "empty string, SDK default buildPrefer().joinToString(\",\").",
+      "Authorization": "SDK authenticated API bearer path unchanged.",
+      "apikey_and_sdk_default_headers": "Same operationClient SDK HTTP engine and DefaultRequest; no copied secret values.",
+      "URL": "SDK Postgrest plugin resolveUrl for rpc/record_sync_event_v6.",
+      "Timeout": "Same postgrest.config.timeout.inWholeMilliseconds; existing SDK engine/client timeout defaults preserved.",
+      "RPC_parameters_and_custom_headers": "No new supplied RPC builder options; original invoker passes only functionName and JsonObject."
+    }
+  },
+  "local_runs": "NOT_RUN; root owns reg03 and final unit/build/lint.",
+  "network": "NOT_RUN",
+  "sdk_mutation": "NOT_RUN",
+  "original_red": "Root archived qualified event wire regression02: 1 app invocation, original 503/PGRST000/RemoteTransient, identical bodies/IDs; 2 physical posts.",
+  "limitation": "This receipt is static cached-source evidence, not GREEN runtime evidence."
+}

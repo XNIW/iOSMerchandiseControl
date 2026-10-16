@@ -1,0 +1,113 @@
+{
+  "observed_at_utc": "2026-10-15T23:54:09.759447+00:00",
+  "read_only": true,
+  "journal": {
+    "mode": "sameScopeRecovery",
+    "phase": "staging",
+    "wipeCommitted": false,
+    "generation_matches_active": false,
+    "identity_matches_budget": true,
+    "file_sha256": "3d26f83f89a8eeb9ea3ddb1d05fc0ae1c69490621b6a4090887d8b099a95b8b4"
+  },
+  "budget": {
+    "attemptCount": 3,
+    "nextAllowedAt": 1791997911.4325662,
+    "schemaVersion": 1
+  },
+  "persisted_orchestrator": {
+    "phase": "recoveryRequired",
+    "lastTrigger": "appForeground",
+    "lastAction": "bootstrap",
+    "lastRunStatus": "failed",
+    "lastRunErrorCode": "unknown(message: Optional(\"networkError(statusCode: Optional(500), message: nil)\"))",
+    "lastRunCompletedAt": 1791998171.3666139,
+    "lastProgressAt": 1791998171.3666139,
+    "lastVerifiedAt": 1784504924.2825851,
+    "lastRunVerifiedConvergence": false,
+    "safetyLoopLastTickAt": 1792108405.3897362
+  },
+  "runtime_authority": {
+    "note": "persisted diagnostics only; not authenticated live authorization",
+    "isSignedIn": true,
+    "deviceStatus": "active",
+    "deviceCanWrite": true
+  },
+  "installed": {
+    "binary_sha256": "e21efd770fc432d2191f363d6c5212a59448fd57ef6a0bab6df5ee79b98a9f78",
+    "version": "1.0",
+    "build": "1",
+    "sdk": "iphonesimulator27.0",
+    "runtime": "iOS26.1",
+    "device": "iPhone15ProMax Simulator",
+    "config_sha256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+    "environment": "TEST jpgoimipbothfgkokyvm",
+    "build_provenance": "historical receipt original a731464; Release equivalent e6a286f/main314cf533, no fresh build"
+  },
+  "limitations": [
+    "No UI interaction or screenshots this turn",
+    "No recovery/RPC invoked",
+    "No token or Keychain read",
+    "No current backend schema queried",
+    "DB grouping captured separately; no current RAM local qualification attested"
+  ],
+  "database_readonly": {
+    "observed_at_utc": "2026-10-15T23:55:35.012950+00:00",
+    "method": "SQLite URI mode=ro; PRAGMA query_only; bounded BEGIN SELECT aggregates; rollback; no payloads/IDs exported",
+    "table_counts": {
+      "ZPRODUCT": 19775,
+      "ZPRODUCTPRICE": 41256,
+      "ZHISTORYENTRY": 83,
+      "ZLOCALPENDINGCHANGE": 6,
+      "ZSYNCEVENTOUTBOXENTRY": 9
+    },
+    "business_intents_by_domain_status": [
+      [
+        "product",
+        "acknowledged",
+        2
+      ],
+      [
+        "productPrice",
+        "acknowledged",
+        4
+      ]
+    ],
+    "event_outbox_by_domain_status": [
+      [
+        "catalog",
+        "sent",
+        2
+      ],
+      [
+        "local_catalog_body_proof",
+        "localOnly",
+        6
+      ],
+      [
+        "prices",
+        "sent",
+        1
+      ]
+    ],
+    "history_status_counts": [
+      [
+        1,
+        83
+      ]
+    ],
+    "current_options_counter_formula_result": 6,
+    "interpretation": "6 localOnly proof receipts counted as attention; acknowledged intents are excluded. No claim of universal cloud convergence or runtime UI screenshot."
+  },
+  "android_installed_metadata": {
+    "device": "Android Emulator API35 Android15",
+    "package": "com.example.merchandisecontrolsplitview",
+    "versionCode": 1,
+    "versionName": "1.0",
+    "debuggable": true,
+    "lastUpdateTime_device_clock": "2026-10-12 19:18:37",
+    "apk_sha256": "1510010be33b2201343e2fcf97b188034b71f56eb95fb76813c74be8c8d8bb3e",
+    "source_equivalence": "UNKNOWN; no exact receipt matched this turn",
+    "environment": "UNKNOWN; APK endpoint not inspected",
+    "method": "adb dumpsys package, pm path, sha256sum, getprop only; no launch/input/data read"
+  }
+}

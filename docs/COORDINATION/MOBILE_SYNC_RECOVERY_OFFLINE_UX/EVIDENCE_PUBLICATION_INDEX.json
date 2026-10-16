@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 1,
+  "UTC": "2026-10-16T06:19:35.357828+00:00",
+  "policy": "selective text publication; original raw references are local-only archive locators",
+  "included": [
+    {
+      "path": "CONTRACT.md",
+      "size": 15387,
+      "sha256": "c0118b2f527ba47954eb580bc114767cdccf973970a64a6e83d9c2fff9e8e9ee"
+    },
+    {
+      "path": "EXECUTION/20261015-01/LOCAL_GATE_HANDOFF.md",
+      "size": 8969,
+      "sha256": "edf1b285699fd3ed8bd3fbc88c26a7d8403b1ec745ec7f7b0a715979abed4774"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-apk-evidence-preservation.json",
+      "size": 3111,
+      "sha256": "4e4939dfb97e4f057afb75e299159023f18979abf9d85b9c10f9aa6f509f5eac"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-event-one-shot-cached-primary-proof.json",
+      "size": 16133,
+      "sha256": "68af9af10310aab8a7fc5da7e3a14b2a2755ce2c076e9ee2c858911ce44901df"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-event-one-shot-implementation.receipt.json",
+      "size": 4005,
+      "sha256": "4b3237db8bc046d6ed42013f49d5ba39e7d81262b529fa5d193262dbbd74bf17"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-event-schema-blank-parity-apply.json",
+      "size": 184,
+      "sha256": "35a8e428138a432787cf46d18e9678ccf8f7fefd5c347d221bb6139b72f6a1f7"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-acceptance-boundary.md",
+      "size": 19910,
+      "sha256": "6fde6d7634c65b70573b244e70209ec0c46d413cbe4fa8634f18972bf65a06f2"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-gates-01-command.json",
+      "size": 273,
+      "sha256": "b44f31e77fdab3ebad878ff3549f60f5046208e3f903115dee8d99672ab27371"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-gates-01-input.json",
+      "size": 4290,
+      "sha256": "775ae28a10c77de74137a99a43854644e26a7c47b1027690ff5f0c2fbbc0448d"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-gates-01-output.json",
+      "size": 23777,
+      "sha256": "ad18cf8bfd41c9991d34300624a8b5d446343e1356e6b54310f4f48071054fe1"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-gates-01-summary.json",
+      "size": 299424,
+      "sha256": "0550ef2ea26a8705b1fa7e45ead88a4c418cd8bd22174617084c908161133e01"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-final-sensitive-added-lines.json",
+      "size": 3829,
+      "sha256": "f9894c07569abb707c779a33d86b460f1b6d1a31c398bd36bb55dd80d7601a45"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-master-before-final-handoff.md",
+      "size": 161245,
+      "sha256": "c0c047fe892bf5301ccfb1964896ae22f7d768182f26d90937f451ab4ca07c35"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-readiness-declaring-class-repair-receipt.json",
+      "size": 1684,
+      "sha256": "ad4729de17d0e4ef7cce3917c807bd2fd9a9a6ac860a51c8f981611356509d4a"
+    },
+    {
+      "path": "EXECUTION/20261015-01/android-regression-vm-fixture-repair.md",
+      "size": 3806,
+      "sha256": "544a9f6b3ca3ab3eb0c1a3b7ac4337814e57416415d6011f73f431b709435b1b"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-acceptance-boundary-before-c03.md",
+      "size": 17100,
+      "sha256": "b079bb1cfc2799d86fd8d7c02068ac0c88ced400b75333be5237caa48e011de0"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-02-output.json",
+      "size": 4954,
+      "sha256": "c5608c027c3ca6217d523c7910ce19e0cad945d29cfc26c15877af9fb7439d79"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-02-summary.json",
+      "size": 5108,
+      "sha256": "d1f413b369a7242af5217afb8c8519e5020d2195874ca8b156b3f6118b080e9f"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-case-lineage.json",
+      "size": 2799,
+      "sha256": "1cd88f20aa4abe031bae07b34862b45bf702eecdf2f7a9b04774e67fdbe17eb2"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-command.json",
+      "size": 545,
+      "sha256": "22b641400a6f614c6b202fa493065a06bb6e301ef84a3206fd85060e207f1444"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-input.json",
+      "size": 3404,
+      "sha256": "e8339530d40586f6396b51f8bc53f548b0557dd0889165d641391cf98989e347"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-output.json",
+      "size": 9450,
+      "sha256": "13c1ffb6d67460ae8297b8322293312fa5a24d2c5c577323da67aa9eae15af12"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-summary.json",
+      "size": 1854,
+      "sha256": "00e7a35fcdc4555e5c26a0c0ba37afc1a8463c7902e6f4375393ff03da89a543"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-tests.json",
+      "size": 803082,
+      "sha256": "0838203c0580ef18c454dbd1dfaf30f9f18efe87429a7b4db81755b6276aa310"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-canonical-03-unit-interim.json",
+      "size": 391,
+      "sha256": "b4723ac6cf0018d64fa6ae731dcd50ab6d524eab9e37d66addd334fd55cb4036"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-command.json",
+      "size": 636,
+      "sha256": "0d40a763bc009372f738f4dd1fb58b4741e2302a2728922b211db4e5fabe9591"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-failure-attribution-green.json",
+      "size": 8026,
+      "sha256": "a13e2e9215ecd2b94136927fce44fd958a6ec7400be1bf48b8254d271c75c1ae"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-failure-attribution.json",
+      "size": 7826,
+      "sha256": "2954806ceba45400318845cc798009ec34bbd39638b2bf1fa48b2dcf87e3005b"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-input.json",
+      "size": 2981,
+      "sha256": "537efc09e8f4dbd93464635f3364be5dbb38fb3db5ab2020b3e573ebf310edee"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-output.json",
+      "size": 4955,
+      "sha256": "a34882bdbdd96b2112ae5e65e738c028e57f2cf9a2e08579fd7f437169717c54"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-01-summary.json",
+      "size": 7501,
+      "sha256": "a52c2c733730811f168882f0b5e631ca16d4638bdfaceda57d6fec667438cde0"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-02-command.json",
+      "size": 636,
+      "sha256": "7c55273b12403676e92ddac3dffe0bbe0cd1c84798e1173cf64dbd3dad39c9b4"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-02-input.json",
+      "size": 3001,
+      "sha256": "bcf445ce8176ebdb4bdcceeca68223a281a628406281a164d915b7cad8f57e9c"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-02-output.json",
+      "size": 5075,
+      "sha256": "0b4322b4c7da71abc3cdb6134e16081433d7f252b3c5877a1bbf01d74ba046b4"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-d01-final-regression-02-summary.json",
+      "size": 1159,
+      "sha256": "b271a28cec80f4b19d0e9bdb1991c7e806272040d8c23bb579ea654676fb345f"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-acceptance-boundary.md",
+      "size": 18698,
+      "sha256": "45f28df7964b35e289031d458842e718f5a1c9b90d83ae39bee558a55ad8e1ef"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-analyze-command.json",
+      "size": 578,
+      "sha256": "1fc8d3f42688acbd6499b98115893a11e1012868ccc19790e7c06f2ec0ac66fc"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-analyze-output-02.json",
+      "size": 12759,
+      "sha256": "1c470540de370ddf25832df76a0b711b8376eab08498642dcbaa55972619ab7b"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-analyze-output-03.json",
+      "size": 19324,
+      "sha256": "0a031a7857be499259446b8980b194ef7407e8f89a8795eeab406de955371d43"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-analyze-output.json",
+      "size": 11500,
+      "sha256": "1b1229462e28025658762e59b63a1e3813d8bb3829ed467daa0973ced413932d"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-debug-build-command.json",
+      "size": 526,
+      "sha256": "929a12b9008ff9172a7ba17025cc08cca0aebb87b541a19d9bfd17c8d494e3ba"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-debug-build-output.json",
+      "size": 5237,
+      "sha256": "a0a431990524c109f5ccb79b2efe0f453e1cb36afa90e66d4d98aaf10f989b2d"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-local-input.json",
+      "size": 3097,
+      "sha256": "a142eb5058baa40dcc29bb33861e3afaa7325903005d99c029f3c4221c48c8e0"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-local-review-before-analyze03.md",
+      "size": 7316,
+      "sha256": "73876b5305673b20a2a0e0c6aba432c6684ac265b816a6694a1190110200b992"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-release-artifact-receipt.json",
+      "size": 3223,
+      "sha256": "dcd9e75374666db96fd47d1452bd1e44297925bfcd9956454a3bb5cbeb727d98"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-release-build-command.json",
+      "size": 582,
+      "sha256": "a3e41c09b4090c1a595df37ee88a150bf6b2cde4f23e4206b83fbb634c5031ec"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-release-build-output.json",
+      "size": 5235,
+      "sha256": "80d8d7430323ea0f07c379d15ef6bfb860598217d3b05a4ece6827193821a34c"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-sensitive-added-lines-02.json",
+      "size": 556,
+      "sha256": "618e13ce25e9ad9e5e04e05add1a05bb4e42fca0ecbf5f8c28bd13b5f88862dd"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-sensitive-added-lines-03.json",
+      "size": 596,
+      "sha256": "98e6ca218e9e7922988404d756f2b223c38a99cfd10ca6f889caa4b40f9d3243"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-sensitive-added-lines.json",
+      "size": 480,
+      "sha256": "e20e4ad8635f0204e2580724d67df218a26c59a6101e087b973b91c045952da9"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-final-warning-fix-apply.json",
+      "size": 553,
+      "sha256": "157103b2e89d4537ac5a453f96474000a0eee886af1c46fcfed306d8320e0aa3"
+    },
+    {
+      "path": "EXECUTION/20261015-01/ios-master-before-final-handoff.md",
+      "size": 495269,
+      "sha256": "b963522bf91435d8f10a318bbd6b3633e87861bbcf011266984c1e66f6478d57"
+    },
+    {
+      "path": "EXECUTION/20261015-01/protected-state-check-05.json",
+      "size": 2073,
+      "sha256": "46900a0966f6bc4e809a4e0f8d344435449f0b89917849a91993a83d983478d6"
+    },
+    {
+      "path": "EXECUTION/20261015-01/protected-state-check-06.json",
+      "size": 18795,
+      "sha256": "1ef12b71a53116794ddd30cbebd2af295206e8091800f4d5a98d5366e49734e7"
+    },
+    {
+      "path": "EXECUTION/20261015-01/protected-state-check-07.json",
+      "size": 9136,
+      "sha256": "87dd2f266207135d51e6c16064c9a630c88e8d37e4c1c33328fef8d136852198"
+    },
+    {
+      "path": "EXECUTION/EXECUTION_LOG.md",
+      "size": 33877,
+      "sha256": "292ea9e4e869c20d260e3d468a0a070e77237e0cb8d1029f94cf54995bea15ff"
+    },
+    {
+      "path": "EXECUTION/RETRY_METADATA_DECISIONS.md",
+      "size": 22752,
+      "sha256": "e3b6921e4fe4c6b94172fc69456fa57a3abd5739373b1a2881d24f5108ef298d"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_CANDIDATE4.md",
+      "size": 1241,
+      "sha256": "f37b3744271ed025795265532aa73dc04969356629aaae1d1958515e73376afc"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_CANDIDATE6.md",
+      "size": 1153,
+      "sha256": "90e505b2aba62e9bca904ba395d9cf9445775ddb6ec7529e48f4d40e9b3b528d"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_D01_CANDIDATE1.md",
+      "size": 661,
+      "sha256": "5dee05df0ba631ce1b068314ae82e5f6dd16c65548c8324c2e321ac9c74c1a36"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_D01_CANDIDATE5.md",
+      "size": 6152,
+      "sha256": "cab30a080d91963770e5e9052cee657eff832e55fc21e36ec8118f9c7c15936c"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_FINAL_LOCAL_REVIEW.md",
+      "size": 7280,
+      "sha256": "245fe072acc94cf63c206376d9fdc205ce232530914c7b90ff6fae35a7536e05"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_QUEUE_CANDIDATE1.md",
+      "size": 793,
+      "sha256": "9dfc2921430a751513ad0996ffe4c9a8cdf762ffdd0e9924f875a3b1cc5c648d"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/ANDROID_REGRESSION_CANDIDATE2.md",
+      "size": 6370,
+      "sha256": "67fdedbfef4b6f8582ce33c65066e77cc97256c256616bf775847c32f4b45867"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_D01_CANDIDATE2.md",
+      "size": 4950,
+      "sha256": "9f7a3574f2f7126d595649b12574d305c97603cdb3c8b86b675bd606b1b40997"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_D01_COMPILER_WARNING_DELTA_REVIEW.md",
+      "size": 3179,
+      "sha256": "bafadcc7453f6afc7e5138bd0864977325ca602014ca5df43e19e8ae1b27d073"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_D01_ERROR_CANDIDATE1.md",
+      "size": 8705,
+      "sha256": "aa824c97b0f0b8d9d2a2657c64ba79eb40192eb98e8563ca97cd7b66e9aad38a"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_D01_FIXTURE_ALIGNMENT_REVIEW.md",
+      "size": 4305,
+      "sha256": "4c15bc7b5dcc4d8f60107153f9e3cabc17148cff9ae75e7f8736ec3f5c603a93"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_D01_PROJECTION_FINAL_V2.md",
+      "size": 7080,
+      "sha256": "ee751912d32d614c2c4a5186deba23a4d0531dc03cccb0be13ebc36854786344"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_FINAL_LOCAL_REVIEW.md",
+      "size": 9150,
+      "sha256": "7170706ca7f58f5b7517514b1793a061a808ab56d0d3bf16215ce4892bc43632"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_RETRY_CANDIDATE1.md",
+      "size": 1520,
+      "sha256": "1afa3614fc2d12af0f3396bf53d101a62d9b410244492795d32e97aaffbab8ba"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_RETRY_CANDIDATE2.md",
+      "size": 993,
+      "sha256": "7f5d32d2331a9297746f58beda426e3017867b6c4ae82550e979c1b42fad6ebb"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_RETRY_CANDIDATE3.md",
+      "size": 695,
+      "sha256": "e1e9d510194fd8a8138653ce74b6fdf137e486d966cc58c3b3468eb7d443f753"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_RETRY_CANDIDATE4.md",
+      "size": 748,
+      "sha256": "0c561350ba6bec79426816aa22dce2e3944c7cb16b5aea29fbf2e86fd7078994"
+    },
+    {
+      "path": "EXECUTION/REVIEWS/IOS_U02.md",
+      "size": 1152,
+      "sha256": "ce944942b2661e42e5ff6ea19ca903e52998902ca4588f560239c66579ee769d"
+    },
+    {
+      "path": "EXECUTION_HANDOFF.md",
+      "size": 7835,
+      "sha256": "81f9451fd405d88a8fb08abb374ea5025d3d47e9605fb16ba4d464624c377549"
+    },
+    {
+      "path": "IMPLEMENTATION_PLAN.md",
+      "size": 9625,
+      "sha256": "7efd814bc4e3a3acf969e339e6db9cac4a60d26fc4f7668743bdc36609d26748"
+    },
+    {
+      "path": "PLANNING_VALIDATION.md",
+      "size": 3687,
+      "sha256": "075f22c85e42f5e831c07612c7625679b81abf735664266cf04310579cec23f3"
+    },
+    {
+      "path": "README.md",
+      "size": 5357,
+      "sha256": "7e55f1dbe6d5df8acdb138b667288ebfa0182e93967776a6268f86ec3acb5f22"
+    },
+    {
+      "path": "REVIEW_CHECKLIST.md",
+      "size": 3710,
+      "sha256": "a0e7ba9394fb63459b98d599e963492e03af94a1c8cbab6e15e1c5e518c70ae9"
+    },
+    {
+      "path": "ROOT_CAUSE_ANALYSIS.md",
+      "size": 20372,
+      "sha256": "5acb0db9fa67d639ad608406ac95707a446620253c8a397e628c5f2f5524e5fb"
+    },
+    {
+      "path": "TEST_MATRIX.md",
+      "size": 13686,
+      "sha256": "9811f2cb7abad36d1c143f8f250536c2662c52c2ddaeaf99f067a98556eac172"
+    },
+    {
+      "path": "baseline.json",
+      "size": 8676,
+      "sha256": "d206ef5b8ab7031f86010fae82f1ec47b0347563413b1dccdbaf74b0b14f65a4"
+    },
+    {
+      "path": "ios-readonly-observation.json",
+      "size": 3638,
+      "sha256": "1f2745231e9f42ef2515c46b2eda93fc15ad3917c347069bdfaca78ffdb174e7"
+    },
+    {
+      "path": "planning-validation.json",
+      "size": 4016,
+      "sha256": "e8bac6c32f292a8e0f933bc304c10ef7ec99120ce3d08e3b68502c83eb24d5e3"
+    }
+  ],
+  "excludedKinds": [
+    "APK and application bundles including private runtime configuration",
+    "xcresult and host diagnostics",
+    "raw logs and original report directories",
+    "intermediate source patches and temporary scripts not selected"
+  ],
+  "archive": "Verified private backup outside the checkout; recovery locator in the external Ecosistema integration receipt. Original runfolder retained locally.",
+  "claims": "Local WIP gates are preserved as such. Exact-SHA CI with HEAD configuration must pass before normal PR merge. No runtime acceptance inferred.",
+  "frozenPatchesRetainedLocally": [
+    {
+      "path": "docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01.patch",
+      "size": 346653,
+      "sha256": "daa060eb51f40ab3409a18d0ce90f7bdf1804be7f9226d80551acf86ada2349a",
+      "reason": "Original context whitespace preserved; actual product diff is already represented by the Git commit"
+    },
+    {
+      "path": "docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/ios-final-local.patch",
+      "size": 421482,
+      "sha256": "a10f6f6a9c50950c7bbe5f9b8060a668da9163fd3c6166786546db495a7e3f18",
+      "reason": "Original context whitespace preserved; actual product diff is already represented by the Git commit"
+    }
+  ]
+}

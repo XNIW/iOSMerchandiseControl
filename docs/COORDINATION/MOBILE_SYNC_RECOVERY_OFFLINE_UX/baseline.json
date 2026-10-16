@@ -1,0 +1,53 @@
+{
+  "ios": {
+    "head": "314cf5332d0b889331802a3f886c1910b9b377b0",
+    "branch": "main",
+    "origin_main": "314cf5332d0b889331802a3f886c1910b9b377b0",
+    "status": "## main...origin/main\n M iOSMerchandiseControl.xcodeproj/project.pbxproj\n M iOSMerchandiseControl.xcodeproj/xcshareddata/xcschemes/iOSMerchandiseControl.xcscheme\n?? docs/TASKS/EVIDENCE/TASK-141/agent-runs/\n?? docs/TASKS/EVIDENCE/TASK-142/agent-runs/\n?? docs/TASKS/EVIDENCE/TASK-144/agent-runs/\n",
+    "foreign_file_sha256": {
+      "iOSMerchandiseControl.xcodeproj/project.pbxproj": "949fb31ebc15f21fb686448114fdc19c55031c53d290a608c15ea5ac28815dfb",
+      "iOSMerchandiseControl.xcodeproj/xcshareddata/xcschemes/iOSMerchandiseControl.xcscheme": "0a7f7fcacbd03716ccf0c53acc692cf5da8da8991890bc39881c9c9341197268",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260813T043449Z-scan-sensitive-iOSMerchandiseControlTests-SyncEventIncrementalDomainApplyServiceTestsswift-p38540.json": "50d4d3d03d32b1a8323574e5a96274d6eab1e90fc051ca4e68740828fff518b1",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260813T043449Z-scan-sensitive-iOSMerchandiseControlTests-SyncEventIncrementalDomainApplyServiceTestsswift-p38540.log": "80a399176da1614cc0d8154ecbc39b51ce737218b850cae825bed46a49e7e3bb",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260813T043449Z-scan-sensitive-iOSMerchandiseControlTests-SyncEventIncrementalDomainApplyServiceTestsswift-p38540.md": "f85892bdf5ff15700e21f382a00dd09c2cf0e07aeaf4c8c0c284333b591a5f53",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260821T193305Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p16383.json": "6ae7358afd84d95dbc91c897ff9e7cf67a2e1f32276e3b82e142bc2631669b68",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260821T193305Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p16383.log": "f51458b7d91614cd1f0351b7b62924699f59443bf922ed3ae889ba2c1956fa71",
+      "docs/TASKS/EVIDENCE/TASK-141/agent-runs/20260821T193305Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p16383.md": "c3c06b80ad02211d404b5d0f81f0128a90db9d1df457856a04a2717646ec16e6",
+      "docs/TASKS/EVIDENCE/TASK-142/agent-runs/20260814T013103Z-scan-sensitive-task-TASK-142-p98915.json": "622d357364476f62017a47ac7fdf7ee16bc429a1f0fdb2034cce284711ba53fb",
+      "docs/TASKS/EVIDENCE/TASK-142/agent-runs/20260814T013103Z-scan-sensitive-task-TASK-142-p98915.log": "8615de5192b858a6c46e3c16337e9a435b0cc60bae799f95bbfd8e686b009783",
+      "docs/TASKS/EVIDENCE/TASK-142/agent-runs/20260814T013103Z-scan-sensitive-task-TASK-142-p98915.md": "bedc8e7c0f11b3ae9df33a33a1694ce37c4fb9895dd84dd0852ec974ee22b275",
+      "docs/TASKS/EVIDENCE/TASK-144/agent-runs/20261010T012319Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p79008.json": "0807527c5d20f574457a0406b8789b2f49cf6e76294219a7335a26e1d67a3a06",
+      "docs/TASKS/EVIDENCE/TASK-144/agent-runs/20261010T012319Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p79008.log": "f51458b7d91614cd1f0351b7b62924699f59443bf922ed3ae889ba2c1956fa71",
+      "docs/TASKS/EVIDENCE/TASK-144/agent-runs/20261010T012319Z-scan-sensitive-iOSMerchandiseControl-iOSMerchandiseControlTests-contracts-github-workflows-ios-product-images-ciyml-p79008.md": "8a55c82369f08b6390238ab93c10053a90220d137695177b81bfe01e17046ce8"
+    },
+    "index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_diff_sha256": "879e3b8a9eb471dd61372e89fbde9c187c906516ce3ed1c003908a7c4bbc8fb2",
+    "worktrees": "worktree /Users/minxiang/Desktop/iOSMerchandiseControl\nHEAD 314cf5332d0b889331802a3f886c1910b9b377b0\nbranch refs/heads/main\n\nworktree /private/tmp/mc-product-completion.2uLv3Z/ios\nHEAD d3a3442646cfbe6a3f269e209a3b7e88658beb91\nbranch refs/heads/agent/mobile-catalog-data-integrity-20260809\nprunable gitdir file points to non-existent location\n\nworktree /Users/minxiang/.codex/merchandise-control-reconcile-20260714-ivtTcq/ios\nHEAD 2801241a646cd5d35aba5e7d285f23a44825c0ef\ndetached\n\nworktree /Users/minxiang/.codex/worktrees/catalog-text-integrity-20260727/ios\nHEAD 95d32a0a91bfc711073be442aa0fbf2142b18d97\nbranch refs/heads/codex/catalog-text-integrity-done-ios-20260727\n\nworktree /Users/minxiang/.codex/worktrees/task-138-20260718/ios\nHEAD 66d90983f8e9ab08dd72184abb4ec70d2c4daefb\nbranch refs/heads/codex/task-138-product-images-optimization\n\nworktree /Users/minxiang/.codex/worktrees/task-139-20260718/ios\nHEAD 164131d55b9e34067c3650ff43796ce0ea49c414\nbranch refs/heads/codex/task-139-product-image-hardening\n\nworktree /Users/minxiang/.codex/worktrees/task139-benchmark-ios-main-20260723\nHEAD 66d90983f8e9ab08dd72184abb4ec70d2c4daefb\ndetached\n\nworktree /Users/minxiang/.codex/worktrees/task139-final-integration-20260725/ios\nHEAD 351ccb9dd0e573bd7f450f23efc1d50670ae362f\nbranch refs/heads/codex/integrate-mac-local-unique-ios-20260725\n\nworktree /Users/minxiang/Projects/MerchandiseControl-Ecosistema-worktrees/ios-live-language-labels-20261010\nHEAD e6a286f5b5715b09010043107a235fe1053f4e74\nbranch refs/heads/codex/ios-name-cell-stable-replay-20261013\n\nworktree /Users/minxiang/Projects/MerchandiseControl-Ecosistema-worktrees/ios-sync-layout-20261012\nHEAD eab43769a27e1fad922138a810eb5c8ab53dfdc2\nbranch refs/heads/codex/ios-sync-layout-20261012\n\n",
+    "stash": ""
+  },
+  "android": {
+    "head": "4b74ed5cfb4e4bce024513561e7dc1b6998003ae",
+    "branch": "main",
+    "origin_main": "4b74ed5cfb4e4bce024513561e7dc1b6998003ae",
+    "status": "## main...origin/main\n M gradle/libs.versions.toml\n M gradle/wrapper/gradle-wrapper.properties\n?? .idea/deploymentTargetSelector.xml\n?? app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task140FNativeNavigationSmokeTest.kt\n?? docs/TASKS/evidence/TASK-140F/\n?? tools/\n",
+    "foreign_file_sha256": {
+      "gradle/libs.versions.toml": "4144435451a26878174db8ae028626524e64753cd43ce0c12ca9653486df6de7",
+      "gradle/wrapper/gradle-wrapper.properties": "10af740d6d50f4c4294ae3e3c2e593dbf9b5a03bf25ed0a955155ade7a1bc387",
+      ".idea/deploymentTargetSelector.xml": "8db1230383fbb6a80e5c5f0760a0d194e7721048f6f3fee32f8c1e1d284b4262",
+      "app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task140FNativeNavigationSmokeTest.kt": "3138726a3a28f3e8364db3915282ba504e604fc76aa19f00c9a820b455e9742f",
+      "docs/TASKS/evidence/TASK-140F/native-closeout-20261015.md": "844c5d710302678f521b9e58e25c58e42edc35a25125fef60c293a075d7ba5e8",
+      "tools/task140f_native_ui_smoke.py": "7dc3305602b93ba59a52edbaa5e326aca0f871e26d2d4b5224e21d66faa522c7"
+    },
+    "index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_diff_sha256": "393254818fe69a81d765e62c965095b8d716af2dbc5b2f9cb1a7f8137efa70a0",
+    "worktrees": "worktree /Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView\nHEAD 4b74ed5cfb4e4bce024513561e7dc1b6998003ae\nbranch refs/heads/main\n\nworktree /Users/minxiang/.codex/merchandise-control-reconcile-20260714-ivtTcq/android\nHEAD 8e7c88918d520b78073b8d0d9a1460f0ff4b215b\ndetached\n\nworktree /Users/minxiang/.codex/worktrees/android-checkpoint-one-trace/MerchandiseControlSplitView\nHEAD 814b137fb72db58dab99b0ea4971dc4ef50feb29\nbranch refs/heads/codex/android-checkpoint-one-trace\n\nworktree /Users/minxiang/.codex/worktrees/android-checkpoint-readiness/MerchandiseControlSplitView\nHEAD 04f6fe26a9b8825f3ffc6d3fcb7e014221880a75\nbranch refs/heads/codex/android-checkpoint-readiness-preflight\n\nworktree /Users/minxiang/.codex/worktrees/android-marker-transient-retry/MerchandiseControlSplitView\nHEAD a334f194e99b8908b3a29dd4972de0a3ac83ae39\nbranch refs/heads/codex/android-empty-state-fab-clearance-20261008\n\nworktree /Users/minxiang/.codex/worktrees/android-native-presentation-20261012/MerchandiseControlSplitView\nHEAD faf69c2f0f6316c6ee7f7f811ae9e9e65be91f47\nbranch refs/heads/codex/android-native-system-bar-background-20261012\n\nworktree /Users/minxiang/.codex/worktrees/mobile-parity-root-cause/MerchandiseControlSplitView\nHEAD 04f6fe26a9b8825f3ffc6d3fcb7e014221880a75\nbranch refs/heads/codex/android-checkpoint-trace-guard\n\n",
+    "stash": ""
+  },
+  "supabase": {
+    "path": "/Users/minxiang/Desktop/MerchandiseControlSupabase",
+    "git_repository": false,
+    "tracking": "MASTER_PLAN.md",
+    "state": "IDLE; planning reference only",
+    "live_schema_verified": false
+  }
+}

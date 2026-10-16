@@ -1,0 +1,89 @@
+{
+  "UTC": "2026-10-16T05:40:32.420845+00:00",
+  "sourceManifest": "ios-final-local-input.json",
+  "sourceManifestSHA256": "a142eb5058baa40dcc29bb33861e3afaa7325903005d99c029f3c4221c48c8e0",
+  "sourcePath": "/tmp/mobile145-20261015-01-DerivedData/Build/Products/Release-iphonesimulator/iOSMerchandiseControl.app",
+  "preservedPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/ios-final-artifacts/iOSMerchandiseControl-Release-simulator.app",
+  "configuration": "Release",
+  "supportedPlatforms": [
+    "iPhoneSimulator"
+  ],
+  "CODE_SIGNING_ALLOWED": "NO",
+  "codesignVerifyExitCode": 1,
+  "unsignedReported": false,
+  "distribution": "SIMULATOR_BUILD_ONLY_NOT_DEVICE_PACKAGE_NOT_INSTALLED",
+  "files": [
+    {
+      "path": "Info.plist",
+      "bytes": 2179,
+      "sha256": "30d0cc051745cf29b3223e0395d410348b5e020b640a57f4090aec3a6a1e51b1"
+    },
+    {
+      "path": "PkgInfo",
+      "bytes": 8,
+      "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+    },
+    {
+      "path": "PrivacyInfo.xcprivacy",
+      "bytes": 598,
+      "sha256": "3e4a93cbe86acef7dd7e063a28c849992f556e7f52cadc5f37c1e8b0e1b54686"
+    },
+    {
+      "path": "SupabaseConfig.example.plist",
+      "bytes": 403,
+      "sha256": "4f5bfb8d54bb5b988596544e2899c67f9a8545aa837e09896fd1761ce16f9b00"
+    },
+    {
+      "path": "SupabaseConfig.plist",
+      "bytes": 192,
+      "sha256": "975a2a4e93da67c56b3d5e357c94999a150daf60edfa2a97cc956d049fb3c469"
+    },
+    {
+      "path": "ZIPFoundation_ZIPFoundation.bundle/Info.plist",
+      "bytes": 681,
+      "sha256": "8a9b702e1aff6a11d8641d77b811fa8436a5f643b091263fd94131d72bb343aa"
+    },
+    {
+      "path": "ZIPFoundation_ZIPFoundation.bundle/PrivacyInfo.xcprivacy",
+      "bytes": 599,
+      "sha256": "9a2f930cedb8d58309a581b9bf9bf3673685ec02ae2197d9f1c56828b718dffd"
+    },
+    {
+      "path": "en.lproj/Localizable.strings",
+      "bytes": 147807,
+      "sha256": "61cd1ce91a65ed8ea4cf8ca0fbb00590a3b4c1f77f731c7c1770c8d6f19024a2"
+    },
+    {
+      "path": "es.lproj/Localizable.strings",
+      "bytes": 184789,
+      "sha256": "c05e0da5bfeb5577660f8b6e06a78bc1a0120bdfbdab17cc9c832333443338b0"
+    },
+    {
+      "path": "iOSMerchandiseControl",
+      "bytes": 49335080,
+      "sha256": "2c413a622da81f72a794bc2cceaad188b2249963a7310b8cb902954b54cda076"
+    },
+    {
+      "path": "it.lproj/Localizable.strings",
+      "bytes": 163060,
+      "sha256": "8eb8daea5615a0fe491d941350020569efd57b41e9108db0adfacc60303ee320"
+    },
+    {
+      "path": "swift-crypto_Crypto.bundle/Info.plist",
+      "bytes": 665,
+      "sha256": "d29b3ea018ee60444369666b7e1e3337a409f024a412e1a0228ecb08c415f054"
+    },
+    {
+      "path": "swift-crypto_Crypto.bundle/PrivacyInfo.xcprivacy",
+      "bytes": 398,
+      "sha256": "42fb8a30dd8d7ba0900e1bf17fe64ed8c12cfdb8a9c791ab6b4e1eceb0f299c0"
+    },
+    {
+      "path": "zh-Hans.lproj/Localizable.strings",
+      "bytes": 131499,
+      "sha256": "73ea715ebab336f27191a189434b1359b7a678dddccee204cbac685cd3630bd5"
+    }
+  ],
+  "aggregateFileManifestSHA256": "4136d771bc2f5a36fe7d08d3018e00199fa5737ec279c9eb226896ad7c3ebf06",
+  "allCopiedFilesVerified": true
+}

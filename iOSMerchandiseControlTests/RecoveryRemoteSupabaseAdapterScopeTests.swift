@@ -1,8 +1,69 @@
 import XCTest
+import Supabase
 @testable import iOSMerchandiseControl
 
 @MainActor
 final class RecoveryRemoteSupabaseAdapterScopeTests: XCTestCase {
+    func testRecoveryRetryAfterPreservesRemoteMinimumBeyondLocalBackoffCap() throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-16T00:00:00Z"))
+        XCTAssertEqual(SupabaseTransportClient.retryAfterUntil("1800", now: now), now.addingTimeInterval(1800))
+        XCTAssertEqual(SupabaseTransportClient.retryAfterUntil("0", now: now), now)
+        for date in [
+            "Fri, 16 Oct 2026 00:30:00 GMT",
+            "Friday, 16-Oct-26 00:30:00 GMT",
+            "Fri Oct 16 00:30:00 2026"
+        ] {
+            XCTAssertEqual(SupabaseTransportClient.retryAfterUntil(date, now: now), now.addingTimeInterval(1800))
+        }
+        XCTAssertEqual(
+            SupabaseTransportClient.retryAfterUntil("Thu, 15 Oct 2026 00:30:00 GMT", now: now),
+            now
+        )
+        for invalid in ["", "-1", "+1", "1.5", "1e4", "NaN", "Infinity", "1800 extra",
+                        "Fri, 16 Oct 2026 00:30:00 GMT trailing", "2026-10-16T00:30:00Z"] {
+            XCTAssertNil(SupabaseTransportClient.retryAfterUntil(invalid, now: now))
+        }
+        XCTAssertNil(SupabaseTransportClient.retryAfterUntil(nil, now: now))
+    }
+
+    func testRecoveryHTTPValidatorPreservesStatusAndRetryAfterWithoutDiagnosticText() throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-16T00:00:00Z"))
+        let url = try XCTUnwrap(URL(string: "https://example.invalid/rest/v1/rpc/synthetic"))
+        let limited = try XCTUnwrap(HTTPURLResponse(
+            url: url, statusCode: 429, httpVersion: "HTTP/1.1", headerFields: ["Retry-After": "1800"]
+        ))
+        XCTAssertThrowsError(try SupabaseTransportClient.validateRPCResponse(limited, now: now)) { error in
+            XCTAssertEqual(error as? AutomaticSyncFailure, AutomaticSyncFailure.http(status: 429, retryAfterUntil: now.addingTimeInterval(1800)))
+        }
+        let unavailable = try XCTUnwrap(HTTPURLResponse(
+            url: url, statusCode: 503, httpVersion: "HTTP/1.1",
+            headerFields: ["Retry-After": "Fri, 16 Oct 2026 00:30:00 GMT"]
+        ))
+        XCTAssertThrowsError(try SupabaseTransportClient.validateRPCResponse(unavailable, now: now)) { error in
+            XCTAssertEqual(error as? AutomaticSyncFailure, AutomaticSyncFailure.http(status: 503, retryAfterUntil: now.addingTimeInterval(1800)))
+        }
+        let success = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil))
+        XCTAssertNoThrow(try SupabaseTransportClient.validateRPCResponse(success, now: now))
+    }
+
+    func testRecoveryPostgrestClassificationUsesCodesAndNeverInfersTimeoutFromMessage() {
+        let cases: [(String?, AutomaticSyncFailure.Disposition, AutomaticSyncFailure.Category)] = [
+            ("42501", .stable, .authorization),
+            ("42P01", .stable, .schema),
+            ("42703", .stable, .schema),
+            ("PGRST204", .stable, .schema),
+            ("57014", .unknown, .unknown),
+            (nil, .unknown, .unknown)
+        ]
+        for (code, disposition, category) in cases {
+            let failure = SupabaseTransportClient.recoveryFailure(for: PostgrestError(
+                code: code,
+                message: "statement timeout; permission denied; schema drift"
+            ))
+            XCTAssertEqual(failure, AutomaticSyncFailure(disposition: disposition, category: category, sqlState: code))
+        }
+    }
+
     func testAutomaticRecoveryRejectsForeignRowsFromEveryFetchBeforeReturningThem() async throws {
         let ownerUserID = UUID(uuidString: "13900000-0000-4000-8000-000000000001")!
         let shopID = UUID(uuidString: "13900000-0000-4000-8000-000000000002")!

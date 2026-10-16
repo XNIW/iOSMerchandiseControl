@@ -13,6 +13,7 @@ actor AutomaticSyncEngine {
     private let singleFlight: AutomaticSyncSingleFlight
     private let cancellationPolicy: AutomaticSyncCancellationPolicy
     private let retryPolicy: AutomaticSyncRetryPolicy
+    private let now: @Sendable () -> Date
     private let runAdmissionValidator: (@Sendable () async throws -> Void)?
 
     init(
@@ -28,6 +29,7 @@ actor AutomaticSyncEngine {
         singleFlight: AutomaticSyncSingleFlight = AutomaticSyncSingleFlight(),
         cancellationPolicy: AutomaticSyncCancellationPolicy = AutomaticSyncCancellationPolicy(),
         retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy(),
+        now: @escaping @Sendable () -> Date = { Date() },
         runAdmissionValidator: (@Sendable () async throws -> Void)? = nil
     ) {
         self.catalogPushProvider = catalogPushProvider
@@ -42,6 +44,7 @@ actor AutomaticSyncEngine {
         self.singleFlight = singleFlight
         self.cancellationPolicy = cancellationPolicy
         self.retryPolicy = retryPolicy
+        self.now = now
         self.runAdmissionValidator = runAdmissionValidator
     }
 
@@ -58,13 +61,25 @@ actor AutomaticSyncEngine {
         source: SyncAutomaticTriggerSource,
         ownerUserID: UUID
     ) async -> SyncAutomaticRunResult {
+        let inheritedScope = Task126OwnerStoreGate.currentAutomaticScope
+        let inheritedObservationSource = inheritedScope.flatMap {
+            SyncAutomaticRunObservationSource.capture(scope: $0, defaults: defaults)
+        }
         guard await singleFlight.begin() else { return .busy() }
+        let admissionScope = inheritedScope ?? (try? Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: ownerUserID, defaults: defaults,
+            allowsPendingReplacement: true, allowsPendingSameScopeRecovery: true
+        ))
+        let observationSource = inheritedScope == nil ? admissionScope.flatMap {
+            SyncAutomaticRunObservationSource.capture(scope: $0, defaults: defaults)
+        } : inheritedObservationSource
         let cancellationToken = await cancellationPolicy.makeToken()
         recordAttempt(source: source)
         var didRun = false
         let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect)
             && action == .sequence([.pushPending, .bootstrap])
         var verifiedConvergence = false
+        var verifiedFinalization: SyncStoreRecoveryFinalization?
         var continuationReceipt: SyncIncrementalContinuationReceipt?
         var compatibleDrains = true
         var pendingWorkDeferral: SyncIncrementalLocalWorkDeferral?
@@ -73,11 +88,45 @@ actor AutomaticSyncEngine {
             // atomic activation happened between runtime construction and
             // admission, no provider or watermark from the stale generation
             // is allowed to run.
+            if let admissionScope {
+                guard admissionScope.ownerUserID == ownerUserID else {
+                    throw Task126OwnerStoreGateError.activeAccountMismatch
+                }
+                try Task126OwnerStoreGate.revalidateAutomaticScope(admissionScope, defaults: defaults)
+            }
+            if let observationSource, !observationSource.origin.isCurrent(defaults: defaults, ownerUserID: ownerUserID) {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
             try await runAdmissionValidator?()
+            if let admissionScope {
+                try Task126OwnerStoreGate.revalidateAutomaticScope(admissionScope, defaults: defaults)
+            }
+            if let observationSource, !observationSource.origin.isCurrent(defaults: defaults, ownerUserID: ownerUserID) {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
             let replacementTarget = try replacementRecoveryTarget(ownerUserID: ownerUserID)
             let shouldRecoverReplacement = replacementTarget?.mode == .accountOrShopReplacement
                 && action.allowsReplacementRecoveryOverride
-            let steps = shouldRecoverReplacement ? [.bootstrap] : action.flattenedAutomaticSteps
+            let steps: [SyncAction]
+            if isAutomaticRecoveryResumePlan, !bindingStore.hasPendingReplacementJournal {
+                // The facade captured fresh same-entity authority after a
+                // finalizer retired this journal. Preserve the pending push
+                // and current-generation drain; its old bootstrap is obsolete.
+                steps = [.pushPending, .drainEvents]
+            } else {
+                steps = shouldRecoverReplacement ? [.bootstrap] : action.flattenedAutomaticSteps
+            }
+            let hasRemotePlan = steps.contains { step in
+                switch step {
+                case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery: true
+                default: false
+                }
+            }
+            if hasRemotePlan,
+               let begin = AutomaticSyncAttemptContext.begin, !((await begin())) {
+                return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
+                    observationSource: observationSource)
+            }
             syncPlan: for (stepIndex, step) in steps.enumerated() {
                 try await cancellationPolicy.checkCancellation(token: cancellationToken)
                 let remaining = Array(steps.dropFirst(stepIndex + 1))
@@ -86,7 +135,7 @@ actor AutomaticSyncEngine {
                 switch step {
                 case .blocked(let reason):
                     recordDiagnostic("lastOutcome", "blocked_\(reason)")
-                    return await complete(.blocked(reason))
+                    return await complete(.blocked(reason), observationSource: observationSource)
                 case .pushPending:
                     let resumesDeferredLocalWork = pendingWorkDeferral != nil
                     if let pendingWorkDeferral {
@@ -120,6 +169,7 @@ actor AutomaticSyncEngine {
                     }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
+                        verifiedFinalization = drain.verifiedFinalization
                         break syncPlan
                     }
                 case .lightReconcile:
@@ -142,6 +192,7 @@ actor AutomaticSyncEngine {
                     }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
+                        verifiedFinalization = drain.verifiedFinalization
                         break syncPlan
                     }
                 case .requestRecovery:
@@ -166,6 +217,7 @@ actor AutomaticSyncEngine {
                     }
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
+                        verifiedFinalization = drain.verifiedFinalization
                         break syncPlan
                     }
                 case .bootstrap, .fullRecovery:
@@ -178,6 +230,7 @@ actor AutomaticSyncEngine {
                     )
                     didRun = recovery.didWork || didRun
                     verifiedConvergence = recovery.verifiedConvergence
+                    verifiedFinalization = recovery.verifiedFinalization
                     // Atomic recovery may have replaced the active container.
                     // Providers owned by this engine were built for the prior
                     // generation and must never execute after publication.
@@ -187,10 +240,10 @@ actor AutomaticSyncEngine {
                     switch decision.action {
                     case .none:
                         recordDiagnostic("lastOutcome", "retry_suppressed_\(decision.reason)")
-                        return await complete(.busy())
+                        return await complete(.busy(), observationSource: observationSource)
                     case .retryAfter(let delay):
                         recordDiagnostic("lastOutcome", "scheduled_retry")
-                        return await complete(.scheduledRetry(after: delay))
+                        return await complete(.scheduledRetry(after: delay), observationSource: observationSource)
                     }
                 case .noOp, .sequence:
                     break
@@ -206,13 +259,17 @@ actor AutomaticSyncEngine {
             if !verifiedConvergence, compatibleDrains, let continuationReceipt {
                 result.continuationReceipt = continuationReceipt
             }
-            return await complete(result, cancellationToken: cancellationToken)
+            // A committed generation may still have pending local work. Its
+            // original receipt identifies the completion without granting a
+            // new canonical date (which still requires verifiedConvergence).
+            result.verifiedFinalization = verifiedFinalization
+            return await complete(result, observationSource: observationSource, cancellationToken: cancellationToken)
         } catch AutomaticIncrementalRecoveryError.recoveryRequired(let recoveryDidWork) {
             recordDiagnostic("lastOutcome", "recovery_required")
-            return await complete(.recoveryRequired(didWork: didRun || recoveryDidWork))
+            return await complete(.recoveryRequired(didWork: didRun || recoveryDidWork), observationSource: observationSource)
         } catch is CancellationError {
             recordDiagnostic("lastOutcome", "cancelled")
-            return await complete(.cancelled())
+            return await complete(.cancelled(), observationSource: observationSource)
         } catch {
             // A completed journal retires this resume plan. Re-enter the
             // existing bounded scheduler so the next decision uses current
@@ -221,15 +278,15 @@ actor AutomaticSyncEngine {
                error as? Task126OwnerStoreGateError == .scopeChanged
                 || error as? AtomicGenerationRecoveryError == .journalTransitionRejected {
                 do { try await cancellationPolicy.checkCancellation(token: cancellationToken) }
-                catch { return await complete(.cancelled()) }
+                catch { return await complete(.cancelled(), observationSource: observationSource) }
                 recordDiagnostic("lastOutcome", "stale_recovery_resume_replan")
                 return await complete(SyncAutomaticRunResult(status: .scheduledRetry, didWork: didRun,
-                    scheduledRetryAfter: 0))
+                    scheduledRetryAfter: 0), observationSource: observationSource)
             }
             let safeError = safeErrorDescription(error)
             recordDiagnostic("lastOutcome", "failed")
             recordDiagnostic("lastError", safeError)
-            return await complete(.failed(errorCode: safeError))
+            return await complete(.failed(errorCode: safeError, failure: .classify(error)), observationSource: observationSource)
         }
     }
 
@@ -249,19 +306,27 @@ actor AutomaticSyncEngine {
     }
 
     private func complete(
-        _ result: SyncAutomaticRunResult, cancellationToken: Int? = nil
+        _ result: SyncAutomaticRunResult, observationSource: SyncAutomaticRunObservationSource?,
+        cancellationToken: Int? = nil
     ) async -> SyncAutomaticRunResult {
+        let completedAt = now()
         await singleFlight.finish()
-        recordDiagnostic("lastCompletedAt", Date().timeIntervalSince1970)
         var finalResult = result
         if let receipt = result.continuationReceipt {
-            guard let cancellationToken else {
+            if let cancellationToken {
+                do {
+                    try await cancellationPolicy.checkCancellation(token: cancellationToken)
+                    finalResult.continuationReceipt = receipt.guardedForRun(policy: cancellationPolicy, token: cancellationToken)
+                } catch {
+                    finalResult = .cancelled()
+                }
+            } else {
                 finalResult.continuationReceipt = nil
-                return finalResult
             }
-            do { try await cancellationPolicy.checkCancellation(token: cancellationToken) }
-            catch { return .cancelled() }
-            finalResult.continuationReceipt = receipt.guardedForRun(policy: cancellationPolicy, token: cancellationToken)
+        }
+        recordDiagnostic("lastCompletedAt", completedAt.timeIntervalSince1970)
+        if finalResult.observation == nil, let observationSource {
+            finalResult = observationSource.completed(finalResult, now: completedAt)
         }
         return finalResult
     }
@@ -314,7 +379,7 @@ actor AutomaticSyncEngine {
         forceLightReconcile: Bool,
         allowsExplicitRecovery: Bool,
         allowsLocalWorkDeferral: Bool = false
-    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?, verifiedRecoveryConvergence: Bool, localWorkDeferral: SyncIncrementalLocalWorkDeferral?) {
+    ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?, verifiedRecoveryConvergence: Bool, localWorkDeferral: SyncIncrementalLocalWorkDeferral?, verifiedFinalization: SyncStoreRecoveryFinalization?) {
         guard let incrementalPullProvider else {
             recordDiagnostic("incremental.lastOutcome", "blocked_missing_provider")
             throw ReplacementRecoveryJournalError.incrementalProviderMissing
@@ -337,7 +402,7 @@ actor AutomaticSyncEngine {
                deferral.isBound(to: defaults), deferral.matches(summary) {
                 try await MainActor.run { try deferral.validateForPush() }
                 // No receipt, watermark change, recovery or readiness grant.
-                return (false, false, nil, false, deferral)
+                return (false, false, nil, false, deferral, nil)
             }
             let reason = summary.requiresFullRecoveryReason
             recordRecoveryRequest(reason: reason)
@@ -362,7 +427,8 @@ actor AutomaticSyncEngine {
                 true,
                 nil,
                 recoveryDidWork.verifiedConvergence,
-                nil
+                nil,
+                recoveryDidWork.verifiedFinalization
             )
         }
         if allowsExplicitRecovery, !summary.verifiedConvergence {
@@ -383,14 +449,15 @@ actor AutomaticSyncEngine {
                 true,
                 nil,
                 recoveryDidWork.verifiedConvergence,
-                nil
+                nil,
+                recoveryDidWork.verifiedFinalization
             )
         }
         if allowsExplicitRecovery {
             recordVerifiedRecoveryDiagnostics(outcome: "verified_not_required")
         }
         let receipt = summary.continuationReceipt.flatMap { $0.matches(summary) ? $0 : nil }
-        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false, receipt, false, nil)
+        return (summary.eventsFetched > 0 || summary.totalApplied > 0, false, receipt, false, nil, nil)
     }
 
     private func recoverRemoteSnapshot(
@@ -399,7 +466,7 @@ actor AutomaticSyncEngine {
         cancellationToken: Int,
         replacementTarget: ReplacementRecoveryTarget?,
         requiresPendingSameScopeRecovery: Bool = false
-    ) async throws -> (didWork: Bool, verifiedConvergence: Bool) {
+    ) async throws -> (didWork: Bool, verifiedConvergence: Bool, verifiedFinalization: SyncStoreRecoveryFinalization?) {
         guard let recoverySnapshotPullProvider else {
             recordDiagnostic("recovery.lastOutcome", "blocked_missing_provider")
             throw AutomaticRecoverySnapshotPullError.providerMissing
@@ -463,7 +530,17 @@ actor AutomaticSyncEngine {
             }
         }
         recordRecoverySummary(summary)
-        return (summary.didWork, !summary.hasPendingLocalWork)
+        // Preserve the original finalization across awaits. A current binding
+        // can reject it, but can never relabel another invocation's proof.
+        let finalization = summary.verifiedFinalization.flatMap { proof in
+            proof.generationID == summary.activatedGenerationID
+                && proof.accountHash == recoveryScope.accountHash
+                && proof.shopID == recoveryScope.shopID
+                && proof.storeIdentity == recoveryScope.storeIdentity
+                && proof.deviceIdentityHash == recoveryScope.deviceIdentityHash
+                && proof.watermark == summary.watermarkAfter ? proof : nil
+        }
+        return (summary.didWork, !summary.hasPendingLocalWork, finalization)
     }
 
     private func replacementRecoveryTarget(

@@ -1,0 +1,44 @@
+{
+  "UTC": "2026-10-16T04:45:15.830599+00:00",
+  "historicalQualifiedAPK": {
+    "path": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/android-native-system-bar-background-proper-test-20261012/actual-01/app-debug-integrated-TEST.apk",
+    "SHA256": "1510010be33b2201343e2fcf97b188034b71f56eb95fb76813c74be8c8d8bb3e",
+    "bytes": 129182632,
+    "receipt": "/Users/minxiang/Projects/MerchandiseControl-Ecosistema/evidence/native-local-availability-20261004/native-residuals-continuation-20261007-01/native-resume-20261009-01/ios-language-label-regression-01/android-native-system-bar-background-proper-test-20261012/actual-01/receipt.json",
+    "receiptSHA256": "ffd24e4a39e7ff62dbab2206259dbfcd63aa12699a872563be9764d4a564a23f",
+    "result": "PASS_BYTES_MATCH_ORIGINAL_RECEIPT",
+    "outsideGradleBuildDirectory": true,
+    "modifiedByThisExecution": false
+  },
+  "installedApplication": {
+    "action": "NO_INSTALL_OR_DEVICE_OPERATION_IN_THIS_EXECUTION",
+    "lastKnownSHA256": "1510010be33b2201343e2fcf97b188034b71f56eb95fb76813c74be8c8d8bb3e",
+    "currentDeviceRecheck": "NOT_RUN",
+    "limit": "Preserving the existing installed app by absence of install/reset/device actions does not claim current runtime acceptance."
+  },
+  "regeneratedOutputs": {
+    "paths": [
+      "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/debug/app-debug.apk",
+      "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/release/app-release-unsigned.apk"
+    ],
+    "status": "BUILD_PASS_ARCHIVED_SEPARATELY_NOT_INSTALLED",
+    "limit": "Temporary Gradle outputs may be regenerated; they are not the historical retained APK above.",
+    "artifacts": [
+      {
+        "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-artifacts/app-debug.apk",
+        "originalOutput": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/debug/app-debug.apk",
+        "SHA256": "a1751d3506f1e595f066bb13e3aac3774bed29f16281e1751ac623b59896cb6a",
+        "bytes": 129050388,
+        "deliverySignature": "DEBUG_SIGNED_NOT_INSTALLED"
+      },
+      {
+        "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261015-01/android-final-gates-01-artifacts/app-release-unsigned.apk",
+        "originalOutput": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView/app/build/outputs/apk/release/app-release-unsigned.apk",
+        "SHA256": "a50492a9c49b1eb080e5c1b0484cee254cb9a1508b412d7de70d5e2fd8106ade",
+        "bytes": 96061207,
+        "deliverySignature": "UNSIGNED_NOT_DEPLOYABLE"
+      }
+    ]
+  },
+  "limits": "No new install, extraction from devices, overwrite of historical receipt or retained binary; source/endpoint lineage of the historical installed binary is not newly qualified."
+}

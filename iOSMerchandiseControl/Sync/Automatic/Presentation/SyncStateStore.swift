@@ -7,29 +7,93 @@ nonisolated enum SyncAutomaticRecoveryAttemptEligibility: Equatable, Sendable {
     case exhausted
 }
 
+/// Only the store can issue a claim. Identity alone does not distinguish a
+/// cancelled invocation from its successor using the same recovery journal.
+nonisolated struct SyncAutomaticRecoveryAttemptClaim: Sendable {
+    fileprivate let storageKey: String
+    fileprivate let identity: String
+    fileprivate let invocationID: UUID
+    let attemptInWindow: Int
+}
+
 private nonisolated struct SyncAutomaticRecoveryAttemptRecord: Codable, Sendable {
-    static let schemaVersion = 1
+    static let schemaVersion = 2
 
     let schemaVersion: Int
     let identity: String
-    let attemptCount: Int
+    let invocationID: UUID
+    let windowIndex: Int
+    let attemptsInWindow: Int
+    let totalAttempts: Int
+    let lastAttemptAt: TimeInterval
+    let lastCompletedAt: TimeInterval?
+    let failure: AutomaticSyncFailure?
     let nextAllowedAt: TimeInterval
+    let retryAfterUntil: TimeInterval?
+}
+
+private nonisolated struct SyncVerifiedProofRecord: Codable, Equatable {
+    static let version = 2
+    let schemaVersion: Int
+    let verifiedAt: TimeInterval
+    let finalization: SyncStoreRecoveryFinalization
+}
+
+/// v2 requires the complete keyed identity actually published by recovery.
+/// LocalStoreIdentity's legacy decoder may infer absent fields or a scalar;
+/// that compatibility must never manufacture provenance for this new record.
+private nonisolated struct SyncVerifiedProofRequiredShape: Decodable {
+    struct Finalization: Decodable {
+        struct StoreIdentity: Decodable {
+            let rawValue: String
+            let defaultStoreId: String
+            let localStoreId: String
+            let schemaVersion: Int
+            let syncProtocolVersion: Int
+            let storeEpoch: Int
+            func exactlyDescribes(_ decoded: LocalStoreIdentity) -> Bool {
+                rawValue == decoded.rawValue && defaultStoreId == decoded.defaultStoreId
+                    && localStoreId == decoded.localStoreId && schemaVersion == decoded.schemaVersion
+                    && syncProtocolVersion == decoded.syncProtocolVersion && storeEpoch == decoded.storeEpoch
+            }
+        }
+        let storeIdentity: StoreIdentity
+    }
+    let finalization: Finalization
 }
 
 @MainActor
 final class SyncStateStore: ObservableObject {
-    private static let convergenceProofVersion = 1
     let objectWillChange = ObservableObjectPublisher()
     private var storedState = SyncState()
     private var continuedGeneration: SyncIncrementalContinuationReceipt?
+    private var terminalProjectionHasObservation = false
+    private var activeProjectionRevision = UUID()
+    private var presentationInvocationID: UUID?
 
     private(set) var state: SyncState {
         get {
-            guard storedState.phase == .idle, let receipt = continuedGeneration else { return storedState }
+            // Resolve canonical provenance before entering the receipt's
+            // non-recursive Task126 lease. Historical success is independent
+            // of the current phase, but never belongs to another generation.
+            var projected = storedState
+            projected.lastVerifiedAt = currentVerifiedDate()
+            if terminalProjectionHasObservation,
+               Self.decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix)?
+                .origin.isCurrent(defaults: defaults) != true,
+               !projected.phase.isAutomaticWorkActive {
+                // Foreign/missing/corrupt history cannot invent a recovery
+                // latch or terminal outcome for the selected entity.
+                projected.phase = recoveryJournalIsPending ? .recoveryRequired : .idle
+                projected.lastOutcome = nil
+                projected.startedAt = nil
+                projected.lastProgressAt = nil
+            }
+            guard storedState.phase == .idle, let receipt = continuedGeneration else { return projected }
             do {
-                return try receipt.withValidatedAuthority(defaults: defaults, checkLocalCounts: false) { storedState }
+                return try receipt.withValidatedAuthority(defaults: defaults, checkLocalCounts: false) { projected }
             } catch {
-                var invalidated = storedState
+                var invalidated = projected
                 invalidated.phase = .recoveryRequired
                 return invalidated
             }
@@ -39,11 +103,17 @@ final class SyncStateStore: ObservableObject {
             // observer may read state or invalidate identity safely here.
             objectWillChange.send()
             continuedGeneration = nil
+            activeProjectionRevision = UUID()
+            presentationInvocationID = nil
+            recoveryProgressInvocationID = nil
+            terminalProjectionHasObservation = false
             storedState = newValue
         }
     }
     private let defaults: UserDefaults
     private let keyPrefix: String
+    private let retryJitter: @Sendable () -> Double
+    private let storeGenerationController: SyncStoreGenerationController?
     private var recoveryProgressInvocationID: UUID?
 
     var recoveryJournalIsPending: Bool {
@@ -59,21 +129,27 @@ final class SyncStateStore: ObservableObject {
     }
 
     private var automaticRecoveryAttemptKey: String {
-        "\(keyPrefix).automaticRecoveryAttempt.v1"
+        "\(keyPrefix).automaticRecoveryAttempt.v2"
     }
 
     init(
         defaults: UserDefaults = .standard,
-        keyPrefix: String = "sync.runtime.orchestrator"
+        keyPrefix: String = "sync.runtime.orchestrator",
+        retryJitter: @escaping @Sendable () -> Double = { Double.random(in: 0.5...1.5) },
+        storeGenerationController: SyncStoreGenerationController? = nil
     ) {
         self.defaults = defaults
         self.keyPrefix = keyPrefix
+        self.retryJitter = retryJitter
+        self.storeGenerationController = storeGenerationController
         state = Self.hydratedState(
             defaults: defaults,
             keyPrefix: keyPrefix,
+            lastVerifiedAt: currentVerifiedDate(),
             hasPendingRecoveryJournal: AccountBindingStore(defaults: defaults)
                 .hasPendingReplacementJournal
         )
+        terminalProjectionHasObservation = defaults.object(forKey: runObservationKey) != nil
     }
 
     // This type owns only synchronous Foundation/Combine values.  Keeping
@@ -81,12 +157,29 @@ final class SyncStateStore: ObservableObject {
     // otherwise empty actor-isolated deinit during XCTest/app teardown.
     nonisolated deinit {}
 
-    func beginRecoveryProgressReporting() -> UUID {
+    func beginPresentationInvocation(_ invocationID: UUID) {
+        presentationInvocationID = invocationID
+        recoveryProgressInvocationID = nil
+        activeProjectionRevision = UUID()
+    }
+
+    func ownsPresentationInvocation(_ invocationID: UUID) -> Bool {
+        presentationInvocationID == invocationID
+    }
+
+    func beginRecoveryProgressReporting(
+        presentationInvocationID expectedInvocationID: UUID? = nil
+    ) -> UUID {
         let invocationID = UUID()
+        guard ownsPresentation(expectedInvocationID) else { return invocationID }
+        activeProjectionRevision = UUID()
+        let revision = activeProjectionRevision
         recoveryProgressInvocationID = invocationID
         objectWillChange.send()
         // A synchronous observer may finish the run or replace this invocation.
         guard invocationID == recoveryProgressInvocationID,
+              revision == activeProjectionRevision,
+              ownsPresentation(expectedInvocationID),
               storedState.phase.isAutomaticWorkActive else { return invocationID }
         storedState.recoveryProgress = nil
         return invocationID
@@ -124,7 +217,12 @@ final class SyncStateStore: ObservableObject {
         storedState.lastProgressAt = now
     }
 
-    func recordDecision(trigger: SyncTrigger, action: SyncAction, now: Date = Date()) {
+    func recordDecision(
+        trigger: SyncTrigger, action: SyncAction,
+        presentationInvocationID expectedInvocationID: UUID? = nil,
+        now: Date = Date()
+    ) {
+        guard ownsPresentation(expectedInvocationID) else { return }
         defaults.set(trigger.diagnosticsName, forKey: "\(keyPrefix).lastTrigger")
         defaults.set(action.diagnosticsName, forKey: "\(keyPrefix).lastAction")
         defaults.set(now.timeIntervalSince1970, forKey: "\(keyPrefix).lastDecisionAt")
@@ -139,22 +237,30 @@ final class SyncStateStore: ObservableObject {
         defaults.set(now.timeIntervalSince1970, forKey: "\(keyPrefix).safetyLoopLastTickAt")
     }
 
-    func updatePhase(_ phase: SyncPhase, outcome: SyncOutcome? = nil, now: Date = Date()) {
+    func updatePhase(
+        _ phase: SyncPhase, outcome: SyncOutcome? = nil,
+        presentationInvocationID expectedInvocationID: UUID? = nil,
+        now: Date = Date()
+    ) {
+        let revision = activeProjectionRevision
+        guard ownsPresentation(expectedInvocationID) else { return }
         let resolvedPhase = recoveryJournalIsPending && !phase.isAutomaticWorkActive
-            ? .recoveryRequired
-            : phase
+            ? .recoveryRequired : phase
         let isActive = resolvedPhase.isAutomaticWorkActive
+        let prior = state
+        let startedAt = isActive ? (prior.startedAt ?? now) : nil
+        let lastProgressAt = isActive ? now : prior.lastProgressAt
+        let candidate = SyncState(phase: resolvedPhase, progress: prior.progress,
+            lastVerifiedAt: prior.lastVerifiedAt, lastOutcome: outcome ?? prior.lastOutcome,
+            startedAt: startedAt, lastProgressAt: lastProgressAt)
+        objectWillChange.send()
+        guard revision == activeProjectionRevision,
+              ownsPresentation(expectedInvocationID) else { return }
         if !isActive { recoveryProgressInvocationID = nil }
-        let startedAt = isActive ? (state.startedAt ?? now) : nil
-        let lastProgressAt = isActive ? now : state.lastProgressAt
-        state = SyncState(
-            phase: resolvedPhase,
-            progress: state.progress,
-            lastVerifiedAt: state.lastVerifiedAt,
-            lastOutcome: outcome ?? state.lastOutcome,
-            startedAt: startedAt,
-            lastProgressAt: lastProgressAt
-        )
+        activeProjectionRevision = UUID()
+        terminalProjectionHasObservation = false
+        continuedGeneration = nil
+        storedState = candidate
         defaults.set(resolvedPhase.diagnosticsName, forKey: "\(keyPrefix).phase")
         if let startedAt {
             defaults.set(startedAt.timeIntervalSince1970, forKey: "\(keyPrefix).activeStartedAt")
@@ -168,9 +274,22 @@ final class SyncStateStore: ObservableObject {
     func recordRunResult(
         _ result: SyncAutomaticRunResult,
         preserveRecoveryRequired: Bool = false,
+        presentationInvocationID expectedPresentationInvocationID: UUID? = nil,
+        automaticRecoveryClaim: SyncAutomaticRecoveryAttemptClaim? = nil,
+        automaticRecoveryAuthority: (@MainActor () -> Bool)? = nil,
         now: Date = Date()
     ) {
-        recoveryProgressInvocationID = nil
+        if let automaticRecoveryClaim {
+            guard ownsAutomaticRecoveryAttempt(automaticRecoveryClaim) else { return }
+        }
+        let candidateRevision = activeProjectionRevision
+        guard ownsPresentation(expectedPresentationInvocationID),
+              automaticRecoveryAuthority?() != false else { return }
+        guard canAcceptObservation(from: result) else {
+            retireInvalidActiveCandidate(for: result, revision: candidateRevision,
+                expectedInvocationID: expectedPresentationInvocationID, authority: automaticRecoveryAuthority)
+            return
+        }
         let isOrdinaryCompletion = !result.verifiedConvergence
             && (result.status == .success || result.status == .noWork)
             && result.blockReason == nil && result.errorCode == nil
@@ -179,12 +298,22 @@ final class SyncStateStore: ObservableObject {
             // Subscribers run before the guard and cannot observe an idle
             // candidate computed from authority they have just invalidated.
             objectWillChange.send()
+            guard candidateRevision == activeProjectionRevision,
+                  ownsPresentation(expectedPresentationInvocationID),
+                  automaticRecoveryAuthority?() != false else { return }
+            guard acceptObservation(from: result) else {
+                retireInvalidActiveCandidate(for: result, revision: candidateRevision,
+                    expectedInvocationID: expectedPresentationInvocationID, authority: automaticRecoveryAuthority)
+                return
+            }
+            let priorVerifiedAt = currentVerifiedDate()
             do {
                 try receipt.withValidatedAuthority(defaults: defaults) {
                     guard storedState.phase != .recoveryRequired else {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
-                    applyRunResult(result, preserveRecoveryRequired: false, continued: true, now: now)
+                    applyRunResult(result, preserveRecoveryRequired: false, continued: true,
+                        verified: false, verifiedAt: priorVerifiedAt, now: now)
                     continuedGeneration = receipt
                 }
                 return
@@ -194,19 +323,105 @@ final class SyncStateStore: ObservableObject {
             }
         }
         objectWillChange.send()
-        applyRunResult(result, preserveRecoveryRequired: preserveRecoveryRequired, continued: false, now: now)
+        // Subscribers may change account/shop synchronously. Observe current
+        // authority again before completing a claim or publishing verification.
+        guard candidateRevision == activeProjectionRevision,
+              ownsPresentation(expectedPresentationInvocationID),
+              automaticRecoveryAuthority?() != false else { return }
+        guard canAcceptObservation(from: result) else {
+            retireInvalidActiveCandidate(for: result, revision: candidateRevision,
+                expectedInvocationID: expectedPresentationInvocationID, authority: automaticRecoveryAuthority)
+            return
+        }
+        if let automaticRecoveryClaim {
+            guard completeAutomaticRecoveryAttempt(claim: automaticRecoveryClaim,
+                failure: result.failure, now: now) else { return }
+        }
+        guard acceptObservation(from: result) else { return }
+        let acceptedProof = acceptVerifiedProof(from: result, now: now)
+        applyRunResult(result, preserveRecoveryRequired: preserveRecoveryRequired, continued: false,
+            verified: acceptedProof, verifiedAt: currentVerifiedDate(), now: now)
         continuedGeneration = nil
+    }
+
+    private func ownsPresentation(_ expectedInvocationID: UUID?) -> Bool {
+        presentationInvocationID == expectedInvocationID
+    }
+
+    func abandonPresentationInvocation(_ invocationID: UUID) {
+        guard presentationInvocationID == invocationID else { return }
+        presentationInvocationID = nil
+        recoveryProgressInvocationID = nil
+        activeProjectionRevision = UUID()
+    }
+
+    func recordCancellationRequest(
+        presentationInvocationID expectedInvocationID: UUID?,
+        preserveRecoveryRequired: Bool,
+        now: Date
+    ) {
+        let revision = activeProjectionRevision
+        guard ownsPresentation(expectedInvocationID) else { return }
+        let priorVerifiedAt = currentVerifiedDate()
+        objectWillChange.send()
+        guard revision == activeProjectionRevision,
+              ownsPresentation(expectedInvocationID) else { return }
+        // This provisional UI outcome preserves the local operation claim.
+        // It does not mint or replace any authoritative observation envelope.
+        applyRunResult(.cancelled(), preserveRecoveryRequired: preserveRecoveryRequired,
+            continued: false, verified: false, verifiedAt: priorVerifiedAt, now: now,
+            preservingPresentationInvocation: true)
+        continuedGeneration = nil
+    }
+
+    private func retireInvalidActiveCandidate(
+        for result: SyncAutomaticRunResult,
+        revision: UUID,
+        expectedInvocationID: UUID?,
+        authority: (@MainActor () -> Bool)?
+    ) {
+        guard result.continuationReceipt != nil, !result.verifiedConvergence,
+              result.status == .success || result.status == .noWork,
+              revision == activeProjectionRevision,
+              ownsPresentation(expectedInvocationID),
+              storedState.phase.isAutomaticWorkActive,
+              authority?() != false else { return }
+        objectWillChange.send()
+        guard revision == activeProjectionRevision,
+              ownsPresentation(expectedInvocationID),
+              storedState.phase.isAutomaticWorkActive,
+              authority?() != false else { return }
+        // Ownership is the exact prework ID, not whether a durable commit
+        // changed the generation. A caller without an ID cannot retire B.
+        storedState.phase = .recoveryRequired
+        storedState.startedAt = nil
+        storedState.recoveryProgress = nil
+        storedState.lastOutcome = nil
+        continuedGeneration = nil
+        recoveryProgressInvocationID = nil
+        presentationInvocationID = nil
+        activeProjectionRevision = UUID()
+        terminalProjectionHasObservation = false
     }
 
     private func applyRunResult(
         _ result: SyncAutomaticRunResult,
         preserveRecoveryRequired: Bool,
         continued: Bool,
-        now: Date
+        verified: Bool,
+        verifiedAt qualifiedVerifiedAt: Date?,
+        now: Date,
+        preservingPresentationInvocation: Bool = false
     ) {
         // This helper is also called with the lease held. It uses plain
         // storage only: no publisher, computed getter or nested scope capture.
         if storedState.phase == .recoveryRequired, result.status == .noWork { return }
+        if !preservingPresentationInvocation {
+            recoveryProgressInvocationID = nil
+            presentationInvocationID = nil
+        }
+        activeProjectionRevision = UUID()
+        terminalProjectionHasObservation = result.observation != nil
 
         var phase: SyncPhase
         let outcome: SyncOutcome
@@ -215,12 +430,12 @@ final class SyncStateStore: ObservableObject {
         switch result.status {
         case .success:
             outcome = .succeeded
-            if result.verifiedConvergence || continued {
+            if verified || continued {
                 phase = .idle
-                verifiedAt = result.verifiedConvergence ? now : storedState.lastVerifiedAt
+                verifiedAt = qualifiedVerifiedAt
             } else {
                 phase = .recoveryRequired
-                verifiedAt = storedState.lastVerifiedAt
+                verifiedAt = qualifiedVerifiedAt
             }
         case .noWork:
             if let reason = result.blockReason {
@@ -229,39 +444,39 @@ final class SyncStateStore: ObservableObject {
             } else if result.errorCode != nil {
                 phase = .failed
                 outcome = .failed
-            } else if result.verifiedConvergence || continued {
+            } else if verified || continued {
                 phase = .idle
                 outcome = .noWork
             } else {
                 phase = .recoveryRequired
                 outcome = .noWork
             }
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .recoveryRequired:
             phase = .recoveryRequired
             outcome = .noWork
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .blocked:
             let reason = result.blockReason ?? .accountDecisionRequired
             phase = .blocked(reason)
             outcome = .blocked(reason)
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .busy:
             phase = .checking
             outcome = .busy
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .failed:
             phase = .failed
             outcome = .failed
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .cancelled:
             phase = .idle
             outcome = .cancelled
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         case .scheduledRetry:
             phase = .checking
             outcome = .scheduledRetry
-            verifiedAt = storedState.lastVerifiedAt
+            verifiedAt = qualifiedVerifiedAt
         }
 
         if recoveryJournalIsPending {
@@ -269,7 +484,7 @@ final class SyncStateStore: ObservableObject {
             // success/noWork. The atomic recovery coordinator clears the
             // journal only after checkpoint C, baseline and watermark commit.
             phase = .recoveryRequired
-        } else if preserveRecoveryRequired, !result.verifiedConvergence {
+        } else if preserveRecoveryRequired, !verified {
             phase = .recoveryRequired
         }
 
@@ -285,19 +500,12 @@ final class SyncStateStore: ObservableObject {
         defaults.set(result.status.rawValue, forKey: "\(keyPrefix).lastRunStatus")
         defaults.set(result.didWork, forKey: "\(keyPrefix).lastRunDidWork")
         defaults.set(
-            result.verifiedConvergence,
+            verified,
             forKey: "\(keyPrefix).lastRunVerifiedConvergence"
         )
         defaults.set(now.timeIntervalSince1970, forKey: "\(keyPrefix).lastRunCompletedAt")
-        if let verifiedAt {
-            defaults.set(verifiedAt.timeIntervalSince1970, forKey: "\(keyPrefix).lastVerifiedAt")
-        }
-        if result.verifiedConvergence {
-            defaults.set(
-                Self.convergenceProofVersion,
-                forKey: "\(keyPrefix).lastVerifiedProofVersion"
-            )
-        }
+        // Legacy date/version bytes are retained as history. They cannot be
+        // promoted to scoped v2 evidence by reading the current selection.
         defaults.removeObject(forKey: "\(keyPrefix).activeStartedAt")
         defaults.set(now.timeIntervalSince1970, forKey: "\(keyPrefix).lastProgressAt")
         if let errorCode = result.errorCode {
@@ -317,87 +525,245 @@ final class SyncStateStore: ObservableObject {
         updatePhase(.recoveryRequired, now: now)
     }
 
+    private var verifiedProofKey: String { "\(keyPrefix).lastVerifiedProof.v2" }
+
+    private var runObservationKey: String { "\(keyPrefix).lastRunObservation.v1" }
+
+    private nonisolated static func decodedRunObservation(
+        defaults: UserDefaults, keyPrefix: String
+    ) -> SyncAutomaticRunObservation? {
+        guard let data = defaults.data(forKey: "\(keyPrefix).lastRunObservation.v1"), data.count <= 8_192,
+              let observation = try? JSONDecoder().decode(SyncAutomaticRunObservation.self, from: data),
+              observation.hasValidPersistentFacts else { return nil }
+        return observation
+    }
+
+    nonisolated static func currentRunObservation(
+        defaults: UserDefaults = .standard,
+        keyPrefix: String = "sync.runtime.orchestrator",
+        ownerUserID: UUID?
+    ) -> SyncAutomaticRunObservation? {
+        // Presentation cannot infer an authenticated owner from old defaults.
+        guard let ownerUserID,
+              let observation = decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix),
+              observation.origin.isCurrent(defaults: defaults, ownerUserID: ownerUserID) else { return nil }
+        return observation
+    }
+
+    private func canAcceptObservation(from result: SyncAutomaticRunResult) -> Bool {
+        guard let incoming = result.observation else { return true }
+        guard incoming.hasValidPersistentFacts, incoming.matches(result),
+              incoming.origin.isCurrent(defaults: defaults) else { return false }
+        guard let current = Self.decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix),
+              current.origin.isCurrent(defaults: defaults) else { return true }
+        if current.invocationID == incoming.invocationID { return current == incoming }
+        // Equal completion instants do not establish a successor. An older
+        // generation/foreign legacy record cannot prevent a new current one.
+        if current.origin == incoming.origin { return incoming.completedAt > current.completedAt }
+        return true
+    }
+
+    private func acceptObservation(from result: SyncAutomaticRunResult) -> Bool {
+        guard canAcceptObservation(from: result) else { return false }
+        guard let incoming = result.observation else { return true }
+        if let current = Self.decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix),
+           current.invocationID == incoming.invocationID {
+            return current == incoming
+        }
+        guard let data = try? JSONEncoder().encode(incoming), data.count <= 8_192 else { return false }
+        defaults.set(data, forKey: runObservationKey)
+        return Self.decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix) == incoming
+    }
+
+    private func verifiedProofRecord() -> SyncVerifiedProofRecord? {
+        guard let data = defaults.data(forKey: verifiedProofKey), data.count <= 4_096,
+              let required = try? JSONDecoder().decode(SyncVerifiedProofRequiredShape.self, from: data),
+              let record = try? JSONDecoder().decode(SyncVerifiedProofRecord.self, from: data),
+              required.finalization.storeIdentity.exactlyDescribes(record.finalization.storeIdentity),
+              record.schemaVersion == SyncVerifiedProofRecord.version,
+              record.verifiedAt.isFinite, record.verifiedAt > 0,
+              record.finalization.schemaVersion == SyncStoreRecoveryFinalization.currentSchemaVersion,
+              Self.isRedactedIdentity(record.finalization.accountHash),
+              Self.isRedactedIdentity(record.finalization.deviceIdentityHash),
+              Self.isRedactedIdentity(record.finalization.checkpointDigest),
+              record.finalization.watermark >= 0,
+              !record.finalization.storeIdentity.isEmpty else { return nil }
+        return record
+    }
+
+    private func currentVerifiedDate() -> Date? {
+        guard let record = verifiedProofRecord(),
+              hasCurrentAuthority(for: record.finalization) else { return nil }
+        return Date(timeIntervalSince1970: record.verifiedAt)
+    }
+
+    private func hasCurrentAuthority(for proof: SyncStoreRecoveryFinalization) -> Bool {
+        let selection = SelectedShopStore(defaults: defaults)
+        let binding = AccountBindingStore(defaults: defaults)
+        // Reject an unrelated/anonymous scope before resolving the shared
+        // controller. Merely creating a presenter must not open a database.
+        guard defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == proof.accountHash,
+              let currentBinding = binding.currentBinding,
+              currentBinding.accountHash == proof.accountHash,
+              currentBinding.storeIdentity.hasSameProvenance(as: proof.storeIdentity),
+              selection.isResolutionReady(accountHash: proof.accountHash),
+              let shop = selection.selectedShop(accountHash: proof.accountHash),
+              shop.shopID == proof.shopID, shop.localStoreIdentity.hasSameProvenance(as: proof.storeIdentity),
+              LinkedShop(shopID: shop.shopID, code: shop.code, name: shop.name, role: shop.role,
+                status: shop.status, selectable: shop.selectable, canWrite: shop.canWrite).isValidSelection,
+              let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID(),
+              DeviceInstallIDStore.identityHash(for: device) == proof.deviceIdentityHash,
+              !selection.hasConfirmedDeviceDenial(accountHash: proof.accountHash,
+                shopID: proof.shopID, deviceIdentityHash: proof.deviceIdentityHash),
+              let controller = storeGenerationController
+                ?? (defaults === UserDefaults.standard ? SyncStoreGenerationController.shared : nil),
+              controller.loadFailureCode == nil,
+              let manifest = controller.activeManifest, proof.exactlyMatches(manifest),
+              proof.storeIdentity.hasSameProvenance(as: manifest.storeIdentity),
+              Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer) else { return false }
+        // Ordinary incremental progress retains the canonical generation and
+        // may advance its cursor without restamping the canonical success.
+        let watermarks = WatermarkStore(defaults: defaults)
+        let scope = WatermarkStore.Scope(accountHash: proof.accountHash, storeIdentity: proof.storeIdentity)
+        let currentWatermark = watermarks.watermark(for: scope)
+        return currentWatermark >= proof.watermark
+            && watermarks.matchesRecoveryGeneration(proof.generationID,
+                watermark: currentWatermark, scope: scope)
+    }
+
+    private func acceptVerifiedProof(from result: SyncAutomaticRunResult, now: Date) -> Bool {
+        guard result.verifiedConvergence,
+              result.status == .success || result.status == .noWork,
+              result.errorCode == nil, result.blockReason == nil,
+              let origin = result.verifiedFinalization,
+              hasCurrentAuthority(for: origin),
+              let observation = result.observation,
+              observation.hasValidPersistentFacts, observation.matches(result),
+              observation.origin.isCurrent(defaults: defaults),
+              observation.origin.generationID == origin.generationID else { return false }
+        if let accepted = verifiedProofRecord(), accepted.finalization == origin,
+           accepted.finalization.storeIdentity.hasSameProvenance(as: origin.storeIdentity) {
+            // Replaying the exact same proof preserves its first publication.
+            return true
+        }
+        let record = SyncVerifiedProofRecord(schemaVersion: SyncVerifiedProofRecord.version,
+            verifiedAt: observation.completedAt, finalization: origin)
+        guard let data = try? JSONEncoder().encode(record), data.count <= 4_096 else { return false }
+        defaults.set(data, forKey: verifiedProofKey)
+        guard let readBack = verifiedProofRecord(), readBack == record else { return false }
+        return readBack.finalization.storeIdentity.hasSameProvenance(as: record.finalization.storeIdentity)
+    }
+
     func automaticRecoveryAttemptEligibility(
         identity: String,
         now: Date = Date()
     ) -> SyncAutomaticRecoveryAttemptEligibility {
-        guard Self.isRedactedIdentity(identity) else { return .exhausted }
+        guard Self.isRedactedIdentity(identity), now.timeIntervalSince1970.isFinite else { return .exhausted }
         guard defaults.object(forKey: automaticRecoveryAttemptKey) != nil else {
-            return .ready
+            // v1 lacks typed failure and completion provenance. Preserve it;
+            // its diagnostics cannot authorize an automatic v2 migration.
+            return defaults.object(forKey: "\(keyPrefix).automaticRecoveryAttempt.v1") == nil ? .ready : .exhausted
         }
-        guard let record = automaticRecoveryAttemptRecord() else {
-            // Corrupt retry metadata must not turn into an unbounded relaunch
-            // loop. The explicit Review/Retry action can clear it safely.
-            return .exhausted
-        }
+        guard let record = automaticRecoveryAttemptRecord() else { return .exhausted }
         guard record.identity == identity else { return .ready }
-        guard record.attemptCount < 3 else { return .exhausted }
+        guard record.lastCompletedAt != nil, record.failure?.disposition == .transient else { return .exhausted }
         let remaining = record.nextAllowedAt - now.timeIntervalSince1970
         return remaining > 0 ? .cooldown(remaining) : .ready
     }
 
     @discardableResult
-    func beginAutomaticRecoveryAttempt(
-        identity: String,
-        now: Date = Date()
-    ) -> Int? {
-        guard automaticRecoveryAttemptEligibility(identity: identity, now: now) == .ready else {
-            return nil
-        }
-        let prior = automaticRecoveryAttemptRecord()
-        let priorCount = prior?.identity == identity ? prior?.attemptCount ?? 0 : 0
-        let nextCount = priorCount + 1
-        guard nextCount <= 3 else { return nil }
-        let delay = min(2 * pow(2, Double(nextCount - 1)), 30)
-        let record = SyncAutomaticRecoveryAttemptRecord(
-            schemaVersion: SyncAutomaticRecoveryAttemptRecord.schemaVersion,
-            identity: identity,
-            attemptCount: nextCount,
-            nextAllowedAt: now.timeIntervalSince1970 + delay
-        )
-        guard persistAutomaticRecoveryAttemptRecord(record) else { return nil }
-        return nextCount
+    func beginAutomaticRecoveryAttempt(identity: String, now: Date = Date()) -> Int? {
+        claimAutomaticRecoveryAttempt(identity: identity, now: now)?.attemptInWindow
     }
 
-    func extendAutomaticRecoveryAttemptCooldown(
-        identity: String,
-        requestedDelay: TimeInterval,
-        now: Date = Date()
-    ) -> TimeInterval {
-        guard let record = automaticRecoveryAttemptRecord(),
-              record.identity == identity else {
-            return max(0, requestedDelay)
-        }
-        let target = max(
-            record.nextAllowedAt,
-            now.timeIntervalSince1970 + min(max(0, requestedDelay), 30)
-        )
-        let updated = SyncAutomaticRecoveryAttemptRecord(
-            schemaVersion: record.schemaVersion,
-            identity: record.identity,
-            attemptCount: record.attemptCount,
-            nextAllowedAt: target
-        )
-        guard persistAutomaticRecoveryAttemptRecord(updated) else { return 30 }
+    func claimAutomaticRecoveryAttempt(identity: String, now: Date = Date()) -> SyncAutomaticRecoveryAttemptClaim? {
+        guard automaticRecoveryAttemptEligibility(identity: identity, now: now) == .ready else { return nil }
+        let prior = automaticRecoveryAttemptRecord().flatMap { $0.identity == identity ? $0 : nil }
+        let newWindow = prior?.attemptsInWindow == 3
+        let attempt = newWindow ? 1 : (prior?.attemptsInWindow ?? 0) + 1
+        let priorTotal = prior?.totalAttempts ?? 0
+        let priorWindow = prior?.windowIndex ?? 1
+        guard priorTotal < Int.max, !newWindow || priorWindow < Int.max else { return nil }
+        let invocationID = UUID()
+        let record = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: identity, invocationID: invocationID,
+            windowIndex: priorWindow + (newWindow ? 1 : 0), attemptsInWindow: attempt,
+            totalAttempts: priorTotal + 1, lastAttemptAt: now.timeIntervalSince1970,
+            lastCompletedAt: nil, failure: nil, nextAllowedAt: now.timeIntervalSince1970,
+            retryAfterUntil: prior?.retryAfterUntil)
+        guard persistAutomaticRecoveryAttemptRecord(record) else { return nil }
+        return SyncAutomaticRecoveryAttemptClaim(storageKey: automaticRecoveryAttemptKey,
+            identity: identity, invocationID: invocationID, attemptInWindow: attempt)
+    }
+
+    private func completeAutomaticRecoveryAttempt(claim: SyncAutomaticRecoveryAttemptClaim,
+        failure: AutomaticSyncFailure?, now: Date) -> Bool {
+        guard ownsAutomaticRecoveryAttempt(claim), let record = automaticRecoveryAttemptRecord(),
+              now.timeIntervalSince1970 >= record.lastAttemptAt else { return false }
+        let completed = now.timeIntervalSince1970
+        let failure = failure ?? AutomaticSyncFailure(disposition: .unknown, category: .unknown)
+        let suppliedRetryAfter = failure.retryAfterUntil?.timeIntervalSince1970
+        let retryAfter = [record.retryAfterUntil, suppliedRetryAfter].compactMap { $0 }.max()
+        let sample = retryJitter()
+        let jitter = sample.isFinite ? min(1.5, max(0.5, sample)) : 1
+        let localDelay = record.attemptsInWindow == 3 ? 300
+            : min(60, 2 * pow(2, Double(record.attemptsInWindow - 1)) * jitter)
+        let nextAllowedAt = max(completed + localDelay, retryAfter ?? 0)
+        let updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: 2, identity: record.identity, invocationID: record.invocationID,
+            windowIndex: record.windowIndex, attemptsInWindow: record.attemptsInWindow,
+            totalAttempts: record.totalAttempts, lastAttemptAt: record.lastAttemptAt,
+            lastCompletedAt: completed, failure: failure, nextAllowedAt: nextAllowedAt,
+            retryAfterUntil: retryAfter)
+        return persistAutomaticRecoveryAttemptRecord(updated)
+    }
+
+    func ownsAutomaticRecoveryAttempt(_ claim: SyncAutomaticRecoveryAttemptClaim) -> Bool {
+        guard claim.storageKey == automaticRecoveryAttemptKey,
+              let record = automaticRecoveryAttemptRecord(), record.lastCompletedAt == nil else { return false }
+        return record.identity == claim.identity && record.invocationID == claim.invocationID
+            && record.attemptsInWindow == claim.attemptInWindow
+    }
+
+    func extendAutomaticRecoveryAttemptCooldown(identity: String, requestedDelay: TimeInterval,
+        now: Date = Date()) -> TimeInterval {
+        guard requestedDelay.isFinite, requestedDelay >= 0 else { return .infinity }
+        guard let record = automaticRecoveryAttemptRecord(), record.identity == identity else { return requestedDelay }
+        let target = max(record.nextAllowedAt, now.timeIntervalSince1970 + requestedDelay)
+        let updated = SyncAutomaticRecoveryAttemptRecord(schemaVersion: record.schemaVersion,
+            identity: record.identity, invocationID: record.invocationID, windowIndex: record.windowIndex,
+            attemptsInWindow: record.attemptsInWindow, totalAttempts: record.totalAttempts,
+            lastAttemptAt: record.lastAttemptAt, lastCompletedAt: record.lastCompletedAt,
+            failure: record.failure, nextAllowedAt: target, retryAfterUntil: record.retryAfterUntil)
+        guard persistAutomaticRecoveryAttemptRecord(updated) else { return .infinity }
         return max(0, target - now.timeIntervalSince1970)
     }
 
     func resetAutomaticRecoveryAttemptBudget() {
         defaults.removeObject(forKey: automaticRecoveryAttemptKey)
+        defaults.removeObject(forKey: "\(keyPrefix).automaticRecoveryAttempt.v1")
     }
 
     private func automaticRecoveryAttemptRecord() -> SyncAutomaticRecoveryAttemptRecord? {
         guard let data = defaults.data(forKey: automaticRecoveryAttemptKey),
-              let record = try? JSONDecoder().decode(
-                SyncAutomaticRecoveryAttemptRecord.self,
-                from: data
-              ),
+              let record = try? JSONDecoder().decode(SyncAutomaticRecoveryAttemptRecord.self, from: data),
               record.schemaVersion == SyncAutomaticRecoveryAttemptRecord.schemaVersion,
-              Self.isRedactedIdentity(record.identity),
-              (1...3).contains(record.attemptCount),
-              record.nextAllowedAt.isFinite,
-              record.nextAllowedAt > 0 else {
-            return nil
+              Self.isRedactedIdentity(record.identity), record.windowIndex >= 1,
+              (1...3).contains(record.attemptsInWindow), record.totalAttempts >= record.attemptsInWindow,
+              (record.totalAttempts - 1) / 3 + 1 == record.windowIndex,
+              (record.totalAttempts - 1) % 3 + 1 == record.attemptsInWindow,
+              record.lastAttemptAt.isFinite, record.lastAttemptAt > 0,
+              record.nextAllowedAt.isFinite, record.nextAllowedAt >= record.lastAttemptAt,
+              record.lastCompletedAt.map({ $0.isFinite && $0 >= record.lastAttemptAt }) ?? true,
+              record.retryAfterUntil.map({ $0.isFinite && $0 > 0 }) ?? true,
+              record.failure.map(\.hasValidPersistentFacts) ?? true,
+              (record.lastCompletedAt == nil) == (record.failure == nil),
+              record.lastCompletedAt.map({ record.nextAllowedAt >= $0 }) ?? true,
+              record.retryAfterUntil.map({ record.nextAllowedAt >= $0 }) ?? true else { return nil }
+        if let completed = record.lastCompletedAt, record.failure?.disposition == .transient {
+            let minimumDelay = record.attemptsInWindow == 3 ? 300 : pow(2, Double(record.attemptsInWindow - 1))
+            guard record.nextAllowedAt >= completed + minimumDelay else { return nil }
+        }
+        if let serverMinimum = record.failure?.retryAfterUntil?.timeIntervalSince1970 {
+            guard record.nextAllowedAt >= serverMinimum else { return nil }
         }
         return record
     }
@@ -418,82 +784,38 @@ final class SyncStateStore: ObservableObject {
     private static func hydratedState(
         defaults: UserDefaults,
         keyPrefix: String,
+        lastVerifiedAt: Date?,
         hasPendingRecoveryJournal: Bool,
         now: Date = Date()
     ) -> SyncState {
-        let lastVerifiedAt = defaults.integer(forKey: "\(keyPrefix).lastVerifiedProofVersion")
-            == convergenceProofVersion
-            ? date(defaults, key: "\(keyPrefix).lastVerifiedAt")
-            : nil
-        let lastProgressAt = date(defaults, key: "\(keyPrefix).lastProgressAt")
-        let activeStartedAt = date(defaults, key: "\(keyPrefix).activeStartedAt")
-        let storedPhase = phase(from: defaults.string(forKey: "\(keyPrefix).phase"))
-        let storedStatus = defaults.string(forKey: "\(keyPrefix).lastRunStatus")
-            .flatMap(SyncAutomaticRunStatus.init(rawValue:))
-        let blockReason = blockReason(from: defaults.string(forKey: "\(keyPrefix).lastRunBlockReason"))
-        let errorCode = defaults.string(forKey: "\(keyPrefix).lastRunErrorCode")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasError = errorCode.map { !$0.isEmpty } ?? false
-
-        var phase = storedPhase ?? phase(for: storedStatus, blockReason: blockReason) ?? .idle
-        var outcome = outcome(for: storedStatus, blockReason: blockReason)
-
-        if phase.isAutomaticWorkActive {
-            if storedStatus == .scheduledRetry {
-                phase = .idle
-                outcome = .scheduledRetry
-            } else if storedStatus == .busy {
-                phase = .idle
-                outcome = .busy
-            } else if let blockReason {
-                phase = .blocked(blockReason)
-                outcome = .blocked(blockReason)
-            } else {
-                phase = .failed
-                outcome = .failed
-            }
+        guard let observation = decodedRunObservation(defaults: defaults, keyPrefix: keyPrefix),
+              observation.origin.isCurrent(defaults: defaults) else {
+            // A raw explicit recovery latch remains a latch when no typed
+            // history exists. Raw failures/blocks/timestamps are never origin.
+            let legacyRecoveryLatch = defaults.object(forKey: "\(keyPrefix).lastRunObservation.v1") == nil
+                && phase(from: defaults.string(forKey: "\(keyPrefix).phase")) == .recoveryRequired
+            return SyncState(phase: hasPendingRecoveryJournal || legacyRecoveryLatch ? .recoveryRequired : .idle,
+                lastVerifiedAt: lastVerifiedAt)
         }
-
-        if hasError, storedStatus == .noWork || storedStatus == .success {
-            if let blockReason {
-                phase = .blocked(blockReason)
-                outcome = .blocked(blockReason)
-            } else {
-                phase = .failed
-                outcome = .failed
-            }
+        let reason = blockReason(from: observation.blockReason)
+        var resolvedPhase = phase(for: observation.status, blockReason: reason) ?? .idle
+        var resolvedOutcome = outcome(for: observation.status, blockReason: reason)
+        if observation.errorCode != nil,
+           observation.status == .success || observation.status == .noWork {
+            resolvedPhase = reason.map(SyncPhase.blocked) ?? .failed
+            resolvedOutcome = reason.map(SyncOutcome.blocked) ?? .failed
         }
-
-        if phase.isAutomaticWorkActive,
-           let lastProgressAt,
-           now.timeIntervalSince(lastProgressAt) >= 60 {
-            if let blockReason {
-                phase = .blocked(blockReason)
-                outcome = .blocked(blockReason)
-            } else {
-                phase = .failed
-                outcome = .failed
-            }
-        }
-
         if hasPendingRecoveryJournal {
-            phase = .recoveryRequired
+            resolvedPhase = .recoveryRequired
         } else if lastVerifiedAt == nil,
-                  blockReason == nil,
-                  !hasError,
-                  storedStatus == .success || storedStatus == .noWork {
-            // Legacy and unverified successful/no-work runs are not evidence of
-            // convergence. Relaunch must not turn them into a fresh idle proof.
-            phase = .recoveryRequired
+                  observation.blockReason == nil, observation.errorCode == nil,
+                  observation.status == .success || observation.status == .noWork {
+            // Current unverified work still cannot manufacture convergence.
+            resolvedPhase = .recoveryRequired
         }
-
-        return SyncState(
-            phase: phase,
-            lastVerifiedAt: lastVerifiedAt,
-            lastOutcome: outcome,
-            startedAt: phase.isAutomaticWorkActive ? activeStartedAt : nil,
-            lastProgressAt: lastProgressAt
-        )
+        return SyncState(phase: resolvedPhase, lastVerifiedAt: lastVerifiedAt,
+            lastOutcome: resolvedOutcome,
+            lastProgressAt: Date(timeIntervalSince1970: observation.completedAt))
     }
 
     private static func date(_ defaults: UserDefaults, key: String) -> Date? {
@@ -613,8 +935,8 @@ private extension SyncAction {
     }
 }
 
-private extension SyncBlockReason {
-    var diagnosticsName: String {
+extension SyncBlockReason {
+    nonisolated var diagnosticsName: String {
         switch self {
         case .authRequired: "authRequired"
         case .networkUnavailable: "networkUnavailable"

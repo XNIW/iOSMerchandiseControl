@@ -1,0 +1,11 @@
+{
+  "UTC": "2026-10-16T05:35:35.571866+00:00",
+  "mode": "read-only final19pin added lines; all official POSIX space occurrences adapted to Python; no matching values emitted or written",
+  "patternSourceSHA256": "34183a019ae6ca8511979b5dcbc7203f6360d661429be8983003bbe66c68a1e7",
+  "sourceManifest": "ios-final-local-input.json",
+  "manifestSHA256": "a142eb5058baa40dcc29bb33861e3afaa7325903005d99c029f3c4221c48c8e0",
+  "addedLines": 4535,
+  "hits": [],
+  "result": "PASS",
+  "limits": "19 source/test pins only, no env/credential file read, no repository/history/evidence-wide certification"
+}

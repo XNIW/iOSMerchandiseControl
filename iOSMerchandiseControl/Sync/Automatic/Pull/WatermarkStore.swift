@@ -11,6 +11,12 @@ nonisolated struct WatermarkStore {
         let checksum: String
     }
 
+    nonisolated enum GenerationProvenance: Equatable, Sendable {
+        case absent
+        case identified(UUID)
+        case invalid
+    }
+
     nonisolated struct Scope: Equatable, Hashable, Sendable {
         var accountHash: String
         var storeIdentity: LocalStoreIdentity
@@ -65,6 +71,18 @@ nonisolated struct WatermarkStore {
             return legacy
         }
         return 0
+    }
+
+    /// Reports existing generation authority without repairing or creating it.
+    func generationProvenance(for scope: Scope) -> GenerationProvenance {
+        guard defaults.object(forKey: generationRecordKey(for: scope)) != nil else {
+            return .absent
+        }
+        guard let record = validatedGenerationRecord(for: scope),
+              int64(forKey: key(for: scope)) == record.value else {
+            return .invalid
+        }
+        return .identified(record.generationID)
     }
 
     func save(_ watermark: Int64, for scope: Scope) {
