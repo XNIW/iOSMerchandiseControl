@@ -448,6 +448,9 @@ final class SyncOrchestrator: ObservableObject {
             if startsNewRetryWindow { stateStore.resetAutomaticRecoveryAttemptBudget() }
         }
         let automaticRecoveryIdentity = automaticRecoveryResumeIdentityIfAllowed(source: source)
+        let legacyContinuation = automaticRecoveryIdentity.flatMap {
+            stateStore.legacyRecoveryContinuation(identity: $0, now: now())
+        }
         let automaticRecoveryScope: Task126VerifiedOwnerStoreScope?
         let isAutomaticRecoveryResume: Bool
         if let automaticRecoveryIdentity {
@@ -474,8 +477,11 @@ final class SyncOrchestrator: ObservableObject {
                 }
                 return
             case .exhausted:
-                recordRuntimeDiagnostic("foreground.outcome", "recovery_resume_exhausted")
-                return
+                guard legacyContinuation != nil else {
+                    recordRuntimeDiagnostic("foreground.outcome", "recovery_resume_exhausted")
+                    return
+                }
+                isAutomaticRecoveryResume = true
             }
         } else {
             automaticRecoveryScope = nil
@@ -574,9 +580,15 @@ final class SyncOrchestrator: ObservableObject {
             }
             // Explicit retry normalization requires release-card authority.
             // An admitted automatic resume retains its gated bootstrap plan.
-            let action = isExplicitRecoveryRetry
-                ? Self.explicitRecoveryAction(afterGates: decidedAction)
-                : decidedAction
+            let action: SyncAction
+            if legacyContinuation != nil {
+                switch decidedAction {
+                case .blocked, .retryAfterBusy: action = decidedAction
+                default: action = .fullRecovery
+                }
+            } else {
+                action = isExplicitRecoveryRetry ? Self.explicitRecoveryAction(afterGates: decidedAction) : decidedAction
+            }
             stateStore.recordDecision(trigger: source.syncTrigger, action: action,
                 presentationInvocationID: invocationID)
             switch action {
@@ -634,7 +646,8 @@ final class SyncOrchestrator: ObservableObject {
                         }
                         guard orchestrator.isRecoveryTimerScopeCurrent(automaticRecoveryScope),
                               orchestrator.stateStore.pendingRecoveryJournal.map(Self.automaticRecoveryResumeIdentity(for:)) == identity else { return false }
-                        recoveryInvocation.claim = orchestrator.stateStore.claimAutomaticRecoveryAttempt(identity: identity, now: orchestrator.now())
+                        recoveryInvocation.claim = orchestrator.stateStore.claimAutomaticRecoveryAttempt(identity: identity,
+                            now: orchestrator.now(), legacyContinuation: legacyContinuation)
                         return recoveryInvocation.claim != nil
                     }
                 }
@@ -646,9 +659,11 @@ final class SyncOrchestrator: ObservableObject {
                 completeForegroundTask(invocationID: invocationID)
                 return
             }
-            let result = await AutomaticSyncAttemptContext.$begin.withValue(beginAttempt) {
-                await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
-                    await automaticRuntime.run(action: action, source: source)
+            let result = await AutomaticSyncAttemptContext.$legacyContinuation.withValue(legacyContinuation) {
+                await AutomaticSyncAttemptContext.$begin.withValue(beginAttempt) {
+                    await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
+                        await automaticRuntime.run(action: action, source: source)
+                    }
                 }
             }
             guard foregroundInvocationID == invocationID,
@@ -715,7 +730,7 @@ final class SyncOrchestrator: ObservableObject {
                 return
             }
             if !stateStore.recoveryJournalIsPending {
-                stateStore.resetAutomaticRecoveryAttemptBudget()
+                stateStore.resetAutomaticRecoveryAttemptBudget(preservingLegacyHistory: true)
             }
             resetForegroundBusyRetryBudget()
             if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending,

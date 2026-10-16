@@ -287,11 +287,17 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         // Reset only for a new top-level invocation so a changing checkpoint
         // cannot multiply the allowed network/memory footprint.
         await recoveryRemote.resetResourceBudget()
+        let legacyContinuation = AutomaticSyncAttemptContext.legacyContinuation
+        if legacyContinuation != nil {
+            guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal != nil else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+        }
         var scope = try await ensureRecoveryJournal(ownerUserID: ownerUserID)
         try await reportProgress(.preparing, scope: scope)
         var restagingFloor: SyncStoreGenerationManifest?
         var restagingJournal: AccountRecoveryJournalSnapshot?
-        if let resumed = try await completeActivatedGenerationIfPossible(
+        if legacyContinuation == nil, let resumed = try await completeActivatedGenerationIfPossible(
             ownerUserID: ownerUserID,
             scope: scope
         ) {
@@ -309,8 +315,13 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         try validateJournal(scope: scope)
         try await requireDrainedActiveStoreForSameScopeRecovery(scope: scope)
 
+        let legacyAdmission: LegacyPrefixAdmission?
+        if let legacyContinuation {
+            legacyAdmission = try await qualifyLegacyPrefix(legacyContinuation, scope: scope)
+        } else { legacyAdmission = nil }
+        let admittedAttempts = legacyContinuation == nil ? maximumAttempts : 1
         var lastCheckpointError: Error?
-        for attempt in 1...maximumAttempts {
+        for attempt in 1...admittedAttempts {
             var staging: SyncStoreGenerationHandle?
             var ledger: ShopSyncRecoveryLedger?
             var manifestActivated = false
@@ -320,11 +331,19 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try validateJournal(scope: scope)
                 try await reportProgress(.checkpoint, scope: scope)
+                if let legacyAdmission {
+                    try await revalidateLegacyPrefix(legacyAdmission, scope: scope)
+                    guard let begin = AutomaticSyncAttemptContext.begin, await begin() else {
+                        throw AtomicGenerationRecoveryError.journalTransitionRejected
+                    }
+                    try await revalidateLegacyPrefix(legacyAdmission, scope: scope)
+                }
                 let freshAdmission = try await recoveryRemote.checkpoint(
                     ownerUserID: ownerUserID,
                     scope: scope
                 )
                 try revalidate(scope, ownerUserID: ownerUserID)
+                if let legacyAdmission { try await revalidateLegacyPrefix(legacyAdmission, scope: scope) }
                 if let restagingFloor {
                     guard let restagingJournal else {
                         throw AtomicGenerationRecoveryError.journalTransitionRejected
@@ -333,17 +352,20 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                         manifest: restagingFloor, journal: restagingJournal)
                 }
                 let resumeID = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal?.generationID
-                let prepared = try await storeGenerationController.prepareStaging(
-                    accountHash: scope.accountHash,
-                    shopID: scope.shopID,
-                    storeIdentity: scope.storeIdentity,
-                    deviceIdentityHash: scope.deviceIdentityHash,
-                    resumeGenerationID: resumeID
-                )
+                let prepared: SyncStoreGenerationHandle
+                if let legacyAdmission { prepared = legacyAdmission.staging }
+                else {
+                    prepared = try await storeGenerationController.prepareStaging(
+                        accountHash: scope.accountHash, shopID: scope.shopID, storeIdentity: scope.storeIdentity,
+                        deviceIdentityHash: scope.deviceIdentityHash, resumeGenerationID: resumeID)
+                }
                 staging = prepared
                 let bindingStore = AccountBindingStore(defaults: defaultsBox.value)
-                guard let stagedJournal = await recordStagingJournal(scope: scope,
-                    generationID: prepared.generationID, expectedJournal: restagingJournal) else {
+                let stagedJournal: AccountRecoveryJournalSnapshot?
+                if let legacyAdmission { stagedJournal = legacyAdmission.journal }
+                else { stagedJournal = await recordStagingJournal(scope: scope,
+                    generationID: prepared.generationID, expectedJournal: restagingJournal) }
+                guard let stagedJournal else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
                 if restagingFloor != nil { restagingJournal = stagedJournal }
@@ -368,6 +390,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                         mode: .resumeAccepted(byteOffsets: offsets))
                     try restoreAcceptedRelationships(state: state, staging: prepared, ledger: persistedLedger)
                 } else {
+                    guard legacyAdmission == nil else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
                     checkpointA = freshAdmission
                     try await storeGenerationController.resetStaging(prepared)
                     state = AtomicRecoveryStagingState()
@@ -558,7 +581,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 throw CancellationError()
             } catch ShopSyncRecoveryContractError.checkpointChanged {
                 if let ledger { try? ledger.closeWrites() }
-                await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
+                if legacyAdmission == nil { await quarantineIfUnpublished(staging, manifestActivated: manifestActivated) }
                 // The convergence marker is obtained before the pointer is
                 // published.  A checkpoint failure after publication can no
                 // longer be retried by treating a changed cloud as complete:
@@ -568,7 +591,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     throw ShopSyncRecoveryContractError.checkpointChanged
                 }
                 lastCheckpointError = ShopSyncRecoveryContractError.checkpointChanged
-                guard attempt < maximumAttempts else { break }
+                guard attempt < admittedAttempts else { break }
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000)
             } catch let error as Task126OwnerStoreGateError where error == .scopeChanged && manifestActivated {
                 if let ledger { try? ledger.closeWrites() }
@@ -582,7 +605,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     // This publication consumed one of the existing attempts.
                     // Reverify a fresh, changed archive only within that budget;
                     // all active-generation/journal/fence guards still apply.
-                    guard attempt < maximumAttempts else {
+                    guard attempt < admittedAttempts else {
                         throw ShopSyncRecoveryContractError.markerNotVerified
                     }
                     restagingFloor = manifest
@@ -591,7 +614,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 }
             } catch {
                 if let ledger { try? ledger.closeWrites() }
-                if !Self.isResumableTransportFailure(error) {
+                if legacyAdmission == nil && !Self.isResumableTransportFailure(error) {
                     await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
                 }
                 throw error
@@ -672,6 +695,77 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         ))
         // Presentation is an async boundary. Never carry authorization across
         // it into a write or publication without the existing scope fence.
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+    }
+
+    private struct LegacyPrefixAdmission {
+        let staging: SyncStoreGenerationHandle
+        let journal: AccountRecoveryJournalSnapshot
+        let progressBytes: Data
+        let fence: SyncStoreGenerationMutationFence
+    }
+
+    private func qualifyLegacyPrefix(_ continuation: SyncLegacyRecoveryContinuation,
+        scope: Task126VerifiedOwnerStoreScope) async throws -> LegacyPrefixAdmission {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard let journal = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery, journal.phase == .staging,
+              journal.generationID == continuation.generationID,
+              await SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == continuation.identity else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        let staging = try await storeGenerationController.existingStaging(scope: scope, generationID: continuation.generationID)
+        guard let progress = try AtomicRecoveryPageProgress.read(staging: staging) else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+        try progress.validate(staging: staging, scope: scope, pageLimit: pageLimit)
+        try progress.checkpointA.validate(expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID, expectedOwnerUserID: scope.ownerUserID)
+        guard progress.domains.values.contains(where: { $0.processed > 0 }) else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+        let ledger = try ShopSyncRecoveryLedger(generationStoreURL: staging.storeURL, mode: .readExisting)
+        let offsets = try ledger.acceptedByteOffsets()
+        for domain in ShopSyncRecoveryDomain.allCases {
+            guard offsets[domain, default: 0] == (progress.domains[domain.rawValue]?.ledgerBytes ?? 0) else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+            }
+        }
+        let state = AtomicRecoveryStagingState(baselineRunID: progress.baselineRunID)
+        state.pageProgress = progress
+        try progress.proofs.restore(state)
+        try restoreAcceptedRelationships(state: state, staging: staging, ledger: ledger)
+        // Pages are live: their accepted proof may differ from checkpoint A.
+        // Validate ledger structure now; terminal B/tail still qualifies it.
+        _ = try ledger.receipt(relationshipViolationCount: 0, pendingLocalCount: 0, outboxCount: 0)
+        for domain in ShopSyncRecoveryDomain.allCases {
+            let cursor = progress.domains[domain.rawValue]
+            var lastID: String?
+            try ledger.forEachRecord(for: domain) { lastID = $0.orderingID }
+            guard cursor?.afterID == (cursor?.complete == true ? nil : lastID) else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+            }
+        }
+        try verifyPersistedStore(state: state, checkpoint: progress.checkpointA,
+            container: staging.container, ownerUserID: scope.ownerUserID, acceptedPrefixOnly: true)
+        let progressBytes = try AtomicRecoveryPageProgress.boundedRead(staging.storeURL.deletingLastPathComponent()
+            .appendingPathComponent(AtomicRecoveryPageProgress.fileName), limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes)
+        let fence = try await storeGenerationController.captureMutationFence(for: staging)
+        let admission = LegacyPrefixAdmission(staging: staging, journal: journal, progressBytes: progressBytes, fence: fence)
+        try await revalidateLegacyPrefix(admission, scope: scope)
+        return admission
+    }
+
+    private func revalidateLegacyPrefix(_ admission: LegacyPrefixAdmission,
+        scope: Task126VerifiedOwnerStoreScope) async throws {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == admission.journal else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        let current = try AtomicRecoveryPageProgress.boundedRead(admission.staging.storeURL.deletingLastPathComponent()
+            .appendingPathComponent(AtomicRecoveryPageProgress.fileName), limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes)
+        guard current == admission.progressBytes else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+        try await storeGenerationController.validateMutationFence(admission.fence, for: admission.staging)
         try revalidate(scope, ownerUserID: scope.ownerUserID)
     }
 
@@ -1926,7 +2020,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         state: AtomicRecoveryStagingState,
         checkpoint: ShopSyncRecoveryCheckpoint,
         container: ModelContainer,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        acceptedPrefixOnly: Bool = false
     ) throws {
         let context = ModelContext(container)
         context.autosaveEnabled = false
@@ -2083,7 +2178,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
               try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()) == 0 else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
-        guard state.expectedImageRelationships.isEmpty else {
+        guard acceptedPrefixOnly || state.expectedImageRelationships.isEmpty else {
             throw ShopSyncRecoveryContractError.relationViolation
         }
         let runID = state.baselineRunID
@@ -2150,15 +2245,15 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
               ),
               baseline.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion,
               baseline.source == SupabaseCatalogBaselineSource.fullPullApply.rawValue,
-              baseline.status == SupabaseCatalogBaselineStatus.valid.rawValue,
-              baseline.appliedAt != nil,
+              baseline.status == (acceptedPrefixOnly ? SupabaseCatalogBaselineStatus.building.rawValue : SupabaseCatalogBaselineStatus.valid.rawValue),
+              acceptedPrefixOnly ? baseline.appliedAt == nil : baseline.appliedAt != nil,
               baselineRecordCount == expectedBaselineCount,
               actualSupplierBaseline.finalize() == expectedSupplierBaseline,
               actualCategoryBaseline.finalize() == expectedCategoryBaseline,
               actualProductBaseline.finalize() == expectedProductBaseline,
-              baselineRecordCount == (try total(checkpoint.catalog.suppliers, domain: .suppliers))
-                + (try total(checkpoint.catalog.categories, domain: .categories))
-                + (try total(checkpoint.catalog.products, domain: .products)) else {
+              try (acceptedPrefixOnly || baselineRecordCount == total(checkpoint.catalog.suppliers, domain: .suppliers)
+                + total(checkpoint.catalog.categories, domain: .categories)
+                + total(checkpoint.catalog.products, domain: .products)) else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
     }
