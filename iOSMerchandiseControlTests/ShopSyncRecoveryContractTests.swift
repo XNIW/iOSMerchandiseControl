@@ -1,9 +1,46 @@
 import Foundation
+import CryptoKit
 import SwiftData
 import XCTest
 @testable import iOSMerchandiseControl
 
 final class ShopSyncRecoveryContractTests: XCTestCase {
+    func testSHA256LowercaseHexMatchesKnownUTF8AndLeadingZeroGoldenVectors() {
+        let vectors: [(String, String)] = [
+            ("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+            ("abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
+            ("task145-leading-zero-30", "0052789bd6c7a9a24fd6ca0579674099f10d79fd30dc8fca2ccf514876a2329d"),
+            ("caffè\u{001f}猫\n😀e\u{0301}", "c595fe204ed8ee0b40630db893d8704ea51955e7f580bab15ee01984bd0bddc8")
+        ]
+        for (input, expected) in vectors {
+            let actual = ShopSyncRecoveryCanonical.sha256(input)
+            XCTAssertEqual(actual, expected)
+            XCTAssertEqual(actual.utf8.count, 64)
+            XCTAssertTrue(actual.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) })
+        }
+        XCTAssertTrue(ShopSyncRecoveryCanonical.sha256("task145-leading-zero-30").hasPrefix("00"))
+        // Preserve exact UTF-8 input; no Unicode normalization is introduced.
+        XCTAssertNotEqual(ShopSyncRecoveryCanonical.sha256("e\u{0301}"),
+            ShopSyncRecoveryCanonical.sha256("é"))
+    }
+
+    func testSHA256LowercaseHexMatchesLegacyFormattingForEveryDigestByteValue() {
+        var observedDigestBytes = Set<UInt8>()
+        for value in 0..<256 {
+            let scalar = String(UnicodeScalar(value)!)
+            let inputs = ["task145-hex|\(value)|\(scalar)|猫", "\(scalar)\u{001f}source\nnote|\(255 - value)"]
+            for input in inputs {
+                let digest = SHA256.hash(data: Data(input.utf8))
+                observedDigestBytes.formUnion(digest)
+                let legacy = digest.map { String(format: "%02x", $0) }.joined()
+                XCTAssertEqual(ShopSyncRecoveryCanonical.sha256(input), legacy,
+                    "The existing canonical digest must preserve every lowercase hex byte.")
+            }
+        }
+        XCTAssertEqual(observedDigestBytes, Set((0...255).map { UInt8($0) }),
+            "The fixed corpus must exercise all 256 possible digest byte values.")
+    }
+
     @MainActor
     func testSameScopeRecoveryPromotionRequiresExplicitDestructiveCoordinator() throws {
         let suiteName = "SameScopePromotion-\(UUID().uuidString)"

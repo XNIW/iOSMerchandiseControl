@@ -143,7 +143,8 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         _ payload: some Encodable,
         table: String,
         columns: String,
-        id: UUID
+        id: UUID,
+        preserveCatalogWriteRejection: Bool = false
     ) async throws -> Row {
         let ownerUserID = try await requireOwner()
         let client = await client()
@@ -164,6 +165,61 @@ struct SupabaseRemoteQueryExecutor: Sendable {
         } catch let error as DecodingError {
             throw await transport.mapDecodingError(error)
         } catch let error as PostgrestError {
+            if preserveCatalogWriteRejection,
+               ["inventory_suppliers", "inventory_categories", "inventory_products"].contains(table),
+               let rejection = SyncCatalogWriteRejectedWithoutCommit.classify(error.code) { throw rejection }
+            throw await transport.mapPostgrestError(error)
+        } catch let error as URLError {
+            throw await transport.networkError(error)
+        } catch {
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
+        }
+    }
+
+    /// One immutable conditional execution. A zero-row reply is deliberately not an ACK.
+    func updateProductConditionally(
+        _ payload: some Encodable, columns: String, id: UUID, ownerUserID: UUID, shopID: UUID,
+        expectedVersion: SyncCatalogConditionalVersion,
+        beforeDispatch: @Sendable () throws -> Void = {}
+    ) async throws -> [RemoteInventoryProductRow] {
+        try expectedVersion.validate()
+        guard try await requireOwner() == ownerUserID else {
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
+                statusCode: nil, code: nil, message: "Owner mismatch.")
+        }
+        let client = await client()
+        // Authentication/client acquisition can suspend across account or shop invalidation.
+        // The adapter supplies its captured lease; generic wire fixtures have no automatic scope.
+        try beforeDispatch()
+        do {
+            var request = try client.from("inventory_products").update(payload)
+                .eq("id", value: id.uuidString)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .eq("shop_id", value: shopID.uuidString)
+                .eq("updated_at", value: expectedVersion.expectedUpdatedAt)
+            if let deletedAt = expectedVersion.expectedDeletedAt {
+                request = request.eq("deleted_at", value: deletedAt)
+            } else {
+                request = request.is("deleted_at", value: nil)
+            }
+            let rows: [RemoteInventoryProductRow] = try await request.select(columns).execute().value
+            guard rows.count <= 1, rows.allSatisfy({ row in
+                row.id == id && row.ownerUserID == ownerUserID && row.shopID == shopID
+                    && SyncCatalogConditionalVersion.isValidTimestamp(row.updatedAt)
+                    && (row.deletedAt.map(SyncCatalogConditionalVersion.isValidTimestamp) ?? true)
+                    && (row.deletedAt == nil) == (expectedVersion.expectedDeletedAt == nil)
+            }) else {
+                throw SupabaseTransportClientError.schemaDrift(message: "Unqualified conditional catalog response.")
+            }
+            return rows
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as SupabaseTransportClientError {
+            throw error
+        } catch let error as DecodingError {
+            throw await transport.mapDecodingError(error)
+        } catch let error as PostgrestError {
+            if let rejection = SyncCatalogWriteRejectedWithoutCommit.classify(error.code) { throw rejection }
             throw await transport.mapPostgrestError(error)
         } catch let error as URLError {
             throw await transport.networkError(error)

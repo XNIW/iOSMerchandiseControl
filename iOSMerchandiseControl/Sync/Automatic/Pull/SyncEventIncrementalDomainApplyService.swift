@@ -1068,6 +1068,10 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         }
         let defaults = defaults
         let atomicMutationProbeForTesting = atomicMutationProbeForTesting
+        #if DEBUG
+        // Detached SwiftData work does not inherit task-local correlation.
+        let b6Cycle = PilotCommitTrace.B6Context.cycle
+        #endif
         return try await Task.detached(priority: .userInitiated) {
             var forcedHistoryBlock: RemoteSyncEventRow?
             for attempt in 0..<2 {
@@ -1086,6 +1090,19 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                         try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
                             modelContainer
                         )
+                        #if DEBUG
+                        let b6Apply = PilotCommitTrace.b6BeginApply(cycle: b6Cycle,
+                            productIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.productIDs }),
+                            priceIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.priceIDs }),
+                            catalogProducts: b6Cycle == nil ? [] : catalog.products,
+                            prices: b6Cycle == nil ? [] : priceRows,
+                            historyIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.sessionIDs }))
+                        var b6Returned = false
+                        defer {
+                            if !b6Returned { PilotCommitTrace.b6ApplyEnd(b6Apply, returned: false,
+                                ns: PilotCommitTrace.b6Now()) }
+                        }
+                        #endif
                         try context.transaction {
                             let protected = try pendingRemoteIDs(
                                 context: context,
@@ -1100,6 +1117,17 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                     || !catalog.suppliers.isEmpty
                                     || !catalog.categories.isEmpty
                             )
+                            #if DEBUG
+                            // Existing identity index only: no observer database read.
+                            let b6BeforeBody = b6Apply.flatMap { ticket in
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                return matches.count == 1 ? PilotCommitTrace.b6ProductBody(matches[0]) : nil
+                            }
+                            let b6BeforeWasLive = b6Apply.map { ticket in
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                return matches.count == 1 && matches[0].remoteDeletedAt == nil
+                            } ?? false
+                            #endif
                             let localPriceIdentityIndex = try IncrementalLocalProductPriceIdentityIndex(
                                 context: context,
                                 includePrices: !priceRows.isEmpty
@@ -1202,11 +1230,18 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             try atomicMutationProbeForTesting?(.afterCatalog)
 
                             let priceStarted = mcNowMillis()
+                            #if DEBUG
+                            let priceResult = try PilotCommitTrace.B6Context.$apply.withValue(b6Apply) {
+                                try applyTargetedProductPriceMutationRows(selectedPrices,
+                                    protected: protected, context: context)
+                            }
+                            #else
                             let priceResult = try applyTargetedProductPriceMutationRows(
                                 selectedPrices,
                                 protected: protected,
                                 context: context
                             )
+                            #endif
                             for row in selectedPrices {
                                 try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                             }
@@ -1214,6 +1249,12 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             try atomicMutationProbeForTesting?(.afterPrices)
 
                             let historyStarted = mcNowMillis()
+                            #if DEBUG
+                            let historyResult = try PilotCommitTrace.B6Context.$apply.withValue(b6Apply) {
+                                try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions(
+                                    selectedHistory, ownerUserID: ownerUserID, context: context, scope: scope)
+                            }
+                            #else
                             let historyResult = try HistoryIncrementalApplyService
                                 .applyRemoteSharedSheetSessions(
                                     selectedHistory,
@@ -1221,6 +1262,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                     context: context,
                                     scope: scope
                                 )
+                            #endif
                             guard historyResult.skippedDirtyRemoteIDs.isEmpty else {
                                 throw SyncEventLateDirtyHistoryError(
                                     remoteIDs: historyResult.skippedDirtyRemoteIDs
@@ -1232,6 +1274,21 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             // Calling save() here would publish the three domains
                             // before a later error could roll the transaction back.
                             try atomicMutationProbeForTesting?(.afterMutationsBeforeCommit)
+                            #if DEBUG
+                            if let ticket = b6Apply {
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                let remoteRows = selectedCatalog.products.filter { $0.id == ticket.targetID }
+                                if matches.count == 1, remoteRows.count == 1 {
+                                    if remoteRows[0].deletedAt == nil {
+                                        PilotCommitTrace.b6MappedProduct(ticket, beforeBody: b6BeforeBody,
+                                            product: matches[0], rawVersion: remoteRows[0].updatedAt)
+                                    } else {
+                                        PilotCommitTrace.b6MappedDeletion(ticket, beforeBody: b6BeforeBody,
+                                            beforeWasLive: b6BeforeWasLive, product: matches[0], row: remoteRows[0])
+                                    }
+                                }
+                            }
+                            #endif
                             completed = SyncEventAtomicMutationResult(
                                 appliedEvents: applied.map(\.event),
                                 lateProtectedBlock: lateBlock,
@@ -1243,6 +1300,11 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                 historyApplyMs: historyApplyMs
                             )
                         }
+                        #if DEBUG
+                        let b6CommitReturnNS = PilotCommitTrace.b6Now()
+                        b6Returned = true
+                        PilotCommitTrace.b6ApplyEnd(b6Apply, returned: true, ns: b6CommitReturnNS)
+                        #endif
                         Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
                     }
                     return completed

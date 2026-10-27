@@ -1,5 +1,10 @@
 import Foundation
 import SwiftData
+// TASK145_COST39_BEGIN oslog-import
+#if DEBUG
+import OSLog
+#endif
+// TASK145_COST39_END oslog-import
 
 /// Current business-body readback, independent of the immutable cloud checkpoint.
 /// Only validated remote apply/ACK writes these sparse local-only receipts.
@@ -149,16 +154,69 @@ nonisolated enum LocalCatalogBodyProofStore {
             scope: scope, overlayGenerationID: generationID)
     }
 
+    /// Verifies the already persisted projection of a previous owned transfer.
+    /// The caller separately proves the exact original manual request/members
+    /// and generation mapping. This grants neither an ACK nor a new request.
+    static func matchesTransferredProductBody(_ row: Product, context: ModelContext,
+                                             scope: Task126VerifiedOwnerStoreScope,
+                                             generationID: UUID) throws -> Bool {
+        guard let id = row.remoteID else { return false }
+        let key = recordID(kind: SupabaseCatalogBaselineEntityType.product.rawValue, id: id)
+        let proofDomain = domain
+        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(predicate: #Predicate {
+            $0.domain == proofDomain && $0.id == key
+        })
+        descriptor.fetchLimit = 2
+        let entries = try context.fetch(descriptor)
+        guard entries.count <= 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
+        guard let entry = entries.first else { return false }
+        let proof = try decode(entry, accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            deviceIdentityHash: scope.deviceIdentityHash, generationID: generationID)
+        let canonical = ManualPushFingerprintNormalizer.product(barcode: row.barcode, itemNumber: row.itemNumber,
+            productName: row.productName, secondProductName: row.secondProductName,
+            purchasePrice: row.purchasePrice, retailPrice: row.retailPrice, stockQuantity: row.stockQuantity,
+            supplierRemoteID: row.supplier?.remoteID, categoryRemoteID: row.category?.remoteID).canonicalString
+        return proof.kind == SupabaseCatalogBaselineEntityType.product.rawValue && proof.remoteID == id
+            && proof.updatedAt == row.remoteUpdatedAt && proof.deletedAt == row.remoteDeletedAt
+            && proof.canonical == canonical
+    }
+
     /// Called off Main under a before/after physical-file fence. Retained
     /// pending intent explains only its own exact current business body.
     static func validate(container: ModelContainer, manifest: SyncStoreGenerationManifest, storeURL: URL) throws {
+// TASK145_COST39_BEGIN validate-start
+#if DEBUG
+        let costStartNS = DispatchTime.now().uptimeNanoseconds
+        var costPhaseStartNS = costStartNS
+        var costPhase = 0 // setup, products, suppliers, categories, ledger, prices, history
+        var costNS = [UInt64](repeating: 0, count: 7)
+        var costReturnedNormally = false
+        func costEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= now &- costPhaseStartNS
+            costPhase = next
+            costPhaseStartNS = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= ended &- costPhaseStartNS
+            let elapsed = ended &- costStartNS
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.validate start_ns.\(costStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) returned.\(costReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(costPhase, privacy: .public) setup_ns.\(costNS[0], privacy: .public) products_ns.\(costNS[1], privacy: .public) suppliers_ns.\(costNS[2], privacy: .public) categories_ns.\(costNS[3], privacy: .public) ledger_ns.\(costNS[4], privacy: .public) prices_ns.\(costNS[5], privacy: .public) history_ns.\(costNS[6], privacy: .public)")
+        }
+#endif
+// TASK145_COST39_END validate-start
         let context = ModelContext(container); context.autosaveEnabled = false
         let ownerHash = manifest.accountHash
+        let resolutions = try LocalCatalogConflictResolutionStore.receipts(context: context)
+        guard resolutions.allSatisfy({ $0.1.currentGenerationID == manifest.generationID }) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        let resolved = Set(resolutions.flatMap { $0.1.resolvedChangeIDs })
         var pendingDescriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
             $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
         })
-        pendingDescriptor.fetchLimit = LocalPendingChangeAccumulator.defaultMaxActiveChanges + 1
-        let pending = try context.fetch(pendingDescriptor)
+        pendingDescriptor.fetchLimit = LocalPendingChangeAccumulator.defaultMaxActiveChanges + resolved.count + 1
+        let pending = try context.fetch(pendingDescriptor).filter { !resolved.contains($0.changeID) }
         guard pending.count <= LocalPendingChangeAccumulator.defaultMaxActiveChanges,
               pending.allSatisfy({ change in
                   guard let rawOwner = change.ownerUserID, let owner = UUID(uuidString: rawOwner) else { return false }
@@ -179,33 +237,74 @@ nonisolated enum LocalCatalogBodyProofStore {
               baseline.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
+// TASK145_COST39_BEGIN validate-phase-1
+#if DEBUG
+        costEnter(1)
+#endif
+// TASK145_COST39_END validate-phase-1
         try scan(Product.self, kind: .product, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\Product.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.product(remoteID: row.remoteID, barcode: row.barcode)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.product.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.product(barcode: row.barcode, itemNumber: row.itemNumber,
                     productName: row.productName, secondProductName: row.secondProductName,
                     purchasePrice: row.purchasePrice, retailPrice: row.retailPrice, stockQuantity: row.stockQuantity,
                     supplierRemoteID: row.supplier?.remoteID, categoryRemoteID: row.category?.remoteID).canonicalString,
-                 LocalPendingChangeLogicalKey.product(remoteID: row.remoteID, barcode: row.barcode),
-                 LocalPendingChangeLogicalKey.productFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.productFingerprintHash(row) : "")
             }
+// TASK145_COST39_BEGIN validate-phase-2
+#if DEBUG
+        costEnter(2)
+#endif
+// TASK145_COST39_END validate-phase-2
         try scan(Supplier.self, kind: .supplier, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\Supplier.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.supplier(remoteID: row.remoteID, name: row.name)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.supplier.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.supplier(remoteID: row.remoteID, name: row.name).canonicalString,
-                 LocalPendingChangeLogicalKey.supplier(remoteID: row.remoteID, name: row.name),
-                 LocalPendingChangeLogicalKey.supplierFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.supplierFingerprintHash(row) : "")
             }
+// TASK145_COST39_BEGIN validate-phase-3
+#if DEBUG
+        costEnter(3)
+#endif
+// TASK145_COST39_END validate-phase-3
         try scan(ProductCategory.self, kind: .productCategory, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\ProductCategory.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.category(remoteID: row.remoteID, name: row.name)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.productCategory.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.category(remoteID: row.remoteID, name: row.name).canonicalString,
-                 LocalPendingChangeLogicalKey.category(remoteID: row.remoteID, name: row.name),
-                 LocalPendingChangeLogicalKey.categoryFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.categoryFingerprintHash(row) : "")
             }
+// TASK145_COST39_BEGIN validate-phase-4
+#if DEBUG
+        costEnter(4)
+#endif
+// TASK145_COST39_END validate-phase-4
         let ledger = try ShopSyncRecoveryLedger(generationStoreURL: storeURL, mode: .readExisting)
+// TASK145_COST39_BEGIN validate-phase-5
+#if DEBUG
+        costEnter(5)
+#endif
+// TASK145_COST39_END validate-phase-5
         try validatePrices(context: context, manifest: manifest, pending: grouped, ledger: ledger)
+// TASK145_COST39_BEGIN validate-phase-6
+#if DEBUG
+        costEnter(6)
+#endif
+// TASK145_COST39_END validate-phase-6
         try validateHistory(context: context, manifest: manifest, pending: grouped, ledger: ledger)
+// TASK145_COST39_BEGIN validate-returned
+#if DEBUG
+        costReturnedNormally = true
+#endif
+// TASK145_COST39_END validate-returned
     }
 
     private static func priceBody(parent: UUID, type: String, price: Double, effectiveAt: Date,
@@ -351,6 +450,7 @@ nonisolated enum LocalCatalogBodyProofStore {
         let pager = BodyRowPager<ProductPrice>(context: context, manifest: manifest, kind: kind,
             sort: [SortDescriptor(\ProductPrice.remoteID)], maximum: ShopSyncRecoveryLimits.maximumRows(for: .prices),
             id: { $0.remoteID })
+        pager.descriptor.relationshipKeyPathsForPrefetching = [\ProductPrice.product]
         func validateExtra(_ row: ProductPrice) throws {
             // A new locally created product has no remote ID until its own
             // catalog ACK. Its exact scoped price intent is still usable.
@@ -374,7 +474,8 @@ nonisolated enum LocalCatalogBodyProofStore {
                       let amount = Decimal(string: parts[3], locale: Locale(identifier: "en_US_POSIX")),
                       let type = SupabasePullPreviewNormalizer.normalizedPriceType(parts[4]),
                       let effective = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: parts[5]),
-                      let created = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: parts[6]),
+                      let created = parts[6].utf8.elementsEqual(parts[5].utf8)
+                        ? effective : ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: parts[6]),
                       ShopSyncRecoveryCanonical.isRedactedKey(parts[7]), ShopSyncRecoveryCanonical.isRedactedKey(parts[8]) else {
                     throw SyncStoreGenerationError.activationReadBackFailed
                 }
@@ -534,17 +635,62 @@ nonisolated enum LocalCatalogBodyProofStore {
         manifest: SyncStoreGenerationManifest, pending: [String: [LocalPendingChange]],
         sort: [SortDescriptor<Model>], body: (Model) -> Current
     ) throws {
+// TASK145_COST39_BEGIN scan-start
+#if DEBUG
+        let costStartNS = DispatchTime.now().uptimeNanoseconds
+        var costPhaseStartNS = costStartNS
+        var costPhase = 0 // setup, fetch, current body, expected body, compare, count
+        var costNS = [UInt64](repeating: 0, count: 6)
+        var costBatches: UInt64 = 0
+        var costRows: UInt64 = 0
+        var costReturnedNormally = false
+        func costEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= now &- costPhaseStartNS
+            costPhase = next
+            costPhaseStartNS = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= ended &- costPhaseStartNS
+            let elapsed = ended &- costStartNS
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.scan entity.\(kind.rawValue, privacy: .public) start_ns.\(costStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) returned.\(costReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(costPhase, privacy: .public) batches.\(costBatches, privacy: .public) rows.\(costRows, privacy: .public) setup_ns.\(costNS[0], privacy: .public) fetch_ns.\(costNS[1], privacy: .public) current_ns.\(costNS[2], privacy: .public) expected_ns.\(costNS[3], privacy: .public) compare_ns.\(costNS[4], privacy: .public) count_ns.\(costNS[5], privacy: .public)")
+        }
+#endif
+// TASK145_COST39_END scan-start
         var descriptor = FetchDescriptor<Model>(sortBy: sort)
         descriptor.fetchLimit = batchSize
         var offset = 0; var prior: UUID?; var physicalActive = 0
         while true {
             try Task.checkCancellation()
             descriptor.fetchOffset = offset
+// TASK145_COST39_BEGIN scan-fetch
+#if DEBUG
+            costEnter(1)
+#endif
+// TASK145_COST39_END scan-fetch
             let rows = try context.fetch(descriptor)
             if rows.isEmpty { break }
+// TASK145_COST39_BEGIN scan-current
+#if DEBUG
+            costBatches &+= 1
+            costRows &+= UInt64(rows.count)
+            costEnter(2)
+#endif
+// TASK145_COST39_END scan-current
             let current = rows.map(body)
             let ids = current.compactMap { $0.0 }
+// TASK145_COST39_BEGIN scan-expected
+#if DEBUG
+            costEnter(3)
+#endif
+// TASK145_COST39_END scan-expected
             let expected = try expectedBodies(kind: kind, ids: ids, context: context, manifest: manifest)
+// TASK145_COST39_BEGIN scan-compare
+#if DEBUG
+            costEnter(4)
+#endif
+// TASK145_COST39_END scan-compare
             for item in current {
                 let activePending = (pending[item.4] ?? []).filter { $0.entityKindRaw == kind.rawValue }
                 let intentMatches = activePending.contains { $0.intendedFingerprintHash == item.5 }
@@ -570,6 +716,11 @@ nonisolated enum LocalCatalogBodyProofStore {
             }
             if rows.count < batchSize { break }
         }
+// TASK145_COST39_BEGIN scan-count
+#if DEBUG
+        costEnter(5)
+#endif
+// TASK145_COST39_END scan-count
         var expectedActive = try expectedActiveCount(kind: kind, context: context, manifest: manifest)
         let deletes = Set(pending.values.flatMap { $0 }.filter {
             $0.entityKindRaw == kind.rawValue && $0.operation == .delete
@@ -580,6 +731,11 @@ nonisolated enum LocalCatalogBodyProofStore {
                 .values.filter { $0.deletedAt == nil }.count
         }
         guard expectedActive == physicalActive else { throw SyncStoreGenerationError.activationReadBackFailed }
+// TASK145_COST39_BEGIN scan-returned
+#if DEBUG
+        costReturnedNormally = true
+#endif
+// TASK145_COST39_END scan-returned
     }
 
     private static func expectedActiveCount(kind: SupabaseCatalogBaselineEntityType, context: ModelContext,
@@ -627,9 +783,19 @@ nonisolated enum LocalCatalogBodyProofStore {
             $0.baselineRunID == runID && $0.entityType == kindRaw && ids.contains($0.remoteID)
         }))
         var result: [UUID: Body] = [:]
+        // This memo contains only a pure UUID-to-hash conversion for this batch.
+        // Every record still checks its own owner, schema, identity and body.
+        var ownerHashes: [UUID: String] = [:]
         for record in records {
+            let ownerHash: String
+            if let computed = ownerHashes[record.ownerUserUUID] {
+                ownerHash = computed
+            } else {
+                ownerHash = AccountBindingStore.accountHash(for: record.ownerUserUUID)
+                ownerHashes[record.ownerUserUUID] = ownerHash
+            }
             guard result[record.remoteID] == nil,
-                  AccountBindingStore.accountHash(for: record.ownerUserUUID) == manifest.accountHash,
+                  ownerHash == manifest.accountHash,
                   record.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
@@ -652,18 +818,25 @@ nonisolated enum LocalCatalogBodyProofStore {
     }
 
     private static func decode(_ entry: SyncEventOutboxEntry, manifest: SyncStoreGenerationManifest) throws -> Body {
+        try decode(entry, accountHash: manifest.accountHash, storeIdentity: manifest.storeIdentity,
+            deviceIdentityHash: manifest.deviceIdentityHash, generationID: manifest.generationID)
+    }
+
+    private static func decode(_ entry: SyncEventOutboxEntry, accountHash: String,
+                               storeIdentity: LocalStoreIdentity, deviceIdentityHash: String,
+                               generationID: UUID) throws -> Body {
         guard entry.status == .localOnly, entry.metadataShape == format,
-              UUID(uuidString: entry.ownerUserID).map(AccountBindingStore.accountHash(for:)) == manifest.accountHash,
-              entry.storeId == manifest.storeIdentity.storeId, entry.localStoreId == manifest.storeIdentity.localStoreId,
-              entry.schemaVersion == manifest.storeIdentity.schemaVersion,
-              entry.syncProtocolVersion == manifest.storeIdentity.syncProtocolVersion,
-              entry.storeEpoch == manifest.storeIdentity.storeEpoch,
-              entry.sourceDeviceID.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash,
+              UUID(uuidString: entry.ownerUserID).map(AccountBindingStore.accountHash(for:)) == accountHash,
+              entry.storeId == storeIdentity.storeId, entry.localStoreId == storeIdentity.localStoreId,
+              entry.schemaVersion == storeIdentity.schemaVersion,
+              entry.syncProtocolVersion == storeIdentity.syncProtocolVersion,
+              entry.storeEpoch == storeIdentity.storeEpoch,
+              entry.sourceDeviceID.map(DeviceInstallIDStore.identityHash(for:)) == deviceIdentityHash,
               let json = entry.metadataPayloadJSON, json.utf8.count <= ShopSyncRecoveryLimits.maximumGenerationManifestBytes,
               ShopSyncRecoveryCanonical.sha256(json) == entry.entityIDsShape,
               let data = json.data(using: .utf8) else { throw SyncStoreGenerationError.activationReadBackFailed }
         let proof = try JSONDecoder().decode(Body.self, from: data)
-        guard proof.generationID == manifest.generationID,
+        guard proof.generationID == generationID,
               entry.id == recordID(kind: proof.kind, id: proof.remoteID), entry.clientEventID == entry.id,
               entry.batchID == entry.id, entry.eventType == proof.kind, proof.updatedAt != nil else {
             throw SyncStoreGenerationError.activationReadBackFailed

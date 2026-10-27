@@ -82,11 +82,13 @@ nonisolated struct LocalPendingAggregatedPushSummary: Sendable, Equatable {
 nonisolated struct LocalPendingAggregatedCatalogBatch: Sendable, Equatable {
     var changeIDs: [String]
     var plan: ManualPushPlan
+    var dispatchSnapshot: LocalPendingManualDispatchSnapshot? = nil
 }
 
 nonisolated struct LocalPendingAggregatedProductPriceBatch: Sendable, Equatable {
     var changeIDs: [String]
     var plan: ProductPricePushDryRunPlan
+    var dispatchSnapshot: LocalPendingManualDispatchSnapshot? = nil
 }
 
 nonisolated struct LocalPendingAggregatedPushPlan: Sendable, Equatable {
@@ -112,6 +114,81 @@ nonisolated struct LocalPendingAggregatedPushPlan: Sendable, Equatable {
     }
 }
 
+nonisolated enum LocalPendingManualDispatchError: Error {
+    case staleBatch
+}
+
+/// Value snapshot of the original plan's exact local revisions. A missing cloud
+/// scope permits a planning-only preview, never a manual remote dispatch.
+nonisolated struct LocalPendingManualDispatchSnapshot: Sendable, Equatable {
+    let scope: Task126VerifiedOwnerStoreScope?
+    let tokens: [LocalPendingChangeCASToken]
+
+    @MainActor
+    static func capture(changes: [LocalPendingChange], ownerUserID: UUID,
+                        defaults: UserDefaults) -> Self {
+        Self(scope: try? Task126OwnerStoreGate.captureAutomaticScope(
+            ownerUserID: ownerUserID, defaults: defaults),
+             tokens: changes.map(LocalPendingChangeCASToken.init).sorted { $0.changeID < $1.changeID })
+    }
+
+    @MainActor
+    func withFence<Result>(modelContainer: ModelContainer, ownerUserID: UUID, defaults: UserDefaults,
+                           _ operation: (ModelContext) throws -> Result) throws -> Result {
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: modelContainer,
+            ownerUserID: ownerUserID, defaults: defaults, expectedAutomaticScope: scope, operation)
+    }
+
+    @MainActor
+    func exactRowsWithFenceHeld(context: ModelContext, ownerUserID: UUID, defaults: UserDefaults,
+                   requiresScope: Bool = true, requiresOriginalSet: Bool = true) throws -> [LocalPendingChange] {
+        guard !tokens.isEmpty, Set(tokens.map(\.changeID)).count == tokens.count else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        if let scope {
+            guard scope.ownerUserID == ownerUserID else { throw LocalPendingManualDispatchError.staleBatch }
+        } else if requiresScope {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        let owner = ownerUserID.uuidString.lowercased()
+        let relevantKeys = Array(Set(tokens.map(\.logicalKey)))
+        var descriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
+            $0.ownerUserID == owner && relevantKeys.contains($0.logicalKey)
+        })
+        descriptor.fetchLimit = LocalPendingAggregatedPushPlanner.defaultHardCap + 1
+        let rows = try context.fetch(descriptor)
+        guard rows.count <= LocalPendingAggregatedPushPlanner.defaultHardCap else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        let ids = Set(tokens.map(\.changeID))
+        let exact = rows.filter { ids.contains($0.changeID) }.sorted { $0.changeID < $1.changeID }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        let successors = Set(try LocalCatalogConflictResolutionStore.receipts(context: context)
+            .compactMap { $0.1.decision.successor?.changeID })
+        guard exact.count == tokens.count else { throw LocalPendingManualDispatchError.staleBatch }
+        for (token, row) in zip(tokens, exact) {
+            guard token.matches(row), !resolved.contains(row.changeID), !successors.contains(row.changeID),
+                  try LocalPendingBusinessAttemptStore.entry(changeID: row.changeID, context: context) == nil else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            if let scope {
+                guard LocalPendingChangeScopeMatcher.matches(row, ownerUserID: ownerUserID,
+                    accountHash: scope.accountHash, storeIdentity: scope.storeIdentity) else {
+                    throw LocalPendingManualDispatchError.staleBatch
+                }
+            }
+        }
+        if requiresOriginalSet {
+            let keys = Set(exact.map(\.logicalKey))
+            let currentIDs = Set(rows.filter {
+                !$0.status.isTerminal && !resolved.contains($0.changeID) && keys.contains($0.logicalKey)
+            }.map(\.changeID))
+            guard currentIDs == ids else { throw LocalPendingManualDispatchError.staleBatch }
+        }
+        return exact
+    }
+}
+
 @MainActor
 struct LocalPendingAggregatedPushStateStore {
     private let context: ModelContext
@@ -120,6 +197,109 @@ struct LocalPendingAggregatedPushStateStore {
     init(context: ModelContext, now: @escaping () -> Date = Date.init) {
         self.context = context
         self.now = now
+    }
+
+    /// Admission and transition share the same serialization fence as Save,
+    /// conflict resolution, and generation retirement. No await separates them.
+    func markSent(snapshot: LocalPendingManualDispatchSnapshot, ownerUserID: UUID,
+                  defaults: UserDefaults = .standard) throws -> LocalPendingManualDispatchSnapshot {
+        try snapshot.withFence(modelContainer: context.container,
+                ownerUserID: ownerUserID, defaults: defaults) { fresh in
+            let rows = try snapshot.exactRowsWithFenceHeld(context: fresh, ownerUserID: ownerUserID, defaults: defaults)
+            guard try ManualPendingAtomicRequestStore.protectedChangeIDs(context: fresh)
+                    .isDisjoint(with: Set(rows.map(\.changeID))),
+                  rows.allSatisfy({ $0.status == .pending && (!$0.entityKind.isCatalogKind || $0.lastAttemptAt == nil) }) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            try Self.validatePriceParents(rows: rows, context: fresh, scope: snapshot.scope)
+            let timestamp = now()
+            for row in rows {
+                row.status = .sent
+                row.lastAttemptAt = timestamp
+                row.updatedAt = timestamp
+            }
+            try fresh.save()
+            return LocalPendingManualDispatchSnapshot(scope: snapshot.scope,
+                tokens: rows.map(LocalPendingChangeCASToken.init))
+        }
+    }
+
+    func finish(snapshot: LocalPendingManualDispatchSnapshot, ownerUserID: UUID,
+                status: LocalPendingChangeStatus, defaults: UserDefaults = .standard,
+                verifiedPricePayloads: [ProductPriceManualPushPayload]? = nil,
+                atomicBatchID: UUID? = nil,
+                verifiedReadOnlyChangeIDs: Set<String> = [],
+                verifiedPriceRows: [RemoteInventoryProductPriceRow]? = nil) throws {
+        try snapshot.withFence(modelContainer: context.container,
+                ownerUserID: ownerUserID, defaults: defaults) { fresh in
+            let rows = try snapshot.exactRowsWithFenceHeld(context: fresh, ownerUserID: ownerUserID,
+                defaults: defaults, requiresOriginalSet: false)
+            guard rows.allSatisfy({ $0.status == .sent }) else { throw LocalPendingManualDispatchError.staleBatch }
+            let protected = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: fresh)
+            if !protected.isDisjoint(with: Set(snapshot.tokens.map(\.changeID))) {
+                // Unknown/partial outcomes retain the exact original sent token.
+                guard status == .acknowledged, let atomicBatchID, let scope = snapshot.scope else { return }
+                try ManualPendingAtomicRequestStore.removeConfirmedBatch(batchID: atomicBatchID,
+                    members: snapshot.tokens, context: fresh, scope: scope,
+                    verifiedReadOnlyChangeIDs: verifiedReadOnlyChangeIDs)
+            }
+            if let verifiedPricePayloads {
+                guard status == .acknowledged, rows.allSatisfy({ $0.entityKind == .productPrice }) else {
+                    throw LocalPendingManualDispatchError.staleBatch
+                }
+                try Self.validatePriceParents(rows: rows, context: fresh, scope: snapshot.scope)
+                if let atomicBatchID {
+                    _ = atomicBatchID
+                    guard let verifiedPriceRows, let scope = snapshot.scope,
+                          verifiedPriceRows.count == verifiedPricePayloads.count,
+                          Set(verifiedPriceRows.map(\.id)) == Set(verifiedPricePayloads.map(\.id)) else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    for remoteRow in verifiedPriceRows {
+                        guard remoteRow.ownerUserID == ownerUserID, remoteRow.shopID == scope.shopID else {
+                            throw LocalPendingManualDispatchError.staleBatch
+                        }
+                        try LocalCatalogBodyProofStore.record(remoteRow, context: fresh, scope: scope)
+                    }
+                }
+                _ = try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(verifiedPricePayloads, context: fresh, saveChanges: false)
+            }
+            for row in rows {
+                row.status = status
+                row.updatedAt = now()
+            }
+            try fresh.save()
+        }
+    }
+
+    static func validatePriceParents(rows: [LocalPendingChange], context: ModelContext,
+                                             scope: Task126VerifiedOwnerStoreScope?) throws {
+        let keys = Set(rows.filter { $0.entityKind == .productPrice }.map(\.logicalKey))
+        guard !keys.isEmpty else { return }
+        guard let scope else { throw LocalPendingManualDispatchError.staleBatch }
+        let blocked = try LocalCatalogConflictResolutionStore.blockedParentProductIDs(context: context, scope: scope)
+        var priceDescriptor = FetchDescriptor<ProductPrice>(predicate: #Predicate { $0.remoteID == nil })
+        priceDescriptor.fetchLimit = LocalPendingAggregatedPushPlanner.defaultHardCap + 1
+        let prices = try context.fetch(priceDescriptor)
+        guard prices.count <= LocalPendingAggregatedPushPlanner.defaultHardCap else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        var found = Set<String>()
+        for price in prices {
+            guard let product = price.product else { continue }
+            let priceKeys = Set([product.remoteID, nil].map {
+                LocalPendingChangeLogicalKey.productPrice(productRemoteID: $0, productBarcode: product.barcode,
+                    type: price.type, effectiveAt: price.effectiveAt)
+            }).intersection(keys)
+            guard !priceKeys.isEmpty else { continue }
+            guard price.remoteID == nil, let remoteID = product.remoteID,
+                  product.remoteDeletedAt == nil, !blocked.contains(remoteID) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            guard found.isDisjoint(with: priceKeys) else { throw LocalPendingManualDispatchError.staleBatch }
+            found.formUnion(priceKeys)
+        }
+        guard found == keys else { throw LocalPendingManualDispatchError.staleBatch }
     }
 
     func markSent(changeIDs: [String], ownerUserID: UUID, planFingerprint: String) throws {
@@ -178,7 +358,11 @@ struct LocalPendingAggregatedPushStateStore {
             sortBy: [SortDescriptor(\.updatedAt, order: .forward)]
         )
         let timestamp = now()
-        let changes = try context.fetch(descriptor).filter { ids.contains($0.changeID) }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        let changes = try context.fetch(descriptor).filter { ids.contains($0.changeID) && !resolved.contains($0.changeID) }
+        guard try changes.allSatisfy({ try LocalPendingBusinessAttemptStore.entry(changeID: $0.changeID, context: context) == nil }) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
         for change in changes {
             apply(change, timestamp)
         }
@@ -197,6 +381,7 @@ final class LocalPendingAggregatedPushPlanner {
     nonisolated static let defaultHardCap = 1_000
     nonisolated static let defaultSentRetryCooldown: TimeInterval = 30 * 60
 
+    private let defaults: UserDefaults
     private let context: ModelContext
     private let priceRemoteFetcher: (any SupabaseProductPricePushDryRunRemoteFetching)?
     private let now: () -> Date
@@ -222,7 +407,8 @@ final class LocalPendingAggregatedPushPlanner {
         priceEngine: SupabaseProductPricePushDryRunEngine = SupabaseProductPricePushDryRunEngine(),
         priceFetchOptions: ProductPricePushDryRunFetchOptions = ProductPricePushDryRunFetchOptions(),
         includesCatalog: Bool = true,
-        includesProductPrice: Bool = true
+        includesProductPrice: Bool = true,
+        defaults: UserDefaults = .standard
     ) {
         self.context = context
         self.priceRemoteFetcher = priceRemoteFetcher
@@ -236,6 +422,7 @@ final class LocalPendingAggregatedPushPlanner {
         self.priceFetchOptions = priceFetchOptions
         self.includesCatalog = includesCatalog
         self.includesProductPrice = includesProductPrice
+        self.defaults = defaults
     }
 
     func makePlan(ownerUserID: UUID?) async throws -> LocalPendingAggregatedPushPlan {
@@ -254,10 +441,10 @@ final class LocalPendingAggregatedPushPlanner {
 
         if includesCatalog {
             let storeIdentity = ShopContextSelection
-                .selectedShopID(ownerUserID: ownerUserID) == nil
+                .selectedShopID(ownerUserID: ownerUserID, defaults: defaults) == nil
                 ? LocalStoreIdentity.anonymous
                 : ShopContextSelection.localStoreIdentity(
-                    ownerUserID: ownerUserID
+                    ownerUserID: ownerUserID, defaults: defaults
                 )
             _ = try CatalogTextPendingRepair.repair(
                 context: context,
@@ -287,6 +474,11 @@ final class LocalPendingAggregatedPushPlanner {
         }
 
         let activeChanges = try fetchActiveOwnerChanges(ownerUserID: ownerUserID, limit: hardCap + 1)
+        // The manual aggregate adapter has no immutable conditional-attempt
+        // contract. It must not turn a resolution successor into an ordinary
+        // unconditioned PATCH or rewrite a retained automatic seal.
+        let conditionalSuccessors = Set(try LocalCatalogConflictResolutionStore.receipts(context: context)
+            .compactMap { $0.1.decision.successor?.changeID })
         if activeChanges.count > hardCap {
             blockers.insert(.hardCapExceeded)
         }
@@ -321,6 +513,23 @@ final class LocalPendingAggregatedPushPlanner {
             ? Array(productPricePendingChanges.prefix(maxPriceBatch))
             : []
         let selectedPending = selectedCatalogPending + selectedProductPricePending
+        let protectedManual = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context)
+        if selectedCatalogPending.contains(where: { protectedManual.contains($0.changeID) }) { blockers.insert(.unsafeCatalogPlan) }
+        if selectedProductPricePending.contains(where: { protectedManual.contains($0.changeID) }) { blockers.insert(.unsafeProductPricePlan) }
+        if try selectedCatalogPending.contains(where: { change in
+            if conditionalSuccessors.contains(change.changeID) || change.lastAttemptAt != nil { return true }
+            return try LocalPendingBusinessAttemptStore.entry(changeID: change.changeID, context: context) != nil
+        }) {
+            blockers.insert(.unsafeCatalogPlan)
+        }
+        if try selectedProductPricePending.contains(where: {
+            try LocalPendingBusinessAttemptStore.entry(changeID: $0.changeID, context: context) != nil
+        }) {
+            blockers.insert(.unsafeProductPricePlan)
+        }
+        let blockedPriceParentIDs = Set(activeChanges.filter {
+            $0.entityKind == .product
+        }.compactMap(\.entityRemoteID))
         let capState: LocalPendingAggregatedPushCapState
         if snapshot.isCapped {
             capState = .cappedStore
@@ -369,6 +578,7 @@ final class LocalPendingAggregatedPushPlanner {
             productPriceBatch = try await makeProductPriceBatch(
                 ownerUserID: ownerUserID,
                 changes: priceChanges,
+                blockedParentIDs: blockedPriceParentIDs,
                 generatedAt: generatedAt,
                 counts: &counts,
                 blockers: &blockers
@@ -439,8 +649,9 @@ final class LocalPendingAggregatedPushPlanner {
                 SortDescriptor(\.changeID, order: .forward)
             ]
         )
-        descriptor.fetchLimit = limit
-        return try context.fetch(descriptor)
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        descriptor.fetchLimit = limit + resolved.count
+        return Array(try context.fetch(descriptor).filter { !resolved.contains($0.changeID) }.prefix(limit))
     }
 
     private func fetchTerminalOwnerChangeCounts(
@@ -491,7 +702,35 @@ final class LocalPendingAggregatedPushPlanner {
         )
     }
 
+    private func freshPlanner(context: ModelContext) -> LocalPendingAggregatedPushPlanner {
+        LocalPendingAggregatedPushPlanner(context: context, priceRemoteFetcher: priceRemoteFetcher,
+            now: now, softBatchLimit: softBatchLimit, hardCap: hardCap,
+            sentRetryCooldown: sentRetryCooldown, preflightService: preflightService,
+            catalogBaselineReader: catalogBaselineReader, priceEngine: priceEngine,
+            priceFetchOptions: priceFetchOptions, includesCatalog: includesCatalog,
+            includesProductPrice: includesProductPrice, defaults: defaults)
+    }
+
     private func makeCatalogBatch(
+        ownerUserID: UUID, changes: [LocalPendingChange],
+        counts: inout LocalPendingAggregatedPushCounts,
+        blockers: inout Set<LocalPendingAggregatedPushBlocker>
+    ) throws -> LocalPendingAggregatedCatalogBatch? {
+        let original = LocalPendingManualDispatchSnapshot.capture(changes: changes,
+            ownerUserID: ownerUserID, defaults: defaults)
+        return try original.withFence(modelContainer: context.container,
+                ownerUserID: ownerUserID, defaults: defaults) { fresh in
+            let rows = try original.exactRowsWithFenceHeld(context: fresh, ownerUserID: ownerUserID,
+                defaults: defaults, requiresScope: false)
+            var batch = try freshPlanner(context: fresh).makeCatalogBatchWithFenceHeld(
+                ownerUserID: ownerUserID, changes: rows, counts: &counts, blockers: &blockers)
+            batch?.dispatchSnapshot = LocalPendingManualDispatchSnapshot(scope: original.scope,
+                tokens: rows.map(LocalPendingChangeCASToken.init))
+            return batch
+        }
+    }
+
+    private func makeCatalogBatchWithFenceHeld(
         ownerUserID: UUID,
         changes: [LocalPendingChange],
         counts: inout LocalPendingAggregatedPushCounts,
@@ -630,48 +869,24 @@ final class LocalPendingAggregatedPushPlanner {
     private func makeProductPriceBatch(
         ownerUserID: UUID,
         changes: [LocalPendingChange],
+        blockedParentIDs: Set<UUID>,
         generatedAt: Date,
         counts: inout LocalPendingAggregatedPushCounts,
         blockers: inout Set<LocalPendingAggregatedPushBlocker>
     ) async throws -> LocalPendingAggregatedProductPriceBatch? {
-        let changeKeys = Set(changes.map(\.logicalKey))
-        let prices = try fetchProductPrices(matching: changeKeys, limit: hardCap + 1)
-        if prices.exceeded {
-            blockers.insert(.localSnapshotExceeded)
+        let original = LocalPendingManualDispatchSnapshot.capture(changes: changes,
+            ownerUserID: ownerUserID, defaults: defaults)
+        let prepared = try original.withFence(modelContainer: context.container,
+                ownerUserID: ownerUserID, defaults: defaults) { fresh -> (ProductPricePushDryRunInput, LocalPendingManualDispatchSnapshot)? in
+            let rows = try original.exactRowsWithFenceHeld(context: fresh, ownerUserID: ownerUserID,
+                defaults: defaults, requiresScope: false)
+            guard let input = try freshPlanner(context: fresh).makeProductPriceInputWithFenceHeld(
+                ownerUserID: ownerUserID, changes: rows, blockedParentIDs: blockedParentIDs,
+                generatedAt: generatedAt, counts: &counts, blockers: &blockers) else { return nil }
+            return (input, LocalPendingManualDispatchSnapshot(scope: original.scope,
+                tokens: rows.map(LocalPendingChangeCASToken.init)))
         }
-        let selectedPrices = prices.values.filter { price in
-            !changeKeys.isDisjoint(with: pendingKeys(for: price))
-        }
-        let selectedKeys = Set(selectedPrices.flatMap { pendingKeys(for: $0) }).intersection(changeKeys)
-        let missingCount = changeKeys.subtracting(selectedKeys).count
-        if missingCount > 0 {
-            counts.missingLiveModelCount += missingCount
-            blockers.insert(.missingLiveModel)
-        }
-
-        let remoteLinkedCount = selectedPrices.filter { $0.remoteID != nil }.count
-        if remoteLinkedCount > 0 {
-            counts.unsupportedCount += remoteLinkedCount
-            blockers.insert(.unsafeProductPricePlan)
-        }
-
-        counts.selectedProductPriceChanges = changes.count
-        guard !changes.isEmpty else { return nil }
-
-        let input = ProductPricePushDryRunInput(
-            generatedAt: generatedAt,
-            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
-                userID: ownerUserID,
-                lastLinkedUserID: ownerUserID
-            ),
-            baselineState: try readProductPriceBaselineState(ownerUserID: ownerUserID),
-            localSnapshot: ProductPricePushDryRunLocalSnapshot(
-                products: selectedPrices.compactMap(makePriceProduct),
-                prices: selectedPrices.enumerated().compactMap { offset, price in
-                    self.makePriceLine(offset: offset, price: price)
-                }
-            )
-        )
+        guard let (input, dispatchSnapshot) = prepared else { return nil }
         let localStage = priceEngine.makeLocalStage(input: input)
         let fetchResult = await fetchRemotePriceRows(
             ownerUserID: ownerUserID,
@@ -690,8 +905,60 @@ final class LocalPendingAggregatedPushPlanner {
             blockers.insert(.unsafeProductPricePlan)
         }
         return LocalPendingAggregatedProductPriceBatch(
-            changeIDs: changes.map(\.changeID).uniquedSorted(),
-            plan: plan
+            changeIDs: dispatchSnapshot.tokens.map(\.changeID),
+            plan: plan, dispatchSnapshot: dispatchSnapshot
+        )
+    }
+
+    private func makeProductPriceInputWithFenceHeld(
+        ownerUserID: UUID, changes: [LocalPendingChange], blockedParentIDs: Set<UUID>, generatedAt: Date,
+        counts: inout LocalPendingAggregatedPushCounts, blockers: inout Set<LocalPendingAggregatedPushBlocker>
+    ) throws -> ProductPricePushDryRunInput? {
+        let changeKeys = Set(changes.map(\.logicalKey))
+        let prices = try fetchProductPrices(matching: changeKeys, limit: hardCap + 1)
+        if prices.exceeded {
+            blockers.insert(.localSnapshotExceeded)
+        }
+        let selectedPrices = prices.values.filter { price in
+            !changeKeys.isDisjoint(with: pendingKeys(for: price))
+        }
+        guard !selectedPrices.contains(where: { price in
+            guard let product = price.product, let remoteID = product.remoteID,
+                  product.remoteDeletedAt == nil else { return true }
+            return blockedParentIDs.contains(remoteID)
+        }) else {
+            blockers.insert(.unsafeProductPricePlan)
+            return nil
+        }
+        let selectedKeys = Set(selectedPrices.flatMap { pendingKeys(for: $0) }).intersection(changeKeys)
+        let missingCount = changeKeys.subtracting(selectedKeys).count
+        if missingCount > 0 {
+            counts.missingLiveModelCount += missingCount
+            blockers.insert(.missingLiveModel)
+        }
+
+        let remoteLinkedCount = selectedPrices.filter { $0.remoteID != nil }.count
+        if remoteLinkedCount > 0 {
+            counts.unsupportedCount += remoteLinkedCount
+            blockers.insert(.unsafeProductPricePlan)
+        }
+
+        counts.selectedProductPriceChanges = changes.count
+        guard !changes.isEmpty else { return nil }
+
+        return ProductPricePushDryRunInput(
+            generatedAt: generatedAt,
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
+                userID: ownerUserID,
+                lastLinkedUserID: ownerUserID
+            ),
+            baselineState: try readProductPriceBaselineState(ownerUserID: ownerUserID),
+            localSnapshot: ProductPricePushDryRunLocalSnapshot(
+                products: selectedPrices.compactMap(makePriceProduct),
+                prices: selectedPrices.enumerated().compactMap { offset, price in
+                    self.makePriceLine(offset: offset, price: price)
+                }
+            )
         )
     }
 

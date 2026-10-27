@@ -602,6 +602,7 @@
 "history.title" = "History";
 "history.status.not_attempted" = "Not synced";
 "history.status.synced" = "Synced";
+"history.status.cloud_pending" = "Local changes pending cloud sync";
 "history.status.errors" = "With errors";
 "history.delete.confirm_title" = "Delete this inventory?";
 "history.delete.confirm_message" = "This action will permanently remove the inventory:\n%@";
@@ -1868,3 +1869,62 @@
 
 "product.save.local_pending" = "Saved on this device · Waiting for cloud confirmation";
 "product.save.cloud_confirmed" = "Cloud confirmed this save";
+
+// TASK-145: scoped draft review and durable catalog conflict resolution.
+"product.review.title" = "Review changes";
+"product.review.explanation" = "Your draft is preserved. Compare the current version and choose which of your fields to keep before saving again.";
+"product.review.unavailable" = "This product is no longer available or could not be identified safely. Your changes have not been saved.";
+"product.review.base" = "When opened";
+"product.review.yours" = "Your changes";
+"product.review.current" = "Current version";
+"product.review.contested" = "Both versions changed this field";
+"product.review.keep_field" = "Keep my value for this field";
+"product.review.use_current" = "Use current version in draft";
+"product.review.edit_selected" = "Edit with selected fields";
+"product.review.return" = "Back to editing";
+"product.review.discard_draft" = "Discard draft";
+"product.review.updated" = "This product was updated. Your draft is preserved.";
+"product.review.conflict" = "This product changed. Review your changes before saving.";
+"product.review.action" = "Review changes";
+"product.review.save_retry" = "Save failed. Your changes are still here. Try saving again.";
+"product.review.field_unknown" = "Field";
+"product.resolution.title" = "Review saved change";
+"product.resolution.explanation" = "These catalog changes were saved on the device and need attention. Your choice applies only to the saved catalog changes in this comparison; saved price history remains separate.";
+"product.resolution.action" = "Review saved change";
+"product.resolution.loading" = "Saving your choice";
+"product.resolution.unconfirmed" = "The result of this saved change must be verified before it can be resolved. Synchronization will continue when eligible.";
+"product.resolution.error" = "Your choice could not be saved. The saved change and your draft are preserved. Review the current version again.";
+"product.resolution.apply_selected" = "Keep selected saved fields";
+"product.resolution.adopt_remote" = "Adopt current remote version";
+"product.resolution.adopt_tombstone" = "Accept remote deletion";
+"product.resolution.adopted_remote" = "Remote version adopted.";
+"product.resolution.adopted_tombstone" = "Remote deletion adopted.";
+"product.resolution.successor_pending" = "Choice saved on the device. Waiting to synchronize.";
+"product.resolution.navigation_busy" = "Finish or cancel the current editor before reviewing another saved change.";
+"product.resolution.invalidated" = "The current store changed. Your draft is preserved; reopen the saved change to review it.";
+"product.resolution.refresh" = "Refresh comparison";
+"product.resolution.linked_history" = "The deletion requires verification of linked price history. Your saved changes are preserved.";
+"product.resolution.relationship_unavailable" = "A selected supplier or category is no longer available. Refresh the comparison before choosing again.";
+"product.resolution.owner_busy" = "Synchronization is using this record. Your choice is preserved; review it again after the current operation finishes.";
+"product.resolution.changed_again" = "Newer changes are available. Refresh the comparison and review your choice again.";
+"product.resolution.newer_revision" = "Newer saved changes are included in this comparison. Review your choice again.";
+
+// TASK-145 contextual local capability and quiet synchronization.
+"sync.local.significantWork.title" = "Synchronizing";
+"sync.local.qualifying.title" = "Preparing your catalog";
+"sync.local.qualifying.detail" = "We are checking the data saved on this device. Other sections remain available.";
+"sync.local.firstDownload.title" = "Waiting for the first download";
+"sync.local.firstDownload.waiting" = "Your catalog will be available after the first download. You can continue using Options.";
+"sync.local.restricted.title" = "Catalog access restricted";
+"sync.local.restricted.detail" = "Check the account, shop and device access in Options. Saved data is preserved.";
+"sync.local.unavailable.title" = "Local data unavailable";
+"sync.local.unavailable.detail" = "Local data could not be opened or verified. Settings and details remain available in Options.";
+"sync.local.openOptions" = "Open Options";
+"sync.account.restoring" = "Restoring your session";
+"sync.account.temporarilyUnavailable" = "Session temporarily unavailable";
+"sync.account.resumeAutomatically" = "Checking resumes automatically when a connection is available.";
+"options.safe.phase" = "Stage";
+"options.safe.opening" = "Opening local data";
+"options.safe.code" = "Code";
+"options.safe.version" = "App version";
+"options.safe.availableLater" = "Catalog features will be available when local data can be opened.";

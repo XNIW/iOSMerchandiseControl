@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import Supabase
+import SwiftData
 import XCTest
 @testable import iOSMerchandiseControl
 
@@ -204,6 +205,351 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         })
     }
 
+    func testTransportRefresh500KeepsStructuredTransientFailure() async throws {
+        let fixture = try AuthLifecycleFixture(refreshStatus: 500, expiredOriginal: true)
+        let remote = SupabaseTransportClient(clientProvider: fixture.provider)
+        let request = Task { () -> AutomaticSyncFailure? in
+            do { _ = try await remote.authenticatedUserID(); return nil }
+            catch { return AutomaticSyncFailure.classify(error) }
+        }
+        defer { request.cancel() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        fixture.transport.releaseRefresh()
+        let observedFailure = await request.value
+        let failure = try XCTUnwrap(observedFailure)
+        XCTAssertEqual(failure.disposition, .transient)
+        XCTAssertEqual(failure.category, .server)
+        XCTAssertEqual(failure.httpStatus, 500)
+        XCTAssertEqual(SupabaseAuthService(provider: fixture.provider).currentSession?.userID, fixture.original.user.id)
+    }
+
+    func testTransportRefresh401KeepsActualAuthenticationDenialStatus() async throws {
+        let fixture = try AuthLifecycleFixture(refreshStatus: 401, expiredOriginal: true)
+        let service = SupabaseAuthService(provider: fixture.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        let generation = service.authGeneration
+        let storedSession = try fixture.storage.retrieve(key: fixture.storageKey)
+        let requiresSignIn = expectation(description: "Typed current-generation refresh denial reaches the existing auth lifecycle")
+        let observation = viewModel.$state.filter { $0 == .failed(.sessionMissing) }.prefix(1).sink { _ in requiresSignIn.fulfill() }
+        defer { observation.cancel() }
+        let remote = SupabaseTransportClient(clientProvider: fixture.provider)
+        let request = Task { () -> AutomaticSyncFailure? in
+            do { _ = try await remote.authenticatedUserID(); return nil }
+            catch { return AutomaticSyncFailure.classify(error) }
+        }
+        defer { request.cancel() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        fixture.transport.releaseRefresh()
+        let observedFailure = await request.value
+        let failure = try XCTUnwrap(observedFailure)
+        XCTAssertEqual(failure.disposition, .stable)
+        XCTAssertEqual(failure.category, .authentication)
+        XCTAssertEqual(failure.httpStatus, 401)
+        await fulfillment(of: [requiresSignIn], timeout: 3)
+        XCTAssertEqual(viewModel.state, .failed(.sessionMissing), "A real 401 requires authentication without manufacturing signedOut")
+        XCTAssertTrue(viewModel.requiresSignInForPresentation)
+        XCTAssertFalse(viewModel.isSignedIn)
+        XCTAssertNil(viewModel.localMutationOwnerUserID)
+        XCTAssertFalse(service.acceptsAuthGeneration(generation))
+        XCTAssertEqual(try fixture.storage.retrieve(key: fixture.storageKey), storedSession,
+            "A typed denial retires authority but preserves the SDK credentials; this is not a synthetic logout")
+    }
+
+    func testBoundedRpcRefresh500KeepsStructuredTransientFailureBeforeRpc() async throws {
+        let fixture = try AuthLifecycleFixture(refreshStatus: 500, expiredOriginal: true)
+        let remote = SupabaseTransportClient(clientProvider: fixture.provider)
+        let request = Task { () -> AutomaticSyncFailure? in
+            do { _ = try await remote.boundedRPC("auth_probe_never_dispatched", parameters: ["probe": "synthetic"], maximumResponseBytes: 1024); return nil }
+            catch { return AutomaticSyncFailure.classify(error) }
+        }
+        defer { request.cancel() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        fixture.transport.releaseRefresh()
+        let observedFailure = await request.value
+        let failure = try XCTUnwrap(observedFailure)
+        XCTAssertEqual(failure.disposition, .transient)
+        XCTAssertEqual(failure.category, .server)
+        XCTAssertEqual(failure.httpStatus, 500)
+        XCTAssertEqual(fixture.transport.requestCount, fixture.transport.refreshRequestCount,
+            "Raw URLProtocol ingress must contain auth refresh requests only; business RPC is not admitted")
+    }
+
+    func testTransportRefreshNetworkFailureDoesNotBecomeMissingSession() async throws {
+        let fixture = try AuthLifecycleFixture(expiredOriginal: true, refreshFailureCode: .notConnectedToInternet)
+        let remote = SupabaseTransportClient(clientProvider: fixture.provider)
+        let request = Task { () -> AutomaticSyncFailure? in
+            do { _ = try await remote.authenticatedUserID(); return nil }
+            catch { return AutomaticSyncFailure.classify(error) }
+        }
+        defer { request.cancel() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        fixture.transport.releaseRefresh()
+        let observedFailure = await request.value
+        let failure = try XCTUnwrap(observedFailure)
+        XCTAssertEqual(failure.disposition, .transient)
+        XCTAssertEqual(failure.category, .network)
+        XCTAssertNil(failure.httpStatus)
+        XCTAssertEqual(failure.urlErrorCode, URLError.notConnectedToInternet.rawValue)
+        XCTAssertEqual(SupabaseAuthService(provider: fixture.provider).currentSession?.userID, fixture.original.user.id)
+    }
+
+    func testR23ConfirmedSessionAbsenceThenUnavailableReadCannotReviveTheEarlierWitness() async throws {
+        let fixture = try AuthLifecycleFixture()
+        let service = SupabaseAuthService(provider: fixture.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        let originalWitness = try XCTUnwrap(service.localIdentityReadWitness)
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.original.user.id)
+        try fixture.storage.remove(key: fixture.storageKey)
+        XCTAssertNil(fixture.provider.client.auth.currentSession)
+        fixture.storage.failRetrieval(key: fixture.storageKey)
+        defer { fixture.storage.failRetrieval(key: nil) }
+        viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertNil(viewModel.localMutationOwnerUserID)
+        XCTAssertFalse(service.acceptsLocalIdentityReadWitness(originalWitness))
+        XCTAssertFalse(viewModel.isSignedIn)
+        XCTAssertEqual(fixture.transport.requestCount, 0)
+    }
+
+    func testR23ChangedSDKSessionBodyCannotReuseTheEarlierOwnerWitness() async throws {
+        let fixture = try AuthLifecycleFixture()
+        let service = SupabaseAuthService(provider: fixture.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        let originalWitness = try XCTUnwrap(service.localIdentityReadWitness)
+        try fixture.storage.store(key: fixture.storageKey, value: JSONEncoder().encode(fixture.newLogin))
+        XCTAssertEqual(fixture.provider.client.auth.currentSession?.user.id, fixture.newLogin.user.id)
+        XCTAssertFalse(service.acceptsLocalIdentityReadWitness(originalWitness))
+        XCTAssertNil(viewModel.localMutationOwnerUserID, "A successful read of another owner invalidates the old value immediately")
+        fixture.storage.failRetrieval(key: fixture.storageKey)
+        viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertNil(viewModel.localMutationOwnerUserID, "A later storage fault cannot resurrect the first owner's witness")
+        fixture.storage.failRetrieval(key: nil)
+        viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.newLogin.user.id)
+        XCTAssertNotEqual(service.localIdentityReadWitness, originalWitness)
+    }
+
+    func testR23LateActualRefresh401CannotRevokeANewerInteractiveGeneration() async throws {
+        let fixture = try AuthLifecycleFixture(refreshStatus: 401, expiredOriginal: true)
+        let oldGeneration = fixture.provider.authSnapshot.generation
+        let oldClient = fixture.provider.client
+        let late = Task { () -> (any Error)? in
+            do { _ = try await oldClient.auth.refreshSession(); return nil }
+            catch { return error }
+        }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        let newLogin = try await fixture.makeNativeSignInService().signInWithGoogle()
+        XCTAssertNotEqual(newLogin.generation, oldGeneration)
+        let service = SupabaseAuthService(provider: fixture.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        fixture.transport.releaseRefresh()
+        let lateError = await late.value
+        let error = try XCTUnwrap(lateError)
+        guard let authError = error as? AuthError, case let .api(_, _, _, response) = authError else {
+            return XCTFail("The controlled late response must be an actual SDK API error")
+        }
+        XCTAssertEqual(response.statusCode, 401)
+        fixture.provider.recordSessionReadFailure(error, generation: oldGeneration)
+        XCTAssertTrue(fixture.provider.acceptsAuthGeneration(newLogin.generation))
+        XCTAssertFalse(fixture.provider.requiresReauthentication(generation: newLogin.generation))
+        XCTAssertTrue(viewModel.isSignedIn)
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.newLogin.user.id)
+    }
+
+    func testR23ExpiredSDKBootstrapHeldRefreshRetainsQualifiedLocalWriterBeforeCloudSessionIsReady() async throws {
+        let local = try await makeR23QualifiedAuthLocalFixture(expiredOriginal: true)
+        await fulfillment(of: [local.auth.transport.refreshStarted], timeout: 3)
+        defer { local.auth.transport.releaseRefresh() }
+        XCTAssertTrue(try XCTUnwrap(local.service.currentSession).isExpired)
+        XCTAssertFalse(local.viewModel.requiresSignInForPresentation)
+        XCTAssertTrue(local.viewModel.isRestoringSessionForPresentation || local.viewModel.isSessionTemporarilyUnavailableForPresentation)
+        XCTAssertFalse(local.viewModel.isSignedIn)
+        XCTAssertEqual(local.viewModel.localMutationOwnerUserID, local.auth.original.user.id)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults))
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { context in
+            let barcode = local.barcode
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })).first)
+            let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            product.productName = "Saved before held refresh completes"
+            try LocalPendingChangeAccumulator(context: context, ownerUserID: local.viewModel.localMutationOwnerUserID,
+                storeIdentity: try XCTUnwrap(local.controller.activeManifest?.storeIdentity))
+                .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                    changedFields: ["productName"], baselineFingerprintHash: baseline)
+            try context.save()
+        }
+        let read = ModelContext(local.controller.modelContainer)
+        let barcode = local.barcode
+        let product = try XCTUnwrap(read.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })).first)
+        XCTAssertEqual(product.productName, "Saved before held refresh completes")
+        let pending = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first)
+        XCTAssertEqual(pending.intendedFingerprintHash, LocalPendingChangeLogicalKey.productFingerprintHash(product))
+        XCTAssertNil(pending.lastAttemptAt)
+        XCTAssertEqual(local.auth.transport.refreshRequestCount, 1)
+        XCTAssertTrue(local.auth.transport.logoutScopes.isEmpty)
+        XCTAssertFalse(local.viewModel.isSignedIn, "The guarded Save must finish while the SDK refresh response remains held")
+    }
+
+    func testR23TransientSDKSessionReadFailureKeepsQualifiedLocalReadEditSaveAndLogoutRevokesIt() async throws {
+        let local = try await makeR23QualifiedAuthLocalFixture()
+        let generation = local.service.authGeneration
+        let known = try XCTUnwrap(local.viewModel.sessionInfo)
+        let stored = try XCTUnwrap(local.auth.storage.retrieve(key: local.auth.storageKey))
+        XCTAssertTrue(local.viewModel.isSignedIn)
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults))
+        local.auth.storage.failRetrieval(key: local.auth.storageKey)
+        defer { local.auth.storage.failRetrieval(key: nil) }
+        XCTAssertNil(local.auth.provider.client.auth.currentSession,
+            "The actual SDK must reach its nil-session branch after the injected transient storage read error")
+        local.viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertNil(local.viewModel.sessionInfo)
+        XCTAssertFalse(local.viewModel.isSignedIn, "A local identity must not manufacture cloud authentication")
+        XCTAssertFalse(local.viewModel.requiresSignInForPresentation,
+            "A transient same-generation SDK nil must not advertise Accedi")
+        XCTAssertTrue(local.viewModel.isSessionTemporarilyUnavailableForPresentation)
+        XCTAssertEqual(local.service.authGeneration, generation)
+        XCTAssertTrue(local.service.acceptsAuthGeneration(generation))
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(local.controller.modelContainer))
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults),
+            "A transient SDK read failure must retain only the already qualified local capability")
+        // This is the actual production writer gate, using the value exposed to
+        // Database/EditProductView. The caller never substitutes a known owner.
+        let savedID = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { context in
+            let barcode = local.barcode
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })).first)
+            XCTAssertEqual(product.productName, "Known qualified local product")
+            let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            product.productName = "Saved while SDK session read is unavailable"
+            let saved = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                ownerUserID: local.viewModel.localMutationOwnerUserID,
+                storeIdentity: try XCTUnwrap(local.controller.activeManifest?.storeIdentity))
+                .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                    changedFields: ["productName"], baselineFingerprintHash: baseline))
+            try context.save()
+            return saved.changeID
+        }
+        let read = ModelContext(local.controller.modelContainer)
+        let barcode = local.barcode
+        let savedProduct = try XCTUnwrap(read.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })).first)
+        XCTAssertEqual(savedProduct.productName, "Saved while SDK session read is unavailable")
+        let savedIntent = LocalPendingChangeCASToken(try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == savedID
+        }))
+        XCTAssertEqual(savedIntent.intendedFingerprintHash, LocalPendingChangeLogicalKey.productFingerprintHash(savedProduct))
+        XCTAssertNil(savedIntent.lastAttemptAt)
+        XCTAssertEqual(local.auth.transport.requestCount, 0, "Read/edit/Save must finish without any auth HTTP")
+        local.auth.storage.failRetrieval(key: nil)
+        XCTAssertEqual(try local.auth.storage.retrieve(key: local.auth.storageKey), stored,
+            "The injected read fault never deleted or replaced the persisted SDK session")
+        try await local.service.signOut()
+        XCTAssertNil(local.viewModel.localMutationOwnerUserID,
+            "The auth generation fence must revoke cached identity immediately, before a delayed view-model event")
+        local.viewModel.refreshCurrentSessionSnapshot()
+        local.viewModel.apply(.init(generation: generation, event: .tokenRefreshed(known)))
+        XCTAssertNil(local.viewModel.localMutationOwnerUserID, "An earlier callback cannot restore the retired local identity")
+        XCTAssertFalse(local.viewModel.isSignedIn)
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { _ in
+                XCTFail("The business writer must not run after logout")
+            })
+        let afterLogout = ModelContext(local.controller.modelContainer)
+        XCTAssertTrue(savedIntent.matches(try XCTUnwrap(afterLogout.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == savedID
+        })))
+        XCTAssertEqual(try afterLogout.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })).first?.productName,
+            "Saved while SDK session read is unavailable")
+    }
+
+    func testR23AuthoritativelyAbsentSDKSessionCannotReuseEarlierLocalIdentityInTheSameGeneration() async throws {
+        let local = try await makeR23QualifiedAuthLocalFixture()
+        let generation = local.service.authGeneration
+        XCTAssertNotNil(local.viewModel.localMutationOwnerUserID)
+        let before = ModelContext(local.controller.modelContainer)
+        let pending = LocalPendingChangeCASToken(try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first))
+        try local.auth.storage.remove(key: local.auth.storageKey)
+        XCTAssertNil(try local.auth.storage.retrieve(key: local.auth.storageKey),
+            "This is a completed absence read, not a transient storage error")
+        XCTAssertNil(local.auth.provider.client.auth.currentSession)
+        local.viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertEqual(local.service.authGeneration, generation)
+        XCTAssertNil(local.viewModel.localMutationOwnerUserID,
+            "A same-generation RAM value cannot override definitive disappearance of the current SDK session")
+        XCTAssertFalse(local.viewModel.isSignedIn)
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { _ in
+                XCTFail("The business writer must not run after confirmed SDK session absence")
+            })
+        XCTAssertTrue(pending.matches(try XCTUnwrap(ModelContext(local.controller.modelContainer)
+            .fetch(FetchDescriptor<LocalPendingChange>()).first)))
+        XCTAssertEqual(local.auth.transport.requestCount, 0)
+    }
+
+    func testR23CachedLocalIdentityCannotBypassConfirmedRevocationOrAppearWithoutAcceptedSDKIdentity() async throws {
+        let local = try await makeR23QualifiedAuthLocalFixture()
+        local.auth.storage.failRetrieval(key: local.auth.storageKey)
+        defer { local.auth.storage.failRetrieval(key: nil) }
+        XCTAssertNil(local.auth.provider.client.auth.currentSession)
+        local.viewModel.refreshCurrentSessionSnapshot()
+        let localOwner = try XCTUnwrap(local.viewModel.localMutationOwnerUserID,
+            "This negative must begin from the positively admitted same-generation local identity")
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: localOwner, defaults: local.defaults))
+        let manifest = try XCTUnwrap(local.controller.activeManifest)
+        let before = ModelContext(local.controller.modelContainer)
+        let token = LocalPendingChangeCASToken(try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first))
+        let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "R23_CONFIRMED_DENIAL", canWrite: false,
+            serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
+        XCTAssertTrue(SelectedShopStore(defaults: local.defaults).recordDeviceAuthorization(denial,
+            ownerUserID: localOwner, shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { _ in
+                XCTFail("A value-only cached owner must never bypass the current device denial")
+            })
+        let read = ModelContext(local.controller.modelContainer)
+        XCTAssertTrue(token.matches(try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first)))
+        let cold = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: local.auth.provider))
+        XCTAssertNil(cold.sessionInfo)
+        XCTAssertNil(cold.localMutationOwnerUserID,
+            "A new view model with no accepted SDK identity cannot reconstruct an owner from a binding hash")
+        XCTAssertFalse(cold.isSignedIn)
+        XCTAssertEqual(local.auth.transport.requestCount, 0)
+    }
+
+    private func makeR23QualifiedAuthLocalFixture(expiredOriginal: Bool = false) async throws -> (
+        defaults: UserDefaults, controller: SyncStoreGenerationController, auth: AuthLifecycleFixture,
+        service: SupabaseAuthService, viewModel: SupabaseAuthViewModel, barcode: String
+    ) {
+        let local = try await makeQualifiedSyncStateFixture(includesAuth: true)
+        let owner = try XCTUnwrap(local.authViewModel?.localMutationOwnerUserID)
+        let auth = try AuthLifecycleFixture(expiredOriginal: expiredOriginal, originalUserID: owner)
+        let service = SupabaseAuthService(provider: auth.provider)
+        let viewModel = SupabaseAuthViewModel(authService: service)
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, owner)
+        let barcode = "R23_AUTH_LOCAL_\(UUID().uuidString.lowercased())"
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: local.controller.modelContainer,
+            ownerUserID: viewModel.localMutationOwnerUserID, defaults: local.defaults) { context in
+            let product = Product(barcode: barcode, productName: "Known qualified local product")
+            context.insert(product)
+            try LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: try XCTUnwrap(local.controller.activeManifest?.storeIdentity))
+                .recordProductChange(product: product, operation: .create, origin: .manualCatalogSave,
+                    changedFields: ["barcode", "productName"])
+            try context.save()
+        }
+        XCTAssertNotNil(local.controller.activeManifest)
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(local.controller.modelContainer))
+        return (local.defaults, local.controller, auth, service, viewModel, barcode)
+    }
+
     func testExpiredKnownSessionKeepsLocalMutationIdentityWhileRefreshIsHeldAndLogoutClearsIt() async throws {
         let fixture = try AuthLifecycleFixture(expiredOriginal: true)
         await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
@@ -212,6 +558,8 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         let viewModel = SupabaseAuthViewModel(authService: service)
         XCTAssertEqual(viewModel.sessionInfo?.userID, fixture.original.user.id)
         XCTAssertFalse(viewModel.isSignedIn, "Cloud calls still require the existing valid session gate")
+        XCTAssertFalse(viewModel.requiresSignInForPresentation)
+        XCTAssertTrue(viewModel.isRestoringSessionForPresentation || viewModel.isSessionTemporarilyUnavailableForPresentation)
         XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.original.user.id,
             "Known SDK identity must reach the exact local store fence before refresh completes")
         fixture.transport.releaseRefresh()
@@ -219,6 +567,8 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         try await service.signOut()
         viewModel.refreshCurrentSessionSnapshot()
         XCTAssertNil(viewModel.localMutationOwnerUserID, "Explicit logout must remove local identity")
+        viewModel.apply(.init(generation: service.authGeneration, event: .signedOut))
+        XCTAssertTrue(viewModel.requiresSignInForPresentation)
     }
 
     func testEarlierRefreshCannotRestoreCompletedLogoutOrRestart() async throws {
@@ -577,18 +927,18 @@ private final class AuthLifecycleFixture {
 
     init(sameUserForNewLogin: Bool = false, holdFirstLogin: Bool = false,
          logoutStatus: Int = 204, holdLogout: Bool = false, refreshStatus: Int = 200,
-         expiredOriginal: Bool = false, heldLoginStatus: Int = 200) throws {
+         expiredOriginal: Bool = false, heldLoginStatus: Int = 200, originalUserID: UUID? = nil, refreshFailureCode: URLError.Code? = nil) throws {
         let host = "auth-\(UUID().uuidString.lowercased()).example.invalid"
         config = SupabaseConfig(projectURL: URL(string: "https://\(host)")!, publishableKey: "synthetic-publishable", productImageAPIBaseURL: nil)
-        original = Self.session(userID: "11111111-2222-4333-8444-555555555555", suffix: "original", expired: expiredOriginal)
-        refreshed = Self.session(userID: "11111111-2222-4333-8444-555555555555", suffix: "old-refresh")
-        newLogin = Self.session(userID: sameUserForNewLogin ? "11111111-2222-4333-8444-555555555555" : "66666666-7777-4888-8999-000000000000", suffix: "new-login")
+        original = Self.session(userID: originalUserID?.uuidString ?? "11111111-2222-4333-8444-555555555555", suffix: "original", expired: expiredOriginal)
+        refreshed = Self.session(userID: originalUserID?.uuidString ?? "11111111-2222-4333-8444-555555555555", suffix: "old-refresh")
+        newLogin = Self.session(userID: sameUserForNewLogin ? (originalUserID?.uuidString ?? "11111111-2222-4333-8444-555555555555") : "66666666-7777-4888-8999-000000000000", suffix: "new-login")
         storageKey = "sb-\(host.split(separator: ".")[0])-auth-token"
         try storage.store(key: storageKey, value: JSONEncoder().encode(original))
         let encoder = JSONEncoder(); encoder.keyEncodingStrategy = .convertToSnakeCase; encoder.dateEncodingStrategy = .iso8601
         transport = AuthLifecycleTransport(refreshed: try encoder.encode(refreshed), newLogin: try encoder.encode(newLogin),
-            oldLogin: try encoder.encode(Self.session(userID: "11111111-2222-4333-8444-555555555555", suffix: "old-sign-in")),
-            holdFirstLogin: holdFirstLogin, logoutStatus: logoutStatus, holdLogout: holdLogout, refreshStatus: refreshStatus, heldLoginStatus: heldLoginStatus)
+            oldLogin: try encoder.encode(Self.session(userID: originalUserID?.uuidString ?? "11111111-2222-4333-8444-555555555555", suffix: "old-sign-in")),
+            holdFirstLogin: holdFirstLogin, logoutStatus: logoutStatus, holdLogout: holdLogout, refreshStatus: refreshStatus, heldLoginStatus: heldLoginStatus, refreshFailureCode: refreshFailureCode)
         AuthLifecycleURLProtocol.registry.register(host: host, transport: transport)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AuthLifecycleURLProtocol.self]
@@ -620,6 +970,8 @@ nonisolated private final class AuthLifecycleMemoryStorage: AuthLocalStorage, @u
     private let lock = NSLock()
     private var values: [String: Data] = [:]
     private var removalFailureKey: String?
+    private var retrievalFailureKey: String?
+    func failRetrieval(key: String?) { lock.withLock { retrievalFailureKey = key } }
     private var ignoredRemovalKey: String?
     private var storeFailureKey: String?
     func failRemoval(key: String?) { lock.withLock { removalFailureKey = key } }
@@ -631,7 +983,12 @@ nonisolated private final class AuthLifecycleMemoryStorage: AuthLocalStorage, @u
             values[key] = value
         }
     }
-    func retrieve(key: String) throws -> Data? { lock.withLock { values[key] } }
+    func retrieve(key: String) throws -> Data? {
+        try lock.withLock {
+            if retrievalFailureKey == key { throw CocoaError(.fileReadNoPermission) }
+            return values[key]
+        }
+    }
     func remove(key: String) throws {
         try lock.withLock {
             if removalFailureKey == key { throw CocoaError(.fileWriteNoPermission) }
@@ -649,6 +1006,8 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
     private let lock = NSLock()
     private var pendingRefresh: [Int: AuthLifecycleURLProtocol] = [:]
     private var refreshCount = 0
+    private var totalRequestCount = 0
+    var requestCount: Int { lock.withLock { totalRequestCount } }
     private var pendingLogin: AuthLifecycleURLProtocol?
     private var loginCount = 0
     private var observedLogoutScopes: [String] = []
@@ -664,16 +1023,19 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
     private let logoutStatus: Int
     private let holdLogout: Bool
     private let refreshStatus: Int
+    private let refreshFailureCode: URLError.Code?
     private let heldLoginStatus: Int
     var refreshRequestCount: Int { lock.withLock { refreshCount } }
     var logoutScopes: [String] { lock.withLock { observedLogoutScopes } }
     init(refreshed: Data, newLogin: Data, oldLogin: Data, holdFirstLogin: Bool,
-         logoutStatus: Int, holdLogout: Bool, refreshStatus: Int, heldLoginStatus: Int) {
+         logoutStatus: Int, holdLogout: Bool, refreshStatus: Int, heldLoginStatus: Int, refreshFailureCode: URLError.Code? = nil) {
         self.refreshed = refreshed; self.newLogin = newLogin; self.oldLogin = oldLogin
         self.holdFirstLogin = holdFirstLogin; self.logoutStatus = logoutStatus
         self.holdLogout = holdLogout; self.refreshStatus = refreshStatus; self.heldLoginStatus = heldLoginStatus
+        self.refreshFailureCode = refreshFailureCode
     }
     func start(_ request: AuthLifecycleURLProtocol) {
+        lock.withLock { totalRequestCount += 1 }
         guard let url = request.request.url else { return }
         if url.lastPathComponent == "token" && url.query?.contains("refresh_token") == true {
             let index = lock.withLock {
@@ -684,7 +1046,10 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
             }
             if index == 0 { refreshStarted.fulfill() }
             if index == 1 { secondRefreshStarted.fulfill() }
-            if index > 0 && refreshStatus >= 400 {
+            if index > 0, let refreshFailureCode {
+                lock.withLock { _ = pendingRefresh.removeValue(forKey: index) }
+                request.client?.urlProtocol(request, didFailWithError: URLError(refreshFailureCode))
+            } else if index > 0 && refreshStatus >= 400 {
                 lock.withLock { _ = pendingRefresh.removeValue(forKey: index) }
                 request.respond(status: refreshStatus, data: responseData(status: refreshStatus, success: refreshed))
             }
@@ -722,6 +1087,10 @@ nonisolated private final class AuthLifecycleTransport: @unchecked Sendable {
     }
     func releaseRefresh(index: Int = 0) {
         let request = lock.withLock { pendingRefresh.removeValue(forKey: index) }
+        if let request, let refreshFailureCode {
+            request.client?.urlProtocol(request, didFailWithError: URLError(refreshFailureCode))
+            return
+        }
         request?.respond(status: refreshStatus, data: responseData(status: refreshStatus, success: refreshed))
     }
     func releaseLogin() {

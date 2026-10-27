@@ -31,15 +31,27 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 modelContainer: modelContainer,
                 scope: scope,
                 defaults: defaults
-            ) { context -> (plan: SyncCatalogPushPlan, changeIDs: [String]) in
-                _ = try CatalogTextPendingRepair.repair(
+            ) { context -> (plan: SyncCatalogPushPlan, changeIDs: [String], isolatedRelations: IsolatedCatalogRelations) in
+                let repair = try CatalogTextPendingRepair.repair(
                     context: context,
                     ownerUserID: ownerUserID,
-                    storeIdentity: scope.storeIdentity
+                    storeIdentity: scope.storeIdentity,
+                    isolatingInvalidTextForAutomaticPush: true,
+                    validateBeforeMutation: { changes in
+                        // Seal errors remain global and precede all isolation/mutation.
+                        for change in changes {
+                            _ = try LocalPendingBusinessAttemptStore.load(StoredCatalogMutation.self,
+                                change: change, kind: "catalog", context: context, scope: scope)
+                        }
+                    }
                 )
                 let snapshot = try LocalPendingChangeSnapshotProvider(context: context)
                     .loadSnapshot(ownerUserID: ownerUserID, storeIdentity: scope.storeIdentity)
-                var blockers: [String] = []
+                let manualRequests = try ManualPendingAtomicRequestStore.blockingChangeIDs(context: context, scope: scope)
+                var blockers: [String] = manualRequests.isEmpty ? [] : ["unconfirmedManualAtomicRequest"]
+                blockers += repair.rejectedChanges.map { changeID, error in
+                    Self.invalidTextDiagnostic(changeID: changeID, error: error)
+                }
                 if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
                 if snapshot.staleBaselineCount > 0 { blockers.append("staleBaselineLocalChanges") }
                 if snapshot.sentCount > 0 { blockers.append("sentChangesWaitingForRetry") }
@@ -57,29 +69,56 @@ final class CatalogPushService: SyncCatalogPushProviding {
                     context: context,
                     ownerUserID: ownerUserID,
                     scope: scope
-                ).map(\.changeID)
-                return (plan, changeIDs)
+                ).filter { repair.rejectedChanges[$0.changeID] == nil }.map(\.changeID)
+                let isolatedRelations = try Self.unresolvedRejectedRelations(
+                    changeIDs: Set(repair.rejectedChanges.keys), context: context)
+                return (plan, changeIDs, isolatedRelations)
             }
             var result = SyncCatalogPushResult(plan: preparation.plan)
+            var isolatedRelations = preparation.isolatedRelations
             guard preparation.plan.hasWork,
                   let remote else {
                 return result
             }
 
             for changeID in preparation.changeIDs {
-                guard let mutation = try Self.withFreshScopedContext(
-                    modelContainer: modelContainer,
-                    scope: scope,
-                    defaults: defaults,
-                    { context in
-                        try Self.prepareMutation(
-                            changeID: changeID,
-                            context: context,
-                            ownerUserID: ownerUserID,
-                            scope: scope
-                        )
+                let prepared: PreparedCatalogMutation?
+                do {
+                    prepared = try Self.withFreshScopedContext(
+                        modelContainer: modelContainer,
+                        scope: scope,
+                        defaults: defaults,
+                        { context in
+                            try Self.prepareMutation(
+                                changeID: changeID,
+                                context: context,
+                                ownerUserID: ownerUserID,
+                                scope: scope,
+                                isolatedRelations: isolatedRelations
+                            )
+                        }
+                    )
+                } catch let error as CatalogTextValidationError {
+                    // Fresh local edits can invalidate one target after preflight.
+                    result.plan?.blockers.append(Self.invalidTextDiagnostic(changeID: changeID, error: error))
+                    let newlyRejected = try Self.withFreshScopedContext(
+                        modelContainer: modelContainer, scope: scope, defaults: defaults) { context in
+                        try Self.unresolvedRejectedRelations(changeIDs: [changeID], context: context)
                     }
-                ) else { continue }
+                    isolatedRelations.supplierIDs.formUnion(newlyRejected.supplierIDs)
+                    isolatedRelations.categoryIDs.formUnion(newlyRejected.categoryIDs)
+                    continue
+                } catch CatalogPushError.unresolvedReference(let field) {
+                    result.plan?.blockers.append("unresolvedCatalogReference:\(changeID):\(field)")
+                    continue
+                } catch CatalogPushError.rejectedRequiresReview {
+                    result.plan?.blockers.append("catalogConflictRequiresReview:\(changeID)")
+                    continue
+                } catch CatalogPushError.priorUnsealedOutcomeUnconfirmed {
+                    result.plan?.blockers.append("unconfirmedCatalogHistory:\(changeID)")
+                    continue
+                }
+                guard let mutation = prepared else { continue }
 
                 switch mutation.action {
                 case .acknowledgeLocalOnly:
@@ -103,12 +142,25 @@ final class CatalogPushService: SyncCatalogPushProviding {
                         try context.save()
                     }
                 case .remote(let call):
-                    let readBack = try await Self.execute(
-                        call,
-                        remote: remote,
-                        scope: scope,
-                        defaults: defaults
-                    )
+                    let dispatch = try Self.withFreshScopedContext(modelContainer: modelContainer, scope: scope, defaults: defaults) {
+                        try LocalPendingBusinessAttemptStore.beginCatalogDispatch(pending: mutation.pending, context: $0, scope: scope)
+                    }
+                    let readBack: CatalogReadBack
+                    do {
+                        readBack = try await Self.execute(call, remote: remote, scope: scope, defaults: defaults)
+                    } catch let rejection as SyncCatalogWriteRejectedWithoutCommit {
+                        try Self.withFreshScopedContext(modelContainer: modelContainer, scope: scope, defaults: defaults) {
+                            _ = try LocalPendingBusinessAttemptStore.recordRejectedWithoutCommit(rejection,
+                                pending: mutation.pending, dispatch: dispatch, context: $0, scope: scope)
+                        }
+                        result.plan?.blockers.append("catalogConflictRequiresReview:\(changeID)")
+                        continue
+                    } catch {
+                        try Self.withFreshScopedContext(modelContainer: modelContainer, scope: scope, defaults: defaults) {
+                            try LocalPendingBusinessAttemptStore.recordUnconfirmed(pending: mutation.pending, context: $0, scope: scope)
+                        }
+                        throw error
+                    }
                     let outcome = try Self.withFreshScopedContext(
                         modelContainer: modelContainer,
                         scope: scope,
@@ -170,8 +222,9 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 SortDescriptor(\.changeID, order: .forward)
             ]
         )
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         return try context.fetch(descriptor).filter {
-            $0.entityKind.isCatalogKind
+            $0.entityKind.isCatalogKind && !resolved.contains($0.changeID)
                 && LocalPendingChangeScopeMatcher.matches(
                     $0,
                     ownerUserID: ownerUserID,
@@ -196,6 +249,10 @@ final class CatalogPushService: SyncCatalogPushProviding {
         case responseMismatch
         case invalidIdempotencyKey
         case nonCanonicalCatalogText(CatalogTextField)
+        case unresolvedReference(String)
+        case rejectedRequiresReview
+        case conditionalWriteUnconfirmed
+        case priorUnsealedOutcomeUnconfirmed
     }
 
     nonisolated private enum CatalogEntityReference: Sendable {
@@ -211,6 +268,17 @@ final class CatalogPushService: SyncCatalogPushProviding {
         case updateCategory(UUID, SyncAutomaticCategoryUpdatePayload)
         case createProduct(SyncAutomaticProductCreatePayload)
         case updateProduct(UUID, SyncAutomaticProductUpdatePayload)
+        case conditionalProductV2(ConditionalProductCall)
+    }
+
+    nonisolated private struct ConditionalProductCall: Codable, Sendable {
+        let schemaVersion: Int
+        let id: UUID
+        let ownerUserID: UUID
+        let shopID: UUID
+        let expectedVersion: SyncCatalogConditionalVersion
+        let changedFields: [String]
+        let values: CatalogConflictProductValues
     }
 
     nonisolated private enum CatalogMutationAction: Sendable {
@@ -238,6 +306,64 @@ final class CatalogPushService: SyncCatalogPushProviding {
         let businessFingerprint: String?
         let isCreate: Bool
         let isTombstone: Bool
+    }
+
+    nonisolated private static func invalidTextDiagnostic(changeID: String, error: CatalogTextValidationError) -> String {
+        "invalidCatalogText:\(changeID):\(error.field.rawValue):\(error.reason.rawValue)"
+    }
+
+    nonisolated private struct IsolatedCatalogRelations {
+        var supplierIDs: Set<PersistentIdentifier> = []
+        var categoryIDs: Set<PersistentIdentifier> = []
+    }
+
+    nonisolated private static func unresolvedRejectedRelations(
+        changeIDs: Set<String>, context: ModelContext
+    ) throws -> IsolatedCatalogRelations {
+        var result = IsolatedCatalogRelations()
+        for changeID in changeIDs {
+            guard let change = try fetchPendingChange(changeID: changeID, context: context) else { continue }
+            switch change.entityKind {
+            case .supplier:
+                if let supplier = try findSupplier(for: change, context: context), supplier.remoteID == nil {
+                    result.supplierIDs.insert(supplier.persistentModelID)
+                }
+            case .productCategory:
+                if let category = try findCategory(for: change, context: context), category.remoteID == nil {
+                    result.categoryIDs.insert(category.persistentModelID)
+                }
+            default: break
+            }
+        }
+        return result
+    }
+
+    nonisolated private static func isolatedReference(
+        in stored: StoredCatalogMutation, change: LocalPendingChange,
+        isolatedRelations: IsolatedCatalogRelations, context: ModelContext
+    ) throws -> String? {
+        guard !isolatedRelations.supplierIDs.isEmpty || !isolatedRelations.categoryIDs.isEmpty,
+              change.entityKind == .product, !stored.isTombstone,
+              let product = try findProduct(for: change, context: context) else { return nil }
+        let fields = Set(change.changedFields.map(normalizedProductChangedField))
+        let supplierOmitted: Bool
+        let categoryOmitted: Bool
+        switch stored.call {
+        case .createProduct(let payload):
+            supplierOmitted = payload.supplierID == nil
+            categoryOmitted = payload.categoryID == nil
+        case .updateProduct(_, let payload):
+            supplierOmitted = fields.contains("supplier") && payload.supplierID == nil
+            categoryOmitted = fields.contains("category") && payload.categoryID == nil
+        default: return nil
+        }
+        // A known reference belongs to the sealed request, not today's body.
+        // Suspend only ambiguity involving this invocation's rejected unresolved relation.
+        if supplierOmitted, let supplier = product.supplier,
+           isolatedRelations.supplierIDs.contains(supplier.persistentModelID) { return "supplier" }
+        if categoryOmitted, let category = product.category,
+           isolatedRelations.categoryIDs.contains(category.persistentModelID) { return "category" }
+        return nil
     }
 
     nonisolated private static func withFreshScopedContext<Result>(
@@ -274,14 +400,32 @@ final class CatalogPushService: SyncCatalogPushProviding {
 
     nonisolated private static func prepareMutation(
         changeID: String, context: ModelContext, ownerUserID: UUID,
-        scope: Task126VerifiedOwnerStoreScope
+        scope: Task126VerifiedOwnerStoreScope, isolatedRelations: IsolatedCatalogRelations
     ) throws -> PreparedCatalogMutation? {
         guard let change = try fetchPendingChange(changeID: changeID, context: context),
               change.status == .pending,
               LocalPendingChangeScopeMatcher.matches(change, ownerUserID: ownerUserID,
                 accountHash: scope.accountHash, storeIdentity: scope.storeIdentity) else { return nil }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        guard !resolved.contains(changeID) else { return nil }
+        guard try !ManualPendingAtomicRequestStore.blockingChangeIDs(context: context, scope: scope).contains(changeID) else {
+            throw CatalogPushError.priorUnsealedOutcomeUnconfirmed
+        }
+        let predecessors = try context.fetch(FetchDescriptor<LocalPendingChange>()).filter {
+            $0.changeID != changeID && !$0.status.isTerminal && !resolved.contains($0.changeID)
+                && $0.logicalKey == change.logicalKey && $0.entityKindRaw == change.entityKindRaw
+                && ($0.createdAt < change.createdAt || ($0.createdAt == change.createdAt && $0.changeID < changeID))
+        }
+        guard predecessors.isEmpty else { throw CatalogPushError.unresolvedReference("catalogRevision") }
+        if try LocalPendingBusinessAttemptStore.rejectionProof(change: change, context: context, scope: scope) != nil {
+            throw CatalogPushError.rejectedRequiresReview
+        }
         if let stored = try LocalPendingBusinessAttemptStore.load(StoredCatalogMutation.self,
             change: change, kind: "catalog", context: context, scope: scope) {
+            if let field = try isolatedReference(in: stored, change: change,
+                isolatedRelations: isolatedRelations, context: context) {
+                throw CatalogPushError.unresolvedReference(field)
+            }
             let entity: CatalogEntityReference?
             switch change.entityKind {
             case .supplier: entity = try findSupplier(for: change, context: context).map { .supplier($0.persistentModelID) }
@@ -293,14 +437,26 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 businessFingerprint: stored.businessFingerprint, action: .remote(stored.call),
                 isCreate: stored.isCreate, isTombstone: stored.isTombstone)
         }
+        // An attempted legacy row without its original immutable request cannot
+        // be reconstructed from today's product body. Preserve it for reconciliation
+        // while the outer per-record loop continues independent work.
+        let priorCatalogAttemptIsKnownAbsent = change.lastAttemptAt == nil
+        guard priorCatalogAttemptIsKnownAbsent else { throw CatalogPushError.priorUnsealedOutcomeUnconfirmed }
         guard let fresh = try prepareFreshMutation(changeID: changeID, context: context,
             ownerUserID: ownerUserID, scope: scope) else { return nil }
         guard case .remote(let call) = fresh.action else { return fresh }
+        #if DEBUG
+        let b6Original = PilotCommitTrace.b6ObservationEnabled ? LocalPendingChangeCASToken(change) : nil
+        #endif
         change.lastAttemptAt = Date()
         let token = LocalPendingChangeCASToken(change)
         try LocalPendingBusinessAttemptStore.seal(StoredCatalogMutation(call: call,
             businessFingerprint: fresh.businessFingerprint, isCreate: fresh.isCreate,
-            isTombstone: fresh.isTombstone), pending: token, kind: "catalog", context: context, scope: scope)
+            isTombstone: fresh.isTombstone), pending: token, kind: "catalog", context: context, scope: scope,
+            priorCatalogAttemptIsKnownAbsent: priorCatalogAttemptIsKnownAbsent)
+        #if DEBUG
+        if let b6Original { PilotCommitTrace.b6SourcePrepared(original: b6Original, sealed: token, scope: scope) }
+        #endif
         return PreparedCatalogMutation(pending: token, entity: fresh.entity,
             businessFingerprint: fresh.businessFingerprint, action: fresh.action,
             isCreate: fresh.isCreate, isTombstone: fresh.isTombstone)
@@ -321,6 +477,24 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 storeIdentity: scope.storeIdentity
               ) else { return nil }
         let token = LocalPendingChangeCASToken(change)
+
+        if let decision = try LocalCatalogConflictResolutionStore.successorDecision(changeID: changeID, context: context) {
+            guard let expected = decision.successor, expected.matches(change),
+                  case .selectedFields(let selected, let selectedFields) = decision.choice,
+                  decision.remote.product.deletedAt == nil,
+                  let product = try findProduct(for: change, context: context) else { throw CatalogPushError.responseMismatch }
+            let values = try decision.remote.values.overlay(selected, fields: selectedFields)
+            let fields = values.differingFields(from: decision.remote.values)
+            guard !fields.isEmpty, LocalPendingChange.encodeChangedFields(fields) == change.changedFieldsRaw,
+                  values.fingerprint == change.intendedFingerprintHash else { throw CatalogPushError.responseMismatch }
+            return PreparedCatalogMutation(pending: token, entity: .product(product.persistentModelID),
+                businessFingerprint: values.fingerprint,
+                action: .remote(.conditionalProductV2(ConditionalProductCall(schemaVersion: 2,
+                    id: decision.remote.product.id, ownerUserID: scope.ownerUserID, shopID: scope.shopID,
+                    expectedVersion: SyncCatalogConditionalVersion(expectedUpdatedAt: decision.remote.product.updatedAt,
+                        expectedDeletedAt: decision.remote.product.deletedAt), changedFields: fields, values: values))),
+                isCreate: false, isTombstone: false)
+        }
 
         switch change.entityKind {
         case .supplier:
@@ -475,6 +649,17 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 )
             }
             guard let product else { return nil }
+            let fields = Set(change.changedFields.map(normalizedProductChangedField))
+            if product.remoteID == nil || fields.contains("supplier") {
+                if let supplier = product.supplier, supplier.remoteID == nil {
+                    throw CatalogPushError.unresolvedReference("supplier")
+                }
+            }
+            if product.remoteID == nil || fields.contains("category") {
+                if let category = product.category, category.remoteID == nil {
+                    throw CatalogPushError.unresolvedReference("category")
+                }
+            }
             try requireCanonical(product)
             let fingerprint = LocalPendingChangeLogicalKey.productFingerprintHash(product)
             if let remoteID = product.remoteID {
@@ -565,6 +750,18 @@ final class CatalogPushService: SyncCatalogPushProviding {
             }
             guard row.id == id else { throw CatalogPushError.responseMismatch }
             readBack = .product(row)
+        case .conditionalProductV2(let request):
+            guard request.schemaVersion == 2, request.ownerUserID == scope.ownerUserID,
+                  request.shopID == scope.shopID else { throw CatalogPushError.responseMismatch }
+            let rows = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.updateProductConditionally(id: request.id, payload: request.values.updatePayload,
+                    expectedVersion: request.expectedVersion, changedFields: request.changedFields)
+            }
+            // Zero at replay does not establish that a previous execution did
+            // not commit. It stays sealed and unconfirmed, with the same CAS.
+            guard !rows.isEmpty else { throw CatalogPushError.conditionalWriteUnconfirmed }
+            guard rows.count == 1, let row = rows.first, row.id == request.id else { throw CatalogPushError.responseMismatch }
+            readBack = .product(row)
         }
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
         switch readBack {
@@ -648,6 +845,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
                     || equal(row.stockQuantity, payload.stockQuantity))
                 && (payload.deletedAt == nil
                     || SupabaseRemoteDateParser.parse(row.deletedAt) != nil)
+        case (.product(let row), .conditionalProductV2(let request)):
+            guard row.id == request.id, row.ownerUserID == request.ownerUserID, row.shopID == request.shopID,
+                  row.deletedAt == nil, SupabaseRemoteDateParser.parse(row.updatedAt) != nil else { return false }
+            let actual = CatalogConflictProductValues(row: row)
+            let differences = Set(actual.differingFields(from: request.values))
+            return Set(request.changedFields).isDisjoint(with: differences)
         default:
             return false
         }
@@ -672,6 +875,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
         plan: SyncCatalogPushPlan,
         scope: Task126VerifiedOwnerStoreScope
     ) throws -> CatalogPushOutcome {
+        if try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context).contains(mutation.pending.changeID) {
+            // A stale completion never converts the local decision into ACK,
+            // nor can it clean a later independent successor.
+            return CatalogPushOutcome(result: SyncCatalogPushResult(plan: plan))
+        }
         guard let change = try fetchPendingChange(
             changeID: mutation.pending.changeID,
             context: context
@@ -817,6 +1025,15 @@ final class CatalogPushService: SyncCatalogPushProviding {
             scope: scope
         )
         try context.save()
+        #if DEBUG
+        // Observation only after the original request's typed response and its
+        // exact pending-row ACK have both passed the existing durable save.
+        if tokenMatches, businessMatches || !dependents.isEmpty, metadataAccepted,
+           case .product(let row) = readBack {
+            PilotCommitTrace.b6SourceIdentityAcknowledged(pending: mutation.pending,
+                remoteID: row.id, rawVersion: row.updatedAt, scope: scope, deletedAtRaw: row.deletedAt)
+        }
+        #endif
         return outcome
     }
 

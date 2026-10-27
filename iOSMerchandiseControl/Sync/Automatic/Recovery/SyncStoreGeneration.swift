@@ -403,7 +403,8 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
 
     /// Opens only the named persisted stage. Never creates, resets, quarantines
     /// or publishes a generation while qualifying a legacy continuation.
-    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID) throws -> SyncStoreGenerationHandle {
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID,
+        requiresAcceptedPrefix: Bool = true) throws -> SyncStoreGenerationHandle {
         lock.lock()
         defer { lock.unlock() }
         guard try decodeAndValidateManifestIfPresent()?.generationID != generationID else {
@@ -415,12 +416,14 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         let directoryValues = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
         let fileValues = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         let progress = directory.appendingPathComponent("recovery-page-progress-v1.json")
-        let progressValues = try progress.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        let progressExists = fileManager.fileExists(atPath: progress.path)
+        let progressValues = progressExists ? try progress.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) : nil
         guard directoryValues.isDirectory == true, directoryValues.isSymbolicLink != true,
               fileValues.isRegularFile == true, fileValues.isSymbolicLink != true,
-              progressValues.isRegularFile == true, progressValues.isSymbolicLink != true,
+              (!progressExists || (progressValues?.isRegularFile == true && progressValues?.isSymbolicLink != true)),
+              !requiresAcceptedPrefix || progressExists,
               !fileManager.fileExists(atPath: directory.appendingPathComponent("quarantined").path),
-              !fileManager.fileExists(atPath: directory.appendingPathComponent("recovery-page-prepared-v1.json").path) else {
+              !requiresAcceptedPrefix || !fileManager.fileExists(atPath: directory.appendingPathComponent("recovery-page-prepared-v1.json").path) else {
             throw SyncStoreGenerationError.invalidManifest
         }
         let handle: SyncStoreGenerationHandle
@@ -1361,6 +1364,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private var manifestQualificationID: UUID?
     private var manifestQualificationRequested = false
     private var manifestQualificationOwner: UUID?
+    private var manifestQualificationStartedOwner: UUID?
     #if DEBUG
     private var rootQualificationObservationTicket: UInt64 = 0
     // Tests hold the real detached readback before its existing publication guards.
@@ -1397,13 +1401,21 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         }
     }
 
-    private init() {
+    private convenience init() {
         let defaults = UserDefaults.standard
+        self.init(recoveringRepository: try? SyncStoreGenerationRepository(defaults: defaults), defaults: defaults)
+    }
+
+    // Both normal startup and the isolated DEBUG opening exercise this exact
+    // repository load/catch. The factory does not set a failure or capability.
+    private init(recoveringRepository repository: SyncStoreGenerationRepository?, defaults: UserDefaults) {
         self.defaults = defaults
-        let repository = try? SyncStoreGenerationRepository(defaults: defaults)
         self.repository = repository
         do {
             guard let repository else { throw SyncStoreGenerationError.unavailable }
+            #if DEBUG
+            Task145StoreLoadFailureObservation.record(.repositoryLoad)
+            #endif
             let loaded = try repository.loadActive()
             self.active = loaded
             self.loadFailureCode = nil
@@ -1417,8 +1429,37 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             self.active = fallback
             self.loadFailureCode = "sync_store_generation_load_failed"
             Task126OwnerStoreGate.registerActiveGenerationContainer(fallback.container)
+            #if DEBUG
+            Task145StoreLoadFailureObservation.record(error as? SyncStoreGenerationError == .invalidManifest
+                ? .invalidManifestCaught : .otherLoadFailureCaught)
+            #endif
         }
     }
+
+    #if DEBUG
+    static func openingControlledRepositoryForTesting(
+        _ repository: SyncStoreGenerationRepository, runID: UUID, defaults: UserDefaults = .standard
+    ) throws -> SyncStoreGenerationController {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAFE_STORE_FAILURE_UI"] == "malformed-manifest",
+              environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) == runID,
+              repository.defaults === defaults,
+              let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            throw SyncStoreGenerationError.defaultsConfigurationMismatch
+        }
+        let expected = support.appendingPathComponent("task144-root-fixtures", isDirectory: true)
+            .appendingPathComponent(runID.uuidString.lowercased(), isDirectory: true)
+            .appendingPathComponent("generation-root", isDirectory: true)
+            .standardizedFileURL
+        guard repository.baseDirectory.standardizedFileURL == expected,
+              repository.baseDirectory.resolvingSymlinksInPath() == expected.resolvingSymlinksInPath(),
+              repository.manifestURL.standardizedFileURL == expected.appendingPathComponent("active-generation.json"),
+              try Data(contentsOf: repository.manifestURL) == Task145StoreLoadFailureObservation.malformedManifest else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        return SyncStoreGenerationController(recoveringRepository: repository, defaults: defaults)
+    }
+    #endif
 
     init(
         repository: SyncStoreGenerationRepository,
@@ -1467,6 +1508,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private func finishManifestQualification(_ identity: UUID, published: Bool, cancelled: Bool) {
         guard manifestQualificationID == identity else { return }
         manifestQualificationID = nil
+        manifestQualificationStartedOwner = nil
         localBodyQualificationRevision &+= 1
         let retry = manifestQualificationRequested && !published && !cancelled
         let owner = manifestQualificationOwner
@@ -1515,6 +1557,14 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             #endif
             return
         }
+        // Phase/presentation events do not revoke a current owner's scan.
+        // Keep its physical readback alive and coalesce one successor request.
+        // A real owner change still follows the cancellation path below.
+        if manifestQualificationID != nil, manifestQualificationStartedOwner == ownerUserID {
+            manifestQualificationRequested = true
+            manifestQualificationOwner = ownerUserID
+            return
+        }
         #if DEBUG
         Task144RootObservation.record("body-start", "branch.manifest-body-qualification", callsite: "SyncStoreGeneration.startLocalBodyQualification")
         #endif
@@ -1534,12 +1584,23 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
         let identity = UUID()
         manifestQualificationID = identity
+        manifestQualificationStartedOwner = ownerUserID
         manifestQualificationRequested = false
         manifestQualificationOwner = ownerUserID
         #if DEBUG
         if Task144RootObservation.enabled { rootQualificationObservationTicket &+= 1 }
         #endif
+// TASK145_COST39_BEGIN qualification-start
+#if DEBUG
+        let qualificationCostStartNS = DispatchTime.now().uptimeNanoseconds
+#endif
+// TASK145_COST39_END qualification-start
         localBodyQualificationTask = Task { [weak self] in
+// TASK145_COST39_BEGIN qualification-attempts
+#if DEBUG
+            var qualificationCostAttempts: UInt64 = 0
+#endif
+// TASK145_COST39_END qualification-attempts
             var published = false
             var firstFailureStage = "none"
             var firstFailureReason = "none"
@@ -1568,12 +1629,34 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let currentContainer = self?.active.container === container
                 let currentManifest = self?.active.manifest == manifest
                 SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED")
+// TASK145_COST39_BEGIN qualification-terminal
+#if DEBUG
+                let elapsed = DispatchTime.now().uptimeNanoseconds &- qualificationCostStartNS
+                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification-cost kind.qualification start_ns.\(qualificationCostStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) attempts.\(qualificationCostAttempts, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public)")
+#endif
+// TASK145_COST39_END qualification-terminal
                 self?.finishManifestQualification(identity, published: published, cancelled: Task.isCancelled)
             }
             for _ in 0..<2 {
                 guard !Task.isCancelled else { noteFailure("capture-before", "cancelled"); return false }
+// TASK145_COST39_BEGIN worker-attempt-ordinal
+#if DEBUG
+                qualificationCostAttempts &+= 1
+                let qualificationCostAttempt = qualificationCostAttempts
+#endif
+// TASK145_COST39_END worker-attempt-ordinal
                 let work = Task.detached(priority: .utility) {
                     var stage = "capture-before"
+// TASK145_COST39_BEGIN worker-start
+#if DEBUG
+                    let workerCostStartNS = DispatchTime.now().uptimeNanoseconds
+                    var workerCostReturnedNormally = false
+                    defer {
+                        let elapsed = DispatchTime.now().uptimeNanoseconds &- workerCostStartNS
+                        Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.worker start_ns.\(workerCostStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) attempt.\(qualificationCostAttempt, privacy: .public) returned.\(workerCostReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_stage.\(stage, privacy: .public)")
+                    }
+#endif
+// TASK145_COST39_END worker-start
                     do {
                         try Task.checkCancellation()
                         let before = try repository.captureActiveMutationFence(for: captured)
@@ -1583,6 +1666,11 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                         stage = "capture-after"
                         let after = try repository.captureActiveMutationFence(for: captured)
                         guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+// TASK145_COST39_BEGIN worker-returned
+#if DEBUG
+                        workerCostReturnedNormally = true
+#endif
+// TASK145_COST39_END worker-returned
                         return after
                     } catch {
                         throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error)
@@ -2011,9 +2099,10 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         return active.manifest == nil || Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container)
     }
 
-    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID) throws -> SyncStoreGenerationHandle {
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID,
+        requiresAcceptedPrefix: Bool = true) throws -> SyncStoreGenerationHandle {
         guard let repository else { throw SyncStoreGenerationError.unavailable }
-        return try repository.existingStaging(scope: scope, generationID: generationID)
+        return try repository.existingStaging(scope: scope, generationID: generationID, requiresAcceptedPrefix: requiresAcceptedPrefix)
     }
 
     func prepareStaging(
@@ -2083,7 +2172,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let before = try repository.captureActiveMutationFence(for: capturedActive)
                 repository.observeLocalWorkBoundary(.beforeLocalWorkTransfer)
                 try SameScopeRecoveryLocalWorkTransfer.apply(
-                    from: activeContainer, to: staging.container, scope: scope, stagingGenerationID: staging.generationID
+                    from: activeContainer, to: staging.container, scope: scope,
+                    sourceGenerationID: capturedActive.manifest?.generationID, stagingGenerationID: staging.generationID
                 )
                 let after = try repository.captureActiveMutationFence(for: capturedActive)
                 guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
@@ -2104,9 +2194,15 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         // container switch, retired-container registration, journal/binding/
         // watermark publication and lease invalidation must all happen before
         // a queued user writer can enter the non-recursive gate.
+        #if DEBUG
+        defer { Task144RootObservation.performanceMark("cutoverReleased", facts: "lease-invalidating-call-returned") }
+        #endif
         return try Task126OwnerStoreGate.withValidatedAutomaticScopeLeaseInvalidated(
             expectedGeneration: scope.leaseGeneration
         ) {
+            #if DEBUG
+            Task144RootObservation.performanceMark("cutoverEntered", facts: "inside-physical-publication-lease")
+            #endif
             try Task.checkCancellation()
             guard active.container === activeContainer,
                   active.presentationID == capturedActive.presentationID else {
@@ -2146,6 +2242,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             #endif
             manifestQualificationID = nil
+            manifestQualificationStartedOwner = nil
             manifestQualificationRequested = false
             manifestQualificationOwner = nil
             emptyPublicationSuccessorBudget = 0
@@ -2266,11 +2363,13 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
     static func isContinuationDrained(container: ModelContainer) throws -> Bool {
         let context = ModelContext(container)
         context.autosaveEnabled = false
+        guard try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context).isEmpty else { return false }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         var pending = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
             $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
         })
-        pending.fetchLimit = 1
-        guard try context.fetch(pending).isEmpty else { return false }
+        pending.fetchLimit = resolved.count + 1
+        guard try context.fetch(pending).allSatisfy({ resolved.contains($0.changeID) }) else { return false }
         let terminalOutboxStatuses: [String] = [
             "sent", "blockedContract", "blockedAuth", "blockedSchema", "dead", "localOnly"
         ]
@@ -2296,7 +2395,9 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
         context.autosaveEnabled = false
         let expectedOwner = scope.ownerUserID.uuidString.lowercased()
         let expectedStore = scope.storeIdentity.storeId
-        var activePending = 0
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        let manualRequests = try ManualPendingAtomicRequestStore.blockingChangeIDs(context: context, scope: scope)
+        var activePending = manualRequests.isEmpty ? 0 : 1
 
         for change in try context.fetch(FetchDescriptor<LocalPendingChange>()) {
             guard let status = LocalPendingChangeStatus(rawValue: change.statusRaw) else {
@@ -2307,6 +2408,7 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
                   Task126OwnerStoreScope.normalizedStoreId(change.storeId) == expectedStore else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
+            if resolved.contains(change.changeID) { continue }
             activePending += 1
         }
 

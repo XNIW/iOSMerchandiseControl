@@ -127,6 +127,9 @@ actor SupabaseTransportClient {
         self.rpcSessionConfiguration = configuration
     }
 
+    // Internal access for the guarded manual exact-body boundary only.
+    func manualRequestProvider() -> SupabaseClientProvider { clientProvider }
+
     func client() -> SupabaseClient {
         clientProvider.client
     }
@@ -141,14 +144,7 @@ actor SupabaseTransportClient {
               maximumResponseBytes > 0 else {
             throw AutomaticSyncFailure(disposition: .stable, category: .payload)
         }
-        let session: Session
-        do {
-            session = try await clientProvider.client.auth.session
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            throw SupabaseTransportClientError.sessionMissing
-        }
+        let session = try await authenticatedSession()
         try Task.checkCancellation()
         guard !session.accessToken.isEmpty,
               !session.accessToken.contains("\n"),
@@ -206,13 +202,36 @@ actor SupabaseTransportClient {
 
     @discardableResult
     func authenticatedUserID() async throws -> UUID {
+        try await authenticatedSession().user.id
+    }
+
+    private func authenticatedSession() async throws -> Session {
+        let snapshot = await clientProvider.authSnapshot
         do {
-            let session = try await clientProvider.client.auth.session
-            return session.user.id
+            let session = try await snapshot.client.auth.session
+            guard await clientProvider.acceptsAuthGeneration(snapshot.generation) else {
+                throw CancellationError()
+            }
+            return session
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            throw SupabaseTransportClientError.sessionMissing
+            guard await clientProvider.acceptsAuthGeneration(snapshot.generation) else {
+                throw CancellationError()
+            }
+            await clientProvider.recordSessionReadFailure(error, generation: snapshot.generation)
+            if let authError = error as? AuthError {
+                switch authError {
+                case .sessionMissing:
+                    throw SupabaseTransportClientError.sessionMissing
+                case .api(_, _, _, let response):
+                    throw AutomaticSyncFailure.http(status: response.statusCode,
+                        retryAfterUntil: Self.retryAfterUntil(response.value(forHTTPHeaderField: "Retry-After"), now: Date()))
+                default:
+                    break
+                }
+            }
+            throw AutomaticSyncFailure.classify(error)
         }
     }
 

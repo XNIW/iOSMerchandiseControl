@@ -217,7 +217,8 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             ownerUserID: ownerUserID,
             scope: scope
         )
-        var blockers: [String] = []
+        let manualRequests = try ManualPendingAtomicRequestStore.blockingChangeIDs(context: context, scope: scope)
+        var blockers: [String] = manualRequests.isEmpty ? [] : ["unconfirmedManualAtomicRequest"]
         if snapshot.blockedCount > 0 { blockers.append("blockedLocalChanges") }
         if snapshot.staleBaselineCount > 0 { blockers.append("staleBaselineLocalChanges") }
         if snapshot.sentCount > 0 { blockers.append("sentChangesWaitingForRetry") }
@@ -238,8 +239,12 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         var upserts: [PreparedProductPriceUpsert] = []
         var orphaned = snapshot.blockedCount + snapshot.staleBaselineCount
         var changedTerminalState = false
+        let blockedParents = try LocalCatalogConflictResolutionStore.blockedParentProductIDs(context: context, scope: scope)
 
         for change in changes {
+            // A retained aggregate cannot be split into independent price calls
+            // or terminalized as an orphan while its response remains unknown.
+            guard !manualRequests.contains(change.changeID) else { continue }
             if change.operation == .delete {
                 change.status = .superseded
                 change.updatedAt = Date()
@@ -250,6 +255,11 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                 change.status = .superseded
                 change.updatedAt = Date()
                 changedTerminalState = true
+                continue
+            }
+            guard let parent = price.product, let parentID = parent.remoteID,
+                  parent.remoteDeletedAt == nil, !blockedParents.contains(parentID) else {
+                orphaned += 1
                 continue
             }
             guard let payload = makePayload(
@@ -295,6 +305,9 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         outcome.result.tombstonedCount = preparation.tombstonedCount
         outcome.result.orphanedCount = preparation.orphanedCount
 
+        #if DEBUG
+        var b6OwnAcks: [(LocalPendingChangeCASToken, UUID, String?)] = []
+        #endif
         for prepared in preparation.upserts {
             guard let row = rowsByID[prepared.payload.id],
                   readBackMatches(row, payload: prepared.payload) else {
@@ -350,6 +363,9 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                productPricePayloadFingerprint(currentPayload) == prepared.payloadFingerprint {
                 change.status = .acknowledged
                 change.updatedAt = Date()
+                #if DEBUG
+                if PilotCommitTrace.b6ObservationEnabled { b6OwnAcks.append((prepared.pending, row.id, row.updatedAt)) }
+                #endif
             }
         }
         outcome.result.insertedCount = rows.count
@@ -360,6 +376,12 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             scope: scope
         )
         try context.save()
+        #if DEBUG
+        for (pending, id, version) in b6OwnAcks {
+            PilotCommitTrace.b6SourceIdentityAcknowledged(pending: pending,
+                remoteID: id, rawVersion: version, scope: scope)
+        }
+        #endif
         return outcome
     }
 

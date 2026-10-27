@@ -60,6 +60,7 @@ nonisolated enum SupabaseAuthEvent: Sendable {
     case initialSession(SupabaseAuthSessionInfo?)
     case signedIn(SupabaseAuthSessionInfo)
     case signedOut
+    case reauthenticationRequired
     case tokenRefreshed(SupabaseAuthSessionInfo?)
     case other(SupabaseAuthSessionInfo?)
 }
@@ -112,6 +113,16 @@ final class SupabaseAuthService: @unchecked Sendable {
 
     func acceptsAuthGeneration(_ generation: UUID) -> Bool {
         provider.acceptsAuthGeneration(generation)
+    }
+
+    var localIdentityReadWitness: SupabaseLocalAuthReadWitness? { provider.localIdentityReadWitness }
+
+    func acceptsLocalIdentityReadWitness(_ witness: SupabaseLocalAuthReadWitness) -> Bool {
+        provider.acceptsLocalIdentityReadWitness(witness)
+    }
+
+    func requiresReauthentication(generation: UUID) -> Bool {
+        provider.requiresReauthentication(generation: generation)
     }
 
     func signInWithGoogle() async throws -> SupabaseAuthSessionResult {
@@ -212,6 +223,10 @@ final class SupabaseAuthService: @unchecked Sendable {
                 defer { listener?.cancel(); continuation.finish() }
                 for await snapshot in provider.authClientChanges() {
                     listener?.cancel()
+                    if provider.requiresReauthentication(generation: snapshot.generation) {
+                        continuation.yield(.init(generation: snapshot.generation, event: .reauthenticationRequired))
+                        continue
+                    }
                     listener = Task {
                         for await change in snapshot.client.auth.authStateChanges {
                             guard !Task.isCancelled,

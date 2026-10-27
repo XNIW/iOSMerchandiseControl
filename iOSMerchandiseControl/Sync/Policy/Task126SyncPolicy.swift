@@ -489,9 +489,22 @@ nonisolated enum Task126OwnerStoreGate {
         modelContainer: ModelContainer,
         ownerUserID: UUID?,
         defaults: UserDefaults = .standard,
+        expectedAutomaticScope: Task126VerifiedOwnerStoreScope? = nil,
         _ mutation: (ModelContext) throws -> Result
     ) throws -> Result {
-        try leaseStore.withCurrentLease { _ in
+        if let expectedAutomaticScope {
+            guard expectedAutomaticScope.ownerUserID == ownerUserID else {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
+            try revalidateAutomaticScope(expectedAutomaticScope, defaults: defaults)
+        }
+        return try leaseStore.withCurrentLease { generation in
+            if let expectedAutomaticScope {
+                try Task.checkCancellation()
+                guard expectedAutomaticScope.leaseGeneration == generation else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+            }
             switch leaseStore.localMutationContainerStateWithLeaseHeld(modelContainer) {
             case .retired:
                 throw Task126OwnerStoreGateError.retiredStoreGeneration
@@ -544,7 +557,18 @@ nonisolated enum Task126OwnerStoreGate {
             }
             let freshContext = ModelContext(modelContainer)
             freshContext.autosaveEnabled = false
+            #if DEBUG
+            let result: Result
+            if PilotCommitTrace.b6ObservationEnabled {
+                // Value-only observation of the lease already held here; never
+                // call capture/revalidate or acquire the same lock from the hook.
+                result = try PilotCommitTrace.B6Context.$localLeaseGeneration.withValue(generation) {
+                    try mutation(freshContext)
+                }
+            } else { result = try mutation(freshContext) }
+            #else
             let result = try mutation(freshContext)
+            #endif
             leaseStore.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
             return result
         }

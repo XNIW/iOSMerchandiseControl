@@ -169,7 +169,8 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
 
     static func makeSnapshot(
         from plan: ProductPricePushDryRunPlan,
-        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions()
+        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions(),
+        expectedShopID: UUID? = nil
     ) throws -> ProductPriceManualPushSnapshot {
         guard plan.isRemoteDedupeSafe,
               plan.summary.blockedTotal == 0,
@@ -190,7 +191,7 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
             )
         }
 
-        let payloads = try plan.candidates.map(makePayload)
+        let payloads = try plan.candidates.map { try makePayload(from: $0, expectedShopID: expectedShopID) }
             .sorted { lhs, rhs in
                 (lhs.productID.uuidString, lhs.type, lhs.effectiveAt, lhs.priceCanonical, lhs.id.uuidString)
                     < (rhs.productID.uuidString, rhs.type, rhs.effectiveAt, rhs.priceCanonical, rhs.id.uuidString)
@@ -241,7 +242,7 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func makePayload(from line: ProductPricePushDryRunLine) throws -> ProductPriceManualPushPayload {
+    private static func makePayload(from line: ProductPricePushDryRunLine, expectedShopID: UUID?) throws -> ProductPriceManualPushPayload {
         guard line.reason == .candidate,
               let payload = line.payload,
               let key = line.key else {
@@ -252,7 +253,7 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
         guard remoteType == "PURCHASE" || remoteType == "RETAIL" else {
             throw ProductPriceManualPushError.invalidPayload
         }
-        let shopID = ShopContextSelection.selectedShopID(ownerUserID: payload.ownerUserID)
+        let shopID = expectedShopID ?? ShopContextSelection.selectedShopID(ownerUserID: payload.ownerUserID)
 
         let id = deterministicID(
             ownerUserID: payload.ownerUserID,
@@ -334,13 +335,16 @@ nonisolated enum ProductPriceManualPushSnapshotFactory {
 struct SupabaseProductPriceManualPushService: Sendable {
     private let remote: any SupabaseProductPriceManualPushRemoteAccessing
     private let options: ProductPriceManualPushOptions
+    private let onVerifiedRows: (@Sendable ([RemoteInventoryProductPriceRow]) async throws -> Void)?
 
     nonisolated init(
         remote: any SupabaseProductPriceManualPushRemoteAccessing,
-        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions()
+        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions(),
+        onVerifiedRows: (@Sendable ([RemoteInventoryProductPriceRow]) async throws -> Void)? = nil
     ) {
         self.remote = remote
         self.options = options
+        self.onVerifiedRows = onVerifiedRows
     }
 
     func push(snapshot: ProductPriceManualPushSnapshot) async throws -> ProductPriceManualPushResult {
@@ -417,10 +421,10 @@ struct SupabaseProductPriceManualPushService: Sendable {
                 rows.append(contentsOf: page)
 
                 if page.count < options.readBackPageSize {
-                    return exactMatch(snapshot: snapshot, rows: rows)
+                    return try await qualifyReadBack(snapshot: snapshot, rows: rows)
                 }
                 if expectedIDs.isSubset(of: Set(rows.map(\.id))) {
-                    return exactMatch(snapshot: snapshot, rows: rows)
+                    return try await qualifyReadBack(snapshot: snapshot, rows: rows)
                 }
                 offset += options.readBackPageSize
             }
@@ -431,6 +435,20 @@ struct SupabaseProductPriceManualPushService: Sendable {
         } catch {
             return .unknown(message: safeDiagnosticDetail(for: error))
         }
+    }
+
+    private func qualifyReadBack(snapshot: ProductPriceManualPushSnapshot,
+                                 rows: [RemoteInventoryProductPriceRow]) async throws -> ProductPriceManualPushVerificationResult {
+        let result = exactMatch(snapshot: snapshot, rows: rows)
+        if case .exactMatch = result, let onVerifiedRows {
+            let expected = Set(snapshot.payloads.map(\.id))
+            let selected = rows.filter { expected.contains($0.id) }
+            guard selected.count == expected.count, Set(selected.map(\.id)) == expected else {
+                throw ProductPriceManualPushError.invalidPayload
+            }
+            try await onVerifiedRows(selected)
+        }
+        return result
     }
 
     private func verifyWithReadBackRetry(
@@ -731,7 +749,8 @@ struct ProductPriceCoveredProductChangeReconciler {
 struct ProductPriceManualPushIdentityReconciler {
     func linkVerifiedPayloads(
         _ payloads: [ProductPriceManualPushPayload],
-        context: ModelContext
+        context: ModelContext,
+        saveChanges: Bool = true
     ) throws -> Int {
         guard !payloads.isEmpty else {
             return 0
@@ -777,7 +796,7 @@ struct ProductPriceManualPushIdentityReconciler {
             link.price.remoteID = link.remoteID
         }
 
-        if !links.isEmpty {
+        if saveChanges && !links.isEmpty {
             do {
                 try context.save()
             } catch {

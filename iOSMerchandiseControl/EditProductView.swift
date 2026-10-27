@@ -9,6 +9,7 @@ struct EditProductView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.localRootPresentationState) private var localPresentation
     @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
+    @Environment(\.catalogConflictResolutionService) private var conflictResolutionService
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var productImageStore: ProductImageStore
@@ -16,6 +17,7 @@ struct EditProductView: View {
     let existingProduct: Product?
     let pendingOwnerUserID: UUID?
     let isCameraAvailable: Bool
+    let persistedConflictChangeID: String?
     @State private var initialDraft: ProductDraft?
     private let logicalRemoteID: UUID?
     private let originalBarcode: String
@@ -53,6 +55,21 @@ struct EditProductView: View {
     @State private var currentImageUpdatedAt: Date?
     @State private var mountedPresentationID: String?
     @State private var retainsLocalDraft = true
+    @State private var persistedConflictReview: PersistedCatalogConflictReview?
+    @State private var persistedSelectedFields = Set<String>()
+    @State private var persistedReviewIsLoading = false
+    @State private var persistedPreparationID: UUID?
+    @State private var persistedPreparingChangeID: String?
+    @State private var persistedResolutionIsRunning = false
+    @State private var persistedResolutionMessage: String?
+    @State private var persistedResolutionError: String?
+    @State private var persistedResolutionOperationID: UUID?
+    @State private var persistedResolvedChangeID: String?
+    @State private var draftConflictReview: ProductEditorConflictReview?
+    @State private var draftReviewSelectedFields = Set<String>()
+    @State private var draftReviewRequired = false
+    @State private var reviewReturnFocus: DraftField?
+    @State private var textSelections: [DraftField: TextSelection] = [:]
     @FocusState private var focusedField: DraftField?
 
     private enum DraftField: String {
@@ -63,11 +80,13 @@ struct EditProductView: View {
         product: Product? = nil,
         initialBarcode: String? = nil,
         pendingOwnerUserID: UUID? = nil,
+        persistedConflictChangeID: String? = nil,
         isCameraAvailable: Bool = UIImagePickerController.isSourceTypeAvailable(.camera)
     ) {
         self.existingProduct = product
         self.pendingOwnerUserID = pendingOwnerUserID
         self.isCameraAvailable = isCameraAvailable
+        self.persistedConflictChangeID = persistedConflictChangeID
         _initialDraft = State(initialValue: product.map(Self.makeDraft))
         self.logicalRemoteID = product?.remoteID
         self.originalBarcode = product?.barcode ?? initialBarcode ?? ""
@@ -117,6 +136,29 @@ struct EditProductView: View {
 
     private var activeEditor: some View {
         Form {
+            if persistedConflictChangeID != nil {
+                Section {
+                    if persistedReviewIsLoading { ProgressView(L("product.resolution.loading")) }
+                    if let persistedResolutionMessage { Text(persistedResolutionMessage) }
+                    if let persistedResolutionError { Text(persistedResolutionError).foregroundStyle(.red) }
+                    if persistedResolvedChangeID != persistedConflictChangeID {
+                        Button(L("product.resolution.action")) {
+                            Task { await preparePersistedConflictReview() }
+                        }
+                        .disabled(persistedReviewIsLoading || persistedResolutionIsRunning || conflictResolutionService == nil)
+                        .accessibilityIdentifier("task145.product.resolution.open")
+                    }
+                }
+            }
+            if draftReviewRequired || currentProductHasChanged {
+                Section {
+                    Label(L(draftReviewRequired ? "product.review.conflict" : "product.review.updated"),
+                          systemImage: "arrow.triangle.2.circlepath")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Button(L("product.review.action"), action: beginDraftReview)
+                        .accessibilityIdentifier("task145.product.review.open")
+                }
+            }
             if let validationMessage {
                 Section {
                     Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
@@ -128,7 +170,7 @@ struct EditProductView: View {
             productImageSection
 
             Section(L("product.section.main")) {
-                TextField(L("product.field.barcode"), text: $barcode)
+                TextField(L("product.field.barcode"), text: $barcode, selection: selectionBinding(for: .barcode))
                     .focused($focusedField, equals: .barcode)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -137,21 +179,22 @@ struct EditProductView: View {
                     .accessibilityLabel(Text(L("product.field.barcode")))
                     .accessibilityIdentifier("task141.product.barcode")
 
-                TextField(L("product.field.item_number"), text: $itemNumber)
+                TextField(L("product.field.item_number"), text: $itemNumber, selection: selectionBinding(for: .itemNumber))
                     .focused($focusedField, equals: .itemNumber)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.item_number")))
 
-                TextField(L("product.field.name"), text: $name)
+                TextField(L("product.field.name"), text: $name, selection: selectionBinding(for: .name))
                     .focused($focusedField, equals: .name)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
                     .accessibilityLabel(Text(L("product.field.name")))
                     .accessibilityIdentifier("task144.product.name")
+                    .task145PerformanceRender("editorRender", qualifies: task145PerformanceEditorMatches(name, barcode: barcode), facts: name)
 
-                TextField(L("product.field.second_name"), text: $secondName)
+                TextField(L("product.field.second_name"), text: $secondName, selection: selectionBinding(for: .secondName))
                     .focused($focusedField, equals: .secondName)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
@@ -159,7 +202,7 @@ struct EditProductView: View {
             }
 
             Section(L("product.section.warehouse")) {
-                TextField(L("product.field.stock_quantity"), text: $stockQuantity)
+                TextField(L("product.field.stock_quantity"), text: $stockQuantity, selection: selectionBinding(for: .stockQuantity))
                     .focused($focusedField, equals: .stockQuantity)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
@@ -181,7 +224,7 @@ struct EditProductView: View {
             }
 
             Section(L("product.section.prices")) {
-                TextField(L("product.field.purchase_price"), text: $purchasePrice)
+                TextField(L("product.field.purchase_price"), text: $purchasePrice, selection: selectionBinding(for: .purchasePrice))
                     .focused($focusedField, equals: .purchasePrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
@@ -201,7 +244,7 @@ struct EditProductView: View {
                     identifier: "task141.product.purchase-price-error"
                 )
 
-                TextField(L("product.field.retail_price"), text: $retailPrice)
+                TextField(L("product.field.retail_price"), text: $retailPrice, selection: selectionBinding(for: .retailPrice))
                     .focused($focusedField, equals: .retailPrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
@@ -221,9 +264,9 @@ struct EditProductView: View {
                     identifier: "task141.product.retail-price-error"
                 )
 
-                if let existingProduct {
+                if let product = currentProduct {
                     Button {
-                        productForHistory = existingProduct
+                        productForHistory = product
                     } label: {
                         Label(L("product.history.action.open"), systemImage: "clock.arrow.circlepath")
                     }
@@ -234,7 +277,7 @@ struct EditProductView: View {
 #if DEBUG
                 observedSupplierNameField
 #else
-                TextField(L("product.field.supplier_name"), text: $supplierName)
+                TextField(L("product.field.supplier_name"), text: $supplierName, selection: selectionBinding(for: .supplierName))
                     .focused($focusedField, equals: .supplierName)
                     .textInputAutocapitalization(.words)
                     .accessibilityLabel(Text(L("product.field.supplier_name")))
@@ -254,7 +297,7 @@ struct EditProductView: View {
             }
 
             Section(L("product.section.category")) {
-                TextField(L("product.field.category_name"), text: $categoryName)
+                TextField(L("product.field.category_name"), text: $categoryName, selection: selectionBinding(for: .categoryName))
                     .focused($focusedField, equals: .categoryName)
                     .textInputAutocapitalization(.words)
                     .accessibilityLabel(Text(L("product.field.category_name")))
@@ -272,9 +315,9 @@ struct EditProductView: View {
                 }
             }
 
-            if existingProduct != nil {
+            if let product = currentProduct {
                 StorefrontEditorSection(
-                    product: existingProduct,
+                    product: product,
                     operationalName: name,
                     operationalRetailPrice: parseOperationalRetailPrice,
                     operationalCategoryRemoteID: existingProduct?.category?.remoteID,
@@ -294,6 +337,27 @@ struct EditProductView: View {
                 Button(L("common.save")) { save() }
                     .fontWeight(.semibold)
             }
+        }
+        .task(id: persistedConflictChangeID) {
+            if persistedConflictChangeID != nil, persistedResolvedChangeID != persistedConflictChangeID {
+                persistedResolutionMessage = nil
+                await preparePersistedConflictReview()
+            }
+        }
+        .sheet(item: $draftConflictReview, onDismiss: restoreReviewFocus) { review in
+            ProductConflictReviewSheet(review: review, selectedFields: $draftReviewSelectedFields) { choice in
+                applyDraftReviewChoice(choice, review: review)
+            }
+        }
+        .sheet(item: $persistedConflictReview, onDismiss: restoreReviewFocus) { review in
+            PersistedProductConflictReviewSheet(review: review,
+                isResolving: persistedResolutionIsRunning,
+                includesNewerRevision: review.changeID != persistedConflictChangeID,
+                errorMessage: persistedResolutionError,
+                selectedFields: $persistedSelectedFields,
+                onChoice: { choice in resolvePersistedConflict(review, choice: choice) },
+                onCancel: { persistedConflictReview = nil },
+                onRefresh: { Task { await preparePersistedConflictReview(preservingSelection: true) } })
         }
         .onChange(of: barcode) { _, _ in
             if !trimmedBarcode.isEmpty {
@@ -407,7 +471,7 @@ struct EditProductView: View {
 
 #if DEBUG
     private var observedSupplierNameField: some View {
-        TextField(L("product.field.supplier_name"), text: observedSupplierNameBinding)
+        TextField(L("product.field.supplier_name"), text: observedSupplierNameBinding, selection: selectionBinding(for: .supplierName))
             .focused($focusedField, equals: .supplierName)
             .textInputAutocapitalization(.words)
             .accessibilityLabel(Text(L("product.field.supplier_name")))
@@ -436,7 +500,9 @@ struct EditProductView: View {
         .init(remoteID: logicalRemoteID, originalBarcode: originalBarcode, baseline: initialDraft,
             barcode: barcode, name: name, secondName: secondName, itemNumber: itemNumber,
             purchasePrice: purchasePrice, retailPrice: retailPrice, stockQuantity: stockQuantity,
-            supplierName: supplierName, categoryName: categoryName, focusedField: focusedField?.rawValue)
+            supplierName: supplierName, categoryName: categoryName, focusedField: retainedFocusedField?.rawValue,
+            selectionLowerBound: retainedSelectionOffsets?.lowerBound,
+            selectionUpperBound: retainedSelectionOffsets?.upperBound)
     }
 
     private func restoreRetainedDraft() {
@@ -456,6 +522,9 @@ struct EditProductView: View {
             supplierName = draft.supplierName
             categoryName = draft.categoryName
             focusedField = draft.focusedField.flatMap(DraftField.init(rawValue:))
+            if let field = focusedField, let lower = draft.selectionLowerBound, let upper = draft.selectionUpperBound {
+                restoreSelection(field: field, lower: lower, upper: upper)
+            }
 #if DEBUG
             Task144RootObservation.recordRelatedSupplierInput("restore-applied", value: draft.supplierName,
                 focusedField: draft.focusedField)
@@ -478,7 +547,11 @@ struct EditProductView: View {
         localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = nil }
     }
 
-    private var currentProduct: Product? { isCurrentModelGeneration ? existingProduct : nil }
+    private var currentProduct: Product? {
+        guard isCurrentModelGeneration, let product = existingProduct,
+              !product.isDeleted, product.modelContext != nil else { return nil }
+        return product
+    }
 
     @ViewBuilder
     private var productImageSection: some View {
@@ -879,6 +952,12 @@ struct EditProductView: View {
     }
 
     private func save() {
+        #if DEBUG
+        PilotCommitTrace.b6SourceMutationBegin(categories: ["create", "update", "price"])
+        #endif
+        #if DEBUG
+        Task144RootObservation.performanceAction("save")
+        #endif
         guard isCurrentModelGeneration else {
             validationMessage = L("product.validation.save_failed")
             return
@@ -926,9 +1005,17 @@ struct EditProductView: View {
             validationMessage = L("catalog.text.error.invalid_input")
             return
         }
-        let existingID = currentProduct?.persistentModelID
+        let existingID = existingProduct?.persistentModelID
 
         var savedProductReceipt: LocalProductSaveReceipt?
+        var rejectedReview: ProductEditorConflictReview?
+        #if DEBUG
+        // Capture outside the nonrecursive local mutation lease. The observer
+        // compares the actual lease generation already held by the writer.
+        let b6Scope = PilotCommitTrace.b6ObservationEnabled ? pendingOwnerUserID.flatMap {
+            try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: $0)
+        } : nil
+        #endif
         do {
             try Task126OwnerStoreGate.withLocalMutationFence(
                 modelContainer: context.container,
@@ -951,6 +1038,8 @@ struct EditProductView: View {
                         throw Task126OwnerStoreGateError.localModelUnavailable
                     }
                     let freshDraft = Self.makeDraft(target)
+                    rejectedReview = ProductEditorConflictReview(base: initialDraft, desired: formDraft,
+                        current: freshDraft, remoteDeleted: target.remoteDeletedAt != nil)
                     let requestedUserChangedFields = Self.changedFieldNames(
                         old: initialDraft,
                         new: formDraft
@@ -1108,21 +1197,278 @@ struct EditProductView: View {
                         savedIntents.append(LocalPendingChangeCASToken(change))
                     }
                 }
+                #if DEBUG
+                let b6Ticket = PilotCommitTrace.b6LocalBegin(product: target, prices: priceChanges,
+                    intents: savedIntents, scope: b6Scope)
+                do {
+                    try freshContext.save()
+                    PilotCommitTrace.b6LocalEnd(b6Ticket, returned: true, ns: PilotCommitTrace.b6Now())
+                } catch {
+                    PilotCommitTrace.b6LocalEnd(b6Ticket, returned: false, ns: PilotCommitTrace.b6Now())
+                    throw error
+                }
+                #else
                 try freshContext.save()
+                #endif
+                #if DEBUG
+                Task144RootObservation.performanceMark("saveCommit", facts: "business-and-intent-save-returned")
+                #endif
                 if !savedIntents.isEmpty, let manifest = Task126OwnerStoreGate.activeManifestWithLeaseHeld(freshContext.container) {
                     savedProductReceipt = LocalProductSaveReceipt(product: target, manifest: manifest, intents: savedIntents)
                 }
             }
             if let savedProductReceipt {
                 localPresentation?.recordSavedProduct(savedProductReceipt, presentationID: mountedPresentationID)
+                #if DEBUG
+                Task144LocalAvailabilityRootFixture.current?.performanceRecordSaveReceipt(savedProductReceipt)
+                #endif
             }
             clearRetainedDraft()
             dismiss()
+        } catch let error as Task126OwnerStoreGateError {
+            switch error {
+            case .localRemoteConflictRequiresReview:
+                draftReviewRequired = true
+                validationMessage = L(rejectedReview?.remoteDeleted == true
+                    ? "product.review.unavailable" : "product.review.conflict")
+            case .localModelUnavailable, .retiredStoreGeneration:
+                draftReviewRequired = true
+                validationMessage = L("product.review.unavailable")
+            default:
+                validationMessage = L("product.review.save_retry")
+            }
         } catch {
-            validationMessage = L("product.validation.save_failed")
-            #if DEBUG
-            print("Errore durante il salvataggio locale.")
-            #endif
+            validationMessage = L("product.review.save_retry")
+        }
+    }
+
+    private var currentProductHasChanged: Bool {
+        guard isCurrentModelGeneration, let initialDraft else { return false }
+        guard let product = currentProduct else { return true }
+        return product.remoteDeletedAt != nil || !ProductDraftReviewFields.changed(from: initialDraft,
+            to: Self.makeDraft(product)).isEmpty
+    }
+
+    private func currentFormDraftForReview() -> ProductDraft? {
+        let purchase = parseOptionalCLPriceInput(purchasePrice)
+        let retail = parseOptionalCLPriceInput(retailPrice)
+        let quantity = parseOptionalCLQuantityInput(stockQuantity)
+        purchasePriceError = numericInputError(purchase, kind: .price)
+        retailPriceError = numericInputError(retail, kind: .price)
+        stockQuantityError = numericInputError(quantity, kind: .quantity)
+        guard purchase.isAccepted, retail.isAccepted, quantity.isAccepted else { return nil }
+        do {
+            return try ProductImportCore.validatedDraft(ProductDraft(barcode: barcode,
+                itemNumber: Self.optionalRaw(itemNumber), productName: Self.optionalRaw(name),
+                secondProductName: Self.optionalRaw(secondName), purchasePrice: purchase.value,
+                retailPrice: retail.value, stockQuantity: quantity.value,
+                supplierName: Self.optionalRaw(supplierName), categoryName: Self.optionalRaw(categoryName)))
+        } catch let error as CatalogTextValidationError {
+            validationMessage = L(error.reason.localizationKey)
+        } catch { validationMessage = L("catalog.text.error.invalid_input") }
+        return nil
+    }
+
+    private func captureDraftReview(desired: ProductDraft) throws -> ProductEditorConflictReview {
+        guard isCurrentModelGeneration, let initialDraft,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container,
+                ownerUserID: pendingOwnerUserID) else { throw Task126OwnerStoreGateError.localModelUnavailable }
+        let freshContext = ModelContext(context.container)
+        freshContext.autosaveEnabled = false
+        let current = try currentProduct.map {
+            try Task126OwnerStoreGate.requireLocalModel(Product.self, id: $0.persistentModelID, in: freshContext)
+        }
+        guard isCurrentModelGeneration else { throw Task126OwnerStoreGateError.retiredStoreGeneration }
+        return ProductEditorConflictReview(base: initialDraft, desired: desired,
+            current: current.map(Self.makeDraft), remoteDeleted: current?.remoteDeletedAt != nil)
+    }
+
+    private func beginDraftReview() {
+        guard let desired = currentFormDraftForReview() else { return }
+        do {
+            let review = try captureDraftReview(desired: desired)
+            draftReviewSelectedFields = []
+            reviewReturnFocus = focusedField ?? reviewReturnFocus
+            draftConflictReview = review
+        } catch { validationMessage = L("product.review.unavailable") }
+    }
+
+    private func applyDraftReviewChoice(_ choice: ProductEditorReviewChoice,
+                                       review: ProductEditorConflictReview) {
+        if case .returnToEditing = choice { draftConflictReview = nil; return }
+        do {
+            let fresh = try captureDraftReview(desired: review.desired)
+            guard fresh.current == review.current, fresh.remoteDeleted == review.remoteDeleted else {
+                draftConflictReview = fresh
+                validationMessage = L("product.resolution.changed_again")
+                return
+            }
+            let selected: Set<String>
+            switch choice {
+            case .returnToEditing: return
+            case .useCurrent: selected = []
+            case .selectedFields(let fields): selected = fields
+            }
+            guard let prepared = review.preparingDraft(selectedFields: selected), let current = review.current else {
+                validationMessage = L("product.review.unavailable")
+                return
+            }
+            let selection = retainedSelectionOffsets
+            initialDraft = current
+            barcode = prepared.barcode; name = prepared.productName ?? ""
+            secondName = prepared.secondProductName ?? ""; itemNumber = prepared.itemNumber ?? ""
+            purchasePrice = prepared.purchasePrice.map { Self.format(number: $0) } ?? ""
+            retailPrice = prepared.retailPrice.map { Self.format(number: $0) } ?? ""
+            stockQuantity = prepared.stockQuantity.map { Self.format(number: $0) } ?? ""
+            supplierName = prepared.supplierName ?? ""; categoryName = prepared.categoryName ?? ""
+            textSelections = [:]
+            if let field = reviewReturnFocus, let selection {
+                let count = fieldText(field).count
+                restoreSelection(field: field, lower: min(selection.lowerBound, count),
+                    upper: min(selection.upperBound, count))
+            }
+            validationMessage = nil; draftReviewRequired = false
+            draftConflictReview = nil
+        } catch { validationMessage = L("product.review.unavailable") }
+    }
+
+    private func restoreReviewFocus() {
+        let field = reviewReturnFocus
+        Task { @MainActor in
+            await Task.yield()
+            guard isViewActive, isCurrentModelGeneration else { return }
+            focusedField = field
+        }
+    }
+
+    private var retainedFocusedField: DraftField? {
+        focusedField ?? ((draftConflictReview != nil || persistedConflictReview != nil) ? reviewReturnFocus : nil)
+    }
+
+    private func fieldText(_ field: DraftField) -> String {
+        switch field {
+        case .barcode: barcode
+        case .name: name
+        case .secondName: secondName
+        case .itemNumber: itemNumber
+        case .purchasePrice: purchasePrice
+        case .retailPrice: retailPrice
+        case .stockQuantity: stockQuantity
+        case .supplierName: supplierName
+        case .categoryName: categoryName
+        }
+    }
+
+    private func selectionBinding(for field: DraftField) -> Binding<TextSelection?> {
+        Binding(get: { textSelections[field] }, set: { textSelections[field] = $0 })
+    }
+
+    private var retainedSelectionOffsets: Range<Int>? {
+        guard let field = retainedFocusedField, let selection = textSelections[field],
+              case .selection(let range) = selection.indices else { return nil }
+        let text = fieldText(field)
+        let boundaries = Set(text.indices).union([text.endIndex])
+        guard boundaries.contains(range.lowerBound), boundaries.contains(range.upperBound) else { return nil }
+        return text.distance(from: text.startIndex, to: range.lowerBound)..<text.distance(from: text.startIndex, to: range.upperBound)
+    }
+
+    private func restoreSelection(field: DraftField, lower: Int, upper: Int) {
+        let text = fieldText(field)
+        guard lower >= 0, upper >= lower,
+              let lowerIndex = text.index(text.startIndex, offsetBy: lower, limitedBy: text.endIndex),
+              let upperIndex = text.index(text.startIndex, offsetBy: upper, limitedBy: text.endIndex) else { return }
+        textSelections[field] = lowerIndex == upperIndex
+            ? TextSelection(insertionPoint: lowerIndex) : TextSelection(range: lowerIndex..<upperIndex)
+    }
+
+    private func preparePersistedConflictReview(preservingSelection: Bool = false) async {
+        guard !persistedResolutionIsRunning,
+              isCurrentModelGeneration, let owner = pendingOwnerUserID,
+              let remoteID = logicalRemoteID, let changeID = persistedConflictChangeID,
+              let service = conflictResolutionService else { return }
+        guard !persistedReviewIsLoading || persistedPreparingChangeID != changeID else { return }
+        let preparationID = UUID()
+        persistedPreparationID = preparationID
+        persistedPreparingChangeID = changeID
+        persistedReviewIsLoading = true
+        persistedResolutionError = nil
+        defer {
+            if persistedPreparationID == preparationID {
+                persistedReviewIsLoading = false
+                persistedPreparationID = nil
+                persistedPreparingChangeID = nil
+            }
+        }
+        do {
+            let review = try await service.prepare(modelContainer: context.container,
+                ownerUserID: owner, remoteID: remoteID, changeID: changeID)
+            guard !Task.isCancelled, persistedPreparationID == preparationID,
+                  persistedConflictChangeID == changeID, isViewActive, isCurrentModelGeneration else { return }
+            if !preservingSelection { persistedSelectedFields = [] }
+            reviewReturnFocus = focusedField ?? reviewReturnFocus
+            persistedConflictReview = review
+        } catch is CancellationError {
+            // Dismissal does not change the already durable intent.
+        } catch {
+            guard persistedPreparationID == preparationID, persistedConflictChangeID == changeID,
+                  isViewActive, isCurrentModelGeneration else { return }
+            persistedResolutionError = persistedConflictErrorMessage(error)
+        }
+    }
+
+    private func resolvePersistedConflict(_ review: PersistedCatalogConflictReview,
+                                          choice: PersistedCatalogConflictChoice) {
+        guard !persistedResolutionIsRunning, isCurrentModelGeneration,
+              let service = conflictResolutionService else { return }
+        let operationID = UUID()
+        let requestedChangeID = persistedConflictChangeID
+        persistedResolutionOperationID = operationID
+        persistedResolutionIsRunning = true
+        persistedResolutionError = nil
+        let container = context.container
+        Task { @MainActor in
+            defer {
+                if persistedResolutionOperationID == operationID {
+                    persistedResolutionIsRunning = false
+                    persistedResolutionOperationID = nil
+                    if persistedConflictChangeID != requestedChangeID, persistedConflictChangeID != nil,
+                       isViewActive, isCurrentModelGeneration {
+                        Task { await preparePersistedConflictReview() }
+                    }
+                }
+            }
+            do {
+                let outcome = try await service.resolve(review: review, choice: choice, modelContainer: container)
+                guard persistedResolutionOperationID == operationID, persistedConflictChangeID == requestedChangeID,
+                      isViewActive, isCurrentModelGeneration else { return }
+                switch outcome {
+                case .adoptedRemote: persistedResolutionMessage = L("product.resolution.adopted_remote")
+                case .adoptedRemoteTombstone: persistedResolutionMessage = L("product.resolution.adopted_tombstone")
+                case .successorPending: persistedResolutionMessage = L("product.resolution.successor_pending")
+                }
+                persistedResolvedChangeID = requestedChangeID
+                persistedConflictReview = nil
+                // The saved revision's decision does not overwrite an unsaved draft.
+            } catch {
+                guard persistedResolutionOperationID == operationID, persistedConflictChangeID == requestedChangeID,
+                      isViewActive, isCurrentModelGeneration else { return }
+                persistedResolutionError = persistedConflictErrorMessage(error)
+            }
+        }
+    }
+
+    private func persistedConflictErrorMessage(_ error: Error) -> String {
+        guard let error = error as? CatalogConflictResolutionError else {
+            return L("product.resolution.error")
+        }
+        switch error {
+        case .destructiveDependencies: return L("product.resolution.linked_history")
+        case .relationshipUnavailable: return L("product.resolution.relationship_unavailable")
+        case .ownerBusy: return L("product.resolution.owner_busy")
+        case .reconciliationRequired: return L("product.resolution.unconfirmed")
+        case .generationChanged: return L("product.resolution.invalidated")
+        case .remoteChanged, .localChanged: return L("product.resolution.changed_again")
+        default: return L("product.resolution.error")
         }
     }
 
@@ -1228,11 +1574,7 @@ struct EditProductView: View {
         old: ProductDraft,
         new: ProductDraft
     ) -> [String] {
-        var fields = ProductUpdateDraft.computeChangedFields(old: old, new: new).map(\.rawValue)
-        if old.barcode != new.barcode {
-            fields.insert("barcode", at: 0)
-        }
-        return fields
+        ProductDraftReviewFields.changed(from: old, to: new)
     }
 
     private static let createChangedFields = [
