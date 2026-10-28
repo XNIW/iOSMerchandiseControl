@@ -892,6 +892,9 @@ struct OptionsView: View {
         case .cancel, .exportAndCancel, .keepLocalData:
             isAccountDecisionDialogPresented = false
         case .discardLocalAndBind:
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.discard-choice.enter")
+            #endif
             beginAccountStoreReplacement()
         case .merge,
              .replaceLocalWithCloud,
@@ -906,26 +909,44 @@ struct OptionsView: View {
     }
 
     private func beginAccountStoreReplacement() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("options.begin.enter")
+        #endif
         isAccountDecisionDialogPresented = false
         guard accountReplacementTask == nil else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.task-busy")
+            #endif
             accountReplacementError = L("options.accountDecision.error.busy")
             return
         }
         guard authenticatedUserID != nil else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.auth")
+            #endif
             accountReplacementError = L("options.accountDecision.error.auth")
             return
         }
         guard let initialPreflight = accountStoreReplacementPreflight else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.preflight")
+            #endif
             accountReplacementError = L("options.accountDecision.error.shop")
             return
         }
         guard let accountStoreReplacementRuntime,
               !foregroundActivityCenter.isBusy,
               productImageStore.beginAccountStoreReplacementLease() else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.runtime-or-activity-or-image-lease")
+            #endif
             accountReplacementError = L("options.accountDecision.error.busy")
             return
         }
 
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("options.admission.passed")
+        #endif
         let replacementCoordinator = AccountStoreReplacementCoordinator(
             context: modelContext,
             bindingStore: bindingStore
@@ -942,6 +963,9 @@ struct OptionsView: View {
             token: accountReplacementActivityToken
         )
         accountReplacementTask = Task { @MainActor in
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.task.enter")
+            #endif
             defer {
                 productImageStore.endAccountStoreReplacementLease()
                 foregroundActivityCenter.setActive(
@@ -951,39 +975,84 @@ struct OptionsView: View {
                 )
                 accountReplacementTask = nil
                 refreshOptionsSummaryProvider()
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.task.exit")
+                #endif
             }
             do {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.runtime-call.enter")
+                #endif
                 _ = try await accountStoreReplacementRuntime.performAccountStoreReplacement {
+                    #if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("options.real-operation.enter")
+                    #endif
+                    #if DEBUG
+                    defer { Task144RootObservation.recordScopeReplacementPhase("options.real-operation.exit") }
+                    #endif
                     guard authenticatedUserID != nil else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.auth")
+                        #endif
                         throw AccountStoreReplacementPreflightError.authenticationUnavailable
                     }
                     guard let currentPreflight = accountStoreReplacementPreflight else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.preflight")
+                        #endif
                         throw AccountStoreReplacementPreflightError.shopUnavailable
                     }
                     guard currentPreflight == initialPreflight else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.context")
+                        #endif
                         throw AccountStoreReplacementPreflightError.contextChanged
                     }
                     guard foregroundActivityCenter.isExclusivelyActive(
                         .cloudReview,
                         token: accountReplacementActivityToken
                     ) else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.activity")
+                        #endif
                         throw AccountStoreReplacementPreflightError.contextChanged
                     }
+                    #if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("options.real-operation.invoke-journal")
+                    #endif
                     return try replacementCoordinator
                         .discardLocalDataAndBind(
                             userID: initialPreflight.userID,
                             storeIdentity: initialPreflight.storeIdentity
                         )
                 }
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.runtime-call.return")
+                #endif
             } catch AccountStoreReplacementPreflightError.authenticationUnavailable {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.auth")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.auth")
             } catch AccountStoreReplacementPreflightError.shopUnavailable {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.preflight")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.shop")
             } catch AccountStoreReplacementPreflightError.contextChanged {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.context")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.busy")
             } catch AccountStoreReplacementRuntimeError.alreadyInProgress {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.already-in-progress")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.busy")
             } catch {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.other")
+                #endif
                 accountReplacementError = error.localizedDescription
             }
         }

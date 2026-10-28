@@ -294,7 +294,15 @@ nonisolated enum Task126OwnerStoreGate {
             }
 
             let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
-            guard defaults.string(forKey: activeAccountKey) == accountHash else {
+            let activeAccountHash = defaults.string(forKey: activeAccountKey)
+            guard activeAccountHash == accountHash else {
+#if DEBUG
+                if ProcessInfo.processInfo.environment["TEST_RUNNER_TASK145_B6_OBSERVE"] == "1" {
+                    // The ORIGINAL guard's single read only. No account values,
+                    // binding/readiness queries or authority/behavior changes.
+                    NSLog("%@", "TASK145_B6_SCOPE_ACCOUNT present.\(activeAccountHash != nil) matches.false")
+                }
+#endif
                 throw Task126OwnerStoreGateError.activeAccountMismatch
             }
 
@@ -688,10 +696,15 @@ nonisolated enum Task126OwnerStoreGate {
     /// authorization and the unchanged physical fence are checked atomically;
     /// no captured writer scope or retired container lease is renewed.
     static func acceptLocalBodyProof(container: ModelContainer, fence: SyncStoreActiveMutationFence,
+                                     didAcceptProof: () -> Void = {},
                                      validatingCurrentAuthority: () -> Bool) -> Bool {
         leaseStore.withCurrentLease { _ in
             guard validatingCurrentAuthority() else { return false }
-            return leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence)
+            guard leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence) else { return false }
+            // Optional physical memo persistence AFTER acceptance, still under
+            // this same lease. Existing callers keep the no-op default.
+            didAcceptProof()
+            return true
         }
     }
 

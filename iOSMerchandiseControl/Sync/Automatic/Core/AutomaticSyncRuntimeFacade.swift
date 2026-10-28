@@ -224,7 +224,7 @@ private extension SyncAction {
     /// A destructive account/shop replacement may only execute recovery work.
     /// A same-scope journal may first drain its own pending writes, but only in
     /// the coordinator's exact push-then-recover sequence, or push-then-bootstrap
-    /// for an admitted automatic foreground/reconnect resume. This keeps the
+    /// for an admitted foreground/reconnect/explicit CTA resume. This keeps the
     /// durable latch fail-closed without creating a retry deadlock.
     nonisolated func allowsPendingRecoveryAdmission(
         mode: AccountRecoveryJournalMode,
@@ -236,7 +236,7 @@ private extension SyncAction {
         case .sameScopeRecovery:
             if isRecoveryOnlyAdmission { return true }
             if self == .sequence([.pushPending, .requestRecovery]) { return true }
-            return (source == .rootForeground || source == .networkReconnect)
+            return (source == .rootForeground || source == .networkReconnect || source == .releaseCard)
                 && self == .sequence([.pushPending, .bootstrap])
         }
     }

@@ -1037,7 +1037,57 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try r3OpenReview()
         try r3AssertReviewValues(base: "R23 peer name 1", desired: desired, current: "R23 peer name 2",
             stage: "explicit-choice-established-peer1-as-new-base")
-        try r3Show(keepName, up: true); keepName.tap()
+        try r3Show(keepName, up: true)
+        try r3Require(reviewRoots.count == 1 && reviewRoots.element.identifier == "task145.product.review"
+            && allKeepNames.count == 1
+            && reviewRoots.element.switches.matching(identifier: "task145.product.review.keep.productName").count == 1,
+            "second-unique-review-name-switch-before-single-tap")
+        let keepNameSecondBefore = try keepName.snapshot()
+        // The default Toggle exports a composite row plus one native track.
+        // Qualify the track in this SAME BEFORE capture; never reuse AFTER geometry.
+        let nativeNameSecondTracks = keepNameSecondBefore.children.filter { $0.elementType == .switch }
+        let nameSecondRowFrame = keepNameSecondBefore.frame
+        let nameSecondTrackFrame = nativeNameSecondTracks.count == 1 ? nativeNameSecondTracks[0].frame : CGRect.null
+        let nameSecondTrackTarget = CGVector(dx: (nameSecondTrackFrame.midX - nameSecondRowFrame.minX) / nameSecondRowFrame.width,
+            dy: (nameSecondTrackFrame.midY - nameSecondRowFrame.minY) / nameSecondRowFrame.height)
+        let keepNameSecondBeforeEvidence = XCTAttachment(string: String(decoding: try r3JSON([
+            "phase": "before-second-single-tap", "identifier": keepNameSecondBefore.identifier,
+            "elementType": keepNameSecondBefore.elementType.rawValue, "label": keepNameSecondBefore.label,
+            "value": keepNameSecondBefore.value ?? NSNull(), "nativeTrackCount": nativeNameSecondTracks.count,
+            "rowFrame": String(describing: nameSecondRowFrame), "nativeTrackFrame": String(describing: nameSecondTrackFrame),
+            "normalizedNativeTrackTarget": String(describing: nameSecondTrackTarget)
+        ]), as: UTF8.self))
+        keepNameSecondBeforeEvidence.name = "R23 review Name switch before the second original single tap"
+        keepNameSecondBeforeEvidence.lifetime = .keepAlways; add(keepNameSecondBeforeEvidence)
+        try r3Require(keepNameSecondBefore.elementType == .switch
+            && keepNameSecondBefore.identifier == "task145.product.review.keep.productName"
+            && (keepNameSecondBefore.value as? String) == "0", "second-review-name-off-before-single-tap")
+        try r3Require(nativeNameSecondTracks.count == 1, "second-unique-native-review-name-track-before-single-tap")
+        try r3Require([nameSecondRowFrame.minX, nameSecondRowFrame.minY, nameSecondRowFrame.width, nameSecondRowFrame.height,
+            nameSecondTrackFrame.minX, nameSecondTrackFrame.minY, nameSecondTrackFrame.width, nameSecondTrackFrame.height].allSatisfy { $0.isFinite }
+            && nameSecondRowFrame.width > 0 && nameSecondRowFrame.height > 0
+            && nameSecondTrackFrame.width > 0 && nameSecondTrackFrame.height > 0 && nameSecondRowFrame.contains(nameSecondTrackFrame)
+            && nativeNameSecondTracks[0].isEnabled && (nativeNameSecondTracks[0].value as? String) == "0",
+            "second-native-review-name-track-geometry-before-single-tap")
+        try r3Require(nameSecondTrackTarget.dx > 0 && nameSecondTrackTarget.dx < 1
+            && nameSecondTrackTarget.dy > 0 && nameSecondTrackTarget.dy < 1, "second-native-review-name-track-target-before-single-tap")
+        keepName.coordinate(withNormalizedOffset: nameSecondTrackTarget).tap()
+        try r3Require(reviewRoots.count == 1 && reviewRoots.element.identifier == "task145.product.review"
+            && allKeepNames.count == 1
+            && reviewRoots.element.switches.matching(identifier: "task145.product.review.keep.productName").count == 1,
+            "second-unique-review-name-switch-after-single-tap")
+        let keepNameSecondAfter = try keepName.snapshot()
+        let keepNameSecondAfterEvidence = XCTAttachment(string: String(decoding: try r3JSON([
+            "phase": "after-second-single-tap", "identifier": keepNameSecondAfter.identifier,
+            "elementType": keepNameSecondAfter.elementType.rawValue, "label": keepNameSecondAfter.label,
+            "value": keepNameSecondAfter.value ?? NSNull()
+        ]), as: UTF8.self))
+        keepNameSecondAfterEvidence.name = "R23 review Name switch after the second original single tap"
+        keepNameSecondAfterEvidence.lifetime = .keepAlways; add(keepNameSecondAfterEvidence)
+        try r3Require(keepNameSecondAfter.elementType == .switch
+            && keepNameSecondAfter.identifier == keepNameSecondBefore.identifier
+            && keepNameSecondAfter.label == keepNameSecondBefore.label
+            && (keepNameSecondAfter.value as? String) == "1", "second-review-name-on-after-single-tap")
         try r3Require(!app.switches["task145.product.review.keep.secondProductName"].exists,
             "peer-only-second-name-is-not-intentional-after-rebase")
         try r3Show(choose, up: true); choose.tap()
@@ -4073,6 +4123,28 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire([viewportFrame.minX, viewportFrame.minY, viewportFrame.maxX, viewportFrame.maxY].allSatisfy { $0.isFinite }
             && !viewportFrame.isNull && !viewportFrame.isInfinite && viewportFrame.width > 1 && viewportFrame.height > 1,
             stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
+        // Preserve the current public OptionRows before any Button hittability
+        // getter can terminate this viewport. This cached projection is evidence
+        // only: it never supplies live existence, hittability or privacy.
+        let preGetterPublicRows: [[String: Any]] = optionRows.map { role in
+            let labels = [role.title + ", " + role.subtitle, role.title + ", Current, " + role.subtitle]
+            let matches = formNodes.filter { $0.elementType == .button && labels.contains($0.label) }
+            return ["role": role.role, "publicLabels": labels,
+                "prefixMatchCount": formNodes.filter { $0.elementType == .button && $0.label.hasPrefix(role.title + ",") }.count,
+                "publicMatches": matches.map { node in
+                    ["type": node.elementType.rawValue, "label": node.label,
+                     "identifierEmpty": node.identifier.isEmpty, "valuePresent": node.rawValue != nil,
+                     "frame": String(describing: node.frame)] as [String: Any]
+                }]
+        }
+        let preGetterRootValues: [String: Any] = ["stage": stage, "ordinal": ordinal,
+            "snapshotStarted": captureStarted, "snapshotFinished": captureFinished,
+            "uptime": ProcessInfo.processInfo.systemUptime, "deadline": deadline,
+            "viewport": String(describing: viewportFrame), "publicOptionRows": preGetterPublicRows]
+        let preGetterRoot = XCTAttachment(data: try JSONSerialization.data(withJSONObject: preGetterRootValues, options: [.sortedKeys]),
+            uniformTypeIdentifier: "public.json")
+        preGetterRoot.name = "TASK145 C3 PRE-GETTER eight public OptionRows " + stage + " #\(ordinal)"
+        preGetterRoot.lifetime = .keepAlways; add(preGetterRoot)
         // Enumerate all eight prefixes together. Snapshot geometry never removes a
         // live role: association must still fail for a missing or changed snapshot row.
         let rolePredicates: [NSPredicate] = optionRows.map { role in
@@ -4084,8 +4156,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         var qualifiedButtons: [String: [C3OptionsSnapshotNode]] = [:]
         for (buttonIndex, button) in buttons.enumerated() {
-            guard queryTiming.measure(.exists, site: .button, index: buttonIndex, { button.exists })
-                && queryTiming.measure(.hittable, site: .button, index: buttonIndex, { button.isHittable }) else { continue }
+            guard queryTiming.measure(.exists, site: .button, index: buttonIndex, { button.exists }) else { continue }
+            try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
+                stage: stage + "-pre-getter-witness-deadline-before", downstream: downstream)
+            // The extra per-Button snapshot/count witness consumed measured AX
+            // time in B12. Keep the same cached public-row evidence, both deadline
+            // guards, and the original live gates/fresh post-getter association.
+            try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
+                stage: stage + "-pre-getter-witness-deadline-after", downstream: downstream)
+            guard queryTiming.measure(.hittable, site: .button, index: buttonIndex, { button.isHittable }) else { continue }
             // The existing fresh Button capture now supplies one coherent public
             // type/id/label/complete-content observation after the same live gates.
             let elementSnapshot: XCUIElementSnapshot
@@ -4210,11 +4289,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 XCUIElement.ElementType.textField.rawValue, "task144.product.name", "task144.product.name")
         ])
         let forbiddenSurfaces = app.descendants(matching: .any).matching(hiddenPredicate)
-        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            forbiddenSurfaces.count == 0
-        }, object: nil)
-        try scopeRequire(XCTWaiter.wait(for: [hidden], timeout: 5) == .completed,
-            stage: stage + "-no-A-summary-diagnostics-row-or-editor", downstream: downstream)
+        if forbiddenSurfaces.count != 0 {
+            let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                forbiddenSurfaces.count == 0
+            }, object: nil)
+            try scopeRequire(XCTWaiter.wait(for: [hidden], timeout: 5) == .completed,
+                stage: stage + "-no-A-summary-diagnostics-row-or-editor", downstream: downstream)
+        }
         let businessLabels = ["Products", "Suppliers", "Categories", "Price history", "History sessions", "Last sync", "Local changes waiting"]
         let forbiddenLabels = app.staticTexts.matching(NSPredicate(
             format: "identifier IN %@ OR label IN %@", businessLabels, businessLabels))

@@ -153,7 +153,7 @@ nonisolated struct SyncStoreGenerationHandle: @unchecked Sendable {
 }
 
 nonisolated struct SyncStoreGenerationMutationFence: Equatable, Sendable {
-    nonisolated struct FileState: Equatable, Sendable {
+    nonisolated struct FileState: Codable, Equatable, Sendable {
         let relativePath: String
         let fileSize: Int
         let allocatedSize: Int
@@ -213,6 +213,18 @@ nonisolated enum SyncStoreActivationBoundary: Equatable, Sendable {
     case afterLocalWorkPreparation
     case beforeManifestRename
     case afterManifestRename
+}
+
+/// Selected authority keeps every stored field except its refresh timestamp.
+/// Values remain exact: do not route through LinkedShop's normalizing initializer.
+private nonisolated struct PhysicalBodyProofSelectedShopAuthority: Encodable {
+    let shopID: UUID
+    let code: String?
+    let name: String
+    let role: String
+    let status: String
+    let selectable: Bool
+    let canWrite: Bool
 }
 
 /// Owns the file-level generation protocol. It never unlinks a store opened in
@@ -591,6 +603,221 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
             guard !files.isEmpty else { throw SyncStoreGenerationError.activeStoreMissing }
         }
         return SyncStoreActiveMutationFence(presentationID: active.presentationID, files: files)
+    }
+
+    /// Optional optimization only. Failure must never replace full validation.
+    /// Capture AFTER SwiftData has opened the store: WAL/SHM changes, migration,
+    /// metadata changes and every unknown writer conservatively cause a miss.
+    func capturePhysicalBodyProof(
+        for active: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence
+    ) throws -> LocalCatalogPhysicalProofStore.Snapshot {
+// TASK145_CAPTURE_FRONTIER_BEGIN capture-start
+#if DEBUG
+        enum CaptureFrontier: String {
+            case manifest, initialFence, membership, storeURL, rootLayout
+            case contextBefore, generationBudget, generationPath, generationDigest
+            case finalFence, contextAfter, contextEquality, complete
+        }
+        var captureFrontier = CaptureFrontier.manifest
+        var captureCompleted = false
+        defer {
+            if !captureCompleted {
+                Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.capture-failure frontier.\(captureFrontier.rawValue, privacy: .public)")
+            }
+        }
+#endif
+// TASK145_CAPTURE_FRONTIER_END capture-start
+        guard let manifest = active.manifest else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN initial-fence
+#if DEBUG
+        captureFrontier = .initialFence
+#endif
+// TASK145_CAPTURE_FRONTIER_END initial-fence
+        guard try captureActiveMutationFence(for: active) == fence else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN membership
+#if DEBUG
+        captureFrontier = .membership
+#endif
+// TASK145_CAPTURE_FRONTIER_END membership
+        guard !fence.files.isEmpty, fence.files.count <= 32 else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN store-url
+#if DEBUG
+        captureFrontier = .storeURL
+#endif
+// TASK145_CAPTURE_FRONTIER_END store-url
+        let directory = try storeURLForLocalBodyReadback(manifest).deletingLastPathComponent()
+// TASK145_CAPTURE_FRONTIER_BEGIN rootLayout
+#if DEBUG
+        captureFrontier = .rootLayout
+#endif
+// TASK145_CAPTURE_FRONTIER_END rootLayout
+        for root in [directory, generationsDirectory, baseDirectory] {
+            guard try root.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN contextBefore
+#if DEBUG
+        captureFrontier = .contextBefore
+#endif
+// TASK145_CAPTURE_FRONTIER_END contextBefore
+        let context = try physicalBodyProofContext(manifest: manifest)
+        var files: [LocalCatalogPhysicalProofStore.File] = []
+        var total = 0
+        for state in fence.files {
+// TASK145_CAPTURE_FRONTIER_BEGIN generationBudget
+#if DEBUG
+            captureFrontier = .generationBudget
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationBudget
+            let (next, overflow) = total.addingReportingOverflow(state.fileSize)
+            guard !overflow, next <= ShopSyncRecoveryLimits.maximumGenerationDirectoryBytes else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+            total = next
+// TASK145_CAPTURE_FRONTIER_BEGIN generationPath
+#if DEBUG
+            captureFrontier = .generationPath
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationPath
+            let url = directory.appendingPathComponent(state.relativePath).standardizedFileURL
+            guard url.path.hasPrefix(directory.standardizedFileURL.path + "/") else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+// TASK145_CAPTURE_FRONTIER_BEGIN generationDigest
+#if DEBUG
+            captureFrontier = .generationDigest
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationDigest
+            files.append(try LocalCatalogPhysicalProofStore.fileDigest(url, expected: state))
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN final-fence
+#if DEBUG
+        captureFrontier = .finalFence
+#endif
+// TASK145_CAPTURE_FRONTIER_END final-fence
+        guard try captureActiveMutationFence(for: active) == fence else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN context-after
+#if DEBUG
+        captureFrontier = .contextAfter
+#endif
+// TASK145_CAPTURE_FRONTIER_END context-after
+        let finalContext = try physicalBodyProofContext(manifest: manifest)
+// TASK145_CAPTURE_FRONTIER_BEGIN context-equality
+#if DEBUG
+        captureFrontier = .contextEquality
+#endif
+// TASK145_CAPTURE_FRONTIER_END context-equality
+        guard finalContext == context else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN complete
+#if DEBUG
+        captureFrontier = .complete
+        captureCompleted = true
+#endif
+// TASK145_CAPTURE_FRONTIER_END complete
+        return .init(version: LocalCatalogPhysicalProofStore.version,
+            keyAccount: LocalCatalogPhysicalProofStore.keyAccount(baseDirectory: baseDirectory,
+                deviceIdentityHash: manifest.deviceIdentityHash),
+            generationID: manifest.generationID, contextSHA256: LocalCatalogPhysicalProofStore.hash(context), files: files)
+    }
+
+    var physicalBodyProofURL: URL {
+        // Never included in the generation's own digest or used as authority.
+        baseDirectory.appendingPathComponent("local-body-physical-proof-v1.json")
+    }
+
+    func reusesPhysicalBodyProof(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot) -> Bool {
+        LocalCatalogPhysicalProofStore.matches(snapshot, capsuleURL: physicalBodyProofURL)
+    }
+
+    func physicalBodyProofReuseToken(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot) -> LocalCatalogPhysicalProofStore.ReuseToken? {
+        LocalCatalogPhysicalProofStore.reuseToken(snapshot, capsuleURL: physicalBodyProofURL)
+    }
+
+    /// Called only AFTER full validation and the ORIGINAL current publication.
+    /// A failed optional seal leaves the accepted RAM proof intact.
+    func sealPhysicalBodyProof(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot,
+                              for active: SyncStoreActiveGeneration,
+                              fence: SyncStoreActiveMutationFence) -> Bool {
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-recapture
+#if DEBUG
+        var sealFrontier = "recapture", sealCompleted = false, sealThrew = false
+        defer {
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.seal frontier.\(sealFrontier, privacy: .public) completed.\(sealCompleted, privacy: .public) threw.\(sealThrew, privacy: .public)")
+        }
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-recapture
+        do {
+            guard try capturePhysicalBodyProof(for: active, fence: fence) == snapshot else { return false }
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-persist
+#if DEBUG
+            sealFrontier = "persist"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-persist
+            try LocalCatalogPhysicalProofStore.seal(snapshot, capsuleURL: physicalBodyProofURL)
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-success
+#if DEBUG
+            sealFrontier = "success"; sealCompleted = true
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-success
+            return true
+        } catch {
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-catch
+#if DEBUG
+            sealThrew = true
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-catch
+            return false
+        }
+    }
+
+    private func physicalBodyProofContext(manifest: SyncStoreGenerationManifest) throws -> Data {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let binding = AccountBindingStore(defaults: defaults)
+        let shops = SelectedShopStore(defaults: defaults)
+        // Full manifest covers account/shop/device/store/generation/schema,
+        // protocol, checkpoint, baseline and immutable verification metadata.
+        // selectedAt refreshes do not change authority. Every other selected
+        // field remains attested exactly, and publication rechecks live authority.
+        // Discovery loading is not body provenance. Publication still requires
+        // current resolution readiness under the original scope lease.
+        var parts: [Data?] = [try encoder.encode(manifest),
+            try encoder.encode(binding.currentBinding),
+            try encoder.encode(shops.selectedShop(accountHash: manifest.accountHash).map { selected in
+                PhysicalBodyProofSelectedShopAuthority(shopID: selected.shopID,
+                    code: selected.code, name: selected.name, role: selected.role,
+                    status: selected.status, selectable: selected.selectable, canWrite: selected.canWrite)
+            }),
+            try encoder.encode(defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1")),
+            try encoder.encode(binding.hasPendingReplacementJournal),
+            try encoder.encode(shops.hasConfirmedDeviceDenial(accountHash: manifest.accountHash,
+                shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash))]
+        for url in [manifestURL, recoveryJournalURL, recoveryFinalizationURL] {
+            // Missing versus empty is distinct. Permission/layout/read errors
+            // cannot be converted into an absent journal or finalization.
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+                guard !isDirectory.boolValue else { throw LocalCatalogPhysicalProofStore.Failure.unavailable }
+                parts.append(try LocalCatalogPhysicalProofStore.readData(url, maximumBytes: 512 * 1_024))
+            } else {
+                let parent = url.deletingLastPathComponent()
+                guard try fileManager.contentsOfDirectory(atPath: parent.path).contains(url.lastPathComponent) == false else {
+                    throw LocalCatalogPhysicalProofStore.Failure.unavailable
+                }
+                parts.append(nil)
+            }
+        }
+        return try encoder.encode(parts)
     }
 
     func activate(
@@ -1323,6 +1550,19 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
 private nonisolated struct LocalBodyQualificationReadbackFailure: Error, Sendable {
     let stage: String // Only fixed literals assigned by the existing worker.
     let underlying: any Error
+    let performedFullValidation: Bool
+    init(stage: String, underlying: any Error, performedFullValidation: Bool = false) {
+        self.stage = stage; self.underlying = underlying
+        self.performedFullValidation = performedFullValidation
+    }
+}
+
+private nonisolated struct LocalBodyQualificationReadback: Sendable {
+    let fence: SyncStoreActiveMutationFence
+    let reusableSnapshot: LocalCatalogPhysicalProofStore.Snapshot?
+    let verifiedSnapshot: LocalCatalogPhysicalProofStore.Snapshot?
+    let reuseToken: LocalCatalogPhysicalProofStore.ReuseToken?
+    var reusedPhysicalProof: Bool { reuseToken != nil }
 }
 
 @MainActor
@@ -1369,6 +1609,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private var rootQualificationObservationTicket: UInt64 = 0
     // Tests hold the real detached readback before its existing publication guards.
     var localBodyQualificationBeforePublicationForTesting: (@MainActor () async -> Void)?
+    private(set) var localBodyFullReadbackCountForTesting = 0
+    private(set) var localBodyPhysicalReuseCountForTesting = 0
+    private(set) var localBodyPhysicalSealCountForTesting = 0
     #endif
     private struct EmptyRootProof {
         let scope: Task126VerifiedOwnerStoreScope
@@ -1607,6 +1850,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             var firstPublicationFailure = "none"
             var authorityClosureEntered = false
             var authorityClosurePassed = false
+            var reusedPhysicalProof = false
+            var sealedPhysicalProof = false
             func noteFailure(_ stage: String, _ reason: String) {
                 if firstFailureStage == "none" { firstFailureStage = stage; firstFailureReason = reason }
             }
@@ -1628,7 +1873,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let currentTask = self?.manifestQualificationID == identity
                 let currentContainer = self?.active.container === container
                 let currentManifest = self?.active.manifest == manifest
-                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED")
+                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED physical-reused.\(reusedPhysicalProof, privacy: .public) physical-sealed.\(sealedPhysicalProof, privacy: .public)")
 // TASK145_COST39_BEGIN qualification-terminal
 #if DEBUG
                 let elapsed = DispatchTime.now().uptimeNanoseconds &- qualificationCostStartNS
@@ -1647,6 +1892,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
 // TASK145_COST39_END worker-attempt-ordinal
                 let work = Task.detached(priority: .utility) {
                     var stage = "capture-before"
+                    var performedFullValidation = false
 // TASK145_COST39_BEGIN worker-start
 #if DEBUG
                     let workerCostStartNS = DispatchTime.now().uptimeNanoseconds
@@ -1660,25 +1906,80 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     do {
                         try Task.checkCancellation()
                         let before = try repository.captureActiveMutationFence(for: captured)
-                        stage = "body-validation"
-                        try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
-                            storeURL: repository.storeURLForLocalBodyReadback(manifest))
+                        // Optimization failures are misses, never swallowed body errors.
+                        let physicalBefore = try? repository.capturePhysicalBodyProof(for: captured, fence: before)
+                        let reuseToken = physicalBefore.flatMap(repository.physicalBodyProofReuseToken)
+                        let reused = reuseToken != nil
+                        if !reused {
+                            stage = "body-validation"
+                            performedFullValidation = true
+                            try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
+                                storeURL: repository.storeURLForLocalBodyReadback(manifest))
+                        }
                         stage = "capture-after"
                         let after = try repository.captureActiveMutationFence(for: captured)
                         guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
+                        var physicalAfter: LocalCatalogPhysicalProofStore.Snapshot?
+                        if physicalBefore != nil {
+                            physicalAfter = try? repository.capturePhysicalBodyProof(for: captured, fence: after)
+                        }
+                        if reused, physicalBefore != physicalAfter {
+                            throw ShopSyncRecoveryContractError.checkpointChanged
+                        }
+                        let sealCandidate = !reused && physicalBefore == physicalAfter ? physicalAfter : nil
+// TASK145_PHYSICAL_FRONTIER_BEGIN eligibility
+#if DEBUG
+                        var contextSame = -1, identitySame = -1, membershipSame = -1
+                        var metadataChangedKinds = -1, digestChangedKinds = -1
+                        if let earlier = physicalBefore, let later = physicalAfter {
+                            contextSame = earlier.contextSHA256 == later.contextSHA256 ? 1 : 0
+                            identitySame = earlier.version == later.version && earlier.keyAccount == later.keyAccount
+                                && earlier.generationID == later.generationID ? 1 : 0
+                            membershipSame = earlier.files.map { $0.state.relativePath }
+                                == later.files.map { $0.state.relativePath } ? 1 : 0
+                            if membershipSame == 1 {
+                                metadataChangedKinds = 0; digestChangedKinds = 0
+                                for pair in zip(earlier.files, later.files) {
+                                    let path = pair.0.state.relativePath
+                                    let kind: Int
+                                    if path.hasSuffix("-wal") { kind = 2 }
+                                    else if path.hasSuffix("-shm") { kind = 4 }
+                                    else if path.hasPrefix("recovery-ledger-v1/") { kind = 8 }
+                                    else if path == "store.store" { kind = 1 }
+                                    else { kind = 16 }
+                                    if pair.0.state != pair.1.state || pair.0.deviceID != pair.1.deviceID
+                                        || pair.0.changeTimeSeconds != pair.1.changeTimeSeconds
+                                        || pair.0.changeTimeNanoseconds != pair.1.changeTimeNanoseconds {
+                                        metadataChangedKinds |= kind
+                                    }
+                                    if pair.0.sha256 != pair.1.sha256 { digestChangedKinds |= kind }
+                                }
+                            }
+                        }
+                        // Only already-computed snapshots; -1 means unavailable, masks use
+                        // main=1/WAL=2/SHM=4/ledger=8/other=16. No paths or hashes are logged.
+                        Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.eligibility before_present.\(physicalBefore != nil, privacy: .public) after_present.\(physicalAfter != nil, privacy: .public) reused.\(reused, privacy: .public) candidate_present.\(sealCandidate != nil, privacy: .public) context_same.\(contextSame, privacy: .public) identity_same.\(identitySame, privacy: .public) membership_same.\(membershipSame, privacy: .public) metadata_changed_kinds.\(metadataChangedKinds, privacy: .public) digest_changed_kinds.\(digestChangedKinds, privacy: .public)")
+#endif
+// TASK145_PHYSICAL_FRONTIER_END eligibility
 // TASK145_COST39_BEGIN worker-returned
 #if DEBUG
                         workerCostReturnedNormally = true
 #endif
 // TASK145_COST39_END worker-returned
-                        return after
+                        return LocalBodyQualificationReadback(fence: after,
+                            reusableSnapshot: sealCandidate, verifiedSnapshot: physicalAfter, reuseToken: reuseToken)
                     } catch {
-                        throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error)
+                        throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error,
+                            performedFullValidation: performedFullValidation)
                     }
                 }
                 do {
-                    let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    let readback = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    let fence = readback.fence
+                    reusedPhysicalProof = readback.reusedPhysicalProof
                     #if DEBUG
+                    if readback.reusedPhysicalProof { self?.localBodyPhysicalReuseCountForTesting += 1 }
+                    else { self?.localBodyFullReadbackCountForTesting += 1 }
                     await self?.localBodyQualificationBeforePublicationForTesting?()
                     #endif
                     guard let self,
@@ -1693,8 +1994,23 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     // lock, so an old async writer gains no renewed authority.
                     authorityClosureEntered = false
                     authorityClosurePassed = false
-                    published = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence) {
+                    published = LocalCatalogPhysicalProofStore.withLatestBinding(readback.reuseToken) {
+                        Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence, didAcceptProof: {
+                            if let snapshot = readback.reusableSnapshot {
+                                sealedPhysicalProof = repository.sealPhysicalBodyProof(snapshot, for: captured, fence: fence)
+                                #if DEBUG
+                                if sealedPhysicalProof { self.localBodyPhysicalSealCountForTesting += 1 }
+                                #endif
+                            }
+                        }) {
                         authorityClosureEntered = true
+                        if readback.reuseToken != nil {
+                            guard let verified = readback.verifiedSnapshot,
+                                  (try? repository.capturePhysicalBodyProof(for: captured, fence: fence)) == verified else {
+                                _ = observeAuthority(false, "complete-physical-proof-changed-at-publication")
+                                return false
+                            }
+                        }
                         let selectedStore = SelectedShopStore(defaults: self.defaults)
                         let currentBinding = AccountBindingStore(defaults: self.defaults)
                         let currentJournal = currentBinding.pendingRecoveryJournal
@@ -1739,13 +2055,20 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                         authorityClosurePassed = true
                         return true
                     }
+                    }
                     if published { return true }
+                    if readback.reuseToken != nil && !authorityClosureEntered && firstPublicationFailure == "none" {
+                        _ = observeAuthority(false, "physical-proof-latest-binding-changed")
+                    }
                     noteFailure("publication", authorityClosurePassed
                         ? "registered-container-or-current-physical-fence"
                         : firstPublicationFailure)
                 } catch {
                     let failure = error as? LocalBodyQualificationReadbackFailure
                     let underlying = failure?.underlying ?? error
+                    #if DEBUG
+                    if failure?.performedFullValidation == true { self?.localBodyFullReadbackCountForTesting += 1 }
+                    #endif
                     noteFailure(failure?.stage ?? "publication", Self.qualificationErrorReason(underlying))
                     // Preserve the original two-attempt checkpointChanged behavior exactly.
                     if underlying as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
@@ -2287,6 +2610,47 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             try repository.markRecoveryFinalized(manifest)
         }
         return manifest
+    }
+
+    /// Recovery completion changes provenance outside the generation's body:
+    /// finalization is fsynced, then the journal mirror/file are removed and
+    /// fsynced by AccountBindingStore. Preserve those guards and seal the FINAL
+    /// context only while the same live, already qualified body remains current.
+    /// A crash before this optional seal leaves an ordinary authenticated miss.
+    @discardableResult
+    func sealFinalizedLocalBodyProof(ownerUserID: UUID) -> Bool {
+        var sealed = false
+        #if DEBUG
+        let sealBeganNS = DispatchTime.now().uptimeNanoseconds
+        defer {
+            Self.qualificationLogger.notice("populated-qualification-physical kind.finalization-seal completed.\(sealed, privacy: .public) elapsed_ns.\(DispatchTime.now().uptimeNanoseconds &- sealBeganNS, privacy: .public)")
+        }
+        #endif
+        guard let repository, let manifest = active.manifest else { return false }
+        do {
+            // Journal cleanup invalidated its captured lease. This fresh scope
+            // must independently prove ordinary owner/shop/device authority.
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID, defaults: defaults)
+            guard scope.pendingReplacement == nil,
+                  scope.accountHash == manifest.accountHash, scope.shopID == manifest.shopID,
+                  scope.storeIdentity == manifest.storeIdentity,
+                  scope.deviceIdentityHash == manifest.deviceIdentityHash else { return false }
+            sealed = try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+                guard Task126OwnerStoreGate.activeManifestWithLeaseHeld(active.container) == manifest,
+                      !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                        shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+                      try repository.isRecoveryFinalized(manifest) else { return false }
+                // This original guard requires the registered active container's
+                // accepted RAM body fence to still equal its actual file fence.
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(active.container)
+                let fence = try repository.captureActiveMutationFence(for: active)
+                let snapshot = try repository.capturePhysicalBodyProof(for: active, fence: fence)
+                // Recapture and existing capsule-fsync/latest-Keychain ordering
+                // remain unchanged; no old context, file or anchor is copied.
+                return repository.sealPhysicalBodyProof(snapshot, for: active, fence: fence)
+            }
+            return sealed
+        } catch { return false }
     }
 
     func isActiveRecoveryFinalized(

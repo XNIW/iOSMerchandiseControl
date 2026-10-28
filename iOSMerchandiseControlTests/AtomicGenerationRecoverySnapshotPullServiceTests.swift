@@ -1,5 +1,7 @@
 import Combine
 import CryptoKit
+import Darwin
+import Security
 import SwiftData
 import SQLite3
 import Supabase
@@ -798,9 +800,19 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let noOldPublication = expectation(description: "Rejected A cannot publish over B")
         noOldPublication.isInverted = true
         let observation = state.objectWillChange.sink { noOldPublication.fulfill() }
+        let oldSlotReleased = expectation(description: "The settled rejected A clears its own foreground slot")
+        var observedOldSlotRelease = false
+        // In this bounded interval completeForegroundTask is the only old-root
+        // publisher after didReturn, and sends after clearing its task/ID.
+        let oldSlotObservation = orchestrator.objectWillChange.sink {
+            guard initialRuntime.didReturn, !observedOldSlotRelease else { return }
+            observedOldSlotRelease = true
+            oldSlotReleased.fulfill()
+        }
         initialRuntime.release()
-        await fulfillment(of: [noOldPublication], timeout: 2)
+        await fulfillment(of: [noOldPublication, oldSlotReleased], timeout: 2)
         observation.cancel()
+        oldSlotObservation.cancel()
         XCTAssertTrue(initialRuntime.didReturn)
         XCTAssertEqual(state.state, stateB)
         XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), bytesB)
@@ -819,26 +831,49 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertFalse(nextSnapshot.hasStateReadFailure)
         let currentLease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
         XCTAssertNoThrow(try fixture.controller.validateLease(currentLease))
+        task145PublishedAttachJSON([
+            "stored_presentation_matches_current": originalLease.presentationID == currentLease.presentationID,
+            "stored_container_matches_current": originalLease.containerIdentity == currentLease.containerIdentity,
+            "local_qualification_returned": qualified,
+            "snapshot_binding_matches": nextSnapshot.accountBindingMatches,
+            "snapshot_network_available": nextSnapshot.isNetworkAvailable,
+            "snapshot_state_read_failure": nextSnapshot.hasStateReadFailure
+        ], name: "TASK145 original retired root pretrigger witness")
 
-        // The same orchestrator still owns its retired physical lease. This
-        // witness stops at runtime admission B, before that facade boundary;
-        // it proves slot liveness and coalescing, not another cloud PASS.
+        // R4 lines228-232: the old root remains revoked; the mounted B root
+        // owns the current ModelContext/lease, just like presentationID remount.
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(runtime.runCount, 1, "A's released slot must not grant its retired lease B's authority")
+        orchestrator.stop()
+        let currentContainer = fixture.controller.modelContainer
+        XCTAssertFalse(currentContainer === originalContainer)
+        let currentProvider = SyncDecisionInputProvider(modelContainer: currentContainer,
+            initialNetworkStatus: .satisfied, bindingStore: binding, selectedShopStore: selection)
+        let currentRoot = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: currentLease,
+            defaults: fixture.defaults, decisionInputProvider: currentProvider,
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { currentRoot.stop() }
+        // This original witness still stops at runtime admission, before a
+        // second facade call. It proves current-root liveness, not cloud ACK.
+        currentRoot.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
         await fulfillment(of: [nextEntered], timeout: 2)
         XCTAssertEqual(runtime.runCount, 2)
         XCTAssertTrue(runtime.isNextHeld)
         guard runtime.isNextHeld else {
             return XCTFail("A rejected terminal result stranded its completed foreground task")
         }
-        orchestrator.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
-        orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+        currentRoot.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
+        currentRoot.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
         for _ in 0..<20 { await Task.yield() }
         XCTAssertEqual(runtime.runCount, 2, "Repeated signals must not consume the held successor slot")
         XCTAssertEqual(transport.counts().checkpoints, counts.checkpoints)
         XCTAssertEqual(transport.counts().pages, counts.pages)
         XCTAssertEqual(auth.networkBlocker.requestCount, 0)
         XCTAssertNil(state.state.lastVerifiedAt)
-        orchestrator.stop()
+        currentRoot.stop()
         runtime.releaseNext()
     }
 
@@ -1054,6 +1089,116 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(NSDictionary(dictionary: fixture.defaults.dictionaryRepresentation()
                 .filter { $0.key.hasPrefix("\(prefix).") }), persistedB,
                 "Timestamps, proof and retry metadata of B must remain unchanged")
+        }
+    }
+
+    func testPreparedReplacementManualRetryPreservesFutureServerDueAndRawHistory() async throws {
+        // Both actual transport outcomes carry a future server minimum. The
+        // stable case additionally qualifies a retained record-level minimum
+        // with the latest failure's optional Retry-After absent.
+        for status in [429, 403] {
+            let fixture = try makeFixture()
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            let target = try XCTUnwrap(binding.currentBinding)
+            XCTAssertTrue(binding.beginReplacement(accountHash: target.accountHash,
+                storeIdentity: target.storeIdentity,
+                deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            let journal = try XCTUnwrap(binding.pendingRecoveryJournal)
+            let identity = SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal)
+            let prefix = "task145.prepared-manual-server-due.\(status)"
+            let clock = Task145RecoveryClock(Date())
+            let serverDeadline = clock.value.addingTimeInterval(600)
+            let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                retryJitter: { 1 }, storeGenerationController: fixture.controller)
+            let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "task145-prepared-manual-server-due")
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint, checkpoint, checkpoint], checkpointMutation: { call in
+                    if call == 1 { throw AutomaticSyncFailure.http(status: status, retryAfterUntil: serverDeadline) }
+                })
+            let recovery = makeService(fixture: fixture, transport: transport, maximumAttempts: 1)
+            let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil,
+                recoverySnapshotPullProvider: recovery, activityRegistrationProvider: nil,
+                defaults: fixture.defaults)
+            let claim = try XCTUnwrap(state.claimAutomaticRecoveryAttempt(identity: identity, now: clock.value))
+            let failed = await engine.run(action: .bootstrap, source: .rootForeground,
+                ownerUserID: fixture.ownerUserID)
+            XCTAssertEqual(failed.status, .failed)
+            XCTAssertEqual(failed.failure?.httpStatus, status)
+            XCTAssertEqual(failed.failure?.disposition, status == 429 ? .transient : .stable)
+            XCTAssertEqual(failed.failure?.retryAfterUntil, serverDeadline)
+            state.recordRunResult(failed, preserveRecoveryRequired: true,
+                automaticRecoveryClaim: claim, now: clock.value)
+            let budgetKey = "\(prefix).automaticRecoveryAttempt.v2"
+            if status == 403 {
+                // An explicit serialized-format counterexample, not a claimed
+                // second engine outcome: retain every field from the real
+                // completed record except this optional nested failure field.
+                // The original validated top-level server minimum remains.
+                var record = try XCTUnwrap(JSONSerialization.jsonObject(with:
+                    try XCTUnwrap(fixture.defaults.data(forKey: budgetKey))) as? [String: Any])
+                var failure = try XCTUnwrap(record["failure"] as? [String: Any])
+                XCTAssertNotNil(failure.removeValue(forKey: "retryAfterUntil"))
+                record["failure"] = failure
+                fixture.defaults.set(try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]),
+                    forKey: budgetKey)
+                XCTAssertEqual(state.automaticRecoveryAttemptEligibility(identity: identity, now: clock.value), .exhausted)
+            }
+            let budget = try XCTUnwrap(fixture.defaults.data(forKey: budgetKey))
+            let journalBytes = try Data(contentsOf: fixture.recoveryJournalURL)
+            XCTAssertEqual(state.manualReplacementRecoveryAttemptEligibility(identity: identity, now: clock.value),
+                .cooldown(600))
+            XCTAssertEqual(transport.counts().checkpoints, 1)
+            XCTAssertEqual(transport.counts().pages, 0)
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+                authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: nil,
+                recoverySnapshotPullProvider: recovery, activityRegistrationProvider: nil,
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+                defaults: fixture.defaults,
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+            let sleeping = XCTestExpectation(description: "The prepared CTA waits for its original server due")
+            let unexpectedDecision = XCTestExpectation(description: "No decision work before server due")
+            unexpectedDecision.isInverted = true
+            let sleeper = Task145RecoverySleeper(entered: sleeping)
+            let decision = Task144HeldRealDecisionProvider(
+                underlying: Task145CurrentGenerationDecisionProvider(controller: fixture.controller, defaults: fixture.defaults),
+                entered: unexpectedDecision)
+            let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+                activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+                stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
+                defaults: fixture.defaults, decisionInputProvider: decision,
+                backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value },
+                monotonicNow: { clock.value.timeIntervalSince1970 },
+                foregroundRetryDelay: { delay in await sleeper.wait(delay) })
+            defer { orchestrator.stop(); decision.release(); sleeper.release() }
+            orchestrator.retryRootActionIfPossible()
+            await fulfillment(of: [sleeping, unexpectedDecision], timeout: 2)
+            XCTAssertEqual(sleeper.delays, [300], "The unchanged timer sleeps in bounded chunks without shortening the durable due")
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertTrue(runtime.results.isEmpty)
+            XCTAssertEqual(transport.counts().checkpoints, 1)
+            XCTAssertEqual(transport.counts().pages, 0)
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budget)
+            XCTAssertEqual(try Data(contentsOf: fixture.recoveryJournalURL), journalBytes)
+            XCTAssertEqual(binding.pendingRecoveryJournal, journal)
+            XCTAssertEqual(state.manualReplacementRecoveryAttemptEligibility(identity: identity,
+                now: serverDeadline.addingTimeInterval(-1)), .cooldown(1))
+            XCTAssertEqual(state.manualReplacementRecoveryAttemptEligibility(identity: identity,
+                now: serverDeadline), .ready)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budget,
+                "Read-only due opportunities must not reset budget, history or retained Retry-After")
+            orchestrator.stop(); decision.release(); sleeper.release()
+            for _ in 0..<20 { await Task.yield() }
+            XCTAssertTrue(runtime.actions.isEmpty)
+            XCTAssertEqual(transport.counts().checkpoints, 1)
+            XCTAssertEqual(fixture.defaults.data(forKey: budgetKey), budget)
+            XCTAssertEqual(try Data(contentsOf: fixture.recoveryJournalURL), journalBytes)
         }
     }
 
@@ -1580,14 +1725,59 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             }
             let afterRestart = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
                 storeGenerationController: reopened.controller)
-            let early = afterRestart.automaticRecoveryAttemptEligibility(identity: identity,
-                now: Date(timeIntervalSince1970: nextAllowedAt - 0.001))
-            if isTransient {
-                guard case .cooldown(let delay) = early else { return XCTFail("The persisted five-minute floor must hold") }
+            if mode == "transient" {
+                // Schema4 reconciliation is admitted by the same phase API as
+                // the ordinary orchestrator, not the intentionally v2-only reader.
+                let earlyPhase = afterRestart.recoveryReconciliationOpportunity(identity: identity,
+                    now: Date(timeIntervalSince1970: nextAllowedAt - 0.001))
+                let earlyPhaseCase: String
+                switch earlyPhase {
+                case .none: earlyPhaseCase = "none"
+                case .ready: earlyPhaseCase = "ready"
+                case .cooldown: earlyPhaseCase = "cooldown"
+                case .blocked: earlyPhaseCase = "blocked"
+                }
+                task145PublishedAttachJSON([
+                    "phase_api": "recoveryReconciliationOpportunity",
+                    "early_phase_case": earlyPhaseCase
+                ], name: "TASK145 original legacy floor phase opportunity witness")
+                guard case .cooldown(let delay) = earlyPhase else { return XCTFail("The persisted five-minute floor must hold") }
                 XCTAssertEqual(delay, 0.001, accuracy: 0.00001)
-            } else { XCTAssertEqual(early, .exhausted) }
-            XCTAssertEqual(afterRestart.automaticRecoveryAttemptEligibility(identity: identity,
-                now: Date(timeIntervalSince1970: nextAllowedAt)), isTransient ? .ready : .exhausted)
+                guard case .ready(let dueOpportunity) = afterRestart.recoveryReconciliationOpportunity(identity: identity,
+                    now: Date(timeIntervalSince1970: nextAllowedAt)) else {
+                    return XCTFail("The original phase must be eligible at its persisted due")
+                }
+                XCTAssertEqual(dueOpportunity.identity, identity)
+                XCTAssertEqual(dueOpportunity.sourceDigest, task145PublishedDiagnosticSHA256(budgetData))
+            } else {
+                let early = afterRestart.automaticRecoveryAttemptEligibility(identity: identity,
+                    now: Date(timeIntervalSince1970: nextAllowedAt - 0.001))
+                if mode == "transient" {
+                    let earlyCase: String
+                    switch early {
+                    case .ready: earlyCase = "ready"
+                    case .cooldown: earlyCase = "cooldown"
+                    case .exhausted: earlyCase = "exhausted"
+                    }
+                    let lifecycle = budget["lifecycle"] as? [String: Any]
+                    let operation = lifecycle?["operation"] as? String
+                    let lifecycleState = lifecycle?["state"] as? String
+                    task145PublishedAttachJSON([
+                        "early_case": earlyCase,
+                        "schema_version": budget["schemaVersion"] as? Int ?? -1,
+                        "record_identity_matches": budget["identity"] as? String == identity,
+                        "published_preparation_present": budget["publishedFinalization"] != nil,
+                        "lifecycle_operation": ["automatic", "reconciliation"].contains(operation ?? "") ? operation! : "UNKNOWN_OR_ABSENT",
+                        "lifecycle_state": ["running", "interrupted", "waiting", "blocked", "completed"].contains(lifecycleState ?? "") ? lifecycleState! : "UNKNOWN_OR_ABSENT"
+                    ], name: "TASK145 original legacy floor eligibility witness")
+                }
+                if isTransient {
+                    guard case .cooldown(let delay) = early else { return XCTFail("The persisted five-minute floor must hold") }
+                    XCTAssertEqual(delay, 0.001, accuracy: 0.00001)
+                } else { XCTAssertEqual(early, .exhausted) }
+                XCTAssertEqual(afterRestart.automaticRecoveryAttemptEligibility(identity: identity,
+                    now: Date(timeIntervalSince1970: nextAllowedAt)), isTransient ? .ready : .exhausted)
+            }
             clock.value = Date(timeIntervalSince1970: isTransient ? nextAllowedAt - 1 : nextAllowedAt + 86_400)
             let duplicate = expectation(description: "Repeated launch and reconnect cannot repeat the consumed opportunity")
             duplicate.isInverted = true
@@ -4245,6 +4435,30 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(runtime.results.count, 1)
             XCTAssertEqual(runtime.sources, [source])
             let result = try XCTUnwrap(runtime.results.first)
+            let observedActionCases = runtime.actions.map { action -> String in
+                switch action {
+                case .sequence(let actions):
+                    if actions == [.pushPending, .bootstrap] { return "sequence-pushPending-bootstrap" }
+                    if actions == [.pushPending, .requestRecovery] { return "sequence-pushPending-requestRecovery" }
+                    return "sequence-other"
+                case .fullRecovery: return "fullRecovery"
+                case .bootstrap: return "bootstrap"
+                case .requestRecovery: return "requestRecovery"
+                case .pushPending: return "pushPending"
+                case .drainEvents: return "drainEvents"
+                case .lightReconcile: return "lightReconcile"
+                case .noOp: return "noOp"
+                case .retryAfterBusy: return "retryAfterBusy"
+                case .blocked: return "blocked"
+                }
+            }
+            task145PublishedAttachJSON([
+                "source": source.rawValue,
+                "actual_runtime_actions": observedActionCases,
+                "actual_result_status": result.status.rawValue,
+                "actual_result_verified": result.verifiedConvergence,
+                "actual_result_has_error_code": result.errorCode != nil
+            ], name: "TASK145 original pending resume action witness")
             XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
             XCTAssertEqual(proof.remote.recordRequests.count, 1)
             let context = ModelContext(fixture.controller.modelContainer)
@@ -4443,7 +4657,15 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 && events.count == 1 && events.first?.status == .sent && saved.stockQuantity == 1
                 && finalizerTransport.counts().checkpoints == 0 && finalizerTransport.counts().pages == 0
             guard controls else { XCTFail("NOT_TRAVERSED: real journal completion, automatic plan, Catalog ACK and sent outbox are required"); return }
-            XCTAssertEqual(binding.currentBinding, originalBinding)
+            let bindingAfterPlan = binding.currentBinding
+            task145PublishedAttachJSON([
+                "source": source.rawValue,
+                "binding_present": bindingAfterPlan != nil,
+                "binding_account_equal": bindingAfterPlan?.accountHash == originalBinding.accountHash,
+                "binding_complete_store_identity_equal": bindingAfterPlan?.storeIdentity == originalBinding.storeIdentity,
+                "binding_exact_bound_at_equal": bindingAfterPlan?.boundAt == originalBinding.boundAt
+            ], name: "TASK145 original completed journal binding witness")
+            XCTAssertEqual(bindingAfterPlan, originalBinding)
             XCTAssertNil(binding.pendingRecoveryJournal)
             XCTAssertEqual(auth.networkBlocker.requestCount, 0)
             let activeReadback = ModelContext(fixture.controller.modelContainer); activeReadback.autosaveEnabled = false
@@ -4605,6 +4827,226 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(transport.counts().pages, 0)
             XCTAssertEqual(auth.networkBlocker.requestCount, 0)
             orchestrator.stop()
+        }
+    }
+
+    func testGenuinePendingTransferAndRealACKDoNotStartAnotherRecoveryOnSecondOrdinaryDrain() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let fixture = proof.fixture
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let bound = try XCTUnwrap(binding.currentBinding)
+        let before = ModelContext(fixture.controller.modelContainer)
+        let pendingA = try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == setup.changeID
+        })
+        let tokenA = LocalPendingChangeCASToken(pendingA)
+        let statusA = pendingA.status
+        let generationA = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: bound.accountHash,
+            storeIdentity: bound.storeIdentity, reason: "genuine-pending-transfer-second-ordinary",
+            deviceIdentityHash: proof.scope.deviceIdentityHash))
+        let row = ordinaryContinuationProduct(fixture: fixture, id: proof.productID, stock: 0)
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [proof.checkpoint, proof.checkpoint, proof.checkpoint, proof.checkpoint], productRows: [row])
+        let recovered = try await makeService(fixture: fixture, transport: transport)
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        XCTAssertTrue(recovered.hasPendingLocalWork)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        let generationB = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        XCTAssertNotEqual(generationB, generationA)
+        let transferred = ModelContext(fixture.controller.modelContainer)
+        let pendingB = try XCTUnwrap(transferred.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == setup.changeID
+        })
+        XCTAssertTrue(tokenA.matches(pendingB), "The real same-scope transfer preserves the exact committed intent")
+        XCTAssertEqual(pendingB.status, statusA)
+        XCTAssertEqual(try ordinaryStock(fixture: fixture, productID: proof.productID), 1)
+        let fullCalls = transport.counts()
+        XCTAssertEqual(fullCalls.checkpoints, 2)
+        XCTAssertEqual(fullCalls.pages, ShopSyncRecoveryDomain.allCases.count)
+        // This is an actual pending intent transferred by the production
+        // service, not a status.localOnly/body receipt used as an origin label.
+        let currentScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        let currentLease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            authoritativeScope: proof.checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+        remote.prepareProductForPush(row)
+        // Counts derive from the independently supplied C remote fixture,
+        // never from the physical rows that must remain preserved locally.
+        remote.reconciliationCountsOverride = .init(products: 1, suppliers: 0,
+            categories: 0, productPrices: 0, historySessions: 0)
+        let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        var summaries: [SyncIncrementalPullSummary] = []
+        let observedPull = RI08TransformingRealPullProvider(pull: pull, transform: {
+            summaries.append($0)
+            return $0
+        })
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            authViewModel: auth.viewModel,
+            catalogPushProvider: CatalogPushService(modelContainer: fixture.controller.modelContainer,
+                remote: remote, defaults: fixture.defaults),
+            productPriceProvider: nil, historySessionProvider: nil, incrementalPullProvider: observedPull,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: SyncActivityRegistrationService(
+                modelContainer: fixture.controller.modelContainer, recorder: remote, defaults: fixture.defaults),
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(currentLease) } }))
+        let first = expectation(description: "Current B defers to its real pending push and fresh ACK drain")
+        runtime.expectedCompletions = [first]
+        let rootB = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth,
+            runtime: runtime, lease: currentLease,
+            decisionProvider: completedRecoveryDecisionProvider(fixture))
+        defer { rootB.stop() }
+        rootB.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [first], timeout: 2)
+        for _ in 0..<100 where proof.stateStore.state.phase != .idle { await Task.yield() }
+        XCTAssertEqual(runtime.actions, [.sequence([.lightReconcile, .pushPending, .drainEvents])])
+        XCTAssertEqual(summaries.first?.requiresFullRecoveryReason, "ordinary_continuation_local_work_pending")
+        XCTAssertNil(summaries.first?.continuationReceipt)
+        XCTAssertEqual(runtime.results.first?.status, .success)
+        XCTAssertNotNil(runtime.results.first?.continuationReceipt)
+        XCTAssertFalse(runtime.results.first?.verifiedConvergence == true)
+        XCTAssertEqual(remote.catalogPushCallCount, 1)
+        XCTAssertEqual(remote.recordRequests.count, 1)
+        let afterACK = ModelContext(fixture.controller.modelContainer)
+        let acknowledged = try XCTUnwrap(afterACK.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == setup.changeID
+        })
+        let originalTokenFields = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(tokenA)) as? [String: Any])
+        let acknowledgedTokenFields = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(LocalPendingChangeCASToken(acknowledged))) as? [String: Any])
+        let legitimateACKFields: Set<String> = ["statusRaw", "updatedAt", "lastAttemptAt"]
+        XCTAssertEqual(NSDictionary(dictionary: originalTokenFields.filter { !legitimateACKFields.contains($0.key) }),
+            NSDictionary(dictionary: acknowledgedTokenFields.filter { !legitimateACKFields.contains($0.key) }),
+            "Real ACK changes only status/attempt timing, never the immutable original intent")
+        XCTAssertEqual(acknowledged.status, .acknowledged)
+        XCTAssertEqual(try ordinaryStock(fixture: fixture, productID: proof.productID), 1)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        let retryKey = "ri08.real-receipt.automaticRecoveryAttempt.v2"
+        let retryAfterACK = fixture.defaults.data(forKey: retryKey)
+        let second = expectation(description: "A second current ordinary drain does not start recovery or repeat the ACK")
+        runtime.expectedCompletions.append(second)
+        rootB.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+        await fulfillment(of: [second], timeout: 2)
+        for _ in 0..<100 where proof.stateStore.state.phase != .idle { await Task.yield() }
+        XCTAssertEqual(runtime.actions, [.sequence([.lightReconcile, .pushPending, .drainEvents]), .lightReconcile])
+        XCTAssertEqual(runtime.results.count, 2)
+        XCTAssertEqual(runtime.results.last?.status, .noWork)
+        XCTAssertNotNil(runtime.results.last?.continuationReceipt)
+        XCTAssertFalse(runtime.results.last?.verifiedConvergence == true)
+        XCTAssertNil(binding.pendingRecoveryJournal)
+        XCTAssertEqual(fixture.defaults.data(forKey: retryKey), retryAfterACK,
+            "Ordinary no-change work cannot mint or reset another recovery claim")
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, generationB)
+        XCTAssertEqual(transport.counts().checkpoints, fullCalls.checkpoints)
+        XCTAssertEqual(transport.counts().pages, fullCalls.pages)
+        XCTAssertEqual(transport.counts().tailPages, fullCalls.tailPages)
+        XCTAssertEqual(remote.catalogPushCallCount, 1)
+        XCTAssertEqual(remote.recordRequests.count, 1)
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), 42)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertNoThrow(try fixture.controller.validateLease(currentLease))
+        let finalScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults)
+        XCTAssertEqual(finalScope.ownerUserID, currentScope.ownerUserID)
+        XCTAssertEqual(finalScope.accountHash, currentScope.accountHash)
+        XCTAssertEqual(finalScope.shopID, currentScope.shopID)
+        XCTAssertTrue(finalScope.storeIdentity.hasSameProvenance(as: currentScope.storeIdentity))
+        XCTAssertEqual(finalScope.deviceIdentityHash, currentScope.deviceIdentityHash)
+        XCTAssertNil(finalScope.pendingReplacement)
+        XCTAssertNoThrow(try Task126OwnerStoreGate.revalidateAutomaticScope(finalScope, defaults: fixture.defaults))
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+    }
+
+    func testOrdinaryCanonicalDriftCreatesSameScopeJournalAndResumesWithoutTapButRejectsRevokedOwner() async throws {
+        for revoked in [false, true] {
+            let proof = try await makeRealContinuationProof()
+            let fixture = proof.fixture
+            proof.stateStore.recordRunResult(proof.result)
+            let binding = AccountBindingStore(defaults: fixture.defaults)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            let originalBinding = try XCTUnwrap(binding.currentBinding)
+            let originalGeneration = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+            let businessBefore = try completedRecoveryBusinessSnapshot(fixture)
+            // The actual incremental count comparison sees a remote deletion;
+            // the subsequent real atomic snapshot independently confirms zero.
+            proof.remote.reconciliationCountsOverride = .init(products: 0, suppliers: 0,
+                categories: 0, productPrices: 0, historySessions: 0)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "ordinary-canonical-drift-empty", products: [], prices: [])
+            let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+                checkpoints: [checkpoint, checkpoint], productRows: [])
+            let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+            defer { auth.close() }
+            let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+            let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
+                remote: proof.remote, defaults: fixture.defaults, storeGenerationController: fixture.controller)
+            let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+                authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
+                historySessionProvider: nil, incrementalPullProvider: pull,
+                recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+                activityRegistrationProvider: nil,
+                deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+                defaults: fixture.defaults,
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+            let first = expectation(description: "Original ordinary drift finishes without snapshot or precomputed push")
+            let resumed = expectation(description: "A single existing automatic admission resumes the new same-scope journal")
+            resumed.isInverted = revoked
+            runtime.expectedCompletions = [first, resumed]
+            runtime.afterRunForTesting = { [weak runtime] result in
+                guard let runtime, runtime.results.count == 1 else { return }
+                XCTAssertEqual(result.status, .recoveryRequired)
+                XCTAssertFalse(result.verifiedConvergence)
+                XCTAssertEqual(transport.counts().checkpoints, 0)
+                XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+                XCTAssertNil(binding.pendingRecoveryJournal)
+                if revoked { XCTAssertTrue(self.recordCompletedRecoveryDenial(proof)) }
+            }
+            let orchestrator = makeCompletedRecoveryOrchestrator(proof: proof, auth: auth,
+                runtime: runtime, lease: lease)
+            defer { orchestrator.stop() }
+            orchestrator.submitForegroundTrigger(source: .foregroundPoll, forceIncremental: true)
+            await fulfillment(of: [first, resumed], timeout: 2)
+            for _ in 0..<100 where proof.stateStore.state.phase != .idle { await Task.yield() }
+            XCTAssertEqual(runtime.actions.first, .lightReconcile)
+            XCTAssertEqual(runtime.sources.first, .foregroundPoll)
+            XCTAssertGreaterThan(proof.remote.reconciliationFetchCallCount, 0)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
+            XCTAssertTrue(proof.remote.recordRequests.isEmpty)
+            XCTAssertNil(binding.pendingRecoveryJournal)
+            XCTAssertEqual(binding.currentBinding?.accountHash, originalBinding.accountHash)
+            XCTAssertEqual(binding.currentBinding?.storeIdentity, originalBinding.storeIdentity)
+            if revoked {
+                XCTAssertEqual(runtime.results.count, 1)
+                XCTAssertEqual(transport.counts().checkpoints, 0)
+                XCTAssertEqual(fixture.controller.activeManifest?.generationID, originalGeneration)
+                XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), businessBefore)
+            } else {
+                XCTAssertEqual(runtime.actions, [.lightReconcile, .bootstrap])
+                XCTAssertEqual(runtime.sources, [.foregroundPoll, .rootForeground])
+                XCTAssertEqual(runtime.results.count, 2)
+                XCTAssertTrue(runtime.results.last?.verifiedConvergence == true)
+                XCTAssertEqual(transport.counts().checkpoints, 2)
+                XCTAssertNotEqual(fixture.controller.activeManifest?.generationID, originalGeneration)
+                let read = ModelContext(fixture.controller.modelContainer)
+                XCTAssertEqual(try read.fetchCount(FetchDescriptor<Product>()), 0)
+                XCTAssertEqual(try read.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
+                let outbox = try read.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+                XCTAssertTrue(outbox.allSatisfy {
+                    $0.domain == LocalCatalogBodyProofStore.domain && $0.status == .localOnly
+                })
+                XCTAssertEqual(proof.stateStore.state.phase, .idle)
+            }
+            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+            runtime.afterRunForTesting = nil
         }
     }
 
@@ -5122,6 +5564,265 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         }
     }
 
+    func testRecoveryJournalCompletionSealsFinalContextAcrossTwoRealContainerReopens() async throws {
+        weak var releasedContainer: ModelContainer?
+        typealias Owned = (root: URL, defaults: UserDefaults, suite: String, owner: UUID, shop: UUID,
+            device: String, manifest: SyncStoreGenerationManifest, context: String, body: [String])
+        func prepareAndRelease() async throws -> Owned {
+            let fixture = try makeFixture()
+            let product = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "final-context-after-real-journal-completion", products: [product], prices: [])
+            var stoppedAfterPublication = false
+            let initial = makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]),
+                maximumAttempts: 1, progressReporter: { event in
+                    guard event.progress.stage == .finalizing, !stoppedAfterPublication else { return }
+                    stoppedAfterPublication = true
+                    withUnsafeCurrentTask { $0?.cancel() }
+                })
+            let interrupted = Task<SyncRecoverySnapshotPullSummary, Error> {
+                try await initial.recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            }
+            switch await interrupted.result {
+            case .success:
+                XCTFail("The actual cancellation must retain the published recovery journal")
+            case .failure(let error):
+                XCTAssertTrue(error is CancellationError || error as? Task126OwnerStoreGateError == .cancelled)
+            }
+            XCTAssertTrue(stoppedAfterPublication)
+            XCTAssertEqual(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal?.phase, .activated)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.recoveryFinalizationURL.path))
+
+            // Match the observed lifecycle: a real reopened, published generation
+            // receives its full body proof while the exact journal is still present.
+            let pending = try reopenFixture(fixture)
+            pending.controller.startLocalBodyQualification(ownerUserID: pending.ownerUserID)
+            let pendingQualified = await pending.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(pendingQualified)
+            let repository = try physicalProofRepository(pending)
+            let pendingFence = try repository.captureActiveMutationFence(for: pending.controller.active)
+            let pendingSnapshot = try repository.capturePhysicalBodyProof(for: pending.controller.active, fence: pendingFence)
+            XCTAssertTrue(repository.reusesPhysicalBodyProof(pendingSnapshot))
+            let oldCapsule = try Data(contentsOf: repository.physicalBodyProofURL)
+            let fullBeforeCompletion = pending.controller.localBodyFullReadbackCountForTesting
+            XCTAssertGreaterThan(fullBeforeCompletion, 0)
+            let beforeBody = try completedRecoveryBusinessSnapshot(pending)
+            let transport = AtomicRecoveryTestTransport(ownerUserID: pending.ownerUserID,
+                checkpoints: [checkpoint], productRows: [product])
+            let completed = try await makeService(fixture: pending, transport: transport)
+                .recoverFromRemoteSnapshot(ownerUserID: pending.ownerUserID)
+            XCTAssertTrue(completed.completedRecoveryJournal)
+            XCTAssertFalse(AccountBindingStore(defaults: pending.defaults).hasPendingReplacementJournal)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: pending.recoveryJournalURL.path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: pending.recoveryFinalizationURL.path))
+            XCTAssertEqual(transport.counts().pages, 0, "Resume must complete the existing published generation")
+            XCTAssertEqual(pending.controller.localBodyFullReadbackCountForTesting, fullBeforeCompletion)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(pending), beforeBody)
+            let finalFence = try repository.captureActiveMutationFence(for: pending.controller.active)
+            let finalSnapshot = try repository.capturePhysicalBodyProof(for: pending.controller.active, fence: finalFence)
+            XCTAssertEqual(finalFence, pendingFence, "Journal completion must not rewrite the qualified business body")
+            XCTAssertNotEqual(finalSnapshot.contextSHA256, pendingSnapshot.contextSHA256)
+            XCTAssertTrue(repository.reusesPhysicalBodyProof(finalSnapshot),
+                "The trusted seal must describe finalization plus durable journal absence, not the transient context")
+            let finalCapsule = try Data(contentsOf: repository.physicalBodyProofURL)
+            XCTAssertNotEqual(finalCapsule, oldCapsule)
+            XCTAssertFalse(repository.reusesPhysicalBodyProof(pendingSnapshot), "The old authentic context is superseded")
+            // Model the crash cut with the old authentic capsule still present.
+            // Its old context/latest binding must miss; restoring the exact current
+            // test-owned capsule does not create an ACK, proof, or trusted anchor.
+            try oldCapsule.write(to: repository.physicalBodyProofURL, options: [.atomic])
+            XCTAssertFalse(repository.reusesPhysicalBodyProof(finalSnapshot))
+            try finalCapsule.write(to: repository.physicalBodyProofURL, options: [.atomic])
+            XCTAssertTrue(repository.reusesPhysicalBodyProof(finalSnapshot))
+            releasedContainer = pending.controller.modelContainer
+            return (pending.temporaryRoot, pending.defaults, pending.suiteName, pending.ownerUserID,
+                pending.shopID, pending.deviceInstallID, try XCTUnwrap(pending.controller.activeManifest),
+                finalSnapshot.contextSHA256, beforeBody)
+        }
+        let owned = try await prepareAndRelease()
+        await Task.yield(); autoreleasepool {}
+        _ = try XCTUnwrap(releasedContainer == nil ? true : nil, "REAL_PREVIOUS_CONTAINER_MUST_BE_RELEASED")
+        var observations: [[String: Any]] = []
+        func reopenAndRelease(_ ordinal: Int) async throws {
+            let repository = try SyncStoreGenerationRepository(baseDirectory: owned.root.appendingPathComponent("generation-root"),
+                legacyDefaultStoreURL: owned.root.appendingPathComponent("legacy-default.store"), defaults: owned.defaults)
+            let controller = try SyncStoreGenerationController(repository: repository, defaults: owned.defaults)
+            controller.startLocalBodyQualification(ownerUserID: owned.owner)
+            let beforeFence = try repository.captureActiveMutationFence(for: controller.active)
+            let before = try repository.capturePhysicalBodyProof(for: controller.active, fence: beforeFence)
+            XCTAssertEqual(before.contextSHA256, owned.context, "Finalization provenance must survive each ordinary reopen")
+            let authenticatedBefore = repository.reusesPhysicalBodyProof(before)
+            let qualified = await controller.awaitLocalBodyQualification()
+            XCTAssertTrue(qualified)
+            XCTAssertEqual(controller.activeManifest, owned.manifest)
+            XCTAssertFalse(AccountBindingStore(defaults: owned.defaults).hasPendingReplacementJournal)
+            let afterFence = try repository.captureActiveMutationFence(for: controller.active)
+            let after = try repository.capturePhysicalBodyProof(for: controller.active, fence: afterFence)
+            XCTAssertEqual(after.contextSHA256, owned.context)
+            let fixture = AtomicRecoveryFixture(controller: controller, defaults: owned.defaults, suiteName: owned.suite,
+                temporaryRoot: owned.root, recoveryJournalURL: repository.recoveryJournalURL,
+                recoveryFinalizationURL: repository.recoveryFinalizationURL, ownerUserID: owned.owner,
+                shopID: owned.shop, deviceInstallID: owned.device)
+            XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), owned.body)
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: owned.owner, defaults: owned.defaults))
+            if authenticatedBefore && before == after {
+                XCTAssertEqual(controller.localBodyPhysicalReuseCountForTesting, 1)
+                XCTAssertEqual(controller.localBodyFullReadbackCountForTesting, 0)
+            } else {
+                XCTAssertGreaterThan(controller.localBodyFullReadbackCountForTesting, 0,
+                    "A real post-open file change must retain the original full fallback")
+            }
+            observations.append(["reopen": ordinal, "contextStillFinal": true,
+                "authenticatedBefore": authenticatedBefore, "unchangedPostOpenSnapshot": before == after,
+                "physicalReuse": controller.localBodyPhysicalReuseCountForTesting,
+                "realFullReadback": controller.localBodyFullReadbackCountForTesting])
+            releasedContainer = controller.modelContainer
+        }
+        for ordinal in 1...2 {
+            try await reopenAndRelease(ordinal)
+            await Task.yield(); autoreleasepool {}
+            _ = try XCTUnwrap(releasedContainer == nil ? true : nil, "EACH_CONTAINER_MUST_RELEASE_BEFORE_NEXT_REOPEN")
+        }
+        let attachment = XCTAttachment(data: try JSONSerialization.data(withJSONObject: observations, options: [.sortedKeys]),
+            uniformTypeIdentifier: "public.json")
+        attachment.name = "TASK145 final-context lifecycle and two real container reopens"
+        attachment.lifetime = .keepAlways; add(attachment)
+    }
+
+    func testFinalContextSealCannotAuthorizeChangedOwnerDenialBodyOrNewJournal() async throws {
+        for refusal in ["foreign-owner", "confirmed-denial", "changed-body", "new-journal"] {
+            let fixture = try makeFixture()
+            let product = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "final-context-refusal-\(refusal)", products: [product], prices: [])
+            let result = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTAssertTrue(result.completedRecoveryJournal)
+            let repository = try physicalProofRepository(fixture)
+            let capsule = try Data(contentsOf: repository.physicalBodyProofURL)
+            var owner = fixture.ownerUserID
+            if refusal == "foreign-owner" {
+                owner = UUID()
+            } else if refusal == "confirmed-denial" {
+                XCTAssertTrue(SelectedShopStore(defaults: fixture.defaults).recordDeviceAuthorization(.init(status: "revoked",
+                    code: "TEST_DEVICE_REVOKED", canWrite: false, serverTime: nil, lastSeenAt: nil,
+                    reasonCode: "TEST", recommendedAction: "contact_admin", checkedAt: Date()), ownerUserID: owner,
+                    shopID: fixture.shopID, deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            } else if refusal == "changed-body" {
+                let context = ModelContext(fixture.controller.modelContainer); context.autosaveEnabled = false
+                let row = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+                row.productName = "UNOWNED_BODY_CHANGE_MUST_NOT_BE_RESEALED"
+                try context.save()
+            } else {
+                let binding = try XCTUnwrap(AccountBindingStore(defaults: fixture.defaults).currentBinding)
+                XCTAssertTrue(AccountBindingStore(defaults: fixture.defaults).beginSameScopeRecovery(
+                    accountHash: binding.accountHash, storeIdentity: binding.storeIdentity, reason: "TEST_NEW_JOURNAL",
+                    deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+            }
+            XCTAssertFalse(fixture.controller.sealFinalizedLocalBodyProof(ownerUserID: owner), refusal)
+            XCTAssertEqual(try Data(contentsOf: repository.physicalBodyProofURL), capsule, refusal)
+        }
+    }
+
+    func testPhysicalProofIgnoresResolutionLoadingWhileFreshPublicationStillRequiresReady() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let price = RemoteInventoryProductPriceRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, productID: product.id, type: "retail", price: 12, priceCanonical: "12",
+            effectiveAt: "2026-07-21 12:00:00", source: "TEST_READY_LOADING", note: "unchanged body",
+            createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "physical-proof-resolution-loading", products: [product], prices: [price])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint],
+            productRows: [product], priceRows: [price])).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let capsuleURL = fixture.temporaryRoot.appendingPathComponent("generation-root/local-body-physical-proof-v1.json")
+        if FileManager.default.fileExists(atPath: capsuleURL.path) { try FileManager.default.removeItem(at: capsuleURL) }
+        let current = try reopenFixture(fixture)
+        let controller = current.controller
+        let repository = try physicalProofRepository(current)
+        let manifest = try XCTUnwrap(controller.activeManifest)
+        let body = try completedRecoveryBusinessSnapshot(current)
+        let binding = AccountBindingStore(defaults: current.defaults).currentBinding
+        let shops = SelectedShopStore(defaults: current.defaults)
+        let selected = try XCTUnwrap(shops.selectedShop(accountHash: manifest.accountHash))
+        XCTAssertTrue(shops.isResolutionReady(accountHash: manifest.accountHash))
+        let readbackEntered = expectation(description: "Real complete body readback before fresh readiness publication")
+        let gate = Task144ManifestQualificationGate(entered: readbackEntered)
+        controller.localBodyQualificationBeforePublicationForTesting = { await gate.wait() }
+        defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
+        controller.startLocalBodyQualification(ownerUserID: current.ownerUserID)
+        let barrier = await XCTWaiter.fulfillment(of: [readbackEntered], timeout: 2)
+        _ = try XCTUnwrap(barrier == .completed ? true : nil, "REAL_BODY_READBACK_NOT_HELD")
+        XCTAssertGreaterThan(controller.localBodyFullReadbackCountForTesting, 0)
+        XCTAssertEqual(controller.localBodyPhysicalReuseCountForTesting, 0)
+        XCTAssertEqual(controller.localBodyPhysicalSealCountForTesting, 0)
+        let readyFence = try repository.captureActiveMutationFence(for: controller.active)
+        let readySnapshot = try repository.capturePhysicalBodyProof(for: controller.active, fence: readyFence)
+        defer { LocalCatalogPhysicalProofStore.removeOwnedKeyForTesting(account: readySnapshot.keyAccount) }
+
+        // Use the same ordinary refresh API as the observed process. Only the
+        // loading flag and its writer lease change; physical bytes and all
+        // other binding/selection/device values remain unchanged.
+        shops.markResolutionUnresolved(accountHash: manifest.accountHash)
+        XCTAssertFalse(shops.isResolutionReady(accountHash: manifest.accountHash))
+        XCTAssertEqual(shops.selectedShop(accountHash: manifest.accountHash), selected)
+        XCTAssertEqual(AccountBindingStore(defaults: current.defaults).currentBinding, binding)
+        let loadingFence = try repository.captureActiveMutationFence(for: controller.active)
+        let loadingSnapshot = try repository.capturePhysicalBodyProof(for: controller.active, fence: loadingFence)
+        XCTAssertEqual(loadingFence, readyFence)
+        XCTAssertEqual(loadingSnapshot, readySnapshot,
+            "Discovery loading alone must not change complete body memo provenance")
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(current), body)
+        XCTAssertThrowsError(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: current.ownerUserID,
+            defaults: current.defaults))
+        XCTAssertEqual(try repository.captureActiveMutationFence(for: controller.active), readyFence)
+        XCTAssertEqual(try repository.capturePhysicalBodyProof(for: controller.active, fence: readyFence), readySnapshot)
+        gate.release()
+        let unreadyPublished = await controller.awaitLocalBodyQualification()
+        controller.localBodyQualificationBeforePublicationForTesting = nil
+        XCTAssertFalse(unreadyPublished, "Stable physical bytes do not bypass fresh publication readiness")
+        XCTAssertEqual(controller.localBodyPhysicalSealCountForTesting, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: capsuleURL.path))
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+            ownerUserID: current.ownerUserID, defaults: current.defaults))
+
+        XCTAssertTrue(shops.markResolutionReady(accountHash: manifest.accountHash))
+        let restoredFence = try repository.captureActiveMutationFence(for: controller.active)
+        let restoredSnapshot = try repository.capturePhysicalBodyProof(for: controller.active, fence: restoredFence)
+        XCTAssertEqual(restoredFence, readyFence)
+        XCTAssertEqual(restoredSnapshot, readySnapshot)
+        controller.startLocalBodyQualification(ownerUserID: current.ownerUserID)
+        let readyPublished = await controller.awaitLocalBodyQualification()
+        XCTAssertTrue(readyPublished)
+        XCTAssertEqual(controller.localBodyPhysicalReuseCountForTesting, 0)
+        XCTAssertGreaterThan(controller.localBodyFullReadbackCountForTesting, 1)
+        XCTAssertEqual(controller.localBodyPhysicalSealCountForTesting, 1)
+        let publishedFence = try repository.captureActiveMutationFence(for: controller.active)
+        let publishedSnapshot = try repository.capturePhysicalBodyProof(for: controller.active, fence: publishedFence)
+        XCTAssertTrue(repository.reusesPhysicalBodyProof(publishedSnapshot))
+        XCTAssertTrue(Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer))
+        XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+            ownerUserID: current.ownerUserID, defaults: current.defaults))
+        XCTAssertEqual(controller.activeManifest, manifest)
+        XCTAssertEqual(AccountBindingStore(defaults: current.defaults).currentBinding, binding)
+        XCTAssertEqual(shops.selectedShop(accountHash: manifest.accountHash), selected)
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(current), body)
+        let freshScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: current.ownerUserID,
+            defaults: current.defaults)
+        try Task126OwnerStoreGate.revalidateAutomaticScope(freshScope, defaults: current.defaults)
+        XCTAssertEqual(freshScope.ownerUserID, current.ownerUserID)
+        XCTAssertEqual(freshScope.accountHash, manifest.accountHash)
+        XCTAssertEqual(freshScope.shopID, manifest.shopID)
+        XCTAssertEqual(freshScope.storeIdentity, manifest.storeIdentity)
+        XCTAssertEqual(freshScope.deviceIdentityHash, manifest.deviceIdentityHash)
+    }
+
     func testCleanCanonicalPriceSemanticTamperCannotQualifyLocalAccessAfterReopen() async throws {
         let fixture = try makeFixture()
         let product = localAvailabilityProduct(fixture: fixture)
@@ -5142,9 +5843,74 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint],
             productRows: [product], priceRows: orderedPrices)).recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
         XCTAssertTrue(recovered.completedRecoveryJournal)
+        let capsuleURL = fixture.temporaryRoot.appendingPathComponent("generation-root/local-body-physical-proof-v1.json")
+        if FileManager.default.fileExists(atPath: capsuleURL.path) { try FileManager.default.removeItem(at: capsuleURL) }
         let clean = try reopenFixture(fixture)
+        let selection = SelectedShopStore(defaults: clean.defaults)
+        let accountHash = try XCTUnwrap(clean.controller.activeManifest?.accountHash)
+        let originalSelection = try XCTUnwrap(selection.selectedShop(accountHash: accountHash))
+        var selectionRefreshedBeforeSeal = false
+        clean.controller.localBodyQualificationBeforePublicationForTesting = {
+            guard !selectionRefreshedBeforeSeal else { return }
+            selectionRefreshedBeforeSeal = true
+            // Same ordinary owner/shop/authorization; only the normal refresh timestamp changes.
+            XCTAssertTrue(selection.save(SelectedShop(shopID: originalSelection.shopID,
+                code: originalSelection.code, name: originalSelection.name, role: originalSelection.role,
+                status: originalSelection.status, selectable: originalSelection.selectable,
+                canWrite: originalSelection.canWrite,
+                selectedAt: originalSelection.selectedAt.addingTimeInterval(1)), accountHash: accountHash))
+        }
+        // Match ordinary qualification's explicit current owner. The existing
+        // ownerless rejection contract is exercised by its separate original test.
+        clean.controller.startLocalBodyQualification(ownerUserID: clean.ownerUserID)
         let cleanQualified = await clean.controller.awaitLocalBodyQualification()
+        clean.controller.localBodyQualificationBeforePublicationForTesting = nil
+        XCTAssertTrue(selectionRefreshedBeforeSeal)
         XCTAssertTrue(cleanQualified, "A valid canonical nonzero price must be usable")
+        XCTAssertGreaterThan(clean.controller.localBodyFullReadbackCountForTesting, 0,
+            "The attestation must start with the REAL complete validator")
+        XCTAssertEqual(clean.controller.localBodyPhysicalSealCountForTesting, 1)
+        let sealedRepository = try physicalProofRepository(clean)
+        let sealedFence = try sealedRepository.captureActiveMutationFence(for: clean.controller.active)
+        let sealedSnapshot = try sealedRepository.capturePhysicalBodyProof(for: clean.controller.active, fence: sealedFence)
+        XCTAssertTrue(sealedRepository.reusesPhysicalBodyProof(sealedSnapshot))
+        let beforeRefresh = try XCTUnwrap(selection.selectedShop(accountHash: accountHash))
+        XCTAssertTrue(selection.save(SelectedShop(shopID: beforeRefresh.shopID,
+            code: beforeRefresh.code, name: beforeRefresh.name, role: beforeRefresh.role,
+            status: beforeRefresh.status, selectable: beforeRefresh.selectable,
+            canWrite: beforeRefresh.canWrite,
+            selectedAt: beforeRefresh.selectedAt.addingTimeInterval(1)), accountHash: accountHash))
+        let refreshedFence = try sealedRepository.captureActiveMutationFence(for: clean.controller.active)
+        let refreshedSnapshot = try sealedRepository.capturePhysicalBodyProof(for: clean.controller.active, fence: refreshedFence)
+        XCTAssertEqual(refreshedFence, sealedFence)
+        XCTAssertEqual(refreshedSnapshot, sealedSnapshot,
+            "A selectedAt-only refresh must not change the complete attested authority or physical family")
+        XCTAssertTrue(sealedRepository.reusesPhysicalBodyProof(refreshedSnapshot))
+        let selectionFact = XCTAttachment(string: "selected-at-only-refresh-before-seal=true; real-mint=\(clean.controller.localBodyPhysicalSealCountForTesting); same-complete-snapshot-after-refresh=true; authenticated-after-refresh=true")
+        selectionFact.name = "TASK145 physical proof ordinary selection refresh"; selectionFact.lifetime = .keepAlways; add(selectionFact)
+        let memo = try reopenFixture(clean)
+        let memoRepository = try physicalProofRepository(memo)
+        let memoBeforeFence = try memoRepository.captureActiveMutationFence(for: memo.controller.active)
+        let memoBefore = try memoRepository.capturePhysicalBodyProof(for: memo.controller.active, fence: memoBeforeFence)
+        let authenticatedBefore = memoRepository.reusesPhysicalBodyProof(memoBefore)
+        let memoQualified = await memo.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(memoQualified)
+        let memoFence = try memoRepository.captureActiveMutationFence(for: memo.controller.active)
+        let memoSnapshot = try memoRepository.capturePhysicalBodyProof(for: memo.controller.active, fence: memoFence)
+        if authenticatedBefore && memoBefore == memoSnapshot {
+            XCTAssertEqual(memo.controller.localBodyPhysicalReuseCountForTesting, 1,
+                "Exact unchanged authenticated bytes MUST exercise the real fast branch")
+        }
+        // No fake hit: reopening can change WAL/SHM. A hit is permitted ONLY if
+        // the complete post-open set still equals an authenticated real proof.
+        if memo.controller.localBodyPhysicalReuseCountForTesting > 0 {
+            XCTAssertEqual(memo.controller.localBodyFullReadbackCountForTesting, 0)
+            XCTAssertTrue(memoRepository.reusesPhysicalBodyProof(memoSnapshot))
+        } else {
+            XCTAssertGreaterThan(memo.controller.localBodyFullReadbackCountForTesting, 0)
+        }
+        let memoFact = XCTAttachment(string: "real-full=\(clean.controller.localBodyFullReadbackCountForTesting); mint=\(clean.controller.localBodyPhysicalSealCountForTesting); post-open-hit=\(memo.controller.localBodyPhysicalReuseCountForTesting); post-open-full=\(memo.controller.localBodyFullReadbackCountForTesting); os-process-close=NOT_PROVEN_BY_THIS_TEST")
+        memoFact.name = "TASK145 physical proof actual price readback path"; memoFact.lifetime = .keepAlways; add(memoFact)
         let generation = clean.controller.activeManifest?.generationID
         let finalizedCheckpoint = try XCTUnwrap(clean.controller.activeManifest?.checkpoint)
         XCTAssertEqual(finalizedCheckpoint.catalog, checkpoint.catalog)
@@ -5170,10 +5936,494 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(try reread.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
         let qualified = await reopened.controller.awaitLocalBodyQualification()
         XCTAssertFalse(qualified, "An unchanged count/bridge cannot authorize a corrupted price body")
+        XCTAssertEqual(reopened.controller.localBodyPhysicalReuseCountForTesting, 0)
+        XCTAssertGreaterThan(reopened.controller.localBodyFullReadbackCountForTesting, 0,
+            "The changed bytes must reach the REAL rejecting complete validator")
         XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
             modelContainer: reopened.controller.modelContainer, ownerUserID: reopened.ownerUserID,
             defaults: reopened.defaults))
         XCTAssertThrowsError(try saveLocalAvailabilityEdit(fixture: reopened, productID: product.id))
+    }
+
+    func testAuthenticatedPhysicalProofMissesNeverBypassTheRealValidatorOrCurrentAuthority() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let price = RemoteInventoryProductPriceRow(id: UUID(), ownerUserID: fixture.ownerUserID,
+            shopID: fixture.shopID, productID: product.id, type: "retail", price: 12, priceCanonical: "12",
+            effectiveAt: "2026-07-21 12:00:00", source: "TEST_PHYSICAL_PROOF", note: "used price ledger",
+            createdAt: "2026-07-21 12:00:00", updatedAt: "2026-07-21T12:00:00.000000Z")
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "physical-proof-negative-capsules", products: [product], prices: [price])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint],
+            productRows: [product], priceRows: [price]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let repository = try physicalProofRepository(fixture)
+        if FileManager.default.fileExists(atPath: repository.physicalBodyProofURL.path) {
+            try FileManager.default.removeItem(at: repository.physicalBodyProofURL)
+        }
+        var current = try reopenFixture(fixture)
+        let currentQualified = await current.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(currentQualified)
+        XCTAssertEqual(current.controller.localBodyPhysicalSealCountForTesting, 1)
+        for variant in ["old-authentic-capsule-replay", "forged", "truncated-crash", "authenticated-old-version", "authenticated-foreign-scope", "key-unavailable", "SHM-metadata-drift", "changed-membership"] {
+            let before = try Data(contentsOf: repository.physicalBodyProofURL)
+            let fence = try repository.captureActiveMutationFence(for: current.controller.active)
+            let snapshot = try repository.capturePhysicalBodyProof(for: current.controller.active, fence: fence)
+            XCTAssertTrue(repository.reusesPhysicalBodyProof(snapshot))
+            var membershipFile: URL?
+            switch variant {
+            case "old-authentic-capsule-replay":
+                // A second REAL full validation must mint a fresh protected
+                // latest seal, even when its business/physical snapshot is equal.
+                try Data([0x00]).write(to: repository.physicalBodyProofURL, options: [.atomic])
+                let newer = try reopenFixture(current)
+                let newerQualified = await newer.controller.awaitLocalBodyQualification()
+                XCTAssertTrue(newerQualified)
+                XCTAssertGreaterThan(newer.controller.localBodyFullReadbackCountForTesting, 0)
+                XCTAssertEqual(newer.controller.localBodyPhysicalSealCountForTesting, 1)
+                let newerCapsule = try Data(contentsOf: repository.physicalBodyProofURL)
+                XCTAssertNotEqual(newerCapsule, before, "Fresh seal nonce must advance latest binding")
+                current = newer
+                try before.write(to: repository.physicalBodyProofURL, options: [.atomic])
+                // snapshot is the ACTUAL complete old set captured before the
+                // newer mint. Even old-DB/old-capsule input in the same namespace
+                // cannot match the new protected latest binding.
+                XCTAssertFalse(repository.reusesPhysicalBodyProof(snapshot))
+            case "forged":
+                var capsule = try XCTUnwrap(JSONSerialization.jsonObject(with: before) as? [String: Any])
+                capsule["authenticationCode"] = Data(repeating: 0, count: 32).base64EncodedString()
+                let forged = try JSONSerialization.data(withJSONObject: capsule, options: [.sortedKeys])
+                try forged.write(to: repository.physicalBodyProofURL, options: [.atomic])
+                let exactOwnedQuery: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: "com.niwcyber.local-catalog-physical-proof.v1",
+                    kSecAttrAccount as String: snapshot.keyAccount, kSecAttrSynchronizable as String: false]
+                var readQuery = exactOwnedQuery
+                readQuery[kSecReturnData as String] = true; readQuery[kSecMatchLimit as String] = kSecMatchLimitOne
+                var ownedResult: CFTypeRef?
+                XCTAssertEqual(SecItemCopyMatching(readQuery as CFDictionary, &ownedResult), errSecSuccess)
+                var protected = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(ownedResult as? Data)) as? [String: Any])
+                protected["latestCapsuleSHA256"] = LocalCatalogPhysicalProofStore.hash(forged)
+                XCTAssertEqual(SecItemUpdate(exactOwnedQuery as CFDictionary,
+                    [kSecValueData as String: try JSONSerialization.data(withJSONObject: protected, options: [.sortedKeys])] as CFDictionary), errSecSuccess)
+            case "truncated-crash":
+                try Data(before.prefix(13)).write(to: repository.physicalBodyProofURL, options: [.atomic])
+            case "authenticated-old-version", "authenticated-foreign-scope":
+                // Read ONLY the exact UUID fixture's key. No Auth/normal key query,
+                // key values, scope IDs or business contents are printed/attached.
+                let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: "com.niwcyber.local-catalog-physical-proof.v1",
+                    kSecAttrAccount as String: snapshot.keyAccount,
+                    kSecAttrSynchronizable as String: false, kSecReturnData as String: true,
+                    kSecMatchLimit as String: kSecMatchLimitOne]
+                var keyResult: CFTypeRef?
+                XCTAssertEqual(SecItemCopyMatching(query as CFDictionary, &keyResult), errSecSuccess)
+                let protectedBytes = try XCTUnwrap(keyResult as? Data)
+                var protected = try XCTUnwrap(JSONSerialization.jsonObject(with: protectedBytes) as? [String: Any])
+                let key = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(protected["key"] as? String)))
+                var capsule = try XCTUnwrap(JSONSerialization.jsonObject(with: before) as? [String: Any])
+                let originalPayload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(capsule["payload"] as? String)))
+                var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: originalPayload) as? [String: Any])
+                var savedSnapshot = try XCTUnwrap(payload["snapshot"] as? [String: Any])
+                if variant == "authenticated-old-version" { savedSnapshot["version"] = "older-unsupported-body-validator" }
+                else { savedSnapshot["contextSHA256"] = String(repeating: "f", count: 64) }
+                payload["snapshot"] = savedSnapshot
+                let encoded = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+                capsule["payload"] = encoded.base64EncodedString()
+                capsule["authenticationCode"] = Data(HMAC<SHA256>.authenticationCode(
+                    for: encoded, using: SymmetricKey(data: key))).base64EncodedString()
+                let changedCapsule = try JSONSerialization.data(withJSONObject: capsule, options: [.sortedKeys])
+                try changedCapsule.write(to: repository.physicalBodyProofURL, options: [.atomic])
+                // Exact owned Keychain item only: model an authentic older
+                // producer's latest binding so this reaches version/context
+                // validation, instead of merely failing the anti-replay gate.
+                protected["latestCapsuleSHA256"] = LocalCatalogPhysicalProofStore.hash(changedCapsule)
+                var updateQuery = query
+                updateQuery.removeValue(forKey: kSecReturnData as String)
+                updateQuery.removeValue(forKey: kSecMatchLimit as String)
+                XCTAssertEqual(SecItemUpdate(updateQuery as CFDictionary,
+                    [kSecValueData as String: try JSONSerialization.data(withJSONObject: protected, options: [.sortedKeys])] as CFDictionary), errSecSuccess)
+            case "key-unavailable":
+                LocalCatalogPhysicalProofStore.removeOwnedKeyForTesting(account: snapshot.keyAccount)
+            case "SHM-metadata-drift":
+                // B13 positive: touch ONLY timestamps, never SQLite SHM bytes.
+                // The branch below proves the rest of the real snapshot exact.
+                let manifest = try XCTUnwrap(current.controller.activeManifest)
+                let store = try repository.storeURLForLocalBodyReadback(manifest)
+                let shm = URL(fileURLWithPath: store.path + "-shm")
+                let attributes = try FileManager.default.attributesOfItem(atPath: shm.path)
+                let modified = try XCTUnwrap(attributes[.modificationDate] as? Date)
+                try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(1)], ofItemAtPath: shm.path)
+            case "changed-membership":
+                let manifest = try XCTUnwrap(current.controller.activeManifest)
+                let store = try repository.storeURLForLocalBodyReadback(manifest)
+                let added = store.deletingLastPathComponent().appendingPathComponent("owned-unknown-writer.bin")
+                try Data([0x41]).write(to: added, options: [.withoutOverwriting])
+                membershipFile = added
+            default: XCTFail("Closed variant list")
+            }
+            let changedFence = try repository.captureActiveMutationFence(for: current.controller.active)
+            let changed = try repository.capturePhysicalBodyProof(for: current.controller.active, fence: changedFence)
+            if variant == "SHM-metadata-drift" {
+                // B13 policy revision, supported by the two preserved B12 OS
+                // snapshots: ONLY SHM mtime/ctime changed while all bytes and
+                // physical identity stayed equal. This used to expect MISS.
+                let oldSHM = try XCTUnwrap(snapshot.files.first { $0.state.relativePath == "store.store-shm" })
+                let newSHM = try XCTUnwrap(changed.files.first { $0.state.relativePath == "store.store-shm" })
+                XCTAssertNotEqual(newSHM.state.modificationTimeBits, oldSHM.state.modificationTimeBits)
+                XCTAssertNotEqual([newSHM.changeTimeSeconds, newSHM.changeTimeNanoseconds],
+                    [oldSHM.changeTimeSeconds, oldSHM.changeTimeNanoseconds])
+                let onlySHMTimesChanged = LocalCatalogPhysicalProofStore.Snapshot(
+                    version: snapshot.version, keyAccount: snapshot.keyAccount,
+                    generationID: snapshot.generationID, contextSHA256: snapshot.contextSHA256,
+                    files: snapshot.files.map { file in
+                        guard file.state.relativePath == "store.store-shm" else { return file }
+                        let state = SyncStoreGenerationMutationFence.FileState(
+                            relativePath: file.state.relativePath, fileSize: file.state.fileSize,
+                            allocatedSize: file.state.allocatedSize,
+                            modificationTimeBits: newSHM.state.modificationTimeBits,
+                            systemFileNumber: file.state.systemFileNumber)
+                        return LocalCatalogPhysicalProofStore.File(state: state, sha256: file.sha256,
+                            deviceID: file.deviceID, changeTimeSeconds: newSHM.changeTimeSeconds,
+                            changeTimeNanoseconds: newSHM.changeTimeNanoseconds)
+                    })
+                XCTAssertEqual(changed, onlySHMTimesChanged, "All bytes, membership, identity and other metadata stay exact")
+                XCTAssertNotEqual(changed, snapshot, "Live equality MUST still include SHM mtime/ctime")
+                XCTAssertTrue(repository.reusesPhysicalBodyProof(changed), "An authentic unchanged SHM body may have new persisted timestamps")
+
+                // Never corrupt a live SQLite SHM. Derive a real changed digest
+                // from its owned COPY outside generation-root, with the copy's
+                // inode/length/mtime preserved. The adapted matcher input below
+                // changes ONLY SHA; it is not claimed to be a live recapture.
+                let manifest = try XCTUnwrap(current.controller.activeManifest)
+                let store = try repository.storeURLForLocalBodyReadback(manifest)
+                let shmURL = URL(fileURLWithPath: store.path + "-shm")
+                let copiedBytes = try Data(contentsOf: shmURL)
+                XCTAssertEqual(LocalCatalogPhysicalProofStore.hash(copiedBytes), newSHM.sha256)
+                let copyURL = fixture.temporaryRoot.appendingPathComponent("owned-shm-byte-witness-" + UUID().uuidString)
+                try copiedBytes.write(to: copyURL, options: [.withoutOverwriting])
+                defer { try? FileManager.default.removeItem(at: copyURL) }
+                let copyFD = Darwin.open(copyURL.path, O_RDWR | O_NOFOLLOW | O_CLOEXEC)
+                guard copyFD >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+                defer { _ = Darwin.close(copyFD) }
+                func copyState() throws -> SyncStoreGenerationMutationFence.FileState {
+                    let values = try copyURL.resourceValues(forKeys: [.fileSizeKey, .fileAllocatedSizeKey, .contentModificationDateKey])
+                    let attributes = try FileManager.default.attributesOfItem(atPath: copyURL.path)
+                    let size = try XCTUnwrap(values.fileSize)
+                    let modified = try XCTUnwrap(values.contentModificationDate)
+                    let inode = try XCTUnwrap(attributes[.systemFileNumber] as? NSNumber).uint64Value
+                    return .init(relativePath: "store.store-shm", fileSize: size,
+                        allocatedSize: max(size, values.fileAllocatedSize ?? 0),
+                        modificationTimeBits: modified.timeIntervalSinceReferenceDate.bitPattern,
+                        systemFileNumber: inode)
+                }
+                let initialCopyDigest = try LocalCatalogPhysicalProofStore.fileDigest(copyURL, expected: copyState())
+                XCTAssertEqual(initialCopyDigest.sha256, newSHM.sha256)
+                var beforeCopy = stat()
+                guard Darwin.fstat(copyFD, &beforeCopy) == 0 else {
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+                }
+                let copyTimes = [beforeCopy.st_atimespec, beforeCopy.st_mtimespec]
+                var changedByte = try XCTUnwrap(copiedBytes.first) ^ 1
+                guard Darwin.pwrite(copyFD, &changedByte, 1, 0) == 1,
+                      Darwin.futimens(copyFD, copyTimes) == 0, Darwin.fsync(copyFD) == 0 else {
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+                }
+                var afterCopy = stat()
+                guard Darwin.fstat(copyFD, &afterCopy) == 0 else {
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+                }
+                XCTAssertEqual(afterCopy.st_ino, beforeCopy.st_ino)
+                XCTAssertEqual(afterCopy.st_size, beforeCopy.st_size)
+                XCTAssertEqual(afterCopy.st_mtimespec.tv_sec, beforeCopy.st_mtimespec.tv_sec)
+                XCTAssertEqual(afterCopy.st_mtimespec.tv_nsec, beforeCopy.st_mtimespec.tv_nsec)
+                let tamperedCopyDigest = try LocalCatalogPhysicalProofStore.fileDigest(copyURL, expected: copyState())
+                XCTAssertNotEqual(tamperedCopyDigest.sha256, initialCopyDigest.sha256)
+                let changedDigestOnly = LocalCatalogPhysicalProofStore.Snapshot(
+                    version: changed.version, keyAccount: changed.keyAccount,
+                    generationID: changed.generationID, contextSHA256: changed.contextSHA256,
+                    files: changed.files.map { file in
+                        guard file.state.relativePath == "store.store-shm" else { return file }
+                        return LocalCatalogPhysicalProofStore.File(state: file.state,
+                            sha256: tamperedCopyDigest.sha256, deviceID: file.deviceID,
+                            changeTimeSeconds: file.changeTimeSeconds, changeTimeNanoseconds: file.changeTimeNanoseconds)
+                    })
+                XCTAssertFalse(repository.reusesPhysicalBodyProof(changedDigestOnly),
+                    "Even identical SHM timestamps cannot hide a changed byte")
+
+                let controller = current.controller
+                let fullBefore = controller.localBodyFullReadbackCountForTesting
+                let reusedBefore = controller.localBodyPhysicalReuseCountForTesting
+                let sealsBefore = controller.localBodyPhysicalSealCountForTesting
+                Task126OwnerStoreGate.registerActiveGenerationContainer(controller.modelContainer, manifest: manifest)
+                controller.startLocalBodyQualification(ownerUserID: current.ownerUserID)
+                let reused = await controller.awaitLocalBodyQualification()
+                XCTAssertTrue(reused)
+                XCTAssertEqual(controller.localBodyPhysicalReuseCountForTesting, reusedBefore + 1)
+                XCTAssertEqual(controller.localBodyFullReadbackCountForTesting, fullBefore)
+                XCTAssertEqual(controller.localBodyPhysicalSealCountForTesting, sealsBefore)
+
+                // Persisted equivalence is not a live TOCTOU waiver. Retouch
+                // SHM after capture on EACH original bounded attempt: the
+                // original full fence/recapture must still deny publication.
+                let modified = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: shmURL.path)[.modificationDate] as? Date)
+                var hookCount = 0
+                controller.localBodyQualificationBeforePublicationForTesting = {
+                    do {
+                        hookCount += 1
+                        try FileManager.default.setAttributes([.modificationDate: modified.addingTimeInterval(Double(hookCount + 1))],
+                            ofItemAtPath: shmURL.path)
+                    } catch { XCTFail("Owned SHM timestamp hook failed") }
+                }
+                Task126OwnerStoreGate.registerActiveGenerationContainer(controller.modelContainer, manifest: manifest)
+                controller.startLocalBodyQualification(ownerUserID: current.ownerUserID)
+                let publicationAccepted = await controller.awaitLocalBodyQualification()
+                controller.localBodyQualificationBeforePublicationForTesting = nil
+                XCTAssertGreaterThan(hookCount, 0)
+                XCTAssertFalse(publicationAccepted, "Live SHM timestamp drift must remain fenced")
+                XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                    ownerUserID: current.ownerUserID, defaults: current.defaults))
+                XCTAssertEqual(controller.localBodyPhysicalSealCountForTesting, sealsBefore)
+                // Restore only fixture admission through the ORIGINAL qualifier.
+                controller.startLocalBodyQualification(ownerUserID: current.ownerUserID)
+                let stableAgain = await controller.awaitLocalBodyQualification()
+                XCTAssertTrue(stableAgain)
+                XCTAssertEqual(controller.localBodyFullReadbackCountForTesting, fullBefore)
+                let timestampFact = XCTAttachment(string: "policy=B13-SHM-persisted-times-only; raw-same=true; real-reuse-delta=1; full-delta=0; copy-byte-tamper-miss=true; live-timestamp-publication=false; hook-count=\(hookCount)")
+                timestampFact.name = "TASK145 authenticated SHM timestamp equivalence and live fence"
+                timestampFact.lifetime = .keepAlways; add(timestampFact)
+                continue
+            }
+            XCTAssertFalse(repository.reusesPhysicalBodyProof(changed), variant)
+            let next = try reopenFixture(current)
+            let qualified = await next.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(qualified, "An optional memo miss must retain the original valid full path: " + variant)
+            XCTAssertEqual(next.controller.localBodyPhysicalReuseCountForTesting, 0, variant)
+            XCTAssertGreaterThan(next.controller.localBodyFullReadbackCountForTesting, 0, variant)
+            if let membershipFile { try FileManager.default.removeItem(at: membershipFile) }
+            current = next
+            // The removed membership file invalidates its proof; the next real
+            // controller must do full work again, never a writer-only reseal.
+            if membershipFile != nil {
+                current = try reopenFixture(current)
+                let membershipRestored = await current.controller.awaitLocalBodyQualification()
+                XCTAssertTrue(membershipRestored)
+            }
+        }
+        // Re-register as UNPROVEN (never ready), without a new SQLite connection.
+        // This gives an unchanged real set for the actual HMAC reuse branch.
+        let guarded = current.controller
+        let guardedManifest = try XCTUnwrap(guarded.activeManifest)
+        let guardedFence = try repository.captureActiveMutationFence(for: guarded.active)
+        let guardedSnapshot = try repository.capturePhysicalBodyProof(for: guarded.active, fence: guardedFence)
+        XCTAssertTrue(repository.reusesPhysicalBodyProof(guardedSnapshot))
+        let ledgerEntry = try XCTUnwrap(guardedSnapshot.files.first {
+            $0.state.relativePath == "recovery-ledger-v1/prices.ndjson" && $0.state.fileSize > 0
+        })
+        let store = try repository.storeURLForLocalBodyReadback(guardedManifest)
+        let ledgerURL = store.deletingLastPathComponent().appendingPathComponent(ledgerEntry.state.relativePath)
+        let ledgerBytes = try Data(contentsOf: ledgerURL)
+        XCTAssertEqual(ledgerBytes.first, 0x7B, "The used price ledger begins with a valid JSON object")
+        let ledgerFD = Darwin.open(ledgerURL.path, O_RDWR | O_NOFOLLOW | O_CLOEXEC)
+        guard ledgerFD >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+        defer { _ = Darwin.close(ledgerFD) }
+        var ledgerStat = stat()
+        guard Darwin.fstat(ledgerFD, &ledgerStat) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        let ledgerTimes = [ledgerStat.st_atimespec, ledgerStat.st_mtimespec]
+        var tamperedAtPublication = false
+        var publicationHookCount = 0
+        let reuseBefore = guarded.localBodyPhysicalReuseCountForTesting
+        let fullBefore = guarded.localBodyFullReadbackCountForTesting
+        guarded.localBodyQualificationBeforePublicationForTesting = { [weak guarded] in
+            guard let guarded, guarded.localBodyPhysicalReuseCountForTesting == reuseBefore + 1 else {
+                XCTFail("Publication tamper must follow an ACTUAL authenticated cache hit"); return
+            }
+            do {
+                publicationHookCount += 1
+                // Always the same malformed first byte, even if a callback repeats.
+                // pwrite preserves the used ledger's inode and length; futimens
+                // restores the original nanoseconds without a Date round trip.
+                var changedFirstByte = ledgerBytes[ledgerBytes.startIndex] ^ 1
+                guard Darwin.pwrite(ledgerFD, &changedFirstByte, 1, 0) == 1,
+                      Darwin.futimens(ledgerFD, ledgerTimes) == 0,
+                      Darwin.fsync(ledgerFD) == 0 else {
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+                }
+                var changedStat = stat()
+                guard Darwin.fstat(ledgerFD, &changedStat) == 0 else {
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+                }
+                XCTAssertEqual(changedStat.st_ino, ledgerStat.st_ino)
+                XCTAssertEqual(changedStat.st_size, ledgerStat.st_size)
+                XCTAssertEqual(changedStat.st_mtimespec.tv_sec, ledgerStat.st_mtimespec.tv_sec)
+                XCTAssertEqual(changedStat.st_mtimespec.tv_nsec, ledgerStat.st_mtimespec.tv_nsec)
+                XCTAssertEqual(try repository.captureActiveMutationFence(for: guarded.active), guardedFence,
+                    "Counterexample deliberately preserves the legacy metadata fence")
+                tamperedAtPublication = true
+            } catch { XCTFail("Owned publication tamper setup failed") }
+        }
+        Task126OwnerStoreGate.registerActiveGenerationContainer(guarded.modelContainer, manifest: guardedManifest)
+        guarded.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let publicationAccepted = await guarded.awaitLocalBodyQualification()
+        guarded.localBodyQualificationBeforePublicationForTesting = nil
+        let denialFact = XCTAttachment(string: "used-price-ledger=true; hook-count=\(publicationHookCount); reused-delta=\(guarded.localBodyPhysicalReuseCountForTesting - reuseBefore); real-full-delta=\(guarded.localBodyFullReadbackCountForTesting - fullBefore); published=\(publicationAccepted); injected=\(tamperedAtPublication)")
+        denialFact.name = "TASK145 used price ledger publication denial"; denialFact.lifetime = .keepAlways; add(denialFact)
+        XCTAssertTrue(tamperedAtPublication)
+        XCTAssertFalse(publicationAccepted, "Whole content must still match UNDER the final lease")
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: guarded.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        // Revert ONLY the test's own injected fault before other independent
+        // authority negatives. Its ctime stays changed and forces a full miss.
+        try ledgerBytes.write(to: ledgerURL)
+        guard Darwin.futimens(ledgerFD, ledgerTimes) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        current = try reopenFixture(current)
+        let repairedOwnedFixture = await current.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(repairedOwnedFixture)
+        XCTAssertGreaterThan(current.controller.localBodyFullReadbackCountForTesting, 0)
+        let shops = SelectedShopStore(defaults: fixture.defaults)
+        let ownerHash = AccountBindingStore.accountHash(for: fixture.ownerUserID)
+        shops.noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+        let foreign = try reopenFixture(current)
+        _ = await foreign.controller.awaitLocalBodyQualification()
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: foreign.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults))
+        shops.noteActiveAccount(ownerHash)
+        let restored = try reopenFixture(current)
+        let restoredQualified = await restored.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(restoredQualified)
+        XCTAssertTrue(shops.recordDeviceAuthorization(.init(status: "revoked", code: "TASK145_PROOF_DENIED",
+            canWrite: false, serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "none", checkedAt: Date()),
+            ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: restored.controller.modelContainer,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults), "A valid physical proof is never authority")
+    }
+
+    func testAuthenticatedPhysicalProofAfterRealContainerReleaseUsesOnlyUnchangedPostOpenBytes() async throws {
+        weak var previousContainer: ModelContainer?
+        typealias Owned = (root: URL, defaults: UserDefaults, owner: UUID,
+            capsule: Data, physical: LocalCatalogPhysicalProofStore.Snapshot, files: [String: Data])
+        // Return no controller/context/model. Preserve an exact owned old family
+        // for the rollback negative; none of these are normal/user store files.
+        func prepareAndRelease() async throws -> Owned {
+            let fixture = try makeFixture()
+            let product = localAvailabilityProduct(fixture: fixture)
+            let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+                seed: "physical-proof-container-release", products: [product], prices: [])
+            let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+                ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+                .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+            XCTAssertTrue(recovered.completedRecoveryJournal)
+            let repository = try physicalProofRepository(fixture)
+            if FileManager.default.fileExists(atPath: repository.physicalBodyProofURL.path) {
+                try FileManager.default.removeItem(at: repository.physicalBodyProofURL)
+            }
+            let clean = try reopenFixture(fixture)
+            let cleanQualified = await clean.controller.awaitLocalBodyQualification()
+            XCTAssertTrue(cleanQualified)
+            XCTAssertEqual(clean.controller.localBodyPhysicalSealCountForTesting, 1)
+            let fence = try repository.captureActiveMutationFence(for: clean.controller.active)
+            let physical = try repository.capturePhysicalBodyProof(for: clean.controller.active, fence: fence)
+            XCTAssertTrue(repository.reusesPhysicalBodyProof(physical))
+            let directory = try repository.storeURLForLocalBodyReadback(try XCTUnwrap(clean.controller.activeManifest))
+                .deletingLastPathComponent()
+            var files: [String: Data] = [:]
+            for entry in physical.files {
+                let data = try Data(contentsOf: directory.appendingPathComponent(entry.state.relativePath))
+                XCTAssertEqual(LocalCatalogPhysicalProofStore.hash(data), entry.sha256)
+                files[entry.state.relativePath] = data
+            }
+            XCTAssertEqual(try repository.capturePhysicalBodyProof(for: clean.controller.active, fence: fence), physical)
+            let capsule = try Data(contentsOf: repository.physicalBodyProofURL)
+            previousContainer = clean.controller.modelContainer
+            return (fixture.temporaryRoot, fixture.defaults, fixture.ownerUserID, capsule, physical, files)
+        }
+        let owned = try await prepareAndRelease()
+        await Task.yield(); autoreleasepool {}
+        guard previousContainer == nil else {
+            XCTFail("No close/reopen claim while the old container is retained"); return
+        }
+        var observedHit = 0
+        var observedFull = 0
+        func reopenAndAdvanceLatest() async throws -> Data {
+            let repository = try SyncStoreGenerationRepository(baseDirectory: owned.root.appendingPathComponent("generation-root"),
+                legacyDefaultStoreURL: owned.root.appendingPathComponent("legacy-default.store"), defaults: owned.defaults)
+            let reopened = try SyncStoreGenerationController(repository: repository, defaults: owned.defaults)
+            let beforeFence = try repository.captureActiveMutationFence(for: reopened.active)
+            let before = try repository.capturePhysicalBodyProof(for: reopened.active, fence: beforeFence)
+            let authenticatedBefore = repository.reusesPhysicalBodyProof(before)
+            let qualified = await reopened.awaitLocalBodyQualification()
+            let afterFence = try repository.captureActiveMutationFence(for: reopened.active)
+            let after = try repository.capturePhysicalBodyProof(for: reopened.active, fence: afterFence)
+            XCTAssertTrue(qualified)
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: reopened.modelContainer,
+                ownerUserID: owned.owner, defaults: owned.defaults))
+            observedHit = reopened.localBodyPhysicalReuseCountForTesting
+            observedFull = reopened.localBodyFullReadbackCountForTesting
+            if authenticatedBefore && before == after {
+                XCTAssertEqual(observedHit, 1, "Unchanged authenticated set must exercise the real fast branch")
+            } else {
+                XCTAssertGreaterThan(observedFull, 0, "Changed post-open/SHM set must take REAL full fallback")
+            }
+            XCTAssertGreaterThan(observedHit + observedFull, 0)
+            XCTAssertLessThanOrEqual(observedHit + observedFull, 2)
+            // Force a second REAL full validation, never a writer reseal. Its
+            // fresh protected seal must supersede the old authentic capsule.
+            let previousSeals = reopened.localBodyPhysicalSealCountForTesting
+            try FileManager.default.removeItem(at: repository.physicalBodyProofURL)
+            Task126OwnerStoreGate.registerActiveGenerationContainer(reopened.modelContainer, manifest: reopened.activeManifest)
+            reopened.startLocalBodyQualification(ownerUserID: owned.owner)
+            let revalidated = await reopened.awaitLocalBodyQualification()
+            XCTAssertTrue(revalidated)
+            XCTAssertGreaterThan(reopened.localBodyPhysicalSealCountForTesting, previousSeals)
+            let newerCapsule = try Data(contentsOf: repository.physicalBodyProofURL)
+            XCTAssertNotEqual(newerCapsule, owned.capsule)
+            previousContainer = reopened.modelContainer
+            return newerCapsule
+        }
+        _ = try await reopenAndAdvanceLatest()
+        await Task.yield(); autoreleasepool {}
+        guard previousContainer == nil else {
+            XCTFail("Restore only after releasing every owned reopened container"); return
+        }
+        // Restore the COMPLETE OLD owned generation plus OLD authentic capsule,
+        // at the SAME namespace. The newer Keychain latest binding stays outside.
+        let repository = try SyncStoreGenerationRepository(baseDirectory: owned.root.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: owned.root.appendingPathComponent("legacy-default.store"), defaults: owned.defaults)
+        let manifestData = try Data(contentsOf: repository.manifestURL)
+        let manifest = try JSONDecoder().decode(SyncStoreGenerationManifest.self, from: manifestData)
+        let directory = try repository.storeURLForLocalBodyReadback(manifest).deletingLastPathComponent()
+        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey], options: []))
+        var existing: [URL] = []
+        while let value = enumerator.nextObject() {
+            guard let file = value as? URL else { continue }
+            if try file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true { existing.append(file) }
+        }
+        for file in existing { try FileManager.default.removeItem(at: file) }
+        for (relative, bytes) in owned.files {
+            let url = directory.appendingPathComponent(relative)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try bytes.write(to: url, options: [.withoutOverwriting])
+            XCTAssertEqual(LocalCatalogPhysicalProofStore.hash(try Data(contentsOf: url)), LocalCatalogPhysicalProofStore.hash(bytes))
+        }
+        try owned.capsule.write(to: repository.physicalBodyProofURL, options: [.atomic])
+        // Passing the exact OLD snapshot also excludes ordinary new-inode/ctime
+        // misses from this check: its old MAC is valid, latest binding is not.
+        XCTAssertFalse(repository.reusesPhysicalBodyProof(owned.physical))
+        let restored = try SyncStoreGenerationController(repository: repository, defaults: owned.defaults)
+        let restoredQualified = await restored.awaitLocalBodyQualification()
+        XCTAssertTrue(restoredQualified, "A valid restored store may requalify ONLY through REAL full validation")
+        XCTAssertEqual(restored.localBodyPhysicalReuseCountForTesting, 0)
+        XCTAssertGreaterThan(restored.localBodyFullReadbackCountForTesting, 0)
+        let fact = XCTAttachment(string: "container-released=true; initial-post-open-hit=\(observedHit); initial-post-open-full=\(observedFull); complete-old-family-restored=true; old-authentic-capsule-reused=false; restored-real-full=\(restored.localBodyFullReadbackCountForTesting); OS-process-restart=NOT_PROVEN; cold-budget=NOT_QUALIFIED")
+        fact.name = "TASK145 real container reopen and authenticated rollback discriminant"
+        fact.lifetime = .keepAlways; add(fact)
     }
 
     func testCleanCanonicalHistorySemanticTamperCannotQualifyLocalAccessAfterReopen() async throws {
@@ -7084,7 +8334,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let budgetBytesB = try XCTUnwrap(fixture.defaults.data(forKey: budgetKey))
         let budgetB = try XCTUnwrap(JSONSerialization.jsonObject(with: budgetBytesB) as? [String: Any])
         XCTAssertEqual(budgetB["identity"] as? String, retryIdentityB)
-        _ = try XCTUnwrap(budgetB["invocationID"] as? String)
+        let claimInvocationB = try XCTUnwrap((budgetB["invocationID"] as? String).flatMap(UUID.init(uuidString:)))
         XCTAssertEqual((budgetB["attemptsInWindow"] as? NSNumber)?.intValue, 1)
         XCTAssertNil(budgetB["lastCompletedAt"], "B's claim cannot be completed before its held callback returns")
         let finalizationBytesB = try Data(contentsOf: fixture.recoveryFinalizationURL)
@@ -7135,6 +8385,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             }
         }
         defer { publication.cancel() }
+        let releaseStartedAt = Date().timeIntervalSince1970
         held.release()
         runtime.returnWaitStarted = true
         await fulfillment(of: [publishedB, returnedB], timeout: 2)
@@ -7153,7 +8404,57 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let acceptedProofB = try XCTUnwrap(JSONSerialization.jsonObject(with: acceptedProofBytesB) as? [String: Any])
         let acceptedOriginB = try XCTUnwrap(acceptedProofB["finalization"] as? [String: Any])
         XCTAssertEqual(acceptedOriginB["generationID"] as? String, generationB.uuidString)
-        XCTAssertNil(fixture.defaults.data(forKey: budgetKey), "The legitimate B completion retires its own finished retry claim")
+        let completedBudgetBytes = try XCTUnwrap(fixture.defaults.data(forKey: budgetKey))
+        let completedBudget = try XCTUnwrap(JSONSerialization.jsonObject(with: completedBudgetBytes) as? [String: Any])
+        let completedLifecycle = try XCTUnwrap(completedBudget["lifecycle"] as? [String: Any])
+        let completedOperation = completedLifecycle["operation"] as? String
+        let completedState = completedLifecycle["state"] as? String
+        let completedInvocation = (completedBudget["invocationID"] as? String).flatMap(UUID.init(uuidString:))
+        task145PublishedAttachJSON([
+            "record_present": true,
+            "record_json_decoded": true,
+            "schema_version": completedBudget["schemaVersion"] as? Int ?? -1,
+            "identity_matches_B": completedBudget["identity"] as? String == retryIdentityB,
+            "invocation_matches_B": completedInvocation == claimInvocationB,
+            "total_attempts": completedBudget["totalAttempts"] as? Int ?? -1,
+            "attempts_in_window": completedBudget["attemptsInWindow"] as? Int ?? -1,
+            "window_index": completedBudget["windowIndex"] as? Int ?? -1,
+            "original_total_attempts": budgetB["totalAttempts"] as? Int ?? -1,
+            "original_attempts_in_window": budgetB["attemptsInWindow"] as? Int ?? -1,
+            "original_window_index": budgetB["windowIndex"] as? Int ?? -1,
+            "last_completed_present": completedBudget["lastCompletedAt"] != nil,
+            "lifecycle_operation": ["automatic", "reconciliation"].contains(completedOperation ?? "") ? completedOperation! : "UNKNOWN_OR_ABSENT",
+            "lifecycle_state": ["running", "interrupted", "waiting", "blocked", "completed"].contains(completedState ?? "") ? completedState! : "UNKNOWN_OR_ABSENT"
+        ], name: "TASK145 original completed successor retry metadata witness")
+        // R4 lines106/109/238 preserve total history. Retire the active slot,
+        // never delete the completed record or compare its claim UUID to the
+        // distinct runtime-observation UUID.
+        XCTAssertFalse(state.hasActivePresentationInvocation)
+        XCTAssertFalse(orchestrator.hasCurrentPresentationInvocation)
+        XCTAssertFalse(runtime.isRunning)
+        XCTAssertEqual(completedBudget["schemaVersion"] as? Int, 4)
+        XCTAssertEqual(completedBudget["identity"] as? String, retryIdentityB)
+        XCTAssertEqual(completedInvocation, claimInvocationB)
+        let retainedKeys: Set<String> = ["schemaVersion", "identity", "invocationID", "windowIndex",
+            "attemptsInWindow", "totalAttempts", "lastAttemptAt", "retryAfterUntil", "legacyContinuation",
+            "publishedFinalization", "retiredLegacyReconciliation"]
+        XCTAssertEqual(NSDictionary(dictionary: completedBudget.filter { retainedKeys.contains($0.key) }),
+            NSDictionary(dictionary: budgetB.filter { retainedKeys.contains($0.key) }))
+        var expectedLifecycle = try XCTUnwrap(budgetB["lifecycle"] as? [String: Any])
+        expectedLifecycle["state"] = "completed"
+        XCTAssertEqual(NSDictionary(dictionary: completedLifecycle), NSDictionary(dictionary: expectedLifecycle),
+            "Completion preserves the original process/operation/provenance without fabricating origin data")
+        let lastCompletedAt = try XCTUnwrap(completedBudget["lastCompletedAt"] as? Double)
+        XCTAssertGreaterThanOrEqual(lastCompletedAt, releaseStartedAt)
+        XCTAssertLessThanOrEqual(lastCompletedAt, Date().timeIntervalSince1970)
+        let nextAllowedAt = try XCTUnwrap(completedBudget["nextAllowedAt"] as? Double)
+        let retryAfter = completedBudget["retryAfterUntil"] as? Double ?? 0
+        XCTAssertGreaterThanOrEqual(nextAllowedAt, max(lastCompletedAt + 1, retryAfter))
+        XCTAssertLessThanOrEqual(nextAllowedAt, max(lastCompletedAt + 3, retryAfter))
+        let completedFailure = try JSONDecoder().decode(AutomaticSyncFailure.self,
+            from: JSONSerialization.data(withJSONObject: try XCTUnwrap(completedBudget["failure"])))
+        XCTAssertEqual(completedFailure, AutomaticSyncFailure(disposition: .unknown, category: .unknown),
+            "The existing completion metadata is retained, never reclassified as an ACK or new transport failure")
         XCTAssertNil(binding.pendingRecoveryJournal)
         XCTAssertEqual(controller.activeManifest, manifestB)
         XCTAssertEqual(try Data(contentsOf: fixture.recoveryFinalizationURL), finalizationBytesB)
@@ -7447,6 +8748,204 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 XCTAssertEqual(proof.remote.eventReads.last?.returnedCount, 1)
             }
         }
+    }
+
+    func testOrdinaryStrongNoWorkHeadRequiresFreshHAndExactFrozenFence() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "ordinary-strong-head")
+        XCTAssertTrue(try ShopSyncOrdinaryNoWorkContract.validateHead(
+            ordinaryStrongNoWorkHead(checkpoint: checkpoint, watermark: 41), checkpoint: checkpoint, watermark: 41))
+        let unexpectedRow = try ordinaryContinuationEvent(fixture: fixture, productID: UUID(), id: 42)
+        XCTAssertFalse(try ShopSyncOrdinaryNoWorkContract.validateHead(
+            ordinaryStrongNoWorkHead(checkpoint: checkpoint, watermark: 41, rows: [unexpectedRow]),
+            checkpoint: checkpoint, watermark: 41), "A nonempty page cannot authorize no-work even when H reports W")
+        for mutation in ["newEvent", "removedLastEvent", "scope", "shop", "asOf", "domain", "limit", "next", "hasMore"] {
+            XCTAssertFalse(try ShopSyncOrdinaryNoWorkContract.validateHead(
+                ordinaryStrongNoWorkHead(checkpoint: checkpoint, watermark: 41, mutation: mutation),
+                checkpoint: checkpoint, watermark: 41), mutation)
+        }
+        XCTAssertFalse(try ShopSyncOrdinaryNoWorkContract.validateHead(
+            ordinaryStrongNoWorkHead(checkpoint: checkpoint, watermark: 42), checkpoint: checkpoint, watermark: 42),
+            "A manifest checkpoint behind the current durable cursor is not an eligible no-work baseline")
+        XCTAssertThrowsError(try ShopSyncOrdinaryNoWorkContract.validateHead(
+            ordinaryStrongNoWorkHead(checkpoint: checkpoint, watermark: 41, mutation: "nonCanonicalH"),
+            checkpoint: checkpoint, watermark: 41))
+    }
+
+    func testOrdinaryStrongNoWorkMarkerRejectsMaterialDriftWithIdenticalCounts() async throws {
+        let fixture = try makeFixture()
+        let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 41, seed: "ordinary-strong-marker")
+        XCTAssertNoThrow(try ShopSyncOrdinaryNoWorkContract.validateMarker(
+            ordinaryStrongNoWorkMarker(checkpoint: checkpoint), checkpoint: checkpoint, watermark: 41))
+        for mutation in ["checkpointDigest", "catalog", "suppliers", "categories", "products", "prices", "history", "images", "domain", "newEvent", "scope", "shop", "requiresRecovery", "refusal", "integrity", "eligible"] {
+            let marker = try ordinaryStrongNoWorkMarker(checkpoint: checkpoint, mutation: mutation)
+            XCTAssertEqual(marker.catalog.products.activeCount, checkpoint.catalog.products.activeCount, mutation)
+            XCTAssertEqual(marker.prices.activeCount, checkpoint.prices.activeCount, mutation)
+            XCTAssertThrowsError(try ShopSyncOrdinaryNoWorkContract.validateMarker(
+                marker, checkpoint: checkpoint, watermark: 41), mutation)
+        }
+    }
+
+    func testNoQualifiedContinuationScopePreservesOriginalLegacyCountRead() async throws {
+        let proof = try await makeRealContinuationProof()
+        let sentinel = RI08UnqualifiedScopedCountSentinel()
+        proof.remote.scopedCountFetcher = sentinel
+        let originalCalls = proof.remote.reconciliationFetchCallCount
+        let service = SyncEventIncrementalDomainApplyService(eventFetcher: proof.remote,
+            remote: proof.remote, defaults: proof.fixture.defaults)
+        let result = try await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            try await service.applyNextEvents(ownerUserID: proof.fixture.ownerUserID,
+                modelContainer: proof.fixture.controller.modelContainer, isAuthenticated: true,
+                forceLightReconcile: true, continuationController: nil)
+        }
+        XCTAssertFalse(result.requiresFullRecovery)
+        XCTAssertNil(result.continuationReceipt)
+        XCTAssertEqual(proof.remote.reconciliationFetchCallCount, originalCalls + 1)
+        XCTAssertEqual(sentinel.calls, 0)
+        XCTAssertTrue(proof.remote.scopedCountScopes.isEmpty)
+    }
+
+    func testScopedRemoteCountsAfterActualMixedSnapshotDoNotRepeatRecovery() async throws {
+        let fixture = try makeFixture()
+        let mappedOwner = UUID()
+        let recoveryScope = ScopedReconciliationSDKFixture.recoveryScope(ownerID: fixture.ownerUserID,
+            shopID: fixture.shopID, mappedOwnerID: mappedOwner, deviceID: fixture.deviceInstallID)
+        let rowScopes: [(UUID, UUID?)] = [(fixture.ownerUserID, fixture.shopID),
+            (UUID(), fixture.shopID), (mappedOwner, nil)]
+        let products = rowScopes.enumerated().map { index, identity in
+            RemoteInventoryProductRow(id: UUID(), ownerUserID: identity.0, shopID: identity.1,
+                barcode: "SCOPED-COUNT-\(index)", itemNumber: nil, productName: "Scoped row \(index)",
+                secondProductName: nil, purchasePrice: nil, retailPrice: nil, supplierID: nil,
+                categoryID: nil, stockQuantity: 0, updatedAt: "2026-07-21T12:00:00.000000Z", deletedAt: nil)
+        }.sorted { $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased() }
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "mixed-scope-count-continuation", products: products, prices: [], recoveryScope: recoveryScope)
+        let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint, checkpoint, checkpoint], productRows: products)
+        let recoveryEngine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            activityRegistrationProvider: nil, defaults: fixture.defaults)
+        let recovered = await recoveryEngine.run(action: .bootstrap, source: .rootForeground,
+            ownerUserID: fixture.ownerUserID)
+        XCTAssertEqual(recovered.status, .success)
+        XCTAssertTrue(recovered.verifiedConvergence)
+        let generation = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let completedRecoveryCalls = transport.counts().checkpoints
+        let nativeCounts = try LocalDatabasePublicSummary.makeReconciliationAware(context: ModelContext(fixture.controller.modelContainer))
+        XCTAssertEqual(nativeCounts, .init(products: 3, suppliers: 0, categories: 0, productPrices: 0, historySessions: 0))
+        let sdk = try ScopedReconciliationSDKFixture(ownerID: fixture.ownerUserID, shopID: fixture.shopID,
+            mappedOwnerID: mappedOwner, deviceID: fixture.deviceInstallID, defaults: fixture.defaults,
+            enabledTables: ["inventory_products"])
+        defer { sdk.close() }
+        let remote = RI08OrdinaryIncrementalRemote(ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+            authoritativeScope: checkpoint.scope, defaults: RI08Defaults(fixture.defaults))
+        remote.scopedCountFetcher = sdk.adapter
+        let fetcher = try RI08StrongNoWorkFetcher(base: remote, fixture: fixture, checkpoint: checkpoint, behavior: .stable)
+        let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
+            remote: remote, defaults: fixture.defaults, storeGenerationController: fixture.controller,
+            domainApplyServiceFactory: { remote, defaults in
+                SyncEventIncrementalDomainApplyService(eventFetcher: fetcher, remote: remote, defaults: defaults)
+            })
+        let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: "scoped-count-real-snapshot", storeGenerationController: fixture.controller)
+        state.recordRunResult(recovered)
+        let verifiedAt = state.state.lastVerifiedAt
+        let engine = AutomaticSyncEngine(catalogPushProvider: nil, productPriceProvider: nil,
+            historySessionProvider: nil, incrementalPullProvider: pull, activityRegistrationProvider: nil,
+            defaults: fixture.defaults)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID, defaults: fixture.defaults)
+        for _ in 0..<2 {
+            let result = await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                await engine.run(action: .drainEvents, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+            }
+            XCTAssertEqual(result.status, .noWork)
+            XCTAssertNotNil(result.continuationReceipt)
+            XCTAssertFalse(result.verifiedConvergence)
+            state.recordRunResult(result)
+            XCTAssertEqual(state.state.phase, .idle)
+            XCTAssertEqual(state.state.lastVerifiedAt, verifiedAt)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
+            XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
+        }
+        XCTAssertEqual(remote.scopedCountScopes, [checkpoint.scope, checkpoint.scope])
+        XCTAssertEqual(fetcher.markerCalls, 2)
+        XCTAssertEqual(fetcher.markerBaselineIDs, ["41", "41"])
+        XCTAssertEqual(transport.counts().checkpoints, completedRecoveryCalls, "No new recovery checkpoint or staging after the completed snapshot")
+    }
+
+    func testOrdinaryStrongNoWorkUsesRealMarkerAndPreservesOriginalVerifiedDate() async throws {
+        let proof = try await makeRealContinuationProof(strongNoWork: .stable)
+        let fetcher = try XCTUnwrap(proof.strongNoWorkFetcher)
+        XCTAssertEqual(fetcher.headCalls, 1)
+        XCTAssertEqual(fetcher.markerCalls, 1)
+        XCTAssertEqual(fetcher.fallbackEventCalls, 0)
+        XCTAssertEqual(fetcher.markerBaselineIDs, ["41"])
+        XCTAssertEqual(proof.remote.reconciliationFetchCallCount, 1)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 0)
+        let originalProof = try XCTUnwrap(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"))
+        proof.stateStore.recordRunResult(proof.result)
+        XCTAssertEqual(proof.stateStore.state.phase, .idle)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        XCTAssertEqual(proof.fixture.defaults.data(forKey: "ri08.real-receipt.lastVerifiedProof.v2"), originalProof)
+        XCTAssertFalse(proof.result.verifiedConvergence)
+    }
+
+    func testOrdinaryStrongNoWorkFailuresNeverPublishOrMutateTheGeneration() async throws {
+        for behavior in [RI08StrongNoWorkBehavior.materialDrift, .race, .refusal, .foreignScope, .countDrift, .headTransient, .markerTransient, .cancelled] {
+            let proof = try await makeRealContinuationProof(expectReceipt: false, strongNoWork: behavior)
+            let fetcher = try XCTUnwrap(proof.strongNoWorkFetcher)
+            XCTAssertNil(proof.result.continuationReceipt, behavior.rawValue)
+            XCTAssertFalse(proof.result.verifiedConvergence, behavior.rawValue)
+            if behavior == .cancelled { XCTAssertEqual(proof.result.status, .cancelled) }
+            if behavior == .headTransient || behavior == .markerTransient {
+                XCTAssertEqual(proof.result.status, .failed, behavior.rawValue)
+                XCTAssertEqual(proof.result.failure?.disposition, .transient, behavior.rawValue)
+                XCTAssertEqual(proof.result.failure?.category, .timeout, behavior.rawValue)
+            }
+            XCTAssertEqual(fetcher.fallbackEventCalls, 0, "A denial is not a hidden checkpoint/event retry: \(behavior.rawValue)")
+            XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41, behavior.rawValue)
+            XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 0, behavior.rawValue)
+            XCTAssertTrue(proof.remote.fenceAdvances.isEmpty, behavior.rawValue)
+            XCTAssertEqual(proof.remote.catalogFetchCallCount, 0, behavior.rawValue)
+        }
+    }
+
+    func testOrdinaryStrongNoWorkDeltaAndStaleManifestRetainOriginalEventPath() async throws {
+        let proof = try await makeRealContinuationProof(eventID: 42,
+            action: .sequence([.drainEvents, .lightReconcile]), strongNoWork: .stable)
+        let fetcher = try XCTUnwrap(proof.strongNoWorkFetcher)
+        XCTAssertEqual(fetcher.headCalls, 1, "After the delta W42 is ahead of manifest C41, so the next drain cannot reuse C41 as a no-work proof")
+        XCTAssertEqual(fetcher.markerCalls, 0)
+        XCTAssertGreaterThan(fetcher.fallbackEventCalls, 0)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42)
+        XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 1)
+        XCTAssertEqual(proof.remote.fenceAdvances.map(\.through), [42])
+        XCTAssertFalse(proof.result.verifiedConvergence)
+    }
+
+    func testOrdinaryStrongNoWorkRunsMarkerBeforePendingWorkDeferral() async throws {
+        let proof = try await makeRealContinuationProof(expectReceipt: false, configure: { _, fixture, _ in
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+                defaults: fixture.defaults)
+            try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                context.insert(LocalPendingChange(ownerUserID: fixture.ownerUserID,
+                    storeId: scope.storeIdentity.storeId, entityKind: .product, operation: .update,
+                    origin: .manualCatalogSave, logicalKey: "ordinary-strong-pending"))
+                try context.save()
+            }
+        }, strongNoWork: .stable)
+        let fetcher = try XCTUnwrap(proof.strongNoWorkFetcher)
+        XCTAssertEqual(fetcher.markerCalls, 1, "Pending work must not turn a head into material proof or skip the strong checkpoint")
+        XCTAssertEqual(fetcher.markerBaselineIDs, ["41"])
+        XCTAssertEqual(proof.remote.reconciliationFetchCallCount, 0)
+        XCTAssertNil(proof.result.continuationReceipt)
+        XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 41)
+        XCTAssertEqual(try ordinaryStock(fixture: proof.fixture, productID: proof.productID), 0)
+        XCTAssertEqual(try ModelContext(proof.fixture.controller.modelContainer).fetchCount(FetchDescriptor<LocalPendingChange>()), 1)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
     }
 
     func testStableNoEventsAlwaysRefreshesCountsWithoutTargetedCatalogLookup() async throws {
@@ -8236,7 +9735,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         transform: ((SyncIncrementalPullSummary) -> SyncIncrementalPullSummary)? = nil,
         afterAtomicMutation: (@Sendable () async throws -> Void)? = nil,
         beforeRecovery: ((AtomicRecoveryFixture) -> Void)? = nil,
-        stateKeyPrefix: String = "ri08.real-receipt"
+        stateKeyPrefix: String = "ri08.real-receipt",
+        strongNoWork: RI08StrongNoWorkBehavior? = nil
     ) async throws -> RI08RealContinuationProof {
         let fixture = try makeFixture()
         beforeRecovery?(fixture)
@@ -8265,10 +9765,17 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                            product: ordinaryContinuationProduct(fixture: fixture, id: productID, stock: 1))
         }
         try configure?(remote, fixture, productID)
+        let strongNoWorkFetcher = try strongNoWork.map {
+            try RI08StrongNoWorkFetcher(base: remote, fixture: fixture, checkpoint: checkpoint, behavior: $0)
+        }
         let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
             remote: remote, defaults: fixture.defaults, storeGenerationController: fixture.controller,
             domainApplyServiceFactory: { remote, defaults in
-                SyncEventIncrementalDomainApplyService(eventFetcher: remote, remote: remote, defaults: defaults,
+                if let strongNoWorkFetcher {
+                    return SyncEventIncrementalDomainApplyService(eventFetcher: strongNoWorkFetcher,
+                        remote: remote, defaults: defaults, afterAtomicMutationForTesting: afterAtomicMutation)
+                }
+                return SyncEventIncrementalDomainApplyService(eventFetcher: remote, remote: remote, defaults: defaults,
                                                        afterAtomicMutationForTesting: afterAtomicMutation)
             })
         let policy = AutomaticSyncCancellationPolicy()
@@ -8293,7 +9800,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         }
         return RI08RealContinuationProof(fixture: fixture, checkpoint: checkpoint, productID: productID,
             scope: scope, stateStore: stateStore, verifiedAt: verifiedAt, remote: remote, engine: engine,
-            policy: policy, result: result)
+            policy: policy, result: result, strongNoWorkFetcher: strongNoWorkFetcher)
     }
 
     private func assertOrdinaryAutomaticContinuation(
@@ -10450,6 +11957,13 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
 
 
+    private func physicalProofRepository(_ fixture: AtomicRecoveryFixture) throws -> SyncStoreGenerationRepository {
+        try SyncStoreGenerationRepository(
+            baseDirectory: fixture.temporaryRoot.appendingPathComponent("generation-root"),
+            legacyDefaultStoreURL: fixture.temporaryRoot.appendingPathComponent("legacy-default.store"),
+            defaults: fixture.defaults)
+    }
+
     private func reopenFixture(_ fixture: AtomicRecoveryFixture) throws -> AtomicRecoveryFixture {
         let repository = try SyncStoreGenerationRepository(
             baseDirectory: fixture.temporaryRoot
@@ -10610,13 +12124,19 @@ extension XCTestCase {
         seed: String,
         products: [RemoteInventoryProductRow],
         prices: [RemoteInventoryProductPriceRow],
-        images: [ShopSyncRecoveryImageRow] = []
+        images: [ShopSyncRecoveryImageRow] = [],
+        recoveryScope: ShopSyncRecoveryScope? = nil
     ) throws -> ShopSyncRecoveryCheckpoint {
-        let base = makeCheckpoint(
+        let originalBase = makeCheckpoint(
             fixture: fixture,
             maxEventID: maxEventID,
             seed: seed
         )
+        let base = ShopSyncRecoveryCheckpoint(schemaVersion: originalBase.schemaVersion,
+            status: originalBase.status, shopId: originalBase.shopId, scope: recoveryScope ?? originalBase.scope,
+            syncEvents: originalBase.syncEvents, catalog: originalBase.catalog, prices: originalBase.prices,
+            history: originalBase.history, images: originalBase.images, integrity: originalBase.integrity,
+            checkpointDigest: originalBase.checkpointDigest)
         var productAccumulator = ShopSyncRecoveryDigestAccumulator(hasIdentity: true)
         for row in products.sorted(by: {
             $0.id.uuidString.lowercased() < $1.id.uuidString.lowercased()
@@ -10910,7 +12430,11 @@ extension XCTestCase {
             defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1"),
             accountHash
         )
-        addTeardownBlock { [defaults, suiteName, temporaryRoot] in
+        let physicalProofKeyAccount = LocalCatalogPhysicalProofStore.keyAccount(
+            baseDirectory: repository.baseDirectory,
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: deviceInstallID))
+        addTeardownBlock { [defaults, suiteName, temporaryRoot, physicalProofKeyAccount] in
+            LocalCatalogPhysicalProofStore.removeOwnedKeyForTesting(account: physicalProofKeyAccount)
             defaults.removePersistentDomain(forName: suiteName)
             try? FileManager.default.removeItem(at: temporaryRoot)
         }
@@ -11704,6 +13228,7 @@ private struct RI08RealContinuationProof {
     let engine: AutomaticSyncEngine
     let policy: AutomaticSyncCancellationPolicy
     let result: SyncAutomaticRunResult
+    let strongNoWorkFetcher: RI08StrongNoWorkFetcher?
     var watermarkScope: WatermarkStore.Scope { .init(ownerUserID: fixture.ownerUserID, storeIdentity: scope.storeIdentity) }
     var fenceDefaultsKey: String { "sync.recovery.fence.account.\(scope.accountHash).store.\(scope.storeIdentity.rawValue)" }
 }
@@ -11759,9 +13284,161 @@ private struct RI08EventRead: Sendable {
 }
 
 @MainActor
+private final class RI08StrongNoWorkFetcher: SupabaseSyncEventIncrementalFetching,
+    ShopScopedIncrementalNoWorkVerifying, ShopScopedIncrementalRPCAuthorizing,
+    ShopScopedIncrementalFencePersisting, @unchecked Sendable {
+    nonisolated let usesServerAuthorizedShopScope = true
+    private let base: RI08OrdinaryIncrementalRemote
+    private let adapter: ShopSyncRecoveryRemoteAdapter
+    private let transport: AtomicRecoveryTestTransport
+    private let behavior: RI08StrongNoWorkBehavior
+    private(set) var headCalls = 0
+    private(set) var markerCalls = 0
+    private(set) var fallbackEventCalls = 0
+    var markerBaselineIDs: [String] { transport.markerBaselineIDsForTesting() }
+
+    init(base: RI08OrdinaryIncrementalRemote, fixture: AtomicRecoveryFixture,
+         checkpoint: ShopSyncRecoveryCheckpoint, behavior: RI08StrongNoWorkBehavior) throws {
+        self.base = base
+        self.behavior = behavior
+        if behavior == .countDrift {
+            base.reconciliationCountsOverride = .init(products: 2, suppliers: 0, categories: 0,
+                productPrices: 0, historySessions: 0)
+        }
+        let mutation: String
+        switch behavior {
+        case .materialDrift: mutation = "checkpointDigest"
+        case .race: mutation = "newEvent"
+        case .refusal: mutation = "refusal"
+        case .foreignScope: mutation = "scope"
+        default: mutation = "none"
+        }
+        let marker = try ordinaryStrongNoWorkMarker(checkpoint: checkpoint, mutation: mutation)
+        let markerTransport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
+            checkpoints: [checkpoint], rawMarker: try JSONEncoder().encode(marker))
+        transport = markerTransport
+        adapter = ShopSyncRecoveryRemoteAdapter(transport: markerTransport, defaults: fixture.defaults)
+    }
+
+    func hasNoEvents(ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+                     baselineCheckpoint: ShopSyncRecoveryCheckpoint) async throws -> Bool {
+        await MainActor.run { self.headCalls += 1 }
+        if behavior == .headTransient { throw AutomaticSyncFailure(disposition: .transient, category: .timeout) }
+        let rows = try await base.fetchSyncEventsAfter(ownerUserID: ownerUserID, afterID: watermark, limit: 1)
+        // This is the controlled remote's observed H, not an acknowledgement or a checkpoint.
+        let freshH = rows.last?.id ?? watermark
+        return try ShopSyncOrdinaryNoWorkContract.validateHead(ordinaryStrongNoWorkHead(
+            checkpoint: baselineCheckpoint, watermark: watermark, headMax: freshH),
+            checkpoint: baselineCheckpoint, watermark: watermark)
+    }
+
+    func verifyNoWork(ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+                      baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+                      localVerification: ShopSyncRecoveryLocalVerificationReceipt) async throws {
+        await MainActor.run { self.markerCalls += 1 }
+        if behavior == .markerTransient { throw AutomaticSyncFailure(disposition: .transient, category: .timeout) }
+        if behavior == .cancelled { throw CancellationError() }
+        let marker = try await adapter.marker(ownerUserID: ownerUserID, scope: scope,
+            baselineCheckpoint: baselineCheckpoint, localVerification: localVerification)
+        try ShopSyncOrdinaryNoWorkContract.validateMarker(marker, checkpoint: baselineCheckpoint, watermark: watermark)
+    }
+
+    func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
+        fallbackEventCalls += 1
+        return try await base.fetchSyncEventsAfter(ownerUserID: ownerUserID, afterID: afterID, limit: limit)
+    }
+
+    func advanceDurableFence(ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope,
+                             from watermark: Int64, through newWatermark: Int64) async throws {
+        try await base.advanceDurableFence(ownerUserID: ownerUserID, scope: scope,
+            from: watermark, through: newWatermark)
+    }
+}
+
+private enum RI08StrongNoWorkBehavior: String, Sendable {
+    case stable, materialDrift, race, refusal, foreignScope, countDrift, headTransient, markerTransient, cancelled
+}
+
+private nonisolated func ordinaryStrongNoWorkHead(
+    checkpoint: ShopSyncRecoveryCheckpoint, watermark: Int64, headMax: Int64? = nil,
+    mutation: String = "none", rows: [RemoteSyncEventRow] = []
+) -> ShopSyncEventPageEnvelope {
+    let otherScope = ShopSyncRecoveryScope(kind: checkpoint.scope.kind, historyKind: checkpoint.scope.historyKind,
+        key: String(repeating: "a", count: 64), legacyOwnerKey: checkpoint.scope.legacyOwnerKey,
+        accountKey: checkpoint.scope.accountKey, deviceKey: checkpoint.scope.deviceKey)
+    let domains = checkpoint.syncEvents.domainMaxIds
+    return ShopSyncEventPageEnvelope(schemaVersion: "shop-sync-event-page-v1",
+        shopId: mutation == "shop" ? UUID() : checkpoint.shopId,
+        scope: mutation == "scope" ? otherScope : checkpoint.scope,
+        scopeEventMaxId: mutation == "newEvent" ? String(watermark + 1)
+            : mutation == "removedLastEvent" ? String(watermark - 1)
+            : mutation == "nonCanonicalH" ? "041" : String(headMax ?? watermark),
+        asOfEventMaxId: mutation == "asOf" ? String(watermark - 1) : String(watermark),
+        asOfDomainEventMaxIds: mutation == "domain"
+            ? .init(catalog: String(watermark - 1), prices: domains.prices, history: domains.history) : domains,
+        pageLimit: mutation == "limit" ? 2 : 1, rows: rows,
+        nextAfterId: mutation == "next" ? String(watermark) : nil, hasMore: mutation == "hasMore")
+}
+
+private nonisolated func ordinaryStrongNoWorkMarker(
+    checkpoint: ShopSyncRecoveryCheckpoint, mutation: String = "none"
+) throws -> ShopSyncRecoveryConvergenceMarker {
+    let marker = ShopSyncRecoveryConvergenceMarker(schemaVersion: "shop-sync-convergence-marker-v1",
+        status: "ready", shopId: checkpoint.shopId, scope: checkpoint.scope,
+        syncEvents: .init(maxId: checkpoint.syncEvents.maxId, verifiedBaselineId: checkpoint.syncEvents.maxId,
+            requiresFullRecovery: false, domainMaxIds: checkpoint.syncEvents.domainMaxIds),
+        catalog: checkpoint.catalog, prices: checkpoint.prices, history: checkpoint.history, images: checkpoint.images,
+        integrity: .init(totalViolationCount: 0), checkpointDigest: checkpoint.checkpointDigest,
+        serverNoWorkEligible: true, markerDigest: ShopSyncRecoveryCanonical.sha256("ordinary-strong-marker"))
+    guard mutation != "none" else { return marker }
+    guard var payload = try JSONSerialization.jsonObject(with: JSONEncoder().encode(marker)) as? [String: Any] else {
+        throw ShopSyncRecoveryContractError.invalidCheckpoint
+    }
+    let changedDigest = String(repeating: "a", count: 64)
+    switch mutation {
+    case "checkpointDigest": payload["checkpointDigest"] = changedDigest
+    case "catalog":
+        var catalog = payload["catalog"] as! [String: Any]
+        catalog["digest"] = changedDigest
+        payload["catalog"] = catalog
+    case "suppliers", "categories", "products":
+        var catalog = payload["catalog"] as! [String: Any]
+        var entity = catalog[mutation] as! [String: Any]
+        entity["versionDigest"] = changedDigest
+        catalog[mutation] = entity
+        payload["catalog"] = catalog
+    case "prices", "history", "images":
+        var entity = payload[mutation] as! [String: Any]
+        entity["versionDigest"] = changedDigest
+        payload[mutation] = entity
+    case "domain", "newEvent", "requiresRecovery":
+        var events = payload["syncEvents"] as! [String: Any]
+        if mutation == "newEvent" { events["maxId"] = String((checkpoint.maxEventID ?? 0) + 1) }
+        else if mutation == "requiresRecovery" { events["requiresFullRecovery"] = true }
+        else {
+            var domains = events["domainMaxIds"] as! [String: Any]
+            domains["catalog"] = String((checkpoint.maxEventID ?? 0) - 1)
+            events["domainMaxIds"] = domains
+        }
+        payload["syncEvents"] = events
+    case "scope":
+        var scope = payload["scope"] as! [String: Any]
+        scope["key"] = changedDigest
+        payload["scope"] = scope
+    case "shop": payload["shopId"] = UUID().uuidString.lowercased()
+    case "refusal": payload["status"] = "resource_exceeded"; payload["serverNoWorkEligible"] = false
+    case "integrity": payload["integrity"] = ["totalViolationCount": 1]
+    case "eligible": payload["serverNoWorkEligible"] = false
+    default: throw ShopSyncRecoveryContractError.invalidCheckpoint
+    }
+    return try JSONDecoder().decode(ShopSyncRecoveryConvergenceMarker.self,
+        from: JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]))
+}
+
+@MainActor
 private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemote,
     ShopScopedIncrementalRPCAuthorizing, ShopScopedIncrementalFencePersisting,
-    ShopDeviceAuthorizationChecking, SyncAutomaticCatalogRemoteWriting, SyncEventRecording, @unchecked Sendable {
+    ShopDeviceAuthorizationChecking, SyncAutomaticCatalogRemoteWriting, SyncEventRecording, ShopScopedReconciliationRemoteCountFetching, @unchecked Sendable {
     nonisolated let usesServerAuthorizedShopScope = true
     private let ownerUserID: UUID
     private let shopID: UUID
@@ -11773,6 +13450,8 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
     private(set) var eventReads: [RI08EventRead] = []
     private(set) var catalogFetchCallCount = 0
     private(set) var reconciliationFetchCallCount = 0
+    var scopedCountFetcher: (any ShopScopedReconciliationRemoteCountFetching)?
+    private(set) var scopedCountScopes: [ShopSyncRecoveryScope] = []
     var reconciliationCountsOverride: SyncInventoryCountSnapshot?
     var eventToPublishAfterCounts: RemoteSyncEventRow?
     private(set) var catalogPushCallCount = 0
@@ -11911,6 +13590,20 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
             deviceIdentityHash: scope.deviceIdentityHash
         ) else { throw ShopSyncRecoveryContractError.scopeFenceMissing }
         fenceAdvances.append(.init(from: watermark, through: newWatermark))
+    }
+
+    func fetchReconciliationRemoteCounts(scope: Task126VerifiedOwnerStoreScope,
+        recoveryScope: ShopSyncRecoveryScope, defaults: UserDefaults) async throws -> SyncInventoryCountSnapshot {
+        let fetcher = await MainActor.run { () -> (any ShopScopedReconciliationRemoteCountFetching)? in
+            guard let fetcher = self.scopedCountFetcher else { return nil }
+            self.scopedCountScopes.append(recoveryScope)
+            return fetcher
+        }
+        if let fetcher {
+            return try await fetcher.fetchReconciliationRemoteCounts(scope: scope,
+                recoveryScope: recoveryScope, defaults: defaults)
+        }
+        return try await fetchReconciliationRemoteCounts()
     }
 
     func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
@@ -12190,6 +13883,7 @@ private final class RI08ObservedRealRuntime: SyncAutomaticRuntimeProviding {
     private(set) var actions: [SyncAction] = []
     private(set) var sources: [SyncAutomaticTriggerSource] = []
     var expectedCompletions: [XCTestExpectation] = []
+    var afterRunForTesting: ((SyncAutomaticRunResult) -> Void)?
     init(facade: AutomaticSyncRuntimeFacade) { self.facade = facade }
     var isRunning: Bool { facade.isRunning }
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
@@ -12197,6 +13891,7 @@ private final class RI08ObservedRealRuntime: SyncAutomaticRuntimeProviding {
         sources.append(source)
         let result = await facade.run(action: action, source: source)
         results.append(result)
+        afterRunForTesting?(result)
         if expectedCompletions.indices.contains(results.count - 1) {
             expectedCompletions[results.count - 1].fulfill()
         }
@@ -13511,13 +15206,52 @@ extension AtomicGenerationRecoverySnapshotPullServiceTests {
             let competitorTransport = Task145PublishedMarkerTransport(seed: seed, fixture: fixture)
             let competitor = try makeTask145PublishedCoordinator(seed: seed, fixture: fixture, auth: auth, transport: competitorTransport)
             defer { competitor.stop() }
-            await task145RunPublished(competitor)
-            XCTAssertEqual(competitor.runtime.results.first?.status, .busy)
+            // Isolate only these DEBUG telemetry keys so this original
+            // invocation's closed return reason cannot be an earlier run's.
+            let telemetry = UserDefaults.standard
+            let outcomeKey = "sync.runtime.foreground.outcome"
+            let reconciliationKey = "sync.runtime.foreground.reconciliationReason"
+            let priorOutcome = telemetry.object(forKey: outcomeKey)
+            let priorReconciliation = telemetry.object(forKey: reconciliationKey)
+            telemetry.removeObject(forKey: outcomeKey)
+            telemetry.removeObject(forKey: reconciliationKey)
+            defer {
+                if let priorOutcome { telemetry.set(priorOutcome, forKey: outcomeKey) }
+                else { telemetry.removeObject(forKey: outcomeKey) }
+                if let priorReconciliation { telemetry.set(priorReconciliation, forKey: reconciliationKey) }
+                else { telemetry.removeObject(forKey: reconciliationKey) }
+            }
+            // A live fourth claim is rejected before the facade/Engine, not
+            // a facade .busy result. Wait for this invocation's exact closed
+            // admission return while the original provider remains held.
+            let heldBefore = await AutomaticSyncSingleFlight.processShared.isRunning
+            XCTAssertTrue(heldBefore)
+            let closedAdmission = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                telemetry.string(forKey: outcomeKey) == "recovery_resume_exhausted"
+            }, object: nil)
+            competitor.coordinator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+            let competitorBarrier = await XCTWaiter.fulfillment(of: [closedAdmission], timeout: 3)
+            XCTAssertEqual(competitorBarrier, .completed)
+            XCTAssertEqual(telemetry.string(forKey: outcomeKey), "recovery_resume_exhausted")
+            XCTAssertNil(telemetry.string(forKey: reconciliationKey))
+            XCTAssertTrue(competitor.runtime.results.isEmpty)
+            XCTAssertTrue(competitor.runtime.sources.isEmpty)
+            XCTAssertTrue(competitor.forbidden.calls.isEmpty)
+            let heldAfter = await AutomaticSyncSingleFlight.processShared.isRunning
+            XCTAssertTrue(heldAfter)
+            task145PublishedAttachJSON([
+                "stage": "held-competitor-after-closed-admission-barrier",
+                "telemetryKeysClearedBeforeOriginalInvocation": true,
+                "foregroundOutcome": task145PublishedDiagnosticOptional(telemetry.string(forKey: outcomeKey)),
+                "reconciliationReason": task145PublishedDiagnosticOptional(telemetry.string(forKey: reconciliationKey)),
+                "runtimeResultCount": competitor.runtime.results.count,
+                "runtimeSources": competitor.runtime.sources.map { String(reflecting: $0) }
+            ], name: "Actual held competitor closed admission reason")
             XCTAssertTrue(old.runtime.results.isEmpty)
             XCTAssertEqual(competitorTransport.markerCalls, 0)
             task145AssertNoSnapshot(competitorTransport)
             XCTAssertEqual(fixture.defaults.data(forKey: seed.budgetKey), claimedBytes,
-                "Busy processShared refusal cannot prepare or consume another claim")
+                "A live published owner refusal cannot prepare or consume another claim")
             competitor.stop()
         }
         hold.release()
@@ -15223,3 +16957,13 @@ private nonisolated final class Task145FirstFailureCapture: @unchecked Sendable 
     }
 }
 #endif
+
+@MainActor
+private final class RI08UnqualifiedScopedCountSentinel: ShopScopedReconciliationRemoteCountFetching, @unchecked Sendable {
+    private(set) var calls = 0
+    func fetchReconciliationRemoteCounts(scope: Task126VerifiedOwnerStoreScope,
+        recoveryScope: ShopSyncRecoveryScope, defaults: UserDefaults) async throws -> SyncInventoryCountSnapshot {
+        await MainActor.run { self.calls += 1 }
+        throw ShopSyncRecoveryContractError.scopeFenceMissing
+    }
+}

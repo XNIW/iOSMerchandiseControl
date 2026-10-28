@@ -752,6 +752,33 @@ final class SyncStateStore: ObservableObject {
         return remaining > 0 ? .cooldown(remaining) : .ready
     }
 
+    /// Manual prepared replacement is distinct from automatic retry: a stable
+    /// completed result can be checked again, but its validated due/history stay
+    /// intact. This is read-only and never turns an ambiguous exhausted record
+    /// into admission. The caller rechecks current scope under the shared flight.
+    func manualReplacementRecoveryAttemptEligibility(
+        identity: String, now: Date = Date()
+    ) -> SyncAutomaticRecoveryAttemptEligibility {
+        guard Self.isRedactedIdentity(identity), now.timeIntervalSince1970.isFinite,
+              let journal = pendingRecoveryJournal,
+              journal.mode == .accountOrShopReplacement, journal.phase == .prepared,
+              SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == identity else { return .exhausted }
+        guard defaults.object(forKey: automaticRecoveryAttemptKey) != nil else {
+            return automaticRecoveryAttemptEligibility(identity: identity, now: now)
+        }
+        guard let record = automaticRecoveryAttemptRecord(), record.identity == identity,
+              record.lastCompletedAt != nil,
+              record.failure?.disposition == .stable || record.failure?.disposition == .transient,
+              record.publishedFinalization == nil, record.legacyContinuation == nil,
+              record.lifecycle?.operation != .reconciliation,
+              record.lifecycle?.state != .running,
+              !Self.liveRecoveryInvocations.contains(record.invocationID) else { return .exhausted }
+        // The validated record already requires nextAllowedAt >= both the
+        // retained Retry-After and the latest failure's server minimum.
+        let remaining = record.nextAllowedAt - now.timeIntervalSince1970
+        return remaining > 0 ? .cooldown(remaining) : .ready
+    }
+
     /// Read-only candidacy. The caller must separately qualify the current
     /// body/manifest/authority. Incomplete records need a durable reservation
     /// under processShared before they can authorize any RPC.

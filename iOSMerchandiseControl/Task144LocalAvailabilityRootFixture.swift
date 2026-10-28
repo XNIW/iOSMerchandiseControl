@@ -43,6 +43,15 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private static let observesScopeRevalidation = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
         .flatMap(UUID.init(uuidString:)) != nil
         && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_OBSERVE_SCOPE"] == "1"
+    // C2-only passive phases feed the existing scope ledger; never complete/cancel work here.
+    private static let observesScopeReplacement = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
+        .flatMap(UUID.init(uuidString:)) != nil
+        && ProcessInfo.processInfo.environment["TASK145_SCOPE_SWITCH_UI"] == "confirmed-delayed-response"
+    @MainActor static var scopeReplacementPhaseObserver: (@MainActor (String) -> Void)?
+    @MainActor static func recordScopeReplacementPhase(_ phase: String) {
+        guard observesScopeReplacement else { return }
+        scopeReplacementPhaseObserver?(phase)
+    }
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
     private var sequence = 0
@@ -5215,8 +5224,16 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
         return result
     }
     func cancel() { runtime.cancel() }
-    func cancelAndWait() async { await runtime.cancelAndWait() }
-    func resumeAfterStoreReplacement() async { await runtime.resumeAfterStoreReplacement() }
+    func cancelAndWait() async {
+        Task144RootObservation.recordScopeReplacementPhase("runtime-wrapper.cancel-await.enter")
+        defer { Task144RootObservation.recordScopeReplacementPhase("runtime-wrapper.cancel-await.exit") }
+        await runtime.cancelAndWait()
+    }
+    func resumeAfterStoreReplacement() async {
+        Task144RootObservation.recordScopeReplacementPhase("runtime-wrapper.resume.enter")
+        defer { Task144RootObservation.recordScopeReplacementPhase("runtime-wrapper.resume.exit") }
+        await runtime.resumeAfterStoreReplacement()
+    }
 }
 
 struct Task144ControlledRootAdmission<Content: View>: View {
@@ -8733,16 +8750,19 @@ private final class Task145ScopeSwitchControl {
         if armedMembershipHold {
             armedMembershipHold = false; membershipHeld = true
             try note("old-a-response-held", ["request": String(request), "response-shop": shopA.shopID.uuidString.lowercased()])
+            Task144RootObservation.recordScopeReplacementPhase("held-a.await.enter")
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 membershipContinuation = continuation
                 holdExpiry = Task { @MainActor [weak self] in
                     do { try await Task.sleep(for: .seconds(120)) } catch { return }
                     guard let self, let pending = self.membershipContinuation else { return }
+                    Task144RootObservation.recordScopeReplacementPhase("held-a.expiry.resume-throw")
                     self.membershipContinuation = nil
                     self.ledger.facts["hold-deadline"] = "expired"
                     pending.resume(throwing: Fault.heldResponseDeadline)
                 }
             }
+            Task144RootObservation.recordScopeReplacementPhase("held-a.await.resumed")
             membershipReturned = true
             try note("old-a-provider-return", ["request": String(request)])
             return try decodedMembership([shopA])
@@ -8750,11 +8770,15 @@ private final class Task145ScopeSwitchControl {
         return try decodedMembership([shopA, linkedB])
     }
     func releaseOldResponse() throws {
+        Task144RootObservation.recordScopeReplacementPhase("held-a.release.enter")
+        defer { Task144RootObservation.recordScopeReplacementPhase("held-a.release.exit") }
         guard qualifiedB != nil, membershipHeld, !membershipReturned,
               let pending = membershipContinuation else { throw Fault.invalidBoundary }
         try note("old-a-release-after-b-qualified")
+        Task144RootObservation.recordScopeReplacementPhase("held-a.release.admitted")
         membershipContinuation = nil; holdExpiry?.cancel(); holdExpiry = nil
         pending.resume()
+        Task144RootObservation.recordScopeReplacementPhase("held-a.release.resume-issued")
     }
     func markRefreshCompleted() throws {
         guard membershipHeld, membershipReturned, membershipContinuation == nil,
@@ -8819,6 +8843,14 @@ extension Task144LocalAvailabilityRootFixture {
     private func configureScopeSwitch(_ control: Task145ScopeSwitchControl) {
         scopeSwitchControl = control
         shopFetcher.scopeSwitchControl = control
+        if control.scenario == .confirmedCallback {
+            let expectedRunID = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:))
+            Task144RootObservation.scopeReplacementPhaseObserver = { [weak self, weak control] phase in
+                guard let self, let control, expectedRunID == control.ledger.runID else { return }
+                do { try control.note("replacement-phase", ["phase": phase]) }
+                catch { self.scopeSwitchFailure(error, stage: "replacement-phase-observation") }
+            }
+        }
         control.onChange = { [weak self, weak control] in
             guard let self, let control else { return }
             self.facts = self.facts.filter { !$0.hasPrefix("task145.scope.observation.") }

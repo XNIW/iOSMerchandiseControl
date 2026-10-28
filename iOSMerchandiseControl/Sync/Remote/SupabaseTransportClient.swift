@@ -176,12 +176,46 @@ actor SupabaseTransportClient {
         request.setValue(clientProvider.config.publishableKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
 
+        #if DEBUG
+        let observesTestResponse = ShopSyncRecoveryCanonical.sha256(clientProvider.config.projectURL.absoluteString)
+            == "42a5d0119a30cb5f291bff1912a46e1092c77b483bbfed663785ef165260c842"
+        let observedRPC: String?
+        switch function {
+        case "shop_sync_recovery_checkpoint_v1": observedRPC = "recovery-checkpoint"
+        case "shop_sync_recovery_page_v1": observedRPC = "recovery-page"
+        case "shop_sync_convergence_marker_v1": observedRPC = "convergence-marker"
+        case "shop_sync_event_page_v1": observedRPC = "event-page"
+        case "shop_sync_rows_by_ids_v1": observedRPC = "rows-by-ids"
+        default: observedRPC = nil
+        }
+        #endif
+
         do {
             let bounded = try await BoundedURLSessionDataLoader.data(
                 for: request,
                 configuration: rpcSessionConfiguration,
                 maximumBytes: maximumResponseBytes
             ) { response in
+                #if DEBUG
+                if observesTestResponse, response.url == url, let observedRPC {
+                    let rawRequestID = response.value(forHTTPHeaderField: "sb-request-id")
+                    let requestIDState: String
+                    let requestIDValue: String
+                    if let rawRequestID {
+                        let bytes = rawRequestID.utf8
+                        let validShape = bytes.count == 36 && bytes.enumerated().allSatisfy { index, byte in
+                            if index == 8 || index == 13 || index == 18 || index == 23 { return byte == 45 }
+                            return (48...57).contains(byte) || (65...70).contains(byte) || (97...102).contains(byte)
+                        }
+                        requestIDState = validShape ? "VALID_SHAPE" : "INVALID"
+                        requestIDValue = validShape ? rawRequestID : "-"
+                    } else {
+                        requestIDState = "ABSENT"
+                        requestIDValue = "-"
+                    }
+                    NSLog("%@", "ordinary-shop-sync-http-response rpc.\(observedRPC) status.\(response.statusCode) request-id-state.\(requestIDState) request-id.\(requestIDValue)")
+                }
+                #endif
                 try Self.validateRPCResponse(response)
             }
             return bounded.0

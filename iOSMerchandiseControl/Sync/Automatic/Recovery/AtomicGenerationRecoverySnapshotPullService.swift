@@ -1153,9 +1153,15 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
 
     @MainActor
     private func completeRecoveryJournal(scope: Task126VerifiedOwnerStoreScope) throws -> Bool {
-        try AccountBindingStore(defaults: defaultsBox.value).completePendingReplacementRecovery(
+        let completed = try AccountBindingStore(defaults: defaultsBox.value).completePendingReplacementRecovery(
             accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
             expectedLeaseGeneration: scope.leaseGeneration)
+        guard completed else { return false }
+        // Cleanup invalidates the old pending-journal context. Re-attest only
+        // the already qualified, unchanged live body against the durable final
+        // context; a failed optional seal still takes the real startup fallback.
+        storeGenerationController.sealFinalizedLocalBodyProof(ownerUserID: scope.ownerUserID)
+        return true
     }
 
     @MainActor

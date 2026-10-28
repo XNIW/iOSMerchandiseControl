@@ -255,9 +255,9 @@ struct Task145PerformanceReadback: UIViewRepresentable {
 }
 
 extension View {
-    @ViewBuilder func task145PerformanceRender(_ event: String, qualifies: Bool = true, facts: String = "", validate: @escaping @MainActor () -> Bool = { true }) -> some View {
+    @ViewBuilder func task145PerformanceRender(_ event: String, qualifies: @autoclosure () -> Bool = true, facts: @autoclosure () -> String = "", validate: @escaping @MainActor () -> Bool = { true }) -> some View {
         if Task145PerformanceConfiguration.measures {
-            background(Task145PerformanceRenderBoundary(event: event, qualifies: qualifies, facts: facts, validate: validate))
+            background(Task145PerformanceRenderBoundary(event: event, qualifies: qualifies(), facts: facts(), validate: validate))
         } else { self }
     }
 }
@@ -266,6 +266,6 @@ import SwiftUI
 func task145PerformanceSaveMatches(_ name: String?) -> Bool { false }
 func task145PerformanceEditorMatches(_ name: String, barcode: String) -> Bool { false }
 extension View {
-    func task145PerformanceRender(_ event: String, qualifies: Bool = true, facts: String = "", validate: @escaping @MainActor () -> Bool = { true }) -> some View { self }
+    func task145PerformanceRender(_ event: String, qualifies: @autoclosure () -> Bool = true, facts: @autoclosure () -> String = "", validate: @escaping @MainActor () -> Bool = { true }) -> some View { self }
 }
 #endif

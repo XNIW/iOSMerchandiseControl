@@ -557,6 +557,7 @@ final class SupabaseConfigSecurityTests: XCTestCase {
         var postClockObserved = false
         var causalWitnessSHA256: String?
         var causalPreviewSHA256: String?
+        var coexistenceReplied = false
         var runtimeScopeProof: (raw: String, sha256: String)?
         do {
             try requireCurrent()
@@ -595,6 +596,21 @@ final class SupabaseConfigSecurityTests: XCTestCase {
                 b6LastStage = "observation-state"
                 let state = PilotCommitTrace.b6ObservationState()
                 guard state.invalidReason == nil else { throw B6HarnessFailure.observerInvalid }
+                // A testmanager liveness diagnostic only: no business mutation, trace event or UI-ready claim.
+                if environment["TEST_RUNNER_TASK145_B6_COEXISTENCE_PROBE"] == "1", !coexistenceReplied,
+                   FileManager.default.fileExists(atPath: directory.appendingPathComponent("coexistence-liveness-nonce.txt").path) {
+                    guard causalMode, binding.role == "peer", !state.terminal else { throw B6HarnessFailure.binding }
+                    let challenge = try await nonce("coexistence-liveness-nonce.txt", deadline: deadline)
+                    guard challenge != firstNonce, challenge != binding.sourceAdmissionNonce else { throw B6HarnessFailure.clockNonce }
+                    try requireCurrent(); try requireValueEpoch(); try Task.checkCancellation()
+                    guard PilotCommitTrace.b6Now() < deadline,
+                          PilotCommitTrace.b6ObservationState().invalidReason == nil else { throw B6HarnessFailure.observerInvalid }
+                    try write(["kind":"SAME_MAIN_HOSTED_UNIT_LIVENESS", "operation_id":binding.operationID,
+                        "nonce":challenge,"participant_pid":ProcessInfo.processInfo.processIdentifier,
+                        "participant_boot_sha256":first.bootHash,"artifact_sha256":artifact,
+                        "native_ns":PilotCommitTrace.b6Now(),"within_original_observation_deadline":true], name:"coexistence-liveness.json")
+                    coexistenceReplied = true
+                }
                 if causalMode, binding.role == "source", causalWitnessSHA256 == nil,
                    FileManager.default.fileExists(atPath: sourceAdmission.path) {
                     let admissionNonce = try await nonce("source-admission-nonce.txt", deadline: deadline)

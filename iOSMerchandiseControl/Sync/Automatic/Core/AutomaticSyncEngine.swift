@@ -77,7 +77,7 @@ actor AutomaticSyncEngine {
         recordAttempt(source: source)
         var didRun = false
         var hasRejectedCatalogChanges = false
-        let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect)
+        let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect || source == .releaseCard)
             && action == .sequence([.pushPending, .bootstrap])
         var verifiedConvergence = false
         var verifiedFinalization: SyncStoreRecoveryFinalization?
@@ -129,7 +129,27 @@ actor AutomaticSyncEngine {
                 default: false
                 }
             }
-            if hasRemotePlan, AutomaticSyncAttemptContext.legacyContinuation == nil,
+            if hasRemotePlan, AutomaticSyncAttemptContext.publishedFinalization != nil {
+                // Published recovery can only finish the exact existing
+                // generation. Reserve its durable floor/claim after admission
+                // and single-flight, before any provider or marker is entered.
+                guard action == .fullRecovery, steps == [.fullRecovery],
+                      AutomaticSyncAttemptContext.legacyContinuation == nil,
+                      AutomaticSyncAttemptContext.reconciliation == nil,
+                      let beginPublished = AutomaticSyncAttemptContext.beginPublishedFinalization else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+                switch await beginPublished() {
+                case .ready:
+                    break
+                case .cooldown(let delay):
+                    recordDiagnostic("lastOutcome", "scheduled_retry")
+                    return await complete(.scheduledRetry(after: delay), observationSource: observationSource)
+                case .rejected:
+                    return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
+                        observationSource: observationSource)
+                }
+            } else if hasRemotePlan, AutomaticSyncAttemptContext.legacyContinuation == nil,
                AutomaticSyncAttemptContext.reconciliation == nil,
                let begin = AutomaticSyncAttemptContext.begin, !((await begin())) {
                 return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
@@ -356,6 +376,9 @@ actor AutomaticSyncEngine {
         if finalResult.observation == nil, let observationSource {
             finalResult = observationSource.completed(finalResult, now: completedAt)
         }
+        #if DEBUG
+        NSLog("%@", "ordinary-automatic-cycle-terminal status.\(finalResult.status.rawValue)")
+        #endif
         return finalResult
     }
 
