@@ -3,7 +3,7 @@ import XCTest
 
 @MainActor
 final class LocalRootConflictReviewRoutingTests: XCTestCase {
-    func testUnqualifiedOrStaleRootCannotRequestConflictReview() {
+    func testUnqualifiedOrStaleRootCannotRequestConflictReview() async {
         let state = LocalRootPresentationState()
         state.advanceStoreGeneration(presentationID: "A")
         XCTAssertFalse(state.requestCatalogConflictReview(remoteID: UUID(), changeID: "change", presentationID: "A"))
@@ -15,7 +15,7 @@ final class LocalRootConflictReviewRoutingTests: XCTestCase {
         XCTAssertNil(state.catalogConflictReviewRequest(presentationID: "A"))
     }
 
-    func testStaleDismissalCannotClearNewerRequestAndDoesNotDiscardDraft() throws {
+    func testStaleDismissalCannotClearNewerRequestAndDoesNotDiscardDraft() async throws {
         let owner = UUID(), state = LocalRootPresentationState()
         let current = manifest(owner: owner)
         state.advanceStoreGeneration(presentationID: "A")
@@ -47,7 +47,7 @@ final class LocalRootConflictReviewRoutingTests: XCTestCase {
         XCTAssertNil(state.catalogConflictReviewRequest(presentationID: "A"))
     }
 
-    func testSameScopeGenerationCarriesRequestButDifferentAccountWithdrawsIt() throws {
+    func testSameScopeGenerationCarriesRequestButDifferentAccountWithdrawsIt() async throws {
         let owner = UUID(), state = LocalRootPresentationState()
         let current = manifest(owner: owner)
         state.advanceStoreGeneration(presentationID: "A")
@@ -65,7 +65,7 @@ final class LocalRootConflictReviewRoutingTests: XCTestCase {
         XCTAssertNil(state.catalogConflictReviewRequest(presentationID: "B"))
     }
 
-    func testSameScopeQualificationWithdrawsDraftUntilReadmittedWithoutErasingIt() throws {
+    func testSameScopeQualificationWithdrawsDraftUntilReadmittedWithoutErasingIt() async throws {
         let owner = UUID(), state = LocalRootPresentationState(), remote = UUID()
         let current = manifest(owner: owner)
         state.advanceStoreGeneration(presentationID: "A")

@@ -496,9 +496,27 @@ final class SupabaseConfigSecurityTests: XCTestCase {
         func nonce(_ name: String, deadline: UInt64) async throws -> String {
             let url = directory.appendingPathComponent(name)
             while !FileManager.default.fileExists(atPath: url.path) {
-                try requireValueEpoch(); try Task.checkCancellation()
+                b6LastStage = "nonce-before-value-epoch"
+                try requireValueEpoch()
+                b6LastStage = "nonce-after-value-epoch"
+                b6LastStage = "nonce-before-cancellation-check"
+                try Task.checkCancellation()
+                b6LastStage = "nonce-after-cancellation-check"
                 guard PilotCommitTrace.b6Now() < deadline else { throw B6HarnessFailure.clockTimeout }
-                try await Task.sleep(nanoseconds: 20_000_000)
+                b6LastStage = "nonce-before-sleep"
+                do {
+                    try await Task.sleep(nanoseconds: 20_000_000)
+                } catch {
+                    b6LastStage = "nonce-sleep-threw"
+                    let failure = error as NSError
+                    NSLog("%@", "TASK145_B6_NONCE_SLEEP_ERROR type.\(String(reflecting: type(of: error))) domain.\(failure.domain) code.\(failure.code)")
+                    // This is the catch-site stack, not the original throw stack.
+                    for frame in Thread.callStackSymbols {
+                        NSLog("%@", "TASK145_B6_NONCE_SLEEP_CATCH_STACK \(frame)")
+                    }
+                    throw error
+                }
+                b6LastStage = "nonce-after-sleep"
             }
             let values = try url.resourceValues(forKeys: [.fileSizeKey, .isSymbolicLinkKey])
             guard values.isSymbolicLink != true, let size = values.fileSize, (1...64).contains(size),
@@ -521,6 +539,27 @@ final class SupabaseConfigSecurityTests: XCTestCase {
         if causalMode {
             guard !FileManager.default.fileExists(atPath: sourceAdmission.path),
                   !FileManager.default.fileExists(atPath: causalPreviewURL.path) else { throw B6HarnessFailure.causalNonce }
+        }
+        if environment["TEST_RUNNER_TASK145_B6_PREPARATION_ONLY"] == "1" {
+            let exitNonce = try XCTUnwrap(environment["TEST_RUNNER_TASK145_B6_PREPARATION_EXIT_NONCE"])
+            guard UUID(uuidString: exitNonce) != nil, exitNonce != binding.sourceAdmissionNonce else { throw B6HarnessFailure.binding }
+            try requireCurrent(); try requireValueEpoch()
+            let storeIdentityData=try JSONEncoder().encode(scope.storeIdentity)
+            let decodedStoreIdentity=try JSONDecoder().decode(LocalStoreIdentity.self,from:storeIdentityData)
+            let storeIdentityShape=try JSONSerialization.jsonObject(with:storeIdentityData)
+            guard decodedStoreIdentity==scope.storeIdentity,storeIdentityShape is [String:Any] else { throw B6HarnessFailure.binding }
+            let ready: [String: Any] = ["stage":"PREPARATION_HOST_READY", "operation_id":binding.operationID,
+                "manifest_sha256":binding.manifestHash,"participant_pid":ProcessInfo.processInfo.processIdentifier,
+                "artifact_sha256":binding.artifactHash,"directory":directory.path,"nativeAcceptance":false,
+                "exit_path":directory.appendingPathComponent("preparation-exit-nonce.txt").path,"store_identity_keyed_roundtrip":true]
+            try write(ready,name:"preparation-host-ready.json")
+            let observed = try await nonce("preparation-exit-nonce.txt",deadline:PilotCommitTrace.b6Now()+30_000_000_000)
+            guard observed == exitNonce else { throw B6HarnessFailure.clockNonce }
+            try requireCurrent(); try requireValueEpoch()
+            let terminal: [String: Any] = ["stage":"PREPARATION_HOST_TERMINAL", "operation_id":binding.operationID,
+                "manifest_sha256":binding.manifestHash,"status":"NOT_B6_ACCEPTANCE","nativeAcceptance":false]
+            try write(terminal,name:"preparation-host-terminal.json"); try attach(terminal,name:"preparation-host-terminal")
+            return
         }
         var ready: [String: Any] = ["stage": "READY_FOR_NONCE", "operation_id": binding.operationID,
             "directory": directory.path, "request_path": directory.appendingPathComponent("calibration-nonce.txt").path,

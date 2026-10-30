@@ -1283,6 +1283,8 @@ final class SyncStateStore: ObservableObject {
                 needsConservativeFloor = false
                 minimumKnownDue = completed + 300
             }
+        } else if defaults.object(forKey: automaticRecoveryAttemptKey) != nil {
+            return blockedRecoveryReconciliation("retry_metadata_invalid_or_foreign")
         } else if let legacy = reconciliationLegacyRecord(identity: identity) {
             // The old format has an explicit due timestamp. Qualify its
             // actual phase/prefix instead of assuming that staging has rows.

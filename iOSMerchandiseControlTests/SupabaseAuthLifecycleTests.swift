@@ -7,6 +7,106 @@ import XCTest
 
 @MainActor
 final class SupabaseAuthLifecycleTests: XCTestCase {
+#if DEBUG && targetEnvironment(simulator)
+    func testConcreteAuthStoragePublishesLoginRefreshAndLogoutOnMainBeforeFence() async throws {
+        let fixture = try AuthLifecycleFixture(sameUserForNewLogin: true)
+        let provider = makeConcreteStorageProvider(fixture)
+        let fallbackKey = "debug.simulator.\(fixture.storageKey)"
+        let publication = AuthDefaultStoragePublicationObservation(keys: [fallbackKey])
+        let observer = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard, queue: nil) { _ in publication.recordChanges() }
+        defer {
+            NotificationCenter.default.removeObserver(observer)
+            fixture.transport.releaseRefresh()
+            removeConcreteStorageFixtureKeys(fixture.storageKey)
+        }
+        let client = provider.client
+        let generation = provider.authSnapshot.generation
+        _ = try await Task.detached {
+            try await client.auth.signInWithIdToken(credentials: .init(provider: .google, idToken: "synthetic-default-login"))
+        }.value
+        XCTAssertEqual(try JSONDecoder().decode(Session.self,
+            from: XCTUnwrap(UserDefaults.standard.data(forKey: fallbackKey))).accessToken, fixture.newLogin.accessToken)
+        XCTAssertEqual(makeConcreteStorageProvider(fixture).client.auth.currentSession?.accessToken, fixture.newLogin.accessToken)
+        let refresh = Task.detached { try await client.auth.refreshSession() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        fixture.transport.releaseRefresh()
+        _ = try await refresh.value
+        XCTAssertEqual(try JSONDecoder().decode(Session.self,
+            from: XCTUnwrap(UserDefaults.standard.data(forKey: fallbackKey))).accessToken, fixture.refreshed.accessToken)
+        XCTAssertEqual(makeConcreteStorageProvider(fixture).client.auth.currentSession?.accessToken, fixture.refreshed.accessToken)
+        try await SupabaseAuthService(provider: provider).signOut()
+        XCTAssertFalse(provider.acceptsAuthGeneration(generation))
+        XCTAssertNil(UserDefaults.standard.data(forKey: fallbackKey))
+        XCTAssertNil(makeConcreteStorageProvider(fixture).client.auth.currentSession)
+        let events = publication.events(for: fallbackKey)
+        XCTAssertGreaterThanOrEqual(events.filter(\.hasValue).count, 2, "Observe actual login and refresh byte transitions")
+        XCTAssertTrue(events.contains { !$0.hasValue }, "Observe actual persisted-session removal")
+        XCTAssertTrue(events.allSatisfy(\.isMainThread), "Concrete storage must reach Main before holding the auth fence")
+    }
+
+    func testConcreteAuthStorageRetiresHeldRefreshAndPublishesWorkerPKCEOnMain() async throws {
+        let fixture = try AuthLifecycleFixture(sameUserForNewLogin: true)
+        let provider = makeConcreteStorageProvider(fixture)
+        let fallbackKey = "debug.simulator.\(fixture.storageKey)"
+        let verifierKey = "\(fixture.storageKey)-code-verifier"
+        let publication = AuthDefaultStoragePublicationObservation(keys: [fallbackKey, verifierKey])
+        let observer = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard, queue: nil) { _ in publication.recordChanges() }
+        defer {
+            NotificationCenter.default.removeObserver(observer)
+            fixture.transport.releaseRefresh()
+            removeConcreteStorageFixtureKeys(fixture.storageKey)
+        }
+        let retired = provider.client
+        let retiredGeneration = provider.authSnapshot.generation
+        _ = try await Task.detached {
+            try await retired.auth.signInWithIdToken(credentials: .init(provider: .google, idToken: "synthetic-default-first-login"))
+        }.value
+        let refresh = Task.detached { try await retired.auth.refreshSession() }
+        await fulfillment(of: [fixture.transport.refreshStarted], timeout: 3)
+        try await SupabaseAuthService(provider: provider).signOut()
+        let current = provider.client
+        _ = try await Task.detached {
+            try await current.auth.signInWithIdToken(credentials: .init(provider: .google, idToken: "synthetic-default-new-login"))
+        }.value
+        _ = try await Task.detached { try current.auth.getOAuthSignInURL(provider: .google) }.value
+        let verifier = try XCTUnwrap(UserDefaults.standard.data(forKey: verifierKey))
+        fixture.transport.releaseRefresh()
+        _ = try await refresh.value
+        _ = try await Task.detached { try retired.auth.getOAuthSignInURL(provider: .google) }.value
+        XCTAssertFalse(provider.acceptsAuthGeneration(retiredGeneration))
+        XCTAssertEqual(UserDefaults.standard.data(forKey: verifierKey), verifier, "A retired SDK cannot replace the current verifier")
+        XCTAssertEqual(try JSONDecoder().decode(Session.self,
+            from: XCTUnwrap(UserDefaults.standard.data(forKey: fallbackKey))).accessToken, fixture.newLogin.accessToken)
+        XCTAssertEqual(makeConcreteStorageProvider(fixture).client.auth.currentSession?.accessToken, fixture.newLogin.accessToken)
+        try await SupabaseAuthService(provider: provider).signOut()
+        XCTAssertNil(UserDefaults.standard.data(forKey: fallbackKey))
+        XCTAssertNil(UserDefaults.standard.data(forKey: verifierKey))
+        XCTAssertNil(makeConcreteStorageProvider(fixture).client.auth.currentSession)
+        let verifierEvents = publication.events(for: verifierKey)
+        XCTAssertTrue(verifierEvents.contains( where: \.hasValue), "Exercise actual worker PKCE storage")
+        XCTAssertTrue(verifierEvents.contains { !$0.hasValue }, "Exercise actual PKCE removal")
+        XCTAssertTrue((publication.events(for: fallbackKey) + verifierEvents).allSatisfy(\.isMainThread))
+    }
+
+    private func makeConcreteStorageProvider(_ fixture: AuthLifecycleFixture) -> SupabaseClientProvider {
+        // Intentionally omit authStorage: exercise the production concrete store,
+        // using only this fixture's unique host and intercepted synthetic HTTP.
+        SupabaseClientProvider(config: fixture.config, session: fixture.session,
+            autoRefreshToken: false, authRegistry: SupabaseAuthClientRegistry())
+    }
+
+    private func removeConcreteStorageFixtureKeys(_ storageKey: String) {
+        for key in [storageKey, "\(storageKey)-code-verifier"] {
+            try? KeychainLocalStorage().remove(key: key)
+            UserDefaults.standard.removeObject(forKey: key)
+            UserDefaults.standard.removeObject(forKey: "debug.simulator.\(key)")
+        }
+    }
+
+#endif
+
     func testRealDeviceAuthorizationPublicationOccursOnMainActorBeforeObservedDefaultsWrite() async throws {
         let fixture = try AuthLifecycleFixture()
         _ = try await fixture.provider.client.auth.session
@@ -911,6 +1011,40 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
     }
 
 }
+
+#if DEBUG && targetEnvironment(simulator)
+nonisolated private final class AuthDefaultStoragePublicationObservation: @unchecked Sendable {
+    struct Event: Sendable {
+        let isMainThread: Bool
+        let hasValue: Bool
+    }
+    private let lock = NSLock()
+    private let keys: [String]
+    private var previous: [String: Data]
+    private var recorded: [String: [Event]] = [:]
+
+    init(keys: [String]) {
+        self.keys = keys
+        previous = Dictionary(uniqueKeysWithValues: keys.compactMap { key in
+            UserDefaults.standard.data(forKey: key).map { (key, $0) }
+        })
+    }
+    func recordChanges() {
+        let values = keys.map { (key: $0, value: UserDefaults.standard.data(forKey: $0)) }
+        let isMainThread = Thread.isMainThread
+        lock.withLock {
+            for (key, value) in values where previous[key] != value {
+                previous[key] = value
+                recorded[key, default: []].append(.init(isMainThread: isMainThread, hasValue: value != nil))
+            }
+        }
+        // Never call the provider/fence, mutate defaults or synchronously hop
+        // executors from this synchronous notification callback.
+    }
+    func events(for key: String) -> [Event] { lock.withLock { recorded[key, default: []] } }
+}
+
+#endif
 
 @MainActor
 private final class AuthLifecycleFixture {

@@ -325,39 +325,52 @@ nonisolated private final class SupabaseAuthStorageFence: @unchecked Sendable {
         }
     }
     func finishSignOut(_ generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration else { return }
-            invalidateLocalIdentityRead()
-            reauthenticationRequired = false
-            do {
-                try removePersistedSession()
-                blocked = false
-            } catch {
-                blocked = true
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration else { return }
+                invalidateLocalIdentityRead()
+                reauthenticationRequired = false
+                do {
+                    try removePersistedSession()
+                    blocked = false
+                } catch {
+                    blocked = true
+                    signingOut = false
+                    currentGeneration = UUID()
+                    throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+                }
                 signingOut = false
                 currentGeneration = UUID()
-                throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
             }
-            signingOut = false
-            currentGeneration = UUID()
         }
     }
     func prepareInteractiveSignIn() throws {
-        try lock.withLock {
-            guard !signingOut else { throw CancellationError() }
-            invalidateLocalIdentityRead()
-            reauthenticationRequired = false
-            // A new SDK client bootstraps persisted sessions even with its
-            // auto-refresh ticker disabled. Verify the retired session is gone
-            // before creating the generation that will own the explicit login.
-            do { try removePersistedSession() }
-            catch {
-                blocked = true
-                throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+        try withStorageMutation {
+            try lock.withLock {
+                guard !signingOut else { throw CancellationError() }
+                invalidateLocalIdentityRead()
+                reauthenticationRequired = false
+                // A new SDK client bootstraps persisted sessions even with its
+                // auto-refresh ticker disabled. Verify the retired session is gone
+                // before creating the generation that will own the explicit login.
+                do { try removePersistedSession() }
+                catch {
+                    blocked = true
+                    throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+                }
+                blocked = false
+                currentGeneration = UUID()
             }
-            blocked = false
-            currentGeneration = UUID()
         }
+    }
+    // Concrete defaults storage synchronously publishes observed changes. Reach
+    // Main before taking the fence so a worker cannot hold it while waiting on
+    // SwiftUI's update lock. Keep guards and persistence in one serialized unit.
+    private func withStorageMutation<T>(_ operation: () throws -> T) rethrows -> T {
+        if storage is SupabaseAuthLocalStorage, !Thread.isMainThread {
+            return try DispatchQueue.main.sync(execute: operation)
+        }
+        return try operation()
     }
     private func removePersistedSession() throws {
         // The SDK retries its legacy migration on every read. A retained legacy
@@ -395,17 +408,21 @@ nonisolated private final class SupabaseAuthStorageFence: @unchecked Sendable {
         }
     }
     func store(key: String, value: Data, generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration, !signingOut, !blocked else { throw CancellationError() }
-            if key == sessionKey { invalidateLocalIdentityRead() }
-            try storage.store(key: key, value: value)
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration, !signingOut, !blocked else { throw CancellationError() }
+                if key == sessionKey { invalidateLocalIdentityRead() }
+                try storage.store(key: key, value: value)
+            }
         }
     }
     func remove(key: String, generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration, !blocked else { throw CancellationError() }
-            if key == sessionKey { invalidateLocalIdentityRead() }
-            try storage.remove(key: key)
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration, !blocked else { throw CancellationError() }
+                if key == sessionKey { invalidateLocalIdentityRead() }
+                try storage.remove(key: key)
+            }
         }
     }
 }

@@ -319,8 +319,37 @@ nonisolated enum LocalCatalogBodyProofStore {
             ProductPriceEffectiveAtCanonicalizer.canonicalString(from: createdAt), sourceHash, noteHash)
     }
 
-    private static func priceBody(_ row: ProductPrice) throws -> String {
-        guard let parent = row.product, let parentID = parent.remoteID, parent.remoteDeletedAt == nil,
+    private struct PhysicalPriceParent {
+        let remoteID: UUID?
+        let deletedAt: Date?
+    }
+
+    /// Read the current physical relationships in one bounded page. The keys
+    /// come from the price rows, never from a ledger or an expected remote ID.
+    /// These values live only until this page is consumed inside the existing
+    /// before/after physical-file fence; they grant no reusable authority.
+    private static func physicalPriceParents(_ rows: [ProductPrice], context: ModelContext) throws
+        -> [PersistentIdentifier: PhysicalPriceParent] {
+        guard rows.count <= batchSize else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        let ids = Array(Set(rows.compactMap { $0.product?.persistentModelID }))
+        guard !ids.isEmpty else { return [:] }
+        var descriptor = FetchDescriptor<Product>(predicate: #Predicate { ids.contains($0.persistentModelID) })
+        descriptor.fetchLimit = ids.count + 1
+        descriptor.propertiesToFetch = [\Product.remoteID, \Product.remoteDeletedAt]
+        let parents = try context.fetch(descriptor)
+        var values: [PersistentIdentifier: PhysicalPriceParent] = [:]
+        for parent in parents {
+            let id = parent.persistentModelID
+            guard values[id] == nil, ids.contains(id) else { throw SyncStoreGenerationError.activationReadBackFailed }
+            values[id] = PhysicalPriceParent(remoteID: parent.remoteID, deletedAt: parent.remoteDeletedAt)
+        }
+        guard values.count == ids.count else { throw SyncStoreGenerationError.activationReadBackFailed }
+        return values
+    }
+
+    private static func priceBody(_ row: ProductPrice, parents: [PersistentIdentifier: PhysicalPriceParent]) throws -> String {
+        guard let physicalID = row.product?.persistentModelID, let parent = parents[physicalID],
+              let parentID = parent.remoteID, parent.deletedAt == nil,
               row.price.isFinite, row.price >= 0 else { throw SyncStoreGenerationError.activationReadBackFailed }
         return priceBody(parent: parentID, type: row.type.rawValue, price: row.price,
             effectiveAt: row.effectiveAt, createdAt: row.createdAt,
@@ -377,6 +406,7 @@ nonisolated enum LocalCatalogBodyProofStore {
         let id: (Model) -> UUID?
         var descriptor: FetchDescriptor<Model>
         var rows: [Model] = []
+        var prepareRows: (([Model]) throws -> Void)?
         var overrides: [UUID: Body] = [:]
         var offset = 0
         var index = 0
@@ -398,6 +428,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                 exhausted = rows.count < batchSize
                 offset += rows.count
                 guard offset <= maximum else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+                try prepareRows?(rows)
                 overrides = try localOverrides(kind: kind, ids: rows.compactMap(id), context: context, manifest: manifest)
             }
             return rows.isEmpty ? nil : rows[index]
@@ -459,6 +490,10 @@ nonisolated enum LocalCatalogBodyProofStore {
             sort: [SortDescriptor(\ProductPrice.remoteID)], maximum: ShopSyncRecoveryLimits.maximumRows(for: .prices),
             id: { $0.remoteID })
         pager.descriptor.relationshipKeyPathsForPrefetching = [\ProductPrice.product]
+        var physicalParents: [PersistentIdentifier: PhysicalPriceParent] = [:]
+        pager.prepareRows = { rows in
+            physicalParents = try physicalPriceParents(rows, context: context)
+        }
         func validateExtra(_ row: ProductPrice) throws {
             // A new locally created product has no remote ID until its own
             // catalog ACK. Its exact scoped price intent is still usable.
@@ -469,7 +504,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                 }
                 return
             }
-            let body = try priceBody(row)
+            let body = try priceBody(row, parents: physicalParents)
             guard row.remoteID.flatMap({ pager.overrides[$0]?.canonical }) == body else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
@@ -510,7 +545,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                     try validateExtra(row); try pager.advance()
                 }
                 if let row = try pager.peek(), row.remoteID == id {
-                    let actual = try priceBody(row)
+                    let actual = try priceBody(row, parents: physicalParents)
                     guard !inactive.contains(parent),
                           actual == (pager.overrides[id]?.canonical ?? expected) || priceIntentMatches(row, pending: pending) else {
                         throw SyncStoreGenerationError.activationReadBackFailed
@@ -533,6 +568,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                 guard let id = row.remoteID, current[id] == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
                 current[id] = row
             }
+            let currentParents = try physicalPriceParents(rows, context: context)
             let parents = try proofs.map { proof -> UUID in
                 guard let part = proof.canonical.components(separatedBy: ShopSyncRecoveryCanonical.separator).first,
                       let id = UUID(uuidString: part) else { throw SyncStoreGenerationError.activationReadBackFailed }
@@ -543,7 +579,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                 if inactive.contains(parents[index]) {
                     guard current[proof.remoteID] == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
                 } else {
-                    guard let row = current[proof.remoteID], try priceBody(row) == proof.canonical
+                    guard let row = current[proof.remoteID], try priceBody(row, parents: currentParents) == proof.canonical
                             || priceIntentMatches(row, pending: pending) else {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }

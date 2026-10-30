@@ -1815,8 +1815,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let captured = active
         let container = captured.container
         Task126OwnerStoreGate.configureLocalBodyFence(container: container, proven: false,
-            provider: { [weak container] in
-                guard let container else { return nil }
+            provider: { [weak container, weak repository] in
+                guard let container, let repository else { return nil }
                 return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
             })
         let bindingStore = AccountBindingStore(defaults: defaults)
@@ -2554,8 +2554,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 manifest: manifest
             )
             Task126OwnerStoreGate.configureLocalBodyFenceWithLeaseHeld(container: activated.container, proven: true,
-                provider: { [weak container = activated.container] in
-                    guard let container else { return nil }
+                provider: { [weak container = activated.container, weak repository] in
+                    guard let container, let repository else { return nil }
                     return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
                 })
             #if DEBUG

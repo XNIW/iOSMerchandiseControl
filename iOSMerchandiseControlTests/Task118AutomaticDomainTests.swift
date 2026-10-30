@@ -67,7 +67,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let state = SyncOrchestrator.makeRootPresentationState(
             isTransitioning: false,
             isSignedIn: true,
-            isAutomaticRuntimeRunning: false,
+            isAutomaticRuntimeRunning: true,
             phase: .pullingEvents
         )
 
@@ -97,7 +97,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.lastOutcome, .blocked(.networkUnavailable))
 
         store.recordRunResult(.busy())
-        XCTAssertEqual(store.state.phase, .checking)
+        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertFalse(store.state.phase.isAutomaticWorkActive)
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
         XCTAssertEqual(store.state.lastOutcome, .busy)
 
         store.recordRunResult(.failed(errorCode: "unit"))
@@ -109,7 +111,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.lastOutcome, .cancelled)
 
         store.recordRunResult(.scheduledRetry())
-        XCTAssertEqual(store.state.phase, .checking)
+        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertFalse(store.state.phase.isAutomaticWorkActive)
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
         XCTAssertEqual(store.state.lastOutcome, .scheduledRetry)
     }
 
@@ -1172,6 +1176,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let context = ModelContext(container)
         let supplier = Supplier(name: "TASK118 Supplier")
         let category = ProductCategory(name: "TASK118 Category")
+        // This fixture writes only the product; its related parents already exist remotely.
+        supplier.remoteID = UUID()
+        category.remoteID = UUID()
         let product = Product(
             barcode: "TASK118-BAR",
             productName: "TASK118 Product",

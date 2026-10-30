@@ -597,7 +597,11 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ].map(readSource).joined(separator: "\n")
 
-        XCTAssertTrue(swiftSources.contains("options.supabase.automaticSync.root.checking.title"))
+        XCTAssertTrue(swiftSources.contains("sync.local.significantWork.title"))
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let localized = try readSource("iOSMerchandiseControl/\(language).lproj/Localizable.strings")
+            XCTAssertTrue(localized.contains("\"sync.local.significantWork.title\" ="))
+        }
         XCTAssertTrue(swiftSources.contains("options.supabase.manualSync.root.changes.title"))
         for literal in [
             "Cloud updates are ready",
