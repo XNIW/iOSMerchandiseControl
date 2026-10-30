@@ -1154,7 +1154,14 @@ nonisolated enum ShopSyncRecoveryCanonical {
 
     static func sha256(_ value: String) -> String {
         let digest = SHA256.hash(data: Data(value.utf8))
-        return digest.map { String(format: "%02x", $0) }.joined()
+        let digits = Array("0123456789abcdef".utf8)
+        var encoded = [UInt8]()
+        encoded.reserveCapacity(64)
+        for byte in digest {
+            encoded.append(digits[Int(byte >> 4)])
+            encoded.append(digits[Int(byte & 0x0f)])
+        }
+        return String(decoding: encoded, as: UTF8.self)
     }
 
     /// Exact `app_private.sync_checkpoint_chain_step_v1` contract.  The

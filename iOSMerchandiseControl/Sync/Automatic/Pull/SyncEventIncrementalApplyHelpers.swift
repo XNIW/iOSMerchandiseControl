@@ -338,13 +338,15 @@ nonisolated func pendingRemoteIDs(
     let superseded = LocalPendingChangeStatus.superseded.rawValue
     let acknowledged = LocalPendingChangeStatus.acknowledged.rawValue
     let maximumRows = LocalPendingChangeAccumulator.defaultMaxActiveChanges + 1
+    let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
     var changes: [LocalPendingChange] = []
     var seenChanges: Set<ObjectIdentifier> = []
 
     func append(_ descriptor: FetchDescriptor<LocalPendingChange>) throws {
         var boundedDescriptor = descriptor
-        boundedDescriptor.fetchLimit = maximumRows + 1
+        boundedDescriptor.fetchLimit = maximumRows + resolved.count + 1
         for change in try context.fetch(boundedDescriptor) {
+            if resolved.contains(change.changeID) { continue }
             guard seenChanges.insert(ObjectIdentifier(change)).inserted else { continue }
             changes.append(change)
             guard changes.count <= maximumRows else {
@@ -795,6 +797,9 @@ nonisolated func applyTargetedProductPriceRow(
     )
 
     if let existingRemote = try fetchProductPrice(remoteID: row.id, context: context) {
+        #if DEBUG
+        let b6BeforePrice = PilotCommitTrace.B6Context.apply == nil ? nil : PilotCommitTrace.b6PriceBody(existingRemote)
+        #endif
         existingRemote.type = priceType(from: type)
         existingRemote.price = canonicalPrice.doubleValue
         existingRemote.effectiveAt = effectiveAt
@@ -802,6 +807,9 @@ nonisolated func applyTargetedProductPriceRow(
         existingRemote.note = SupabasePullPreviewNormalizer.semanticString(row.note)
         existingRemote.createdAt = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.createdAt) ?? existingRemote.createdAt
         existingRemote.product = product
+        #if DEBUG
+        PilotCommitTrace.b6MappedPrice(existingRemote, beforeBody: b6BeforePrice, rawVersion: row.updatedAt)
+        #endif
         return ProductPriceApplyResult(inserted: 0, skippedExisting: 1, totalConsidered: 1)
     }
 
@@ -848,6 +856,9 @@ nonisolated func applyTargetedProductPriceRow(
         product: product
     )
     context.insert(newPrice)
+    #if DEBUG
+    PilotCommitTrace.b6MappedPrice(newPrice, beforeBody: nil, rawVersion: row.updatedAt)
+    #endif
     currentPricesByKey[key] = [
         TargetedProductPriceCurrentInfo(
             canonicalPrice: canonicalPrice,

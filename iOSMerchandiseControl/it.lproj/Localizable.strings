@@ -601,6 +601,7 @@
 "history.title" = "Cronologia";
 "history.status.not_attempted" = "Da sincronizzare";
 "history.status.synced" = "Sincronizzato";
+"history.status.cloud_pending" = "Modifiche locali in attesa del cloud";
 "history.status.errors" = "Con errori";
 "history.delete.confirm_title" = "Eliminare questo inventario?";
 "history.delete.confirm_message" = "Questa operazione rimuoverà definitivamente l'inventario:\n%@";
@@ -1867,3 +1868,62 @@
 
 "product.save.local_pending" = "Salvato sul dispositivo · In attesa di conferma cloud";
 "product.save.cloud_confirmed" = "Il cloud ha confermato questo salvataggio";
+
+// TASK-145: scoped draft review and durable catalog conflict resolution.
+"product.review.title" = "Rivedi modifiche";
+"product.review.explanation" = "La bozza è conservata. Confronta la versione corrente e scegli quali campi mantenere prima di salvare di nuovo.";
+"product.review.unavailable" = "Questo prodotto non è più disponibile o non è stato identificato con certezza. Le modifiche non sono state salvate.";
+"product.review.base" = "All’apertura";
+"product.review.yours" = "Le tue modifiche";
+"product.review.current" = "Versione corrente";
+"product.review.contested" = "Entrambe le versioni hanno modificato questo campo";
+"product.review.keep_field" = "Mantieni il mio valore per questo campo";
+"product.review.use_current" = "Usa la versione corrente nella bozza";
+"product.review.edit_selected" = "Modifica con i campi scelti";
+"product.review.return" = "Torna alla modifica";
+"product.review.discard_draft" = "Scarta bozza";
+"product.review.updated" = "Il prodotto è stato aggiornato. La bozza è conservata.";
+"product.review.conflict" = "Questo prodotto è cambiato. Rivedi le modifiche prima di salvare.";
+"product.review.action" = "Rivedi modifiche";
+"product.review.save_retry" = "Salvataggio non riuscito. Le modifiche sono conservate. Prova a salvare di nuovo.";
+"product.review.field_unknown" = "Campo";
+"product.resolution.title" = "Rivedi modifica salvata";
+"product.resolution.explanation" = "Queste modifiche al catalogo sono salvate sul dispositivo e richiedono attenzione. La scelta riguarda solo le modifiche salvate incluse nel confronto; lo storico prezzi già salvato resta separato.";
+"product.resolution.action" = "Rivedi modifica salvata";
+"product.resolution.loading" = "Salvataggio della scelta";
+"product.resolution.unconfirmed" = "L’esito della modifica salvata deve essere verificato prima di risolverla. La sincronizzazione riprenderà quando possibile.";
+"product.resolution.error" = "Impossibile salvare la scelta. La modifica salvata e la bozza sono conservate. Rivedi la versione corrente.";
+"product.resolution.apply_selected" = "Mantieni i campi salvati scelti";
+"product.resolution.adopt_remote" = "Adotta la versione remota corrente";
+"product.resolution.adopt_tombstone" = "Accetta cancellazione remota";
+"product.resolution.adopted_remote" = "Versione remota adottata.";
+"product.resolution.adopted_tombstone" = "Cancellazione remota acquisita.";
+"product.resolution.successor_pending" = "Scelta salvata sul dispositivo. In attesa di sincronizzazione.";
+"product.resolution.navigation_busy" = "Completa o annulla la modifica corrente prima di rivedere un’altra modifica salvata.";
+"product.resolution.invalidated" = "Il database corrente è cambiato. La bozza è conservata; riapri la modifica salvata per rivederla.";
+"product.resolution.refresh" = "Aggiorna confronto";
+"product.resolution.linked_history" = "La cancellazione richiede la verifica dello storico prezzi collegato. Le modifiche salvate sono conservate.";
+"product.resolution.relationship_unavailable" = "Un fornitore o una categoria scelti non sono più disponibili. Aggiorna il confronto prima di scegliere di nuovo.";
+"product.resolution.owner_busy" = "La sincronizzazione sta usando questo record. La scelta è conservata; rivedila al termine dell’operazione corrente.";
+"product.resolution.changed_again" = "Sono presenti altre modifiche. Aggiorna il confronto e rivedi la scelta.";
+"product.resolution.newer_revision" = "Il confronto include altre modifiche salvate più recenti. Rivedi la scelta.";
+
+// TASK-145 contextual local capability and quiet synchronization.
+"sync.local.significantWork.title" = "Sincronizzazione in corso";
+"sync.local.qualifying.title" = "Catalogo in preparazione";
+"sync.local.qualifying.detail" = "Stiamo verificando i dati salvati su questo dispositivo. Le altre sezioni restano disponibili.";
+"sync.local.firstDownload.title" = "In attesa del primo download";
+"sync.local.firstDownload.waiting" = "Il catalogo sarà disponibile al termine del primo download. Puoi continuare a usare le Opzioni.";
+"sync.local.restricted.title" = "Accesso al catalogo limitato";
+"sync.local.restricted.detail" = "Controlla in Opzioni l’account, il negozio e l’accesso del dispositivo. I dati restano conservati.";
+"sync.local.unavailable.title" = "Dati locali non disponibili";
+"sync.local.unavailable.detail" = "Non è stato possibile aprire o verificare i dati locali. Le impostazioni e i dettagli restano disponibili in Opzioni.";
+"sync.local.openOptions" = "Apri Opzioni";
+"sync.account.restoring" = "Ripristino della sessione";
+"sync.account.temporarilyUnavailable" = "Sessione temporaneamente non disponibile";
+"sync.account.resumeAutomatically" = "La verifica riprende automaticamente quando la connessione è disponibile.";
+"options.safe.phase" = "Fase";
+"options.safe.opening" = "Apertura dei dati locali";
+"options.safe.code" = "Codice";
+"options.safe.version" = "Versione app";
+"options.safe.availableLater" = "Le funzioni del catalogo saranno disponibili quando i dati locali potranno essere aperti.";

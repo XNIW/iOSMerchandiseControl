@@ -4,6 +4,52 @@ nonisolated enum AutomaticSyncAttemptContext {
     /// The existing engine invokes this only after facade/admission gates and
     /// acquiring single-flight, before entering its remote action plan.
     @TaskLocal static var begin: (@Sendable () async -> Bool)?
+    @TaskLocal static var legacyContinuation: SyncLegacyRecoveryContinuation?
+    @TaskLocal static var reconciliation: SyncRecoveryReconciliation?
+    @TaskLocal static var publishedFinalization: SyncPublishedRecoveryFinalization?
+    @TaskLocal static var beginPublishedFinalization: (@Sendable () async -> SyncPublishedRecoveryAdmission)?
+}
+
+/// Admission for the exact persisted journal phase. The service validates its
+/// local store/prefix before consuming the attempt; it cannot replay a push.
+nonisolated struct SyncRecoveryReconciliation: Equatable, Sendable {
+    let identity: String
+    let sourceDigest: String
+    let journal: AccountRecoveryJournalSnapshot
+    let isLegacyOrigin: Bool
+}
+
+/// Authority for terminal verification only; it cannot authorize a new stage.
+nonisolated struct SyncPublishedRecoveryFinalization: Equatable, Sendable {
+    let identity: String
+    let generationID: UUID
+    let checkpointDigest: String
+    let baselineRunID: UUID
+
+    func matches(manifest: SyncStoreGenerationManifest, journal: AccountRecoveryJournalSnapshot) -> Bool {
+        manifest.recoveryMode == .sameScopeRecovery && journal.mode == .sameScopeRecovery
+            && (journal.phase == .verified || journal.phase == .activated)
+            && manifest.generationID == generationID && journal.generationID == generationID
+            && manifest.checkpoint.checkpointDigest == checkpointDigest && journal.checkpointDigest == checkpointDigest
+            && manifest.baselineRunID == baselineRunID && journal.baselineRunID == baselineRunID
+            && journal.watermark == manifest.checkpoint.maxEventID
+            && journal.replacement.accountHash == manifest.accountHash
+            && journal.replacement.storeIdentity.hasSameProvenance(as: manifest.storeIdentity)
+            && journal.deviceIdentityHash == manifest.deviceIdentityHash
+    }
+}
+
+nonisolated enum SyncPublishedRecoveryAdmission: Sendable {
+    case ready
+    case cooldown(TimeInterval)
+    case rejected
+}
+
+/// A fresh continuation of the exact old stage, never a historical failure classification.
+nonisolated struct SyncLegacyRecoveryContinuation: Codable, Equatable, Sendable {
+    let identity: String
+    let legacySHA256: String
+    let generationID: UUID
 }
 
 nonisolated enum SyncAutomaticRunStatus: String, Codable, CaseIterable, Equatable, Sendable, Hashable {

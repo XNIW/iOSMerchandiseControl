@@ -535,7 +535,10 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(contentSource.contains("AppSyncRootHost("))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.rootPresentationState"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.shouldShowRootBanner"))
-        XCTAssertTrue(hostSource.contains("rootBanner(state: rootBannerState, isVisible: showsRootBanner)"))
+        XCTAssertTrue(hostSource.contains("publishPresentation(syncOrchestrator, state)"))
+        XCTAssertTrue(hostSource.contains(".task(id: syncOrchestrator.visibleWorkInvocationID)"))
+        XCTAssertTrue(contentSource.contains("ToolbarItem(placement: .topBarTrailing)"))
+        XCTAssertFalse(hostSource.contains("rootBanner(state:"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleScenePhaseChanged(phase)"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleAuthPresentationChanged()"))
         XCTAssertTrue(hostSource.contains("syncOrchestrator.handleShopContextChanged()"))
@@ -594,7 +597,11 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ].map(readSource).joined(separator: "\n")
 
-        XCTAssertTrue(swiftSources.contains("options.supabase.automaticSync.root.checking.title"))
+        XCTAssertTrue(swiftSources.contains("sync.local.significantWork.title"))
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let localized = try readSource("iOSMerchandiseControl/\(language).lproj/Localizable.strings")
+            XCTAssertTrue(localized.contains("\"sync.local.significantWork.title\" ="))
+        }
         XCTAssertTrue(swiftSources.contains("options.supabase.manualSync.root.changes.title"))
         for literal in [
             "Cloud updates are ready",

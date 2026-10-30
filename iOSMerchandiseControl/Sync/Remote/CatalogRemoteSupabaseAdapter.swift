@@ -3,6 +3,15 @@ import Supabase
 
 struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
     let remote: SupabaseTransportClient
+    private let conditionalScope: @Sendable () throws -> Task126VerifiedOwnerStoreScope
+
+    nonisolated init(remote: SupabaseTransportClient,
+         conditionalScope: @escaping @Sendable () throws -> Task126VerifiedOwnerStoreScope = {
+             try Task126OwnerStoreGate.requireCurrentAutomaticScope()
+         }) {
+        self.remote = remote
+        self.conditionalScope = conditionalScope
+    }
 
     private var query: SupabaseRemoteQueryExecutor {
         SupabaseRemoteQueryExecutor(transport: remote)
@@ -34,7 +43,8 @@ struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
             payload,
             table: "inventory_suppliers",
             columns: Self.supplierColumns,
-            id: id
+            id: id,
+            preserveCatalogWriteRejection: true
         )
         return row
     }
@@ -65,7 +75,8 @@ struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
             payload,
             table: "inventory_categories",
             columns: Self.categoryColumns,
-            id: id
+            id: id,
+            preserveCatalogWriteRejection: true
         )
         return row
     }
@@ -96,9 +107,29 @@ struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
             payload,
             table: "inventory_products",
             columns: Self.productColumns,
-            id: id
+            id: id,
+            preserveCatalogWriteRejection: true
         )
         return row
+    }
+
+    func updateProductConditionally(
+        id: UUID, payload: SyncAutomaticProductUpdatePayload,
+        expectedVersion: SyncCatalogConditionalVersion, changedFields: [String]
+    ) async throws -> [RemoteInventoryProductRow] {
+        let scope = try conditionalScope()
+        let wire = try SyncCatalogConditionalProductWirePayload(payload: payload, changedFields: changedFields)
+        let rows = try await query.updateProductConditionally(
+            wire, columns: Self.productColumns, id: id, ownerUserID: scope.ownerUserID,
+            shopID: scope.shopID, expectedVersion: expectedVersion, beforeDispatch: {
+                guard try conditionalScope() == scope else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+            })
+        guard try conditionalScope() == scope else {
+            throw Task126OwnerStoreGateError.scopeChanged
+        }
+        return rows
     }
 
     private func mappedCreateError(_ error: Error) async -> Error {
@@ -106,6 +137,7 @@ struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
             return await remote.mapDecodingError(error)
         }
         if let error = error as? PostgrestError {
+            if let rejection = SyncCatalogWriteRejectedWithoutCommit.classify(error.code) { return rejection }
             return await remote.mapPostgrestError(error)
         }
         if let error = error as? URLError {

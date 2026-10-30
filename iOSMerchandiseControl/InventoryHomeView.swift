@@ -3,12 +3,18 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct InventoryHomeView: View {
+    let isBusinessContentAvailable: Bool
+    let businessContentIsCurrent: @MainActor () -> Bool
+    let unavailableTitleKey: String
+    let unavailableDetailKey: String
+    let openOptions: (() -> Void)?
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @Environment(\.modelContext) private var context
 
+    @State private var businessRequestID = UUID()
     @State private var showFileImporter = false
     @State private var showPreGenerate = false
     @State private var showShopPicker = false
@@ -16,6 +22,16 @@ struct InventoryHomeView: View {
     @State private var navigateToManualGenerated = false
     /// Serve per dire a GeneratedView se deve aprire subito lo scanner
     @State private var autoOpenScannerInGenerated = false
+
+    init(isBusinessContentAvailable: Bool, businessContentIsCurrent: @escaping @MainActor () -> Bool,
+         unavailableTitleKey: String = "sync.local.qualifying.title",
+         unavailableDetailKey: String = "sync.local.qualifying.detail", openOptions: (() -> Void)? = nil) {
+        self.isBusinessContentAvailable = isBusinessContentAvailable
+        self.businessContentIsCurrent = businessContentIsCurrent
+        self.unavailableTitleKey = unavailableTitleKey
+        self.unavailableDetailKey = unavailableDetailKey
+        self.openOptions = openOptions
+    }
 
     private static let allowedUTTypes: Set<UTType> = [.spreadsheet, .html]
     private static let allowedExtensions: Set<String> = ["xlsx", "xls", "html", "htm"]
@@ -76,9 +92,11 @@ struct InventoryHomeView: View {
     }
 
     private func loadSelectedFiles(_ urls: [URL], requiresSecurityScopedAccess: Bool) {
-        guard !urls.isEmpty else { return }
+        guard isBusinessContentAvailable, businessContentIsCurrent(), !urls.isEmpty else { return }
+        let requestID = businessRequestID
 
         Task {
+            guard requestID == businessRequestID, businessContentIsCurrent() else { return }
             let accessFlags = requiresSecurityScopedAccess
                 ? urls.map { $0.startAccessingSecurityScopedResource() }
                 : Array(repeating: false, count: urls.count)
@@ -105,8 +123,10 @@ struct InventoryHomeView: View {
 
             do {
                 try await excelSession.load(from: urls, in: context)
+                guard requestID == businessRequestID, businessContentIsCurrent() else { return }
                 showPreGenerate = true
             } catch {
+                guard requestID == businessRequestID, businessContentIsCurrent() else { return }
                 handleImportFailure(error)
             }
         }
@@ -117,7 +137,10 @@ struct InventoryHomeView: View {
     }
 
     private func startManualInventory(autoOpenScanner: Bool) {
+        guard isBusinessContentAvailable, businessContentIsCurrent() else { return }
+        let requestID = businessRequestID
         Task {
+            guard requestID == businessRequestID, businessContentIsCurrent() else { return }
             do {
                 let entry: HistoryEntry
                 if autoOpenScanner,
@@ -144,7 +167,42 @@ struct InventoryHomeView: View {
         // Tiene questa root view reattiva ai cambi lingua anche se i testi passano da L(...).
         let _ = appLanguage
 
-        return ScrollView {
+        return Group {
+            if isBusinessContentAvailable {
+                businessContent
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        shopContextHeader
+                        Text(L(unavailableTitleKey))
+                            .font(.headline)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("sync-replacement-business-data-gate")
+                        Text(L(unavailableDetailKey)).foregroundStyle(.secondary)
+                        if let openOptions { Button(L("sync.local.openOptions"), action: openOptions) }
+                    }
+                    .frame(maxWidth: 520, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 28)
+                }
+            }
+        }
+        .sheet(isPresented: $showShopPicker) { shopPickerSheet }
+        .onChange(of: isBusinessContentAvailable) { _, available in
+            guard !available else { return }
+            // Withdraw destinations and invalidate in-flight presentation completions.
+            // The workbook and app-owned draft values are deliberately untouched.
+            businessRequestID = UUID()
+            showFileImporter = false
+            showPreGenerate = false
+            navigateToManualGenerated = false
+            autoOpenScannerInGenerated = false
+            loadError = nil
+        }
+    }
+
+    private var businessContent: some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 pageHeader
 
@@ -180,23 +238,24 @@ struct InventoryHomeView: View {
             .padding(.vertical, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showShopPicker) {
-            shopPickerSheet
-        }
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .navigationDestination(isPresented: $showPreGenerate) {
-            PreGenerateView(onExitToHome: {
-                showPreGenerate = false
-            })
-            .environmentObject(excelSession)
+            if isBusinessContentAvailable, businessContentIsCurrent() {
+                PreGenerateView(onExitToHome: {
+                    showPreGenerate = false
+                })
+                .environmentObject(excelSession)
+            }
         }
         .navigationDestination(isPresented: $navigateToManualGenerated) {
             Group {
-                if let entry = excelSession.currentHistoryEntry {
-                    GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
-                } else {
-                    Text(L("inventory.home.no_inventory"))
-                        .foregroundStyle(.secondary)
+                if isBusinessContentAvailable, businessContentIsCurrent() {
+                    if let entry = excelSession.currentHistoryEntry {
+                        GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
+                    } else {
+                        Text(L("inventory.home.no_inventory"))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -206,6 +265,7 @@ struct InventoryHomeView: View {
             allowedContentTypes: [.spreadsheet, .html],
             allowsMultipleSelection: true
         ) { result in
+            guard businessContentIsCurrent() else { return }
             switch result {
             case .success(let urls):
                 loadSelectedFiles(urls, requiresSecurityScopedAccess: true)
@@ -228,12 +288,13 @@ struct InventoryHomeView: View {
         }
         // Gestione file ricevuto da "Apri con" — warm resume
         .onChange(of: excelSession.pendingOpenURL) { _, newURL in
-            guard let url = newURL else { return }
+            guard businessContentIsCurrent(), let url = newURL else { return }
             excelSession.pendingOpenURL = nil
             loadExternalFile(url)
         }
         // Gestione file ricevuto da "Apri con" — cold launch
         .onAppear {
+            guard businessContentIsCurrent() else { return }
             if let url = excelSession.pendingOpenURL {
                 excelSession.pendingOpenURL = nil
                 loadExternalFile(url)
@@ -421,7 +482,7 @@ struct InventoryHomeView: View {
 }
 
 #Preview {
-    InventoryHomeView()
+    InventoryHomeView(isBusinessContentAvailable: true, businessContentIsCurrent: { true })
         .environmentObject(ExcelSessionViewModel())
         .environmentObject(ShopContextStore())
         .environmentObject(SupabaseAuthViewModel(authService: nil))

@@ -67,7 +67,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let state = SyncOrchestrator.makeRootPresentationState(
             isTransitioning: false,
             isSignedIn: true,
-            isAutomaticRuntimeRunning: false,
+            isAutomaticRuntimeRunning: true,
             phase: .pullingEvents
         )
 
@@ -97,7 +97,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.lastOutcome, .blocked(.networkUnavailable))
 
         store.recordRunResult(.busy())
-        XCTAssertEqual(store.state.phase, .checking)
+        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertFalse(store.state.phase.isAutomaticWorkActive)
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
         XCTAssertEqual(store.state.lastOutcome, .busy)
 
         store.recordRunResult(.failed(errorCode: "unit"))
@@ -109,7 +111,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.lastOutcome, .cancelled)
 
         store.recordRunResult(.scheduledRetry())
-        XCTAssertEqual(store.state.phase, .checking)
+        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertFalse(store.state.phase.isAutomaticWorkActive)
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
         XCTAssertEqual(store.state.lastOutcome, .scheduledRetry)
     }
 
@@ -1172,6 +1176,9 @@ final class Task118AutomaticDomainTests: XCTestCase {
         let context = ModelContext(container)
         let supplier = Supplier(name: "TASK118 Supplier")
         let category = ProductCategory(name: "TASK118 Category")
+        // This fixture writes only the product; its related parents already exist remotely.
+        supplier.remoteID = UUID()
+        category.remoteID = UUID()
         let product = Product(
             barcode: "TASK118-BAR",
             productName: "TASK118 Product",
@@ -1369,6 +1376,633 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(remote.attemptedProductIDs().count + remote.productUpdatePayloads().count, attemptsBeforeRepeat)
         XCTAssertEqual(try read.fetchCount(FetchDescriptor<ProductPrice>()), 0)
         XCTAssertEqual(try read.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
+    }
+
+    @MainActor
+    func testSealedCreateWithoutSupplierReplaysAfterLaterSaveAddsReliableSupplier() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("sealed-relation.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID,
+            failFirstProductCreateAfterCommit: true)
+        let barcode = "T11-SEALED-A-RELATION-B"
+        let supplierID = UUID()
+        // The actual import create mask includes relation fields even when no relation exists.
+        let importFields = ["barcode", "itemNumber", "productName", "secondProductName",
+            "purchasePrice", "retailPrice", "stockQuantity", "supplierName", "categoryName"]
+        var originalToken: LocalPendingChangeCASToken?
+        var laterToken: LocalPendingChangeCASToken?
+        var originalPayload: SyncAutomaticProductCreatePayload?
+        var originalSeal = ""
+        do {
+            let container = try makeContainer(storeURL: storeURL)
+            let context = ModelContext(container)
+            let product = Product(barcode: barcode, productName: "Imported without a supplier")
+            context.insert(product)
+            let first = try XCTUnwrap(LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: product, operation: .create,
+                    origin: .confirmedImport, changedFields: importFields))
+            let originalID = first.changeID
+            try context.save()
+            let before = ModelContext(container)
+            let firstBody = try XCTUnwrap(fetchProduct(barcode: barcode, context: before))
+            let firstChange = try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first)
+            guard firstBody.supplier == nil, firstBody.category == nil, firstBody.remoteID == nil,
+                  firstChange.changeID == originalID, firstChange.status == .pending,
+                  firstChange.lastAttemptAt == nil, Set(firstChange.changedFields) == Set(importFields.map { $0.lowercased() }),
+                  LocalPendingChangeScopeMatcher.matches(firstChange, ownerUserID: owner,
+                    accountHash: AccountBindingStore.accountHash(for: owner), storeIdentity: fixture.storeIdentity)
+            else { XCTFail("SEALED_RELATION_SETUP_NOT_QUALIFIED: A is not an ordinary scoped import create"); return }
+
+            var responseLossObserved = false
+            do {
+                _ = try await CatalogPushService(modelContainer: container, remote: remote,
+                    defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+            } catch Task118CatalogRemoteError.committedResponseLost { responseLossObserved = true }
+            catch { XCTFail("SEALED_RELATION_SETUP_NOT_QUALIFIED: unexpected first error \(type(of: error))"); return }
+            let afterLoss = ModelContext(container)
+            let attempted = try XCTUnwrap(afterLoss.fetch(FetchDescriptor<LocalPendingChange>()).first)
+            let payload = try XCTUnwrap(remote.attemptedProductCreatePayloads().first)
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+            let sealed = try XCTUnwrap(LocalPendingBusinessAttemptStore.load(Task118LegacyCatalogMutation.self,
+                change: attempted, kind: "catalog", context: afterLoss, scope: scope))
+            guard case .createProduct(let sealedPayload) = sealed.call,
+                  responseLossObserved, remote.attemptedProductCreatePayloads().count == 1,
+                  remote.remoteProductRowCount() == 1, payload.supplierID == nil, payload.categoryID == nil,
+                  sealedPayload == payload, attempted.changeID == originalID,
+                  attempted.lastAttemptAt != nil, attempted.status == .pending,
+                  try fetchProduct(barcode: barcode, context: afterLoss)?.remoteID == nil,
+                  try fetchOutboxEntries(context: afterLoss, ownerUserID: owner, domain: "catalog").isEmpty
+            else { XCTFail("SEALED_RELATION_SETUP_NOT_QUALIFIED: no committed A with retained valid seal"); return }
+            originalToken = LocalPendingChangeCASToken(attempted)
+            originalPayload = payload
+            originalSeal = try XCTUnwrap(fetchOutboxEntries(context: afterLoss, ownerUserID: owner,
+                domain: LocalPendingBusinessAttemptStore.domain).first?.metadataPayloadJSON)
+
+            let edit = ModelContext(container)
+            let current = try XCTUnwrap(fetchProduct(barcode: barcode, context: edit))
+            let supplier = Supplier(name: "Already remote supplier", remoteID: supplierID,
+                remoteUpdatedAt: Date(timeIntervalSince1970: 1_700_000_000))
+            edit.insert(supplier)
+            current.supplier = supplier
+            let later = try XCTUnwrap(LocalPendingChangeAccumulator(context: edit, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: current, operation: .update,
+                    origin: .manualCatalogSave, changedFields: ["supplierName"]))
+            try edit.save()
+            laterToken = LocalPendingChangeCASToken(later)
+            let saved = ModelContext(container)
+            let savedChanges = try saved.fetch(FetchDescriptor<LocalPendingChange>())
+            let savedOriginal = try XCTUnwrap(savedChanges.first { $0.changeID == originalID })
+            let savedLater = try XCTUnwrap(savedChanges.first { $0.changeID == later.changeID })
+            guard savedChanges.count == 2, savedOriginal.changeID != savedLater.changeID,
+                  savedOriginal.idempotencyKey != savedLater.idempotencyKey,
+                  originalToken?.matches(savedOriginal) == true, savedLater.status == .pending,
+                  savedLater.lastAttemptAt == nil,
+                  savedLater.baselineFingerprintHash == savedOriginal.intendedFingerprintHash,
+                  savedLater.intendedFingerprintHash != savedOriginal.intendedFingerprintHash,
+                  try fetchProduct(barcode: barcode, context: saved)?.supplier?.remoteID == supplierID,
+                  try fetchOutboxEntries(context: saved, ownerUserID: owner,
+                    domain: LocalPendingBusinessAttemptStore.domain).first?.metadataPayloadJSON == originalSeal
+            else { XCTFail("SEALED_RELATION_SETUP_NOT_QUALIFIED: B was not durably separated from A"); return }
+        } // All models and contexts for the first file-backed container leave scope before reopen.
+
+        let original = try XCTUnwrap(originalToken)
+        let later = try XCTUnwrap(laterToken)
+        let payload = try XCTUnwrap(originalPayload)
+        let reopened = try makeContainer(storeURL: storeURL)
+        let beforeRetry = ModelContext(reopened)
+        let reopenedChanges = try beforeRetry.fetch(FetchDescriptor<LocalPendingChange>())
+        let reopenedOriginal = try XCTUnwrap(reopenedChanges.first { $0.changeID == original.changeID })
+        let reopenedLater = try XCTUnwrap(reopenedChanges.first { $0.changeID == later.changeID })
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        let reopenedSeal = try LocalPendingBusinessAttemptStore.load(Task118LegacyCatalogMutation.self,
+            change: reopenedOriginal, kind: "catalog", context: beforeRetry, scope: scope)
+        guard original.matches(reopenedOriginal), later.matches(reopenedLater), reopenedSeal != nil,
+              try fetchProduct(barcode: barcode, context: beforeRetry)?.supplier?.remoteID == supplierID,
+              try fetchOutboxEntries(context: beforeRetry, ownerUserID: owner,
+                domain: LocalPendingBusinessAttemptStore.domain).first?.metadataPayloadJSON == originalSeal
+        else { XCTFail("SEALED_RELATION_SETUP_NOT_QUALIFIED: reopen changed A or B"); return }
+        print("SEALED_RELATION_SETUP_QUALIFIED: committed A nil relation; distinct durable B reliable relation; exact A seal reopened")
+
+        var replayResult: SyncCatalogPushResult?
+        var replayError = "none"
+        do {
+            replayResult = try await CatalogPushService(modelContainer: reopened, remote: remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        } catch {
+            replayError = error as? SyncStoreGenerationError == .activationReadBackFailed
+                ? "activationReadBackFailed" : String(reflecting: type(of: error))
+        } // Keep all replay/progress assertions reachable if the candidate rejects valid A.
+        let read = ModelContext(reopened)
+        let finalChanges = try read.fetch(FetchDescriptor<LocalPendingChange>())
+        let finalOriginal = finalChanges.first { $0.changeID == original.changeID }
+        let finalLater = finalChanges.first { $0.changeID == later.changeID }
+        let body = try fetchProduct(barcode: barcode, context: read)
+        let attempts = remote.attemptedProductCreatePayloads()
+        let seals = try fetchOutboxEntries(context: read, ownerUserID: owner,
+            domain: LocalPendingBusinessAttemptStore.domain)
+        XCTAssertEqual(replayError, "none", "Valid A must not be rejected using the later B body")
+        XCTAssertEqual(replayResult?.productCreates, 1)
+        XCTAssertEqual(replayResult?.productUpdates, 1)
+        XCTAssertEqual(attempts.count, 2, "A must be replayed once with its original deterministic identity")
+        XCTAssertEqual(attempts.dropFirst().first, payload, "Replay must preserve the entire A payload")
+        XCTAssertEqual(remote.productUpdatePayloads().count, 1, "B requires its own remote update")
+        XCTAssertEqual(remote.updatedProductIDs(), [payload.id])
+        XCTAssertEqual(remote.productUpdatePayloads().first?.supplierID, supplierID)
+        XCTAssertEqual(remote.remoteProductRowCount(), 1)
+        XCTAssertEqual(remote.persistedProductRow(id: payload.id)?.supplierID, supplierID)
+        XCTAssertTrue(remote.attemptedSupplierCreatePayloads().isEmpty)
+        XCTAssertEqual(finalChanges.count, 2)
+        XCTAssertEqual(finalOriginal?.idempotencyKey, original.idempotencyKey)
+        XCTAssertEqual(finalLater?.idempotencyKey, later.idempotencyKey)
+        XCTAssertEqual(finalOriginal?.status, .acknowledged)
+        XCTAssertEqual(finalLater?.status, .acknowledged)
+        XCTAssertEqual(body?.remoteID, payload.id)
+        XCTAssertEqual(body?.supplier?.remoteID, supplierID)
+        XCTAssertEqual(body?.productName, payload.productName)
+        XCTAssertTrue(seals.isEmpty, "Only the corresponding ACKs may retire A and B seals")
+        XCTAssertEqual(try activeChangeCount(context: read, ownerUserID: owner), 0)
+        let diagnostic: [String: Any] = [
+            "setup_qualified": true, "replay_error": replayError,
+            "original_change_id": original.changeID, "later_change_id": later.changeID,
+            "original_seal_sha256": ShopSyncRecoveryCanonical.sha256(originalSeal),
+            "retained_original_seal_unchanged": seals.first { $0.id == original.changeID }?.metadataPayloadJSON == originalSeal,
+            "create_attempt_count": attempts.count, "update_attempt_count": remote.productUpdatePayloads().count,
+            "remote_row_count": remote.remoteProductRowCount(),
+            "original_status": finalOriginal?.statusRaw ?? "missing", "later_status": finalLater?.statusRaw ?? "missing",
+            "original_key_preserved": finalOriginal?.idempotencyKey == original.idempotencyKey,
+            "later_key_preserved": finalLater?.idempotencyKey == later.idempotencyKey,
+            "local_supplier_is_b": body?.supplier?.remoteID == supplierID,
+            "remote_supplier_is_b": remote.persistedProductRow(id: payload.id)?.supplierID == supplierID
+        ]
+        let attachment = XCTAttachment(data: try JSONSerialization.data(withJSONObject: diagnostic,
+            options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
+        attachment.name = "T11-sealed-A-relation-B-replay"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+
+    @MainActor
+    func testInvalidPendingSupplierPreservesDependentProductAndAllowsIndependentProduct() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("t11-catalog.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let invalidName = String(repeating: "X", count: 161)
+        let expectedError = CatalogTextValidationError(field: .supplierName, reason: .tooLong)
+        let dependentBarcode = "T11-DEPENDENT"
+        let independentBarcode = "T11-INDEPENDENT"
+        var original: [LocalPendingChangeCASToken] = []
+        var observedErrors: [String] = []
+
+        func drain(_ container: ModelContainer) async -> SyncCatalogPushResult? {
+            do {
+                return try await CatalogPushService(modelContainer: container, remote: remote,
+                    defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+            } catch let error as CatalogTextValidationError {
+                observedErrors.append("\(error.field.rawValue):\(error.reason.rawValue)")
+                XCTAssertEqual(error, expectedError, "Unexpected typed error is not the proposed T11 failure")
+            } catch {
+                observedErrors.append(String(reflecting: type(of: error)))
+                XCTFail("T11_UNEXPECTED_SERVICE_ERROR: \(type(of: error))")
+            }
+            return nil // Keep the independent-row assertions reachable after the real error.
+        }
+
+        func verify(_ container: ModelContainer, phase: String, result: SyncCatalogPushResult?) throws {
+            let read = ModelContext(container)
+            let suppliers = try read.fetch(FetchDescriptor<Supplier>())
+            let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+            let dependent = try fetchProduct(barcode: dependentBarcode, context: read)
+            let independent = try fetchProduct(barcode: independentBarcode, context: read)
+            let supplier = suppliers.first
+            let attempts = remote.attemptedProductCreatePayloads()
+            let events = try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog")
+            XCTAssertEqual(suppliers.count, 1, phase)
+            XCTAssertEqual(try read.fetchCount(FetchDescriptor<Product>()), 2, phase)
+            XCTAssertEqual(changes.count, 3, phase)
+            XCTAssertEqual(supplier?.name, invalidName, phase)
+            XCTAssertNil(supplier?.remoteID, phase)
+            XCTAssertNotNil(dependent, phase)
+            XCTAssertEqual(dependent?.productName, "Dependent intent", phase)
+            XCTAssertNotNil(dependent?.supplier, phase)
+            XCTAssertTrue(dependent?.supplier === supplier, phase)
+            XCTAssertNil(dependent?.remoteID, phase)
+            XCTAssertEqual(independent?.productName, "Independent intent", phase)
+            XCTAssertNil(independent?.supplier, phase)
+            XCTAssertNotNil(independent?.remoteID, "T11_INDEPENDENT_MUST_PROGRESS: \(phase)")
+            XCTAssertTrue(remote.attemptedSupplierCreatePayloads().isEmpty, phase)
+            XCTAssertTrue(remote.updatedSupplierIDs().isEmpty, phase)
+            XCTAssertTrue(remote.updatedProductIDs().isEmpty, phase)
+            XCTAssertEqual(attempts.filter { $0.barcode == dependentBarcode }.count, 0,
+                           "The unresolved supplier must not silently become a nil remote relation")
+            XCTAssertEqual(attempts.count, 1, "T11_INDEPENDENT_EXACTLY_ONE_CREATE: \(phase)")
+            XCTAssertEqual(attempts.first?.barcode, independentBarcode, phase)
+            XCTAssertEqual(attempts.first?.id, independent?.remoteID, phase)
+            XCTAssertNil(attempts.first?.supplierID, phase)
+            for token in original {
+                let saved = changes.first { $0.changeID == token.changeID }
+                XCTAssertNotNil(saved, phase)
+                XCTAssertEqual(saved?.idempotencyKey, token.idempotencyKey, phase)
+                XCTAssertEqual(saved?.ownerHash, token.ownerHash, phase)
+                XCTAssertEqual(saved?.storeId, token.storeId, phase)
+                XCTAssertEqual(saved?.localStoreId, token.localStoreId, phase)
+                XCTAssertEqual(saved?.storeEpoch, token.storeEpoch, phase)
+                if token.entityKindRaw == LocalPendingChangeEntityKind.supplier.rawValue
+                    || token.logicalKey == LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: dependentBarcode) {
+                    XCTAssertFalse(saved?.status.isTerminal ?? true, phase)
+                    XCTAssertEqual(saved?.logicalKey, token.logicalKey, phase)
+                    XCTAssertEqual(saved?.changedFieldsRaw, token.changedFieldsRaw, phase)
+                    XCTAssertEqual(saved?.baselineFingerprintHash, token.baselineFingerprintHash, phase)
+                    XCTAssertEqual(saved?.intendedFingerprintHash, token.intendedFingerprintHash, phase)
+                    XCTAssertEqual(saved?.baseRemoteUpdatedAt, token.baseRemoteUpdatedAt, phase)
+                    XCTAssertEqual(saved?.baseVersion, token.baseVersion, phase)
+                    XCTAssertEqual(saved?.baseEventId, token.baseEventId, phase)
+                    XCTAssertNil(saved?.entityRemoteID, phase)
+                } else {
+                    XCTAssertEqual(saved?.status, .acknowledged, "Only the independent intent may ACK: \(phase)")
+                }
+            }
+            XCTAssertEqual(events.count, 1, "T11_INDEPENDENT_OWN_OUTBOX: \(phase)")
+            if let result {
+                let supplierID = try XCTUnwrap(original.first { $0.entityKindRaw == "supplier" }?.changeID)
+                let dependentID = try XCTUnwrap(original.first {
+                    $0.logicalKey == LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: dependentBarcode)
+                }?.changeID)
+                XCTAssertEqual(result.plan?.blockers.sorted(), [
+                    "invalidCatalogText:\(supplierID):supplierName:too_long",
+                    "unresolvedCatalogReference:\(dependentID):supplier"
+                ].sorted(), "The same item diagnosis must be reproduced from persisted data after reopen")
+                XCTAssertEqual(result.productCreates, phase == "after-first-drain" ? 1 : 0)
+            }
+            if let event = events.first, let remoteID = independent?.remoteID {
+                let request = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: event)
+                XCTAssertEqual(request.changedCount, 1, phase)
+                XCTAssertEqual(request.entityIDs, .object([
+                    "product_ids": .array([.string(remoteID.uuidString.lowercased())])
+                ]), phase)
+                XCTAssertEqual(event.status, .pending, phase)
+            }
+            let diagnostic: [String: Any] = [
+                "phase": phase, "observed_errors": observedErrors,
+                "result_product_creates": result?.productCreates ?? -1,
+                "result_blockers": result?.plan?.blockers ?? [],
+                "supplier_create_count": remote.attemptedSupplierCreatePayloads().count,
+                "product_attempts": attempts.map { ["id": $0.id.uuidString, "barcode": $0.barcode,
+                    "supplier_id": $0.supplierID?.uuidString ?? "nil"] },
+                "intents": changes.map { ["id": $0.changeID, "key": $0.idempotencyKey,
+                    "kind": $0.entityKindRaw, "status": $0.statusRaw, "logical_key": $0.logicalKey] },
+                "catalog_outbox_count": events.count
+            ]
+            let attachment = XCTAttachment(data: try JSONSerialization.data(withJSONObject: diagnostic,
+                options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
+            attachment.name = "T11-\(phase)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+
+        do {
+            let container = try makeContainer(storeURL: storeURL)
+            let context = ModelContext(container)
+            // Persisted legacy/corrupt data fixture, not a UI Save accepted by the accumulator.
+            let supplier = Supplier(name: invalidName)
+            let dependent = Product(barcode: dependentBarcode, productName: "Dependent intent", supplier: supplier)
+            let independent = Product(barcode: independentBarcode, productName: "Independent intent")
+            context.insert(supplier)
+            context.insert(dependent)
+            context.insert(independent)
+            let rows: [(LocalPendingChangeEntityKind, String, [String], String)] = [
+                (.supplier, LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: invalidName),
+                 ["name"], LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier)),
+                (.product, LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: dependentBarcode),
+                 ["barcode", "productName", "supplier"], LocalPendingChangeLogicalKey.productFingerprintHash(dependent)),
+                (.product, LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: independentBarcode),
+                 ["barcode", "productName"], LocalPendingChangeLogicalKey.productFingerprintHash(independent))
+            ]
+            for (index, row) in rows.enumerated() {
+                let time = Date(timeIntervalSince1970: 1_700_000_000 + Double(index))
+                let change = LocalPendingChange(ownerUserID: owner,
+                    ownerHash: AccountBindingStore.accountHash(for: owner),
+                    storeId: fixture.storeIdentity.storeId, localStoreId: fixture.storeIdentity.localStoreId,
+                    syncProtocolVersion: fixture.storeIdentity.syncProtocolVersion,
+                    schemaVersion: fixture.storeIdentity.schemaVersion, storeEpoch: fixture.storeIdentity.storeEpoch,
+                    entityKind: row.0, operation: .create, status: .pending, origin: .manualCatalogSave,
+                    logicalKey: row.1, changedFields: row.2, intendedFingerprintHash: row.3,
+                    createdAt: time, updatedAt: time)
+                context.insert(change)
+                original.append(LocalPendingChangeCASToken(change))
+            }
+            try context.save()
+            let fresh = ModelContext(container)
+            let persisted = try fresh.fetch(FetchDescriptor<LocalPendingChange>())
+            let persistedSupplier = try XCTUnwrap(fresh.fetch(FetchDescriptor<Supplier>()).first)
+            let persistedDependent = try XCTUnwrap(fetchProduct(barcode: dependentBarcode, context: fresh))
+            let snapshot = try LocalPendingChangeSnapshotProvider(context: fresh)
+                .loadSnapshot(ownerUserID: owner, storeIdentity: fixture.storeIdentity)
+            var typedValidation: CatalogTextValidationError?
+            do { _ = try CatalogTextPolicy.validate(persistedSupplier.name, for: .supplierName) }
+            catch let error as CatalogTextValidationError { typedValidation = error }
+            let qualified = typedValidation == expectedError && persisted.count == 3
+                && snapshot.pendingCatalogChangeCount == 3 && Set(persisted.map(\.changeID)).count == 3
+                && Set(persisted.map(\.idempotencyKey)).count == 3
+                && persisted.allSatisfy { $0.status == .pending && LocalPendingChangeScopeMatcher.matches($0,
+                    ownerUserID: owner, accountHash: AccountBindingStore.accountHash(for: owner),
+                    storeIdentity: fixture.storeIdentity) }
+                && persistedDependent.supplier === persistedSupplier
+            guard qualified else { XCTFail("T11_SETUP_NOT_QUALIFIED"); return }
+            print("T11_SETUP_QUALIFIED supplierName=tooLong; real dependency; 3 scoped pending intents")
+            let firstResult = await drain(container)
+            try verify(container, phase: "after-first-drain", result: firstResult)
+        } // All first-container contexts/models leave scope before the file is reopened.
+        let reopened = try makeContainer(storeURL: storeURL)
+        try verify(reopened, phase: "reopened-before-second-drain", result: nil)
+        let secondResult = await drain(reopened)
+        try verify(reopened, phase: "reopened-after-second-drain", result: secondResult)
+    }
+
+    @MainActor
+    func testInvalidSupplierIsolationDoesNotBypassCorruptSealedAttempt() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let graph = try insertT11InvalidSupplierGraph(container: container, owner: owner, fixture: fixture)
+        let context = ModelContext(container)
+        let now = Date()
+        let corrupt = SyncEventOutboxEntry(id: graph.supplierChangeID,
+            ownerUserID: owner.uuidString.lowercased(), storeId: fixture.storeIdentity.storeId,
+            localStoreId: fixture.storeIdentity.localStoreId, clientEventID: graph.supplierChangeID,
+            batchID: graph.supplierChangeID, domain: LocalPendingBusinessAttemptStore.domain,
+            eventType: "catalog", changedCount: 1, entityIDsShape: "corrupt-T11-hash",
+            metadataShape: "sealed_business_attempt_v1", metadataPayloadJSON: "corrupt-T11-seal",
+            status: .localOnly, nextRetryAt: now, createdAt: now, updatedAt: now,
+            sourceDeviceID: try DeviceInstallIDStore(defaults: fixture.defaults).requireDeviceInstallID())
+        context.insert(corrupt)
+        try context.save()
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        do {
+            _ = try await CatalogPushService(modelContainer: container, remote: remote, defaults: fixture.defaults)
+                .pushPendingCatalog(ownerUserID: owner)
+            XCTFail("A corrupt seal must stop all sibling RPC")
+        } catch { XCTAssertEqual(error as? SyncStoreGenerationError, .activationReadBackFailed) }
+        XCTAssertTrue(remote.attemptedSupplierCreatePayloads().isEmpty)
+        XCTAssertTrue(remote.attemptedProductCreatePayloads().isEmpty)
+        let read = ModelContext(container)
+        XCTAssertEqual(try read.fetch(FetchDescriptor<LocalPendingChange>()).map(\.status), [.pending, .pending, .pending])
+        XCTAssertNil(try fetchProduct(barcode: graph.independentBarcode, context: read)?.remoteID)
+        let sealed = try XCTUnwrap(fetchOutboxEntries(context: read, ownerUserID: owner,
+            domain: LocalPendingBusinessAttemptStore.domain).first)
+        XCTAssertEqual(sealed.metadataPayloadJSON, "corrupt-T11-seal")
+        XCTAssertEqual(sealed.entityIDsShape, "corrupt-T11-hash")
+        XCTAssertTrue(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").isEmpty)
+    }
+
+    @MainActor
+    func testSealedNameOnlyUpdateReplaysWhileLaterRejectedSupplierEditRemainsPending() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID,
+            failFirstProductUpdateAfterCommit: true)
+        let service = CatalogPushService(modelContainer: container, remote: remote, defaults: fixture.defaults)
+        let barcode = "T11-UPDATE-MASK"
+        let seed = ModelContext(container)
+        let product = Product(barcode: barcode, productName: "Before A")
+        seed.insert(product)
+        try LocalPendingChangeAccumulator(context: seed, ownerUserID: owner, storeIdentity: fixture.storeIdentity)
+            .recordProductChange(product: product, operation: .create, origin: .manualCatalogSave,
+                changedFields: ["barcode", "productName"])
+        try seed.save()
+        let seeded = try await service.pushPendingCatalog(ownerUserID: owner)
+        let editA = ModelContext(container)
+        let bodyA = try XCTUnwrap(fetchProduct(barcode: barcode, context: editA))
+        let remoteID = try XCTUnwrap(bodyA.remoteID)
+        guard seeded.productCreates == 1, remote.remoteProductRowCount() == 1,
+              try activeChangeCount(context: editA, ownerUserID: owner) == 0 else {
+            XCTFail("UPDATE_MASK_SETUP_NOT_QUALIFIED: seed create has no actual ACK"); return
+        }
+        bodyA.productName = "Name A"
+        let changeA = try XCTUnwrap(LocalPendingChangeAccumulator(context: editA, ownerUserID: owner,
+            storeIdentity: fixture.storeIdentity).recordProductChange(product: bodyA, operation: .update,
+                origin: .manualCatalogSave, changedFields: ["productName"]))
+        let changeAID = changeA.changeID
+        try editA.save()
+        var lostResponse = false
+        do { _ = try await service.pushPendingCatalog(ownerUserID: owner) }
+        catch Task118CatalogRemoteError.committedResponseLost { lostResponse = true }
+        catch { XCTFail("UPDATE_MASK_SETUP_NOT_QUALIFIED: unexpected first update error \(type(of: error))"); return }
+        let afterLoss = ModelContext(container)
+        let attemptedA = try XCTUnwrap(afterLoss.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == changeAID
+        })
+        let payloadA = try XCTUnwrap(remote.productUpdatePayloads().first)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        let sealedA = try XCTUnwrap(LocalPendingBusinessAttemptStore.load(Task118LegacyCatalogMutation.self,
+            change: attemptedA, kind: "catalog", context: afterLoss, scope: scope))
+        guard case .updateProduct(let sealedID, let sealedPayload) = sealedA.call,
+              lostResponse, remote.productUpdatePayloads().count == 1,
+              sealedID == remoteID, sealedPayload == payloadA,
+              Set(attemptedA.changedFields) == ["productname"], attemptedA.status == .pending,
+              attemptedA.lastAttemptAt != nil, payloadA.productName == "Name A", payloadA.supplierID == nil,
+              remote.persistedProductRow(id: remoteID)?.productName == "Name A" else {
+            XCTFail("UPDATE_MASK_SETUP_NOT_QUALIFIED: A is not committed name-only with retained seal"); return
+        }
+        let tokenA = LocalPendingChangeCASToken(attemptedA)
+        let editB = ModelContext(container)
+        let bodyB = try XCTUnwrap(fetchProduct(barcode: barcode, context: editB))
+        let supplier = Supplier(name: String(repeating: "X", count: 161))
+        editB.insert(supplier)
+        // A direct fixture represents legacy invalid data; the normal supplier Save rejects it.
+        let supplierChange = LocalPendingChange(ownerUserID: owner,
+            ownerHash: AccountBindingStore.accountHash(for: owner),
+            storeId: fixture.storeIdentity.storeId, localStoreId: fixture.storeIdentity.localStoreId,
+            syncProtocolVersion: fixture.storeIdentity.syncProtocolVersion,
+            schemaVersion: fixture.storeIdentity.schemaVersion, storeEpoch: fixture.storeIdentity.storeEpoch,
+            entityKind: .supplier, operation: .create, status: .pending, origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: supplier.name),
+            changedFields: ["name"], intendedFingerprintHash: LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier))
+        editB.insert(supplierChange)
+        bodyB.supplier = supplier
+        let changeB = try XCTUnwrap(LocalPendingChangeAccumulator(context: editB, ownerUserID: owner,
+            storeIdentity: fixture.storeIdentity).recordProductChange(product: bodyB, operation: .update,
+                origin: .manualCatalogSave, changedFields: ["supplierName"]))
+        let tokenB = LocalPendingChangeCASToken(changeB)
+        try editB.save()
+        let saved = ModelContext(container)
+        let savedA = try XCTUnwrap(saved.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == changeAID })
+        let savedBody = try XCTUnwrap(fetchProduct(barcode: barcode, context: saved))
+        var typedSupplierError: CatalogTextValidationError?
+        do { _ = try CatalogTextPolicy.validate(try XCTUnwrap(savedBody.supplier).name, for: .supplierName) }
+        catch let error as CatalogTextValidationError { typedSupplierError = error }
+        guard tokenA.matches(savedA), tokenA.changeID != tokenB.changeID,
+              tokenA.idempotencyKey != tokenB.idempotencyKey, savedBody.supplier?.remoteID == nil,
+              typedSupplierError == .init(field: .supplierName, reason: .tooLong),
+              try activeChangeCount(context: saved, ownerUserID: owner) == 3 else {
+            XCTFail("UPDATE_MASK_SETUP_NOT_QUALIFIED: B or rejected supplier is not persisted independently"); return
+        }
+        let expectedBlockers = [
+            "invalidCatalogText:\(supplierChange.changeID):supplierName:too_long",
+            "unresolvedCatalogReference:\(changeB.changeID):supplier"
+        ].sorted()
+        for pass in 0..<2 {
+            let result = try await service.pushPendingCatalog(ownerUserID: owner)
+            XCTAssertEqual(result.productUpdates, pass == 0 ? 1 : 0)
+            XCTAssertEqual(result.plan?.blockers.sorted(), expectedBlockers)
+            XCTAssertEqual(remote.productUpdatePayloads(), [payloadA, payloadA], "Replay uses A's exact mask and values")
+            XCTAssertEqual(remote.attemptedProductCreatePayloads().count, 1)
+            XCTAssertTrue(remote.attemptedSupplierCreatePayloads().isEmpty)
+            let read = ModelContext(container)
+            let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+            let retainedB = try XCTUnwrap(changes.first { $0.changeID == tokenB.changeID })
+            XCTAssertEqual(changes.first { $0.changeID == changeAID }?.status, .acknowledged)
+            XCTAssertEqual(retainedB.idempotencyKey, tokenB.idempotencyKey)
+            XCTAssertEqual(retainedB.changedFieldsRaw, tokenB.changedFieldsRaw)
+            XCTAssertEqual(retainedB.intendedFingerprintHash, tokenB.intendedFingerprintHash)
+            XCTAssertNil(retainedB.lastAttemptAt, "B must not be sealed or sent while its supplier is unresolved")
+            XCTAssertEqual(retainedB.status, .pending)
+            XCTAssertEqual(changes.first { $0.changeID == supplierChange.changeID }?.status, .pending)
+            XCTAssertEqual(try activeChangeCount(context: read, ownerUserID: owner), 2)
+            let current = try XCTUnwrap(fetchProduct(barcode: barcode, context: read))
+            XCTAssertEqual(current.productName, "Name A")
+            XCTAssertEqual(current.supplier?.name, String(repeating: "X", count: 161))
+            XCTAssertNil(current.supplier?.remoteID)
+            XCTAssertNil(remote.persistedProductRow(id: remoteID)?.supplierID)
+            XCTAssertTrue(try fetchOutboxEntries(context: read, ownerUserID: owner,
+                domain: LocalPendingBusinessAttemptStore.domain).isEmpty)
+            XCTAssertEqual(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").count, 2)
+        }
+    }
+
+    @MainActor
+    func testSealedDependencyOnRejectedSupplierStaysPendingWhileIndependentProductProgresses() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let graph = try insertT11InvalidSupplierGraph(container: container, owner: owner, fixture: fixture)
+        let context = ModelContext(container)
+        let product = try XCTUnwrap(fetchProduct(barcode: graph.dependentBarcode, context: context))
+        let change = try XCTUnwrap(context.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.changeID == graph.dependentChangeID
+        })
+        change.lastAttemptAt = Date()
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        // Serialized legacy request: a structurally valid seal with an omitted unresolved relation.
+        let payload = SyncAutomaticProductCreatePayload(id: UUID(), ownerUserID: owner,
+            shopID: fixture.shopID, barcode: product.barcode, itemNumber: product.itemNumber,
+            productName: product.productName, secondProductName: product.secondProductName,
+            purchasePrice: product.purchasePrice, retailPrice: product.retailPrice,
+            supplierID: nil, categoryID: nil, stockQuantity: product.stockQuantity)
+        let stored = Task118LegacyCatalogMutation(call: .createProduct(payload),
+            businessFingerprint: LocalPendingChangeLogicalKey.productFingerprintHash(product),
+            isCreate: true, isTombstone: false)
+        try LocalPendingBusinessAttemptStore.seal(stored, pending: LocalPendingChangeCASToken(change),
+            kind: "catalog", context: context, scope: scope)
+        XCTAssertNotNil(try LocalPendingBusinessAttemptStore.load(Task118LegacyCatalogMutation.self,
+            change: change, kind: "catalog", context: context, scope: scope))
+        let before = try XCTUnwrap(fetchOutboxEntries(context: context, ownerUserID: owner,
+            domain: LocalPendingBusinessAttemptStore.domain).first?.metadataPayloadJSON)
+        let token = LocalPendingChangeCASToken(change)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let service = CatalogPushService(modelContainer: container, remote: remote, defaults: fixture.defaults)
+        let expectedBlockers = [
+            "invalidCatalogText:\(graph.supplierChangeID):supplierName:too_long",
+            "unresolvedCatalogReference:\(graph.dependentChangeID):supplier"
+        ].sorted()
+        for pass in 0..<2 {
+            let result = try await service.pushPendingCatalog(ownerUserID: owner)
+            XCTAssertEqual(result.productCreates, pass == 0 ? 1 : 0)
+            XCTAssertEqual(result.plan?.blockers.sorted(), expectedBlockers)
+            XCTAssertEqual(remote.attemptedProductCreatePayloads().map(\.barcode), [graph.independentBarcode])
+            XCTAssertTrue(remote.attemptedSupplierCreatePayloads().isEmpty)
+            let read = ModelContext(container)
+            let retained = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first {
+                $0.changeID == graph.dependentChangeID
+            })
+            XCTAssertTrue(token.matches(retained), "Suspension cannot rewrite the attempted identity or pretend ACK")
+            XCTAssertEqual(try fetchOutboxEntries(context: read, ownerUserID: owner,
+                domain: LocalPendingBusinessAttemptStore.domain).first?.metadataPayloadJSON, before)
+            XCTAssertEqual(try read.fetch(FetchDescriptor<LocalPendingChange>()).filter { $0.status == .pending }.count, 2)
+            XCTAssertNil(try fetchProduct(barcode: graph.dependentBarcode, context: read)?.remoteID)
+            let independent = try XCTUnwrap(fetchProduct(barcode: graph.independentBarcode, context: read))
+            let independentID = try XCTUnwrap(independent.remoteID)
+            let independentIntent = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first {
+                $0.entityRemoteID == independentID
+            })
+            XCTAssertEqual(independentIntent.status, .acknowledged)
+            XCTAssertEqual(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").count, 1)
+        }
+    }
+
+    @MainActor
+    func testInvalidSupplierPartialProgressKeepsAttentionAndIndependentSteps() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let graph = try insertT11InvalidSupplierGraph(container: container, owner: owner, fixture: fixture)
+        let context = ModelContext(container)
+        let dependent = try XCTUnwrap(fetchProduct(barcode: graph.dependentBarcode, context: context))
+        let price = ProductPrice(type: .retail, price: 9.99,
+            effectiveAt: Date(timeIntervalSince1970: 1_700_000_100), product: dependent)
+        context.insert(price)
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: owner, storeIdentity: fixture.storeIdentity)
+            .recordProductPriceChange(price: price, origin: .productPriceSave)
+        try context.save()
+        let catalogRemote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let priceRemote = Task118ProductPriceRemote()
+        let recorder = Task118T11EventRecorder(ownerUserID: owner)
+        let incremental = Task118T11IncrementalRecorder()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: CatalogPushService(modelContainer: container, remote: catalogRemote, defaults: fixture.defaults),
+            productPriceProvider: ProductPricePushService(modelContainer: container, remote: priceRemote, defaults: fixture.defaults),
+            historySessionProvider: nil, incrementalPullProvider: incremental,
+            activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: container,
+                recorder: recorder, defaults: fixture.defaults), defaults: fixture.defaults)
+        for attempt in 0..<2 {
+            let result = await engine.run(action: .sequence([.pushPending, .drainEvents]),
+                source: .foregroundPoll, ownerUserID: owner)
+            XCTAssertEqual(result.status, .failed)
+            XCTAssertEqual(result.errorCode, "catalog_local_changes_blocked")
+            XCTAssertEqual(result.failure, AutomaticSyncFailure(disposition: .stable, category: .payload))
+            XCTAssertEqual(result.didWork, attempt == 0)
+            XCTAssertFalse(result.verifiedConvergence)
+            XCTAssertNil(result.continuationReceipt)
+            XCTAssertNil(result.verifiedFinalization)
+            let state = SyncStateStore(defaults: fixture.defaults)
+            state.recordRunResult(result)
+            XCTAssertEqual(state.state.phase, .failed)
+            XCTAssertNil(state.state.lastVerifiedAt)
+            let reopened = SyncStateStore(defaults: fixture.defaults)
+            XCTAssertEqual(reopened.state.phase, .failed)
+            XCTAssertNil(reopened.state.lastVerifiedAt)
+            XCTAssertEqual(fixture.defaults.string(forKey: "sync.runtime.orchestrator.lastRunErrorCode"),
+                "catalog_local_changes_blocked")
+            XCTAssertEqual(incremental.calls, attempt + 1, "The admitted incremental step must still run")
+            XCTAssertEqual(recorder.requests.count, 1, "Pok notification must be sent exactly once")
+            XCTAssertEqual(catalogRemote.attemptedProductCreatePayloads().map(\.barcode), [graph.independentBarcode])
+            XCTAssertEqual(priceRemote.insertCallCount(), 0, "The existing price guard must hold the unresolved parent")
+            let read = ModelContext(container)
+            XCTAssertNil(try fetchProductPrice(productBarcode: graph.dependentBarcode, context: read)?.remoteID)
+            XCTAssertEqual(try read.fetch(FetchDescriptor<LocalPendingChange>()).filter {
+                $0.entityKind == .productPrice && $0.status == .pending
+            }.count, 1)
+            let independent = try XCTUnwrap(fetchProduct(barcode: graph.independentBarcode, context: read)?.remoteID)
+            XCTAssertEqual(recorder.requests.first?.entityIDs,
+                .object(["product_ids": .array([.string(independent.uuidString.lowercased())])]))
+            XCTAssertEqual(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").map(\.status), [.sent])
+            XCTAssertEqual(try read.fetch(FetchDescriptor<LocalPendingChange>()).filter { $0.status == .pending }.count, 3)
+        }
     }
 
     @MainActor
@@ -2076,6 +2710,429 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertNotEqual(unresolved.shopSourceText, L("options.supabase.automaticSync.diagnostics.ownerScope"))
     }
 
+    // R23: real writer services with controlled remote outcomes. These are
+    // integration tests of durable client behavior, not backend acceptance.
+    @MainActor
+    func testR23ResolvedSuccessorUsesExactConditionalVersionAndAcknowledgesOnce() async throws {
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        let container = try makeContainer()
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let original = try await makeR23RejectedCatalogChange(container: container, fixture: fixture,
+            owner: owner, remote: remote)
+        let outcome = try resolveR23CatalogReview(original, choice: .selectedFields(values: original.desired,
+            fields: ["productName"]), container: container)
+        guard case .successorPending(let successorID) = outcome else { return XCTFail("Expected successor") }
+        let before = try r23Token(successorID, container: container)
+        let originalSeal = try r23Seal(original.changeID, container: container)
+        let result = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(result.productUpdates, 1)
+        XCTAssertEqual(remote.conditionalRequests.count, 1)
+        let sent = try XCTUnwrap(remote.conditionalRequests.first)
+        XCTAssertEqual(sent.id, original.snapshot.product.id)
+        XCTAssertEqual(sent.version.expectedUpdatedAt, "2026-10-23T20:10:00.123456Z")
+        XCTAssertNil(sent.version.expectedDeletedAt)
+        XCTAssertEqual(sent.fields, ["productName"])
+        XCTAssertEqual(sent.payload.productName, "Saved A")
+        let after = try r23Token(successorID, container: container)
+        XCTAssertEqual(after.statusRaw, LocalPendingChangeStatus.acknowledged.rawValue)
+        XCTAssertEqual(after.idempotencyKey, before.idempotencyKey)
+        XCTAssertEqual(after.changedFieldsRaw, before.changedFieldsRaw)
+        XCTAssertEqual(try r23Token(original.changeID, container: container), original.pending)
+        XCTAssertEqual(try r23Seal(original.changeID, container: container), originalSeal)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: successorID, context: ModelContext(container)))
+        XCTAssertEqual(try fetchOutboxEntries(context: ModelContext(container), ownerUserID: owner, domain: "catalog").count, 1)
+        XCTAssertEqual(try LocalPendingChangeSnapshotProvider(context: ModelContext(container)).loadSnapshot(
+            ownerUserID: owner, storeIdentity: fixture.storeIdentity).pendingCatalogChangeCount, 0)
+        _ = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(remote.conditionalRequests.count, 1, "Actual ACK excludes the successor from another dispatch")
+    }
+
+    @MainActor
+    func testR23ConditionalCommitLostResponseReopensAndZeroReplayRemainsUnconfirmed() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("r23-conditional.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        var container = try makeContainer(storeURL: url)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let original = try await makeR23RejectedCatalogChange(container: container, fixture: fixture,
+            owner: owner, remote: remote)
+        guard case .successorPending(let successorID) = try resolveR23CatalogReview(original,
+            choice: .selectedFields(values: original.desired, fields: ["productName"]), container: container) else {
+            return XCTFail("Expected successor")
+        }
+        remote.loseFirstConditionalResponse = true
+        do {
+            _ = try await CatalogPushService(modelContainer: container, remote: remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+            XCTFail("Expected the controlled lost response")
+        } catch Task118CatalogRemoteError.committedResponseLost {}
+        let attempted = try r23Token(successorID, container: container)
+        let sealed = try r23Seal(successorID, container: container)
+        let first = try XCTUnwrap(remote.conditionalRequests.first)
+        XCTAssertEqual(remote.persistedProductRow(id: original.snapshot.product.id)?.productName, "Saved A")
+        container = try makeContainer(storeURL: url)
+        do {
+            _ = try await CatalogPushService(modelContainer: container, remote: remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+            XCTFail("A zero-row CAS replay must remain unconfirmed")
+        } catch {
+            XCTAssertEqual(String(describing: error), "conditionalWriteUnconfirmed")
+        }
+        XCTAssertEqual(remote.conditionalRequests, [first, first], "The replay retains all raw predicates, values and fields")
+        XCTAssertEqual(remote.conditionalReturnCounts, [1, 0])
+        container = try makeContainer(storeURL: url)
+        XCTAssertEqual(try r23Token(successorID, container: container), attempted)
+        XCTAssertEqual(try r23Seal(successorID, container: container), sealed)
+        XCTAssertEqual(try r23Token(original.changeID, container: container), original.pending)
+        let read = ModelContext(container)
+        let pending = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == successorID })
+        XCTAssertEqual(pending.status, .pending)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.rejectionProof(change: pending, context: read, scope: original.scope))
+        XCTAssertEqual(try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: read), [original.changeID])
+        XCTAssertTrue(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").isEmpty)
+        let fresh = try makeR23Review(container: container, fixture: fixture, owner: owner,
+            changeID: successorID, row: try XCTUnwrap(remote.persistedProductRow(id: original.snapshot.product.id)))
+        XCTAssertThrowsError(try resolveR23CatalogReview(fresh, choice: .adoptRemote, container: container)) {
+            XCTAssertEqual($0 as? CatalogConflictResolutionError, .reconciliationRequired)
+        }
+    }
+
+    @MainActor
+    func testR23LegacyLostResponseThenTypedReplayRejectionCannotProveNoCommit() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("r23-legacy-unknown.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        var container = try makeContainer(storeURL: url)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID,
+            failFirstProductUpdateAfterCommit: true)
+        let seeded = try insertR23CatalogChange(container: container, fixture: fixture, owner: owner, remote: remote)
+        do {
+            _ = try await CatalogPushService(modelContainer: container, remote: remote,
+                defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+            XCTFail("Expected the controlled lost response")
+        } catch Task118CatalogRemoteError.committedResponseLost {}
+        let token = try r23Token(seeded.changeID, container: container)
+        let sealed = try r23Seal(seeded.changeID, container: container)
+        let first = try XCTUnwrap(remote.productUpdatePayloads().first)
+        container = try makeContainer(storeURL: url)
+        remote.rejectNextProductUpdate = true
+        let replay = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(replay.productUpdates, 0)
+        XCTAssertEqual(remote.productUpdatePayloads(), [first, first])
+        container = try makeContainer(storeURL: url)
+        XCTAssertEqual(try r23Token(seeded.changeID, container: container), token)
+        XCTAssertEqual(try r23Seal(seeded.changeID, container: container), sealed)
+        let read = ModelContext(container)
+        let pending = try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.rejectionProof(change: pending, context: read, scope: scope))
+        XCTAssertTrue(try fetchOutboxEntries(context: read, ownerUserID: owner, domain: "catalog").isEmpty)
+        let review = try makeR23Review(container: container, fixture: fixture, owner: owner,
+            changeID: seeded.changeID, row: try XCTUnwrap(remote.persistedProductRow(id: seeded.row.id)))
+        XCTAssertEqual(review.desired, review.remote, "Even equal local/remote bodies are not proof of no commit")
+        XCTAssertThrowsError(try resolveR23CatalogReview(review, choice: .adoptRemote, container: container)) {
+            XCTAssertEqual($0 as? CatalogConflictResolutionError, .reconciliationRequired)
+        }
+        XCTAssertTrue(try LocalCatalogConflictResolutionStore.receipts(context: ModelContext(container)).isEmpty)
+    }
+
+    @MainActor
+    func testR23ManualUnknownCannotBeResealedAndIndependentFreshWorkStillProceeds() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("r23-manual-to-automatic-unknown.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        var container = try makeContainer(storeURL: url)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let seed = try insertR23CatalogChange(container: container, fixture: fixture, owner: owner, remote: remote)
+        let manualTimestamp = Date(timeIntervalSince1970: 1_792_781_123)
+        let manualState = LocalPendingAggregatedPushStateStore(context: ModelContext(container), now: { manualTimestamp })
+        try manualState.markSent(changeIDs: [seed.changeID], ownerUserID: owner, planFingerprint: "prior-manual-aggregate")
+        try manualState.markRetryable(changeIDs: [seed.changeID], ownerUserID: owner)
+        container = try makeContainer(storeURL: url)
+        let prior = try r23Token(seed.changeID, container: container)
+        XCTAssertEqual(prior.lastAttemptAt, manualTimestamp)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        // This server rejection is deliberately never reached: without original
+        // request bytes even the first automatic HTTP would be a reconstruction.
+        remote.rejectNextProductUpdate = true
+        let first = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(first.productUpdates, 0)
+        XCTAssertTrue(remote.productUpdatePayloads().isEmpty, "Unsealed attempted history cannot authorize a reconstructed HTTP call")
+        XCTAssertEqual(try r23Token(seed.changeID, container: container), prior)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        let review = try makeR23Review(container: container, fixture: fixture, owner: owner,
+            changeID: seed.changeID, row: seed.row)
+        XCTAssertThrowsError(try resolveR23CatalogReview(review, choice: .adoptRemote, container: container)) {
+            XCTAssertEqual($0 as? CatalogConflictResolutionError, .reconciliationRequired)
+        }
+        XCTAssertTrue(try LocalCatalogConflictResolutionStore.receipts(context: ModelContext(container)).isEmpty)
+        XCTAssertEqual(try LocalCatalogConflictResolutionStore.attentionProductChangeIDs(context: ModelContext(container),
+            ownerUserID: owner, storeIdentity: fixture.storeIdentity), [seed.changeID])
+        let manualPlan = try await LocalPendingAggregatedPushPlanner(context: ModelContext(container),
+            includesCatalog: true, includesProductPrice: false).makePlan(ownerUserID: owner)
+        XCTAssertTrue(manualPlan.blockers.contains(.unsafeCatalogPlan), "The manual path cannot reconstruct the unknown request either")
+
+        // A different, never-attempted entity remains eligible; the unknown
+        // member is not a global writer stop and keeps its original token.
+        let independentID = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: owner) { context in
+            let product = Product(barcode: "R23-INDEPENDENT-FRESH", productName: "Independent saved intent")
+            context.insert(product)
+            let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: product, operation: .create,
+                    origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: nil))
+            try context.save()
+            return change.changeID
+        }
+        container = try makeContainer(storeURL: url)
+        let next = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(next.productCreates, 1)
+        XCTAssertEqual(remote.attemptedProductCreatePayloads().map(\.barcode), ["R23-INDEPENDENT-FRESH"])
+        XCTAssertTrue(remote.productUpdatePayloads().isEmpty)
+        XCTAssertEqual(try r23Token(independentID, container: container).statusRaw, LocalPendingChangeStatus.acknowledged.rawValue)
+        XCTAssertEqual(try r23Token(seed.changeID, container: container), prior)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        XCTAssertTrue(try LocalCatalogConflictResolutionStore.receipts(context: ModelContext(container)).isEmpty)
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<Product>()).first { $0.remoteID == seed.row.id }?.productName, "Saved A")
+        XCTAssertEqual(remote.persistedProductRow(id: seed.row.id)?.productName, seed.row.productName)
+        XCTAssertEqual(remote.persistedProductRow(id: seed.row.id)?.updatedAt, seed.row.updatedAt)
+    }
+
+    @MainActor
+    func testR23DurableManualAtomicUnknownKeepsOriginalRequestWhileIndependentAutomaticWorkProceeds() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("r23-durable-manual-atomic-unknown.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        var container = try makeContainer(storeURL: url)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let seed = try insertR23CatalogChange(container: container, fixture: fixture, owner: owner, remote: remote)
+        let manualTimestamp = Date(timeIntervalSince1970: 1_792_781_123)
+        let manualState = LocalPendingAggregatedPushStateStore(context: ModelContext(container), now: { manualTimestamp })
+        try manualState.markSent(changeIDs: [seed.changeID], ownerUserID: owner, planFingerprint: "prior-manual-aggregate")
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: owner) { context in
+            let change = try XCTUnwrap(context.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == seed.changeID })
+            let url = "https://example.invalid/rest/v1/inventory_products?id=eq.\(seed.row.id.uuidString.lowercased())&owner_user_id=eq.\(owner.uuidString.lowercased())&shop_id=eq.\(scope.shopID.uuidString.lowercased())"
+            var request = URLRequest(url: URL(string: url)!)
+            request.httpMethod = "PATCH"
+            request.httpBody = Data("{\"product_name\":\"Saved A\"}".utf8)
+            let witness = try ManualPendingAtomicRequestStore.prepareExact(request: request, requestID: UUID(), batchID: UUID(),
+                members: [LocalPendingChangeCASToken(change)], requestMemberIDs: [seed.changeID], scope: scope,
+                generationID: UUID(), context: context)
+            try ManualPendingAtomicRequestStore.beginDispatch(witness: witness, context: context, scope: scope)
+        }
+        let originalRequest = try XCTUnwrap(ManualPendingAtomicRequestStore.records(context: ModelContext(container)).first?.1.request)
+        container = try makeContainer(storeURL: url)
+        let prior = try r23Token(seed.changeID, container: container)
+        XCTAssertEqual(prior.lastAttemptAt, manualTimestamp)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        // The actual store boundary retains original aggregate bytes. The
+        // automatic writer must not reinterpret them as a single-row replay.
+        remote.rejectNextProductUpdate = true
+        let first = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(first.productUpdates, 0)
+        XCTAssertTrue(remote.productUpdatePayloads().isEmpty, "A durable manual aggregate cannot authorize a single-row automatic replay")
+        XCTAssertEqual(try r23Token(seed.changeID, container: container), prior)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        let review = try makeR23Review(container: container, fixture: fixture, owner: owner,
+            changeID: seed.changeID, row: seed.row)
+        XCTAssertThrowsError(try resolveR23CatalogReview(review, choice: .adoptRemote, container: container)) {
+            XCTAssertEqual($0 as? CatalogConflictResolutionError, .reconciliationRequired)
+        }
+        XCTAssertTrue(try LocalCatalogConflictResolutionStore.receipts(context: ModelContext(container)).isEmpty)
+        XCTAssertEqual(try LocalCatalogConflictResolutionStore.attentionProductChangeIDs(context: ModelContext(container),
+            ownerUserID: owner, storeIdentity: fixture.storeIdentity), [seed.changeID])
+        let manualPlan = try await LocalPendingAggregatedPushPlanner(context: ModelContext(container),
+            includesCatalog: true, includesProductPrice: false).makePlan(ownerUserID: owner)
+        XCTAssertTrue(manualPlan.blockers.contains(.sentChangesWaitingForRetry),
+            "The still-sent manual member is blocked before candidate selection")
+        XCTAssertNil(manualPlan.catalogBatch, "The manual path cannot reconstruct the unknown request either")
+        XCTAssertEqual(try r23Token(seed.changeID, container: container), prior)
+        XCTAssertEqual(try ManualPendingAtomicRequestStore.records(context: ModelContext(container)).first?.1.request, originalRequest)
+
+        // A different, never-attempted entity remains eligible; the unknown
+        // member is not a global writer stop and keeps its original token.
+        let independentID = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: owner) { context in
+            let product = Product(barcode: "R23-INDEPENDENT-FRESH", productName: "Independent saved intent")
+            context.insert(product)
+            let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: product, operation: .create,
+                    origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: nil))
+            try context.save()
+            return change.changeID
+        }
+        container = try makeContainer(storeURL: url)
+        let next = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(next.productCreates, 1)
+        XCTAssertEqual(remote.attemptedProductCreatePayloads().map(\.barcode), ["R23-INDEPENDENT-FRESH"])
+        XCTAssertTrue(remote.productUpdatePayloads().isEmpty)
+        XCTAssertEqual(try r23Token(independentID, container: container).statusRaw, LocalPendingChangeStatus.acknowledged.rawValue)
+        XCTAssertEqual(try r23Token(seed.changeID, container: container), prior)
+        XCTAssertNil(try LocalPendingBusinessAttemptStore.entry(changeID: seed.changeID, context: ModelContext(container)))
+        XCTAssertTrue(try LocalCatalogConflictResolutionStore.receipts(context: ModelContext(container)).isEmpty)
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<Product>()).first { $0.remoteID == seed.row.id }?.productName, "Saved A")
+        XCTAssertEqual(remote.persistedProductRow(id: seed.row.id)?.productName, seed.row.productName)
+        XCTAssertEqual(remote.persistedProductRow(id: seed.row.id)?.updatedAt, seed.row.updatedAt)
+        XCTAssertEqual(try ManualPendingAtomicRequestStore.records(context: ModelContext(container)).first?.1.request, originalRequest)
+        XCTAssertEqual(try ManualPendingAtomicRequestStore.blockingChangeIDs(context: ModelContext(container), scope: scope), [seed.changeID])
+    }
+
+    @MainActor
+    func testR23AdoptionPreservesPriceThenRealPriceWriterAcknowledgesExactlyOnce() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("r23-price.sqlite")
+        let owner = UUID()
+        let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
+        defer { fixture.cleanup() }
+        var container = try makeContainer(storeURL: url)
+        let remote = Task118CatalogRemote(ownerUserID: owner, shopID: fixture.shopID)
+        let review = try await makeR23RejectedCatalogChange(container: container, fixture: fixture,
+            owner: owner, remote: remote)
+        let originalSeal = try r23Seal(review.changeID, container: container)
+        let child = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: owner) { context in
+            let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+            let price = ProductPrice(type: .purchase, price: 37, effectiveAt: Date(timeIntervalSince1970: 1_792_781_000),
+                source: "manual", product: product)
+            context.insert(price)
+            let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductPriceChange(price: price, origin: .productPriceSave))
+            try context.save()
+            return LocalPendingChangeCASToken(change)
+        }
+        _ = try resolveR23CatalogReview(review, choice: .adoptRemote, container: container)
+        container = try makeContainer(storeURL: url)
+        XCTAssertEqual(try r23Token(child.changeID, container: container), child)
+        let priceRemote = Task118ProductPriceRemote()
+        let result = try await ProductPricePushService(modelContainer: container, remote: priceRemote,
+            defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: owner)
+        XCTAssertEqual(result.insertedCount, 1)
+        XCTAssertEqual(priceRemote.insertCallCount(), 1)
+        XCTAssertEqual(priceRemote.insertedPayloads.count, 1)
+        let sent = try XCTUnwrap(priceRemote.insertedPayloads.first)
+        XCTAssertEqual(sent.productID, review.snapshot.product.id)
+        XCTAssertEqual(sent.price, 37)
+        XCTAssertEqual(sent.ownerUserID, owner)
+        XCTAssertEqual(sent.shopID, fixture.shopID)
+        container = try makeContainer(storeURL: url)
+        let after = try r23Token(child.changeID, container: container)
+        XCTAssertEqual(after.statusRaw, LocalPendingChangeStatus.acknowledged.rawValue)
+        XCTAssertEqual(after.idempotencyKey, child.idempotencyKey)
+        XCTAssertEqual(after.changedFieldsRaw, child.changedFieldsRaw)
+        XCTAssertEqual(try r23Token(review.changeID, container: container), review.pending)
+        XCTAssertEqual(try r23Seal(review.changeID, container: container), originalSeal)
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<ProductPrice>()).first?.remoteID, sent.id)
+        XCTAssertEqual(try fetchOutboxEntries(context: ModelContext(container), ownerUserID: owner, domain: "prices").count, 1)
+        _ = try await ProductPricePushService(modelContainer: container, remote: priceRemote,
+            defaults: fixture.defaults).pushPendingProductPrices(ownerUserID: owner)
+        XCTAssertEqual(priceRemote.insertCallCount(), 1)
+        XCTAssertEqual(try ModelContext(container).fetchCount(FetchDescriptor<ProductPrice>()), 1)
+    }
+
+    @MainActor
+    private func insertR23CatalogChange(container: ModelContainer, fixture: Task118AutomaticScopeFixture,
+        owner: UUID, remote: Task118CatalogRemote) throws -> (changeID: String, row: RemoteInventoryProductRow) {
+        let row = RemoteInventoryProductRow(id: UUID(), ownerUserID: owner, shopID: fixture.shopID,
+            barcode: "R23-WRITER", itemNumber: "Remote item", productName: "Remote R", secondProductName: nil,
+            purchasePrice: 10, retailPrice: 20, supplierID: nil, categoryID: nil, stockQuantity: nil,
+            updatedAt: "2026-10-23T20:10:00.123456Z", deletedAt: nil)
+        remote.seedProduct(row)
+        let id = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: owner) { context in
+            let product = Product(barcode: row.barcode, remoteID: row.id,
+                remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt), itemNumber: row.itemNumber,
+                productName: row.productName, purchasePrice: row.purchasePrice, retailPrice: row.retailPrice)
+            context.insert(product)
+            let base = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            product.productName = "Saved A"
+            let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context, ownerUserID: owner,
+                storeIdentity: fixture.storeIdentity).recordProductChange(product: product, operation: .update,
+                    origin: .manualCatalogSave, changedFields: ["productName"], baselineFingerprintHash: base))
+            try context.save()
+            return change.changeID
+        }
+        return (id, row)
+    }
+
+    @MainActor
+    private func makeR23RejectedCatalogChange(container: ModelContainer, fixture: Task118AutomaticScopeFixture,
+        owner: UUID, remote: Task118CatalogRemote) async throws -> PersistedCatalogConflictReview {
+        let seed = try insertR23CatalogChange(container: container, fixture: fixture, owner: owner, remote: remote)
+        remote.rejectNextProductUpdate = true
+        let result = try await CatalogPushService(modelContainer: container, remote: remote,
+            defaults: fixture.defaults).pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(result.productUpdates, 0)
+        XCTAssertEqual(remote.productUpdatePayloads().count, 1)
+        let review = try makeR23Review(container: container, fixture: fixture, owner: owner,
+            changeID: seed.changeID, row: seed.row)
+        let context = ModelContext(container)
+        let pending = try XCTUnwrap(context.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == seed.changeID })
+        XCTAssertNotNil(try LocalPendingBusinessAttemptStore.rejectionProof(change: pending, context: context, scope: review.scope))
+        return review
+    }
+
+    @MainActor
+    private func makeR23Review(container: ModelContainer, fixture: Task118AutomaticScopeFixture,
+        owner: UUID, changeID: String, row: RemoteInventoryProductRow) throws -> PersistedCatalogConflictReview {
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: fixture.defaults)
+        let context = ModelContext(container)
+        let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        let token = try r23Token(changeID, container: container)
+        let snapshot = CatalogConflictRemoteSnapshot(product: row, suppliers: [], categories: [],
+            observedAt: Date(), scopeLeaseGeneration: scope.leaseGeneration)
+        return PersistedCatalogConflictReview(id: UUID(), changeID: changeID, originalChangedFields: ["productName"],
+            desired: CatalogConflictProductValues(product: product), remote: snapshot.values,
+            remoteUpdatedAt: row.updatedAt, remoteDeletedAt: row.deletedAt, canResolve: true, blockedReason: nil,
+            pending: token, scope: scope, generationID: UUID(), snapshot: snapshot,
+            originalSealSHA256: try LocalPendingBusinessAttemptStore.entry(changeID: changeID, context: context)?.entityIDsShape)
+    }
+
+    @MainActor
+    private func resolveR23CatalogReview(_ review: PersistedCatalogConflictReview, choice: PersistedCatalogConflictChoice,
+        container: ModelContainer) throws -> PersistedCatalogConflictOutcome {
+        try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container, ownerUserID: review.scope.ownerUserID) { context in
+            try LocalPendingChangeAccumulator.resolvePersistedCatalogConflict(context: context, review: review, choice: choice,
+                remote: review.snapshot, ownerRelease: .init(invocationID: UUID(), processEpoch: UUID(),
+                    scopeLeaseGeneration: review.scope.leaseGeneration, generationID: review.generationID,
+                    writerJournalSHA256: ShopSyncRecoveryCanonical.sha256("no-recovery-journal")), writerJournalIsClear: true)
+        }
+    }
+
+    @MainActor
+    private func r23Token(_ changeID: String, container: ModelContainer) throws -> LocalPendingChangeCASToken {
+        let context = ModelContext(container)
+        return LocalPendingChangeCASToken(try XCTUnwrap(context.fetch(FetchDescriptor<LocalPendingChange>()).first { $0.changeID == changeID }))
+    }
+
+    @MainActor
+    private func r23Seal(_ changeID: String, container: ModelContainer) throws -> String {
+        try XCTUnwrap(LocalPendingBusinessAttemptStore.entry(changeID: changeID, context: ModelContext(container))?.metadataPayloadJSON)
+    }
+
     private func makeAutomaticScopeFixture(
         ownerUserID: UUID
     ) throws -> Task118AutomaticScopeFixture {
@@ -2112,6 +3169,49 @@ final class Task118AutomaticDomainTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    @MainActor
+    private func insertT11InvalidSupplierGraph(container: ModelContainer, owner: UUID,
+        fixture: Task118AutomaticScopeFixture) throws -> (supplierChangeID: String, dependentChangeID: String,
+        dependentBarcode: String, independentBarcode: String) {
+        let context = ModelContext(container)
+        let supplier = Supplier(name: String(repeating: "X", count: 161))
+        let dependent = Product(barcode: "T11-ADJACENT-DEPENDENT", productName: "Dependent", supplier: supplier)
+        let independent = Product(barcode: "T11-ADJACENT-INDEPENDENT", productName: "Independent")
+        context.insert(supplier); context.insert(dependent); context.insert(independent)
+        let rows: [(LocalPendingChangeEntityKind, String, [String], String)] = [
+            (.supplier, LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: supplier.name),
+             ["name"], LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier)),
+            (.product, LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: dependent.barcode),
+             ["barcode", "productName", "supplier"], LocalPendingChangeLogicalKey.productFingerprintHash(dependent)),
+            (.product, LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: independent.barcode),
+             ["barcode", "productName"], LocalPendingChangeLogicalKey.productFingerprintHash(independent))
+        ]
+        var changes: [LocalPendingChange] = []
+        for (index, row) in rows.enumerated() {
+            let time = Date(timeIntervalSince1970: 1_700_000_000 + Double(index))
+            let change = LocalPendingChange(ownerUserID: owner, ownerHash: AccountBindingStore.accountHash(for: owner),
+                storeId: fixture.storeIdentity.storeId, localStoreId: fixture.storeIdentity.localStoreId,
+                syncProtocolVersion: fixture.storeIdentity.syncProtocolVersion,
+                schemaVersion: fixture.storeIdentity.schemaVersion, storeEpoch: fixture.storeIdentity.storeEpoch,
+                entityKind: row.0, operation: .create, status: .pending, origin: .manualCatalogSave,
+                logicalKey: row.1, changedFields: row.2, intendedFingerprintHash: row.3,
+                createdAt: time, updatedAt: time)
+            context.insert(change); changes.append(change)
+        }
+        try context.save()
+        let fresh = ModelContext(container)
+        let savedSupplier = try XCTUnwrap(fresh.fetch(FetchDescriptor<Supplier>()).first)
+        let savedDependent = try XCTUnwrap(fetchProduct(barcode: dependent.barcode, context: fresh))
+        XCTAssertTrue(savedDependent.supplier === savedSupplier)
+        XCTAssertThrowsError(try CatalogTextPolicy.validate(savedSupplier.name, for: .supplierName)) {
+            XCTAssertEqual($0 as? CatalogTextValidationError, .init(field: .supplierName, reason: .tooLong))
+        }
+        let snapshot = try LocalPendingChangeSnapshotProvider(context: fresh)
+            .loadSnapshot(ownerUserID: owner, storeIdentity: fixture.storeIdentity)
+        XCTAssertEqual(snapshot.pendingCatalogChangeCount, 3)
+        return (changes[0].changeID, changes[1].changeID, dependent.barcode, independent.barcode)
     }
 
     private func makeContainer(storeURL: URL? = nil) throws -> ModelContainer {
@@ -2216,21 +3316,40 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     private let shopID: UUID
     private let failFirstProductCreateAfterCommit: Bool
     private var didFailProductCreateAfterCommit = false
+    private let failFirstProductUpdateAfterCommit: Bool
+    private var didFailProductUpdateAfterCommit = false
     private var createdProductPayloads: [SyncAutomaticProductCreatePayload] = []
     private var persistedProductRows: [UUID: RemoteInventoryProductRow] = [:]
     private var productCreateAttemptIDs: [UUID] = []
+    private var supplierCreateRequests: [SyncAutomaticSupplierCreatePayload] = []
     private var supplierUpdateRequests: [(UUID, SyncAutomaticSupplierUpdatePayload)] = []
     private var categoryUpdateRequests: [(UUID, SyncAutomaticCategoryUpdatePayload)] = []
     private var productUpdateRequests: [(UUID, SyncAutomaticProductUpdatePayload)] = []
+    struct ConditionalRequest: Equatable {
+        let id: UUID
+        let payload: SyncAutomaticProductUpdatePayload
+        let version: SyncCatalogConditionalVersion
+        let fields: [String]
+    }
+    var rejectNextProductUpdate = false
+    var loseFirstConditionalResponse = false
+    private var didLoseConditionalResponse = false
+    private(set) var conditionalRequests: [ConditionalRequest] = []
+    private(set) var conditionalReturnCounts: [Int] = []
+
+    func seedProduct(_ row: RemoteInventoryProductRow) { persistedProductRows[row.id] = row }
+
 
     init(
         ownerUserID: UUID,
         shopID: UUID,
-        failFirstProductCreateAfterCommit: Bool = false
+        failFirstProductCreateAfterCommit: Bool = false,
+        failFirstProductUpdateAfterCommit: Bool = false
     ) {
         self.ownerUserID = ownerUserID
         self.shopID = shopID
         self.failFirstProductCreateAfterCommit = failFirstProductCreateAfterCommit
+        self.failFirstProductUpdateAfterCommit = failFirstProductUpdateAfterCommit
     }
 
     func createdProductPayloadCount() -> Int {
@@ -2258,6 +3377,8 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
         productUpdateRequests.map(\.1)
     }
 
+    func attemptedSupplierCreatePayloads() -> [SyncAutomaticSupplierCreatePayload] { supplierCreateRequests }
+
     func updatedSupplierIDs() -> [UUID] {
         supplierUpdateRequests.map(\.0)
     }
@@ -2275,7 +3396,8 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
-        payloads.map {
+        supplierCreateRequests.append(contentsOf: payloads)
+        return payloads.map {
             RemoteInventorySupplierRow(
                 id: $0.id,
                 ownerUserID: $0.ownerUserID,
@@ -2357,6 +3479,10 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
 
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
         productUpdateRequests.append((id, payload))
+        if rejectNextProductUpdate {
+            rejectNextProductUpdate = false
+            throw SyncCatalogWriteRejectedWithoutCommit(sqlstate: "23505")
+        }
         let existing = persistedProductRows[id]
         let row = RemoteInventoryProductRow(
             id: id,
@@ -2375,13 +3501,49 @@ private final class Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
             deletedAt: payload.deletedAt
         )
         persistedProductRows[id] = row
+        if failFirstProductUpdateAfterCommit, !didFailProductUpdateAfterCommit {
+            didFailProductUpdateAfterCommit = true
+            throw Task118CatalogRemoteError.committedResponseLost
+        }
         return row
+    }
+    func updateProductConditionally(id: UUID, payload: SyncAutomaticProductUpdatePayload,
+        expectedVersion: SyncCatalogConditionalVersion, changedFields: [String]) async throws -> [RemoteInventoryProductRow] {
+        try expectedVersion.validate()
+        _ = try SyncCatalogConditionalProductWirePayload(payload: payload, changedFields: changedFields)
+        conditionalRequests.append(.init(id: id, payload: payload, version: expectedVersion, fields: changedFields))
+        guard let existing = persistedProductRows[id], existing.ownerUserID == ownerUserID,
+              existing.shopID == shopID, existing.updatedAt == expectedVersion.expectedUpdatedAt,
+              existing.deletedAt == expectedVersion.expectedDeletedAt else {
+            conditionalReturnCounts.append(0)
+            return []
+        }
+        let fields = Set(changedFields)
+        let row = RemoteInventoryProductRow(id: id, ownerUserID: ownerUserID, shopID: shopID,
+            barcode: fields.contains("barcode") ? try XCTUnwrap(payload.barcode) : existing.barcode,
+            itemNumber: fields.contains("itemNumber") ? payload.itemNumber : existing.itemNumber,
+            productName: fields.contains("productName") ? payload.productName : existing.productName,
+            secondProductName: fields.contains("secondProductName") ? payload.secondProductName : existing.secondProductName,
+            purchasePrice: fields.contains("purchasePrice") ? payload.purchasePrice : existing.purchasePrice,
+            retailPrice: fields.contains("retailPrice") ? payload.retailPrice : existing.retailPrice,
+            supplierID: fields.contains("supplierID") ? payload.supplierID : existing.supplierID,
+            categoryID: fields.contains("categoryID") ? payload.categoryID : existing.categoryID,
+            stockQuantity: fields.contains("stockQuantity") ? payload.stockQuantity : existing.stockQuantity,
+            updatedAt: "2026-10-23T20:12:00.654321Z", deletedAt: existing.deletedAt)
+        persistedProductRows[id] = row
+        conditionalReturnCounts.append(1)
+        if loseFirstConditionalResponse, !didLoseConditionalResponse {
+            didLoseConditionalResponse = true
+            throw Task118CatalogRemoteError.committedResponseLost
+        }
+        return [row]
     }
 }
 
 @MainActor
 private final class Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting {
     private var insertCalls = 0
+    private(set) var insertedPayloads: [SyncAutomaticProductPricePayload] = []
 
     func insertCallCount() -> Int {
         insertCalls
@@ -2389,6 +3551,7 @@ private final class Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWr
 
     func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
         insertCalls += 1
+        insertedPayloads.append(contentsOf: payloads)
         return payloads.map {
             RemoteInventoryProductPriceRow(
                 id: $0.id,
@@ -2404,5 +3567,50 @@ private final class Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWr
                 updatedAt: "2026-05-24T00:00:00Z"
             )
         }
+    }
+}
+
+private struct Task118LegacyCatalogMutation: Codable {
+    enum Call: Codable {
+        case createProduct(SyncAutomaticProductCreatePayload)
+        case updateProduct(UUID, SyncAutomaticProductUpdatePayload)
+    }
+    let call: Call
+    let businessFingerprint: String?
+    let isCreate: Bool
+    let isTombstone: Bool
+}
+
+@MainActor
+private final class Task118T11IncrementalRecorder: SyncIncrementalPullProviding {
+    private(set) var calls = 0
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary {
+        calls += 1
+        return .noWork(watermark: 0)
+    }
+}
+
+@MainActor
+private final class Task118T11EventRecorder: SyncEventRecording {
+    let ownerUserID: UUID
+    private(set) var requests: [SyncEventRecordRequest] = []
+    init(ownerUserID: UUID) { self.ownerUserID = ownerUserID }
+
+    func record(_ request: SyncEventRecordRequest) async throws -> SyncEventRecordResult {
+        try SyncEventRecordValidator().validate(request)
+        requests.append(request)
+        var row: [String: Any] = [
+            "id": String(requests.count), "owner_user_id": ownerUserID.uuidString,
+            "domain": request.domain, "event_type": request.eventType,
+            "changed_count": request.changedCount, "client_event_id": request.clientEventID,
+            "created_at": "2026-10-16T00:00:00Z", "requires_full_recovery": false,
+            "entity_ids": try JSONSerialization.jsonObject(with: JSONEncoder().encode(request.entityIDs)),
+            "metadata": try JSONSerialization.jsonObject(with: JSONEncoder().encode(request.metadata))
+        ]
+        if let shop = request.shopID { row["shop_id"] = shop.uuidString; row["store_id"] = shop.uuidString }
+        if let device = request.sourceDeviceID { row["source_device_id"] = device }
+        if let batch = request.batchID { row["batch_id"] = batch.uuidString }
+        return .recorded(try JSONDecoder().decode(RemoteSyncEventRow.self,
+            from: JSONSerialization.data(withJSONObject: row, options: [.sortedKeys])))
     }
 }

@@ -1342,6 +1342,23 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertTrue(store.activeReasons.isEmpty)
     }
 
+    func testR23EditorPresenceDoesNotBlockAutomaticWorkButCriticalTokenDoes() {
+        var store = ForegroundCloudWorkflowActivityStore()
+        let editor = UUID(), writer = UUID(), scanner = UUID()
+        store.setActive(.editing, true, token: editor)
+        XCTAssertTrue(store.isBusy, "Manual replacement remains protected while editing")
+        XCTAssertFalse(store.blocksAutomaticSync)
+        store.setActive(.localProgress, true, token: writer)
+        XCTAssertTrue(store.blocksAutomaticSync)
+        store.setActive(.localProgress, false, token: writer)
+        XCTAssertFalse(store.blocksAutomaticSync)
+        store.setActive(.scanner, true, token: scanner)
+        XCTAssertTrue(store.blocksAutomaticSync)
+        store.setActive(.scanner, false, token: scanner)
+        XCTAssertFalse(store.blocksAutomaticSync)
+        XCTAssertTrue(store.isBusy)
+    }
+
     func testForegroundActivityExclusiveTokenRejectsConcurrentLocalWorkflow() {
         var store = ForegroundCloudWorkflowActivityStore()
         let replacement = UUID()

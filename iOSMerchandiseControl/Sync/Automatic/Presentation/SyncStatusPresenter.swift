@@ -22,6 +22,13 @@ nonisolated enum SyncStatusPresenter {
 }
 
 extension SyncPhase {
+    nonisolated var isSignificantAutomaticWork: Bool {
+        switch self {
+        case .pushing, .pullingEvents, .reconciling: return true
+        case .idle, .checking, .recoveryRequired, .blocked, .failed: return false
+        }
+    }
+
     nonisolated var isAutomaticWorkActive: Bool {
         switch self {
         case .checking, .pushing, .pullingEvents, .reconciling:

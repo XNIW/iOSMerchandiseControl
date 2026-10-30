@@ -638,7 +638,11 @@ struct HistoryView: View {
                                     NavigationLink(
                                         destination: GeneratedView(entry: entry)
                                     ) {
-                                        HistoryRow(entry: entry, appLanguage: appLanguage)
+                                        HistoryRow(entry: entry, appLanguage: appLanguage, b6LocalAccess: {
+                                            !entry.hasPersistedJSONDecodeFault
+                                                && Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container,
+                                                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+                                        })
                                             .padding(.vertical, 2)
                                     }
                                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -767,6 +771,7 @@ private struct HistoryMonthSectionHeader: View {
 private struct HistoryRow: View {
     let entry: HistoryEntry
     let appLanguage: String
+    var b6LocalAccess: @MainActor () -> Bool = { false }
 
     private var displayLocale: Locale {
         historyDisplayLocale(for: appLanguage)
@@ -846,7 +851,11 @@ private struct HistoryRow: View {
             }
 
             HStack(alignment: .top, spacing: 8) {
-                HistoryStatusBadge(status: entry.syncStatus, deletedPending: entry.isHistorySessionDeletedPendingCloud)
+                HistoryStatusBadge(
+                    status: entry.syncStatus,
+                    deletedPending: entry.isHistorySessionDeletedPendingCloud,
+                    cloudPending: entry.isHistorySessionDirtyForCloud
+                )
 
                 if entry.wasExported {
                     Label(L("history.exported"), systemImage: "square.and.arrow.up")
@@ -898,6 +907,20 @@ private struct HistoryRow: View {
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
+        .task145B6Render(.entity(id: entry.remoteID, kinds: ["history"], route: "history.sessions",
+            visibleFields: b6VisibleFields), validate: b6LocalAccess)
+    }
+
+    // Data-only history edits with unchanged visible summary intentionally produce no matching witness.
+    private var b6VisibleFields: [String: String] {
+        var fields = ["title": displayName, "timestamp": dateString, "totalItems": "\(entry.totalItems)",
+            "orderTotal": formatMoney(entry.orderTotal), "paymentTotal": formatMoney(entry.paymentTotal),
+            "missingItems": "\(entry.missingItems)"]
+        if shouldShowEntryID { fields["secondaryID"] = entry.id }
+        if !entry.supplier.isEmpty { fields["supplier"] = entry.supplier }
+        if !entry.category.isEmpty { fields["category"] = entry.category }
+        if let totalQuantityText { fields["totalQuantity"] = totalQuantityText }
+        return fields
     }
 
     @ViewBuilder
@@ -921,10 +944,19 @@ private struct HistoryRow: View {
 private struct HistoryStatusBadge: View {
     let status: HistorySyncStatus
     let deletedPending: Bool
+    let cloudPending: Bool
+
+    // syncStatus also records local application, not just the current cloud ACK.
+    private var showsCloudPending: Bool {
+        cloudPending && !deletedPending && status != .attemptedWithErrors
+    }
 
     private var title: String {
         if deletedPending {
             return L("history.status.deleted_pending")
+        }
+        if showsCloudPending {
+            return L("history.status.cloud_pending")
         }
         switch status {
         case .notAttempted:
@@ -940,6 +972,9 @@ private struct HistoryStatusBadge: View {
         if deletedPending {
             return "trash.badge.clock"
         }
+        if showsCloudPending {
+            return "icloud.and.arrow.up"
+        }
         switch status {
         case .notAttempted:
             return "arrow.triangle.2.circlepath"
@@ -951,7 +986,7 @@ private struct HistoryStatusBadge: View {
     }
 
     private var color: Color {
-        if deletedPending {
+        if deletedPending || showsCloudPending {
             return .orange
         }
         switch status {
@@ -967,6 +1002,7 @@ private struct HistoryStatusBadge: View {
     var body: some View {
         Label(title, systemImage: systemName)
             .font(.caption2.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

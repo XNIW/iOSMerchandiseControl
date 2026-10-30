@@ -1,9 +1,18 @@
 import Foundation
+import CryptoKit
 import Supabase
 
 nonisolated enum SupabaseOAuthRedirect {
     static let scheme = "com.niwcyber.iosmerchandisecontrol"
     static let url = URL(string: "\(scheme)://login-callback")!
+}
+
+/// Binds a local UUID value to an actually successful SDK session-storage read.
+/// No session bytes, tokens or authority are stored in this witness.
+nonisolated struct SupabaseLocalAuthReadWitness: Equatable, Sendable {
+    let generation: UUID
+    let readEpoch: UUID
+    let ownerUserID: UUID
 }
 
 nonisolated struct SupabaseAuthClientSnapshot: Sendable {
@@ -42,6 +51,90 @@ final class SupabaseClientProvider: @unchecked Sendable {
 
     func acceptsAuthGeneration(_ generation: UUID) -> Bool {
         authGroup.fence.accepts(generation)
+    }
+
+    var localIdentityReadWitness: SupabaseLocalAuthReadWitness? {
+        authGroup.fence.localIdentityReadWitness
+    }
+
+    func acceptsLocalIdentityReadWitness(_ witness: SupabaseLocalAuthReadWitness) -> Bool {
+        authGroup.fence.acceptsLocalIdentityReadWitness(witness)
+    }
+
+    func requiresReauthentication(generation: UUID) -> Bool {
+        authGroup.fence.requiresReauthentication(generation: generation)
+    }
+
+    /// Only an actual SDK refresh HTTP 401 is definitive here. The caller
+    /// captures this generation before awaiting that refresh. Missing sessions,
+    /// storage errors, transport errors and response text cannot revoke it.
+    func recordSessionReadFailure(_ error: any Error, generation: UUID) {
+        guard let authError = error as? AuthError,
+              case let .api(_, _, _, response) = authError, response.statusCode == 401,
+              let url = response.url, url.scheme == config.projectURL.scheme,
+              url.host == config.projectURL.host, url.port == config.projectURL.port,
+              url.path == config.projectURL.appendingPathComponent("auth/v1/token").path,
+              URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: {
+                  $0.name == "grant_type" && $0.value == "refresh_token"
+              }) == true,
+              authGroup.fence.requireReauthentication(generation: generation) else { return }
+        authGroup.publishCurrentSnapshot()
+    }
+
+    /// Internal manual-write boundary: use the same SDK session and HTTP session,
+    /// but place the exact-body CAS after the final auth await. No SDK fetch wrapper
+    /// is called here, so it cannot perform a second auth await after this fence.
+    func performManualRequest(
+        _ request: URLRequest,
+        snapshot: SupabaseAuthClientSnapshot,
+        scope: Task126VerifiedOwnerStoreScope,
+        validateScope: @MainActor @Sendable () throws -> Void,
+        beforeDispatch: @MainActor @Sendable (URLRequest) throws -> Void
+    ) async throws -> (Data, URLResponse) {
+        guard Task126OwnerStoreGate.currentAutomaticScope == scope,
+              acceptsAuthGeneration(snapshot.generation),
+              let url = request.url,
+              url.scheme == config.projectURL.scheme,
+              url.host == config.projectURL.host, url.port == config.projectURL.port,
+              url.path.hasPrefix(config.projectURL.appendingPathComponent("rest/v1").path + "/"),
+              request.httpBodyStream == nil else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        try validateScope()
+        let session: Session
+        do {
+            session = try await snapshot.client.auth.session
+        } catch {
+            guard acceptsAuthGeneration(snapshot.generation) else { throw CancellationError() }
+            recordSessionReadFailure(error, generation: snapshot.generation)
+            if let authError = error as? AuthError {
+                switch authError {
+                case .sessionMissing: throw SupabaseTransportClientError.sessionMissing
+                case .api(_, _, _, let response):
+                    throw AutomaticSyncFailure.http(status: response.statusCode,
+                        retryAfterUntil: SupabaseTransportClient.retryAfterUntil(
+                            response.value(forHTTPHeaderField: "Retry-After"), now: Date()))
+                default: break
+                }
+            }
+            throw AutomaticSyncFailure.classify(error)
+        }
+        try Task.checkCancellation()
+        guard acceptsAuthGeneration(snapshot.generation),
+              Task126OwnerStoreGate.currentAutomaticScope == scope,
+              session.user.id == scope.ownerUserID,
+              !session.accessToken.isEmpty,
+              !session.accessToken.contains("\n"), !session.accessToken.contains("\r") else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        try validateScope()
+        var wire = request
+        wire.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        // The synchronous callback persists only method/path/query/body in the
+        // existing outbox. Credentials remain RAM-only and are never a receipt.
+        try beforeDispatch(wire)
+        // No further auth lookup, retry, encoder or callback precedes this HTTP call.
+        return try await authGroup.httpSession.data(for: wire)
     }
 
     func authClientChanges() -> AsyncStream<SupabaseAuthClientSnapshot> {
@@ -103,6 +196,7 @@ nonisolated private final class SupabaseAuthActiveSnapshot: @unchecked Sendable 
 }
 
 private final class SupabaseAuthClientGroup {
+    let httpSession: URLSession
     let fence: SupabaseAuthStorageFence
     let snapshotStorage: SupabaseAuthActiveSnapshot
     private(set) var snapshot: SupabaseAuthClientSnapshot {
@@ -115,6 +209,7 @@ private final class SupabaseAuthClientGroup {
     init(config: SupabaseConfig, redirectURL: URL, storage: any AuthLocalStorage,
          storageKey: String, session: URLSession, autoRefreshToken: Bool) {
         let fence = SupabaseAuthStorageFence(storage: storage, sessionKey: storageKey)
+        self.httpSession = session
         self.fence = fence
         let makeClient: (UUID) -> SupabaseClient = { generation in
             SupabaseClient(supabaseURL: config.projectURL, supabaseKey: config.publishableKey,
@@ -139,6 +234,10 @@ private final class SupabaseAuthClientGroup {
                 Task { @MainActor [weak self] in self?.observers.removeValue(forKey: id) }
             }
         }
+    }
+
+    func publishCurrentSnapshot() {
+        for observer in observers.values { observer.yield(snapshot) }
     }
 
     func rotateIfNeeded() async -> SupabaseAuthClientSnapshot {
@@ -171,6 +270,43 @@ nonisolated private final class SupabaseAuthStorageFence: @unchecked Sendable {
     private var currentGeneration = UUID()
     private var signingOut = false
     private var blocked = false
+    private var reauthenticationRequired = false
+    private var localIdentityReadEpoch = UUID()
+    private var sessionReadDigest: Data?
+    private var sessionReadOwner: UUID?
+    private var sessionReadUnavailable = false
+
+    var localIdentityReadWitness: SupabaseLocalAuthReadWitness? {
+        lock.withLock {
+            guard !signingOut, !blocked, sessionReadDigest != nil, !sessionReadUnavailable,
+                  let owner = sessionReadOwner else { return nil }
+            return SupabaseLocalAuthReadWitness(generation: currentGeneration, readEpoch: localIdentityReadEpoch, ownerUserID: owner)
+        }
+    }
+    func acceptsLocalIdentityReadWitness(_ witness: SupabaseLocalAuthReadWitness) -> Bool {
+        lock.withLock {
+            witness.generation == currentGeneration && witness.readEpoch == localIdentityReadEpoch
+                && !signingOut && !blocked && sessionReadDigest != nil && sessionReadOwner == witness.ownerUserID
+        }
+    }
+    func requiresReauthentication(generation: UUID) -> Bool {
+        lock.withLock { generation == currentGeneration && reauthenticationRequired }
+    }
+    func requireReauthentication(generation: UUID) -> Bool {
+        lock.withLock {
+            guard generation == currentGeneration, !signingOut, !blocked else { return false }
+            invalidateLocalIdentityRead()
+            blocked = true
+            reauthenticationRequired = true
+            return true
+        }
+    }
+    private func invalidateLocalIdentityRead() {
+        localIdentityReadEpoch = UUID()
+        sessionReadDigest = nil
+        sessionReadOwner = nil
+        sessionReadUnavailable = false
+    }
 
     init(storage: any AuthLocalStorage, sessionKey: String) {
         self.storage = storage
@@ -183,39 +319,58 @@ nonisolated private final class SupabaseAuthStorageFence: @unchecked Sendable {
     func beginSignOut(_ generation: UUID) throws {
         try lock.withLock {
             guard generation == currentGeneration, !signingOut else { throw CancellationError() }
+            invalidateLocalIdentityRead()
+            reauthenticationRequired = false
             signingOut = true
         }
     }
     func finishSignOut(_ generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration else { return }
-            do {
-                try removePersistedSession()
-                blocked = false
-            } catch {
-                blocked = true
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration else { return }
+                invalidateLocalIdentityRead()
+                reauthenticationRequired = false
+                do {
+                    try removePersistedSession()
+                    blocked = false
+                } catch {
+                    blocked = true
+                    signingOut = false
+                    currentGeneration = UUID()
+                    throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+                }
                 signingOut = false
                 currentGeneration = UUID()
-                throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
             }
-            signingOut = false
-            currentGeneration = UUID()
         }
     }
     func prepareInteractiveSignIn() throws {
-        try lock.withLock {
-            guard !signingOut else { throw CancellationError() }
-            // A new SDK client bootstraps persisted sessions even with its
-            // auto-refresh ticker disabled. Verify the retired session is gone
-            // before creating the generation that will own the explicit login.
-            do { try removePersistedSession() }
-            catch {
-                blocked = true
-                throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+        try withStorageMutation {
+            try lock.withLock {
+                guard !signingOut else { throw CancellationError() }
+                invalidateLocalIdentityRead()
+                reauthenticationRequired = false
+                // A new SDK client bootstraps persisted sessions even with its
+                // auto-refresh ticker disabled. Verify the retired session is gone
+                // before creating the generation that will own the explicit login.
+                do { try removePersistedSession() }
+                catch {
+                    blocked = true
+                    throw SupabaseAuthStorageFenceError.localSessionRemovalFailed
+                }
+                blocked = false
+                currentGeneration = UUID()
             }
-            blocked = false
-            currentGeneration = UUID()
         }
+    }
+    // Concrete defaults storage synchronously publishes observed changes. Reach
+    // Main before taking the fence so a worker cannot hold it while waiting on
+    // SwiftUI's update lock. Keep guards and persistence in one serialized unit.
+    private func withStorageMutation<T>(_ operation: () throws -> T) rethrows -> T {
+        if storage is SupabaseAuthLocalStorage, !Thread.isMainThread {
+            return try DispatchQueue.main.sync(execute: operation)
+        }
+        return try operation()
     }
     private func removePersistedSession() throws {
         // The SDK retries its legacy migration on every read. A retained legacy
@@ -230,19 +385,44 @@ nonisolated private final class SupabaseAuthStorageFence: @unchecked Sendable {
     func retrieve(key: String, generation: UUID) throws -> Data? {
         try lock.withLock {
             guard generation == currentGeneration, !blocked else { return nil }
-            return try storage.retrieve(key: key)
+            do {
+                let value = try storage.retrieve(key: key)
+                if key == sessionKey {
+                    if let value {
+                        let digest = Data(SHA256.hash(data: value))
+                        if let previous = sessionReadDigest, previous != digest { invalidateLocalIdentityRead() }
+                        sessionReadDigest = digest
+                        sessionReadOwner = (try? JSONDecoder().decode(Session.self, from: value))?.user.id
+                        sessionReadUnavailable = false
+                    } else {
+                        // Absence is conclusive. A subsequent read error in this
+                        // generation must not resurrect the preceding UUID.
+                        invalidateLocalIdentityRead()
+                    }
+                }
+                return value
+            } catch {
+                if key == sessionKey { sessionReadUnavailable = true }
+                throw error
+            }
         }
     }
     func store(key: String, value: Data, generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration, !signingOut, !blocked else { throw CancellationError() }
-            try storage.store(key: key, value: value)
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration, !signingOut, !blocked else { throw CancellationError() }
+                if key == sessionKey { invalidateLocalIdentityRead() }
+                try storage.store(key: key, value: value)
+            }
         }
     }
     func remove(key: String, generation: UUID) throws {
-        try lock.withLock {
-            guard generation == currentGeneration, !blocked else { throw CancellationError() }
-            try storage.remove(key: key)
+        try withStorageMutation {
+            try lock.withLock {
+                guard generation == currentGeneration, !blocked else { throw CancellationError() }
+                if key == sessionKey { invalidateLocalIdentityRead() }
+                try storage.remove(key: key)
+            }
         }
     }
 }
