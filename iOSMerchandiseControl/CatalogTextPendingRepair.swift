@@ -10,6 +10,7 @@ nonisolated struct CatalogTextPendingRepairResult: Equatable, Sendable {
     var repairedProducts = 0
     var repairedSuppliers = 0
     var repairedCategories = 0
+    var rejectedChanges: [String: CatalogTextValidationError] = [:]
 
     var repairedCount: Int {
         repairedProducts + repairedSuppliers + repairedCategories
@@ -24,13 +25,16 @@ nonisolated enum CatalogTextPendingRepair {
         context: ModelContext,
         ownerUserID: UUID,
         storeIdentity: LocalStoreIdentity,
-        limit: Int = LocalPendingChangeAccumulator.defaultMaxActiveChanges
+        limit: Int = LocalPendingChangeAccumulator.defaultMaxActiveChanges,
+        isolatingInvalidTextForAutomaticPush: Bool = false,
+        validateBeforeMutation: (([LocalPendingChange]) throws -> Void)? = nil
     ) throws -> CatalogTextPendingRepairResult {
         let owner = ownerUserID.uuidString.lowercased()
         let ownerHash = AccountBindingStore.accountHash(for: ownerUserID)
         let activeStoreID = storeIdentity.storeId
         let activeLocalStoreID = storeIdentity.localStoreId
         let safeLimit = max(1, limit)
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         let changes = try fetchScopedPendingChanges(
             context: context,
             owner: owner,
@@ -38,42 +42,62 @@ nonisolated enum CatalogTextPendingRepair {
             storeID: activeStoreID,
             localStoreID: activeLocalStoreID,
             storeIdentity: storeIdentity,
-            limit: safeLimit
-        )
+            limit: safeLimit,
+            excludingResolvedChangeIDs: resolved
+        ).filter { !resolved.contains($0.changeID) }
 
         let targetIndex = try makeTargetIndex(
             container: context.container,
             changes: changes
         )
-        let resolvedChanges = changes.map {
+        // Validate every retained seal below, but never canonicalize a request's
+        // already-attempted token or reinterpret an unsealed unknown legacy body.
+        let protected = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context)
+        let repairableChanges = try changes.filter { change in
+            guard change.lastAttemptAt == nil, !protected.contains(change.changeID) else { return false }
+            return try LocalPendingBusinessAttemptStore.entry(changeID: change.changeID, context: context) == nil
+        }
+        let resolvedChanges = repairableChanges.map {
             ResolvedChange(
                 change: $0,
                 target: targetIndex.target(for: $0, context: context)
             )
         }
 
+        // The automatic caller validates retained seals on this bounded,
+        // scope-filtered set before isolating data errors or changing bodies.
+        try validateBeforeMutation?(changes)
+
+        var result = CatalogTextPendingRepairResult()
         for resolved in resolvedChanges
         where resolved.change.operation != .delete {
             guard let target = resolved.target else { continue }
-            switch target {
-            case let .product(product):
-                try CatalogTextPersistenceBoundary
-                    .preflightCanonicalization(product)
-            case let .supplier(supplier):
-                try CatalogTextPersistenceBoundary
-                    .preflightCanonicalization(supplier)
-            case let .category(category):
-                try CatalogTextPersistenceBoundary
-                    .preflightCanonicalization(category)
+            do {
+                switch target {
+                case let .product(product):
+                    try CatalogTextPersistenceBoundary
+                        .preflightCanonicalization(product)
+                case let .supplier(supplier):
+                    try CatalogTextPersistenceBoundary
+                        .preflightCanonicalization(supplier)
+                case let .category(category):
+                    try CatalogTextPersistenceBoundary
+                        .preflightCanonicalization(category)
+                }
+            } catch let error as CatalogTextValidationError {
+                // Only the automatic caller isolates a stable error attributed
+                // to this resolved target. Other callers keep atomic preflight.
+                guard isolatingInvalidTextForAutomaticPush else { throw error }
+                result.rejectedChanges[resolved.change.changeID] = error
             }
         }
 
-        var result = CatalogTextPendingRepairResult()
         let timestamp = Date()
 
         for resolved in resolvedChanges
         where resolved.change.operation != .delete {
             let change = resolved.change
+            guard result.rejectedChanges[change.changeID] == nil else { continue }
             guard let target = resolved.target else { continue }
             switch target {
             case let .product(product):
@@ -147,7 +171,8 @@ nonisolated enum CatalogTextPendingRepair {
         storeID: String,
         localStoreID: String,
         storeIdentity: LocalStoreIdentity,
-        limit: Int
+        limit: Int,
+        excludingResolvedChangeIDs: Set<String>
     ) throws -> [LocalPendingChange] {
         let pending = LocalPendingChangeStatus.pending.rawValue
         var matches: [LocalPendingChange] = []
@@ -174,6 +199,7 @@ nonisolated enum CatalogTextPendingRepair {
                     == storeIdentity.syncProtocolVersion
                 && change.schemaVersion == storeIdentity.schemaVersion
                 && change.storeEpoch == storeIdentity.storeEpoch
+                && !excludingResolvedChangeIDs.contains(change.changeID)
                 && (
                     change.entityKind == .product
                         || change.entityKind == .supplier

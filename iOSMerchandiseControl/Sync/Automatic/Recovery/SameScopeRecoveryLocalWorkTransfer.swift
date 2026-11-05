@@ -11,7 +11,7 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
 
     static func apply(
         from active: ModelContainer, to staging: ModelContainer,
-        scope: Task126VerifiedOwnerStoreScope, stagingGenerationID: UUID
+        scope: Task126VerifiedOwnerStoreScope, sourceGenerationID: UUID? = nil, stagingGenerationID: UUID
     ) throws {
         let source = ModelContext(active)
         let destination = ModelContext(staging)
@@ -21,17 +21,33 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
         var pendingDescriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
             $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
         })
-        pendingDescriptor.fetchLimit = limit + 1
+        pendingDescriptor.fetchLimit = 2 * limit + 1
         let pending = try source.fetch(pendingDescriptor)
-        guard pending.count <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        guard pending.count <= 2 * limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        let resolutions = try LocalCatalogConflictResolutionStore.receipts(context: source)
+        guard resolutions.allSatisfy({ $0.1.currentGenerationID == sourceGenerationID }) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        let manualRequests = try ManualPendingAtomicRequestStore.records(context: source, scope: scope)
+        let protectedManual = Set(manualRequests.flatMap { $0.1.request.changeIDs })
+        guard manualRequests.allSatisfy({ _, receipt in
+            receipt.currentGenerationID == sourceGenerationID
+                && receipt.request.members.allSatisfy { token in pending.contains { token.matches($0) } }
+        }) else { throw SyncStoreGenerationError.activationReadBackFailed }
+        let resolved = Set(resolutions.flatMap { $0.1.resolvedChangeIDs })
+        guard resolved.isDisjoint(with: protectedManual) else { throw SyncStoreGenerationError.activationReadBackFailed }
+        let reservedSuccessors = Set(resolutions.compactMap { $0.1.decision.successor?.changeID })
+        let effectivePending = pending.filter { !resolved.contains($0.changeID) }
+        guard effectivePending.count <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
         let terminalStatuses = ["sent", "blockedContract", "blockedAuth", "blockedSchema", "dead", "localOnly"]
         var outboxDescriptor = FetchDescriptor<SyncEventOutboxEntry>(predicate: #Predicate {
             !terminalStatuses.contains($0.statusRaw)
-                || ($0.statusRaw == "localOnly" && $0.domain == "local_business_attempt")
+                || ($0.statusRaw == "localOnly" && ($0.domain == "local_business_attempt"
+                    || $0.domain == "local_catalog_conflict_resolution" || $0.domain == "local_manual_atomic_request"))
         })
-        outboxDescriptor.fetchLimit = limit + 1
+        outboxDescriptor.fetchLimit = 3 * limit + 1
         let outbox = try source.fetch(outboxDescriptor)
-        guard outbox.count <= limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        guard outbox.count <= 3 * limit else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
         let sealedAttempts = outbox.filter(LocalPendingBusinessAttemptStore.isSealed)
         guard Set(sealedAttempts.map(\.id)).count == sealedAttempts.count else {
             throw SyncStoreGenerationError.activationReadBackFailed
@@ -69,7 +85,7 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
         }
-        let grouped = Dictionary(grouping: pending, by: \.entityKind)
+        let grouped = Dictionary(grouping: effectivePending, by: \.entityKind)
         let supplierKeys = Set((grouped[.supplier] ?? []).map(\.logicalKey))
         let categoryKeys = Set((grouped[.productCategory] ?? []).map(\.logicalKey))
         let productKeys = Set((grouped[.product] ?? []).map(\.logicalKey))
@@ -172,7 +188,9 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
                 remoteUpdatedAt: original.remoteUpdatedAt, remoteDeletedAt: original.remoteDeletedAt)
             if targetSuppliers[key] == nil { destination.insert(target) }
             for change in changes {
-                markConflict(change, current: LocalPendingChangeLogicalKey.supplierFingerprintHash(target), copies: copiedChanges)
+                if !protectedManual.contains(change.changeID) {
+                    markConflict(change, current: LocalPendingChangeLogicalKey.supplierFingerprintHash(target), copies: copiedChanges)
+                }
                 target.name = original.name
                 if change.operation == .delete { target.remoteDeletedAt = original.remoteDeletedAt }
             }
@@ -187,7 +205,9 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
                 remoteUpdatedAt: original.remoteUpdatedAt, remoteDeletedAt: original.remoteDeletedAt)
             if targetCategories[key] == nil { destination.insert(target) }
             for change in changes {
-                markConflict(change, current: LocalPendingChangeLogicalKey.categoryFingerprintHash(target), copies: copiedChanges)
+                if !protectedManual.contains(change.changeID) {
+                    markConflict(change, current: LocalPendingChangeLogicalKey.categoryFingerprintHash(target), copies: copiedChanges)
+                }
                 target.name = original.name
                 if change.operation == .delete { target.remoteDeletedAt = original.remoteDeletedAt }
             }
@@ -195,9 +215,25 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
         }
         for (key, original) in products {
             let changes = (grouped[.product] ?? []).filter { $0.logicalKey == key }
-            guard changes.isEmpty || changes.contains(where: {
+            let originalIntentMatches = changes.isEmpty || changes.contains(where: {
                 $0.intendedFingerprintHash == LocalPendingChangeLogicalKey.productFingerprintHash(original)
-            }) else { throw SyncStoreGenerationError.activationReadBackFailed }
+            })
+            if !originalIntentMatches {
+                // A prior transfer preserves immutable request A while merging
+                // unselected remote fields into B. Qualify that exact persisted
+                // B projection, without rewriting A's token or request bytes.
+                guard let sourceGenerationID,
+                      changes.contains(where: { change in
+                          manualRequests.contains { _, receipt in
+                              receipt.transfers.last?.destinationGenerationID == sourceGenerationID
+                                  && receipt.request.members.contains { $0.matches(change) }
+                          }
+                      }),
+                      try LocalCatalogBodyProofStore.matchesTransferredProductBody(original, context: source,
+                          scope: scope, generationID: sourceGenerationID) else {
+                    throw SyncStoreGenerationError.activationReadBackFailed
+                }
+            }
             let target = targetProducts[key] ?? Product(barcode: original.barcode, remoteID: original.remoteID,
                 remoteUpdatedAt: original.remoteUpdatedAt, remoteDeletedAt: original.remoteDeletedAt)
             let inserted = targetProducts[key] == nil
@@ -208,8 +244,11 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
             }
             for change in changes {
                 if !inserted {
-                    markConflict(change, current: LocalPendingChangeLogicalKey.productFingerprintHash(target), copies: copiedChanges)
-                    if target.remoteDeletedAt != nil { copiedChanges[change.changeID]?.status = .staleBaseline }
+                    if sealedByChangeID[change.changeID] == nil && !reservedSuccessors.contains(change.changeID)
+                        && !protectedManual.contains(change.changeID) {
+                        markConflict(change, current: LocalPendingChangeLogicalKey.productFingerprintHash(target), copies: copiedChanges)
+                        if target.remoteDeletedAt != nil { copiedChanges[change.changeID]?.status = .staleBaseline }
+                    }
                 }
                 let fields = Set(change.changedFields)
                 let all = inserted || change.operation == .create
@@ -220,12 +259,12 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
                 if all || fields.contains("purchaseprice") { target.purchasePrice = original.purchasePrice }
                 if all || fields.contains("retailprice") { target.retailPrice = original.retailPrice }
                 if all || fields.contains("stockquantity") { target.stockQuantity = original.stockQuantity }
-                if all || fields.contains("suppliername") || fields.contains("supplierremoteid") {
+                if all || fields.contains("suppliername") || fields.contains("supplierremoteid") || fields.contains("supplierid") {
                     target.supplier = original.supplier.flatMap {
                         targetSuppliers[LocalPendingChangeLogicalKey.supplier(remoteID: $0.remoteID, name: $0.name)]
                     }
                 }
-                if all || fields.contains("categoryname") || fields.contains("categoryremoteid") {
+                if all || fields.contains("categoryname") || fields.contains("categoryremoteid") || fields.contains("categoryid") {
                     target.category = original.category.flatMap {
                         targetCategories[LocalPendingChangeLogicalKey.category(remoteID: $0.remoteID, name: $0.name)]
                     }
@@ -268,7 +307,7 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
             }
             copyHistory(original, to: target)
         }
-        for change in pending {
+        for change in effectivePending {
             let found: Bool
             switch change.entityKind {
             case .supplier: found = suppliers[change.logicalKey] != nil
@@ -289,12 +328,24 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
                   SyncEventOutboxStatus(rawValue: entry.statusRaw) != nil else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
+            if entry.domain == ManualPendingAtomicRequestStore.domain {
+                guard let sourceGenerationID else { throw SyncStoreGenerationError.activationReadBackFailed }
+                let copy = try ManualPendingAtomicRequestStore.copyForTransfer(entry, scope: scope,
+                    sourceGenerationID: sourceGenerationID, destinationGenerationID: stagingGenerationID)
+                destination.insert(copy)
+                continue
+            }
             if LocalPendingBusinessAttemptStore.isSealed(entry) {
                 try LocalPendingBusinessAttemptStore.validate(entry, scope: scope)
-            } else {
+            } else if entry.domain != LocalCatalogConflictResolutionStore.domain {
                 _ = try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: entry)
             }
-            destination.insert(copyOutbox(entry))
+            let copy = copyOutbox(entry)
+            if entry.domain == LocalCatalogConflictResolutionStore.domain {
+                try LocalCatalogConflictResolutionStore.transfer(entry, to: copy, source: source,
+                    destination: destination, stagingGenerationID: stagingGenerationID)
+            }
+            destination.insert(copy)
         }
         for key in supplierKeys {
             if let row = targetSuppliers[key] {
@@ -314,7 +365,7 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
         try destination.save()
         let readBack = ModelContext(staging)
         var readBackChanges = FetchDescriptor<LocalPendingChange>()
-        readBackChanges.fetchLimit = limit + 1
+        readBackChanges.fetchLimit = 2 * limit + 1
         let saved = try readBack.fetch(readBackChanges)
         guard saved.count == pending.count else { throw SyncStoreGenerationError.activationReadBackFailed }
         guard Set(saved.map(\.changeID)).count == saved.count else { throw SyncStoreGenerationError.activationReadBackFailed }
@@ -323,6 +374,24 @@ nonisolated enum SameScopeRecoveryLocalWorkTransfer {
             guard let actual = savedByID[expected.changeID], LocalPendingChangeCASToken(expected).matches(actual),
                   expected.createdAt == actual.createdAt else { throw SyncStoreGenerationError.activationReadBackFailed }
         }
+        guard try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: readBack) == resolved else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        let savedManual = try ManualPendingAtomicRequestStore.records(context: readBack, scope: scope)
+        guard savedManual.count == manualRequests.count,
+              manualRequests.flatMap({ $0.1.request.members }).allSatisfy({ token in
+                  saved.contains { token.matches($0) }
+              }),
+              Set(savedManual.flatMap { $0.1.request.changeIDs }) == protectedManual,
+              manualRequests.allSatisfy({ original, receipt in
+                  savedManual.contains { copy, transferred in
+                      copy.id == original.id && copy.lastErrorKindRaw == original.lastErrorKindRaw
+                          && copy.attemptCount == original.attemptCount && copy.lastAttemptAt == original.lastAttemptAt
+                          && transferred.request == receipt.request && transferred.requestSHA256 == receipt.requestSHA256
+                          && transferred.currentGenerationID == stagingGenerationID
+                          && transferred.transfers.count == receipt.transfers.count + 1
+                  }
+              }) else { throw SyncStoreGenerationError.activationReadBackFailed }
     }
 
     private static func scan<Model: PersistentModel>(

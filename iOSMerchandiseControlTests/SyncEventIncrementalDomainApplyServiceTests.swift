@@ -2774,7 +2774,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-rollback-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-rollback", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let container = try SyncStoreSchema.makeFileBackedContainer(at: storeURL)
         do {
@@ -2862,7 +2863,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-lease-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-lease", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let container = try SyncStoreSchema.makeFileBackedContainer(at: storeURL)
         let events = [
@@ -2951,6 +2953,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-local-writer-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-writer", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let writerError = SyncEventThreadSafeErrorBox()
         let afterCatalog = expectation(description: "incremental catalog mutation reached")
@@ -3125,7 +3129,6 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
             )?.status,
             .applied
         )
-        try FileManager.default.removeItem(at: directory)
     }
 
     @MainActor
@@ -3211,7 +3214,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-relation-rollback-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-relation", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let container = try SyncStoreSchema.makeFileBackedContainer(
             at: directory.appendingPathComponent("active.store")
         )

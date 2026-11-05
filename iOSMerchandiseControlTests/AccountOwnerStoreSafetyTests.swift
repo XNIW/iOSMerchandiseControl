@@ -1,3 +1,5 @@
+import Combine
+import Supabase
 import SwiftData
 import XCTest
 @testable import iOSMerchandiseControl
@@ -253,22 +255,65 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let owner = UUID()
         let shop = selectedShop(id: UUID())
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let selectedShopStore = SelectedShopStore(defaults: defaults)
+        selectedShopStore.noteActiveAccount(accountHash)
+        XCTAssertTrue(selectedShopStore.save(shop, accountHash: accountHash))
+        _ = try DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
+        let schema = modelSchema
+        let container = try ModelContainer(for: schema, configurations: [
+            ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        ])
+        Self.retainedContainers.append(container)
+        let auth = try Task145ReplacementRecoverySyntheticAuth(ownerUserID: owner)
+        defer { auth.close() }
+        XCTAssertTrue(auth.viewModel.isSignedIn)
+        XCTAssertEqual(auth.viewModel.sessionInfo?.userID, owner)
         let bindingStore = AccountBindingStore(defaults: defaults)
+        XCTAssertNil(bindingStore.currentBinding, "The isolated suite starts without a binding")
+        XCTAssertTrue(bindingStore.saveBinding(accountHash: accountHash, storeIdentity: shop.localStoreIdentity))
+        XCTAssertEqual(bindingStore.currentBinding?.accountHash, accountHash)
+        XCTAssertEqual(bindingStore.currentBinding?.storeIdentity, shop.localStoreIdentity)
         let stateStore = SyncStateStore(
             defaults: defaults,
             keyPrefix: "task139.replacementRecovery"
         )
         stateStore.recordRunResult(.recoveryRequired())
         let runtime = RecordingReplacementRuntime()
+        let decisionProvider = Task145ReplacementRecoveryObservedDecisionProvider(
+            underlying: SyncDecisionInputProvider(
+                modelContainer: container, initialNetworkStatus: .satisfied,
+                bindingStore: bindingStore, selectedShopStore: selectedShopStore
+            )
+        )
         let orchestrator = SyncOrchestrator(
             automaticRuntime: runtime,
-            authViewModel: SupabaseAuthViewModel(authService: nil),
+            authViewModel: auth.viewModel,
             activityCenter: ForegroundCloudWorkflowActivityCenter(),
             syncEventSignalWatcher: nil,
             stateStore: stateStore,
-            decisionInputProvider: BootstrapDecisionInputProvider(ownerUserID: owner),
+            defaults: defaults,
+            decisionInputProvider: decisionProvider,
             backgroundScheduler: SyncNoopBackgroundTaskScheduler()
         )
+        defer { orchestrator.stop() }
+        let automaticCompletion = expectation(description: "Existing runtime records replacement completion")
+        @MainActor final class CompletionLatch {
+            var active = true
+            var fulfilled = false
+        }
+        let completionLatch = CompletionLatch()
+        let completionSubscription = stateStore.objectWillChange.sink {
+            // objectWillChange precedes the setter: observe after that synchronous
+            // mutation returns, on the state store's actual MainActor.
+            Task { @MainActor in
+                guard completionLatch.active, !completionLatch.fulfilled,
+                      stateStore.state.lastOutcome == .succeeded else { return }
+                completionLatch.fulfilled = true
+                automaticCompletion.fulfill()
+            }
+        }
+        defer { completionLatch.active = false; completionSubscription.cancel() }
 
         _ = try await orchestrator.performAccountStoreReplacement {
             XCTAssertTrue(bindingStore.beginReplacement(
@@ -287,6 +332,94 @@ final class AccountOwnerStoreSafetyTests: XCTestCase {
         }
         for _ in 0..<100 where runtime.actions.isEmpty {
             await Task.yield()
+        }
+        await fulfillment(of: [automaticCompletion], timeout: 2)
+
+        if runtime.actions.first != .bootstrap || stateStore.state.lastOutcome != .succeeded {
+            let rawOutcome = UserDefaults.standard.string(forKey: "sync.runtime.foreground.outcome")
+            let knownOutcomes: Set<String> = [
+                "blocked_accountDecisionRequired",
+                "blocked_authRequired",
+                "blocked_deviceNotActive",
+                "blocked_localStateUnavailable",
+                "blocked_networkUnavailable",
+                "blocked_scene",
+                "busy_retry_exhausted",
+                "completed_recovery_scope_changed",
+                "decision_noop",
+                "deferred_busy",
+                "deferred_decision_busy",
+                "deferred_existing_task",
+                "deferred_runtime_busy",
+                "deferred_store_replacement",
+                "foreground_generation_unavailable",
+                "recovery_completion_entity_changed",
+                "recovery_reconciliation_blocked",
+                "recovery_required_preserved",
+                "recovery_resume_backoff",
+                "recovery_resume_backoff_exhausted",
+                "recovery_resume_exhausted",
+                "recovery_scope_changed_before_runtime",
+                "recovery_scope_unavailable",
+                "recovery_transient_retry_scheduled",
+                "scheduled_bootstrap_recovery_via_sync_runtime",
+                "scheduled_drain_events_via_sync_runtime",
+                "scheduled_full_recovery_via_sync_runtime",
+                "scheduled_light_reconcile_via_sync_runtime",
+                "scheduled_push_pending_via_sync_runtime",
+                "scheduled_recovery_request_via_sync_runtime",
+                "scheduled_sequence_via_sync_runtime",
+                "stale_recovery_completion_ignored",
+            ]
+            let closedOutcome: String
+            if let rawOutcome {
+                closedOutcome = knownOutcomes.contains(rawOutcome) ? rawOutcome : "OTHER"
+            } else {
+                closedOutcome = "ABSENT"
+            }
+            var facts: [String: Any] = [
+                "schema": 1,
+                "fixture_auth": "sdk-local-session",
+                "fixture_provider": "SyncDecisionInputProvider",
+                "original_fixture_auth": "auth-service-nil",
+                "original_fixture_provider": "forced-authenticated-matched-bootstrap",
+                "historical_runtime_branch": "UNKNOWN_NOT_LOGGED",
+                "signed_in": auth.viewModel.isSignedIn,
+                "session_owner_matches": auth.viewModel.sessionInfo?.userID == owner,
+                "selected_scope_persisted": selectedShopStore.selectedShop(accountHash: accountHash) == shop,
+                "selected_scope_resolution_ready": selectedShopStore.isResolutionReady(accountHash: accountHash),
+                "journal_account_or_shop_replacement": bindingStore.pendingRecoveryJournal?.mode == .accountOrShopReplacement,
+                "provider_entered": decisionProvider.enterCount > 0,
+                "provider_returned": decisionProvider.returnCount > 0,
+                "provider_enter_count": decisionProvider.enterCount,
+                "provider_return_count": decisionProvider.returnCount,
+                "foreground_outcome_store": "UserDefaults.standard",
+                "runtime_action_count": runtime.actions.count,
+                "first_action_is_bootstrap": runtime.actions.first == .bootstrap,
+                "foreground_outcome": closedOutcome
+            ]
+            if let returned = decisionProvider.lastReturnedSnapshot {
+                facts["returned_authenticated"] = returned.isAuthenticated
+                facts["returned_owner_matches"] = returned.ownerUserID == owner
+                facts["returned_requires_bootstrap"] = returned.requiresBootstrap
+                facts["returned_requires_full_recovery"] = returned.requiresFullRecovery
+                facts["returned_account_matches"] = returned.accountBindingMatches
+                facts["returned_network_available"] = returned.isNetworkAvailable
+                facts["returned_state_read_failure"] = returned.hasStateReadFailure
+                facts["returned_pending_local_changes"] = returned.hasPendingLocalChanges
+                facts["returned_sync_busy"] = returned.isSyncBusy
+            } else {
+                for key in ["returned_authenticated", "returned_owner_matches", "returned_requires_bootstrap",
+                    "returned_requires_full_recovery", "returned_account_matches", "returned_network_available",
+                    "returned_state_read_failure", "returned_pending_local_changes", "returned_sync_busy"] {
+                    facts[key] = NSNull()
+                }
+            }
+            let attachment = XCTAttachment(string: String(decoding:
+                try JSONSerialization.data(withJSONObject: facts, options: [.sortedKeys]), as: UTF8.self))
+            attachment.name = "TASK145 AccountOwner replacement fixture closed admission facts"
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
 
         XCTAssertEqual(runtime.cancelAndWaitCount, 1)
@@ -2747,5 +2880,101 @@ private final class BusinessOutboundRecorder:
             status: .empty,
             summary: SyncActivityRegistrationSummary(registered: 0, waiting: 0, notRegisterable: 0)
         )
+    }
+}
+
+// Same SDK/local-session/network-blocker fixture used by the Atomic recovery tests.
+@MainActor
+private final class Task145ReplacementRecoverySyntheticAuth {
+    let viewModel: SupabaseAuthViewModel
+    let networkBlocker = Task145ReplacementRecoveryNetworkCounter()
+    private let host: String
+    private let session: URLSession
+    init(ownerUserID: UUID) throws {
+        host = "ri08-\(UUID().uuidString.lowercased()).example.invalid"
+        let storage = Task145ReplacementRecoveryMemoryAuthStorage()
+        let user = User(id: ownerUserID, appMetadata: [:], userMetadata: [:], aud: "authenticated",
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000), updatedAt: Date(timeIntervalSince1970: 1_700_000_000))
+        let syntheticSession = Session(accessToken: "ri08-synthetic-access", tokenType: "bearer",
+            expiresIn: 3600, expiresAt: Date().timeIntervalSince1970 + 3600,
+            refreshToken: "ri08-synthetic-refresh", user: user)
+        try storage.store(key: "sb-\(host.split(separator: ".")[0])-auth-token",
+            value: JSONEncoder().encode(syntheticSession))
+        Task145ReplacementRecoveryNetworkBlocker.register(host: host, counter: networkBlocker)
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [Task145ReplacementRecoveryNetworkBlocker.self]
+        session = URLSession(configuration: configuration)
+        let provider = SupabaseClientProvider(
+            config: .init(projectURL: URL(string: "https://\(host)")!,
+                publishableKey: "ri08-synthetic-publishable", productImageAPIBaseURL: nil),
+            authStorage: storage, session: session, autoRefreshToken: false,
+            authRegistry: SupabaseAuthClientRegistry())
+        viewModel = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: provider))
+    }
+    func close() {
+        session.invalidateAndCancel()
+        Task145ReplacementRecoveryNetworkBlocker.unregister(host: host)
+    }
+}
+
+private nonisolated final class Task145ReplacementRecoveryMemoryAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Data] = [:]
+    func store(key: String, value: Data) throws { lock.withLock { values[key] = value } }
+    func retrieve(key: String) throws -> Data? { lock.withLock { values[key] } }
+    func remove(key: String) throws { _ = lock.withLock { values.removeValue(forKey: key) } }
+}
+private nonisolated final class Task145ReplacementRecoveryNetworkCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    var requestCount: Int { lock.withLock { count } }
+    func record() { lock.withLock { count += 1 } }
+}
+private nonisolated final class Task145ReplacementRecoveryNetworkRegistry: @unchecked Sendable {
+    private let lock = NSLock()
+    private var counters: [String: Task145ReplacementRecoveryNetworkCounter] = [:]
+    func register(host: String, counter: Task145ReplacementRecoveryNetworkCounter) { lock.withLock { counters[host] = counter } }
+    func unregister(host: String) { _ = lock.withLock { counters.removeValue(forKey: host) } }
+    func record(host: String) { lock.withLock { counters[host] }?.record() }
+}
+private nonisolated final class Task145ReplacementRecoveryNetworkBlocker: URLProtocol, @unchecked Sendable {
+    private static let registry = Task145ReplacementRecoveryNetworkRegistry()
+    static func register(host: String, counter: Task145ReplacementRecoveryNetworkCounter) { registry.register(host: host, counter: counter) }
+    static func unregister(host: String) { registry.unregister(host: host) }
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.registry.record(host: request.url?.host ?? "")
+        client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+    }
+    override func stopLoading() {}
+}
+
+// Passive RAM observation of the same real provider; no policy evaluation or task is added.
+@MainActor
+private final class Task145ReplacementRecoveryObservedDecisionProvider: SyncDecisionInputProviding {
+    private let underlying: SyncDecisionInputProvider
+    private(set) var enterCount = 0
+    private(set) var returnCount = 0
+    private(set) var lastReturnedSnapshot: SyncDecisionInputSnapshot?
+
+    init(underlying: SyncDecisionInputProvider) { self.underlying = underlying }
+
+    func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async {
+        await underlying.updateNetworkStatus(status)
+    }
+
+    func recordRealtimeEvent() async {
+        await underlying.recordRealtimeEvent()
+    }
+
+    func makeSnapshot(triggerSource: SyncAutomaticTriggerSource, isAuthenticated: Bool,
+        ownerUserID: UUID?, isSyncBusy: Bool) async -> SyncDecisionInputSnapshot {
+        enterCount += 1
+        let snapshot = await underlying.makeSnapshot(triggerSource: triggerSource,
+            isAuthenticated: isAuthenticated, ownerUserID: ownerUserID, isSyncBusy: isSyncBusy)
+        lastReturnedSnapshot = snapshot
+        returnCount += 1
+        return snapshot
     }
 }

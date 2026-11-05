@@ -209,6 +209,11 @@ nonisolated struct HistoryIncrementalApplyService {
                 ? byLogicalFingerprint[logicalFingerprint]
                 : nil
             if let existing = identityMatch ?? logicalMatch {
+                #if DEBUG
+                let b6BeforeBody = PilotCommitTrace.B6Context.apply?.targetID == (existing.remoteID ?? existing.uid)
+                    ? PilotCommitTrace.b6HistoryBody(existing)
+                    : nil
+                #endif
                 if remoteDeletedAt != nil {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
@@ -223,6 +228,13 @@ nonisolated struct HistoryIncrementalApplyService {
                             remoteDeletedAt: remoteDeletedAt!
                         )
                         try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                        #if DEBUG
+                        if PilotCommitTrace.B6Context.apply != nil {
+                            PilotCommitTrace.b6MappedHistory(
+                                entry: existing, beforeBody: b6BeforeBody, rawVersion: row.updatedAt
+                            )
+                        }
+                        #endif
                         result.updatedCount += 1
                     }
                     continue
@@ -246,6 +258,13 @@ nonisolated struct HistoryIncrementalApplyService {
                     byUID[existing.uid] = existing
                     byLogicalFingerprint[logicalFingerprint] = existing
                     try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                    #if DEBUG
+                    if PilotCommitTrace.B6Context.apply != nil {
+                        PilotCommitTrace.b6MappedHistory(
+                            entry: existing, beforeBody: b6BeforeBody, rawVersion: row.updatedAt
+                        )
+                    }
+                    #endif
                     result.updatedCount += 1
                     continue
                 }
@@ -277,6 +296,13 @@ nonisolated struct HistoryIncrementalApplyService {
                     remoteUpdatedAt: remoteUpdatedAt
                 )
                 try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                #if DEBUG
+                if PilotCommitTrace.B6Context.apply != nil {
+                    PilotCommitTrace.b6MappedHistory(
+                        entry: existing, beforeBody: b6BeforeBody, rawVersion: row.updatedAt
+                    )
+                }
+                #endif
                 result.updatedCount += 1
             } else {
                 if remoteDeletedAt != nil {
@@ -297,6 +323,13 @@ nonisolated struct HistoryIncrementalApplyService {
                 byUID[inserted.uid] = inserted
                 byLogicalFingerprint[logicalFingerprint] = inserted
                 try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+                #if DEBUG
+                if PilotCommitTrace.B6Context.apply != nil {
+                    PilotCommitTrace.b6MappedHistory(
+                        entry: inserted, beforeBody: nil, rawVersion: row.updatedAt
+                    )
+                }
+                #endif
                 result.insertedCount += 1
             }
         }

@@ -602,6 +602,7 @@
 "history.title" = "历史";
 "history.status.not_attempted" = "未同步";
 "history.status.synced" = "已同步";
+"history.status.cloud_pending" = "本地更改待云端同步";
 "history.status.errors" = "有错误";
 "history.delete.confirm_title" = "删除此库存？";
 "history.delete.confirm_message" = "此操作将永久删除该库存：\n%@";
@@ -1868,3 +1869,62 @@
 
 "product.save.local_pending" = "已保存在此设备 · 正在等待云端确认";
 "product.save.cloud_confirmed" = "云端已确认本次保存";
+
+// TASK-145: scoped draft review and durable catalog conflict resolution.
+"product.review.title" = "检查更改";
+"product.review.explanation" = "草稿已保留。请对比当前版本，选择要保留的字段，然后再次保存。";
+"product.review.unavailable" = "此商品已不可用，或无法准确识别。你的更改尚未保存。";
+"product.review.base" = "打开时的版本";
+"product.review.yours" = "你的更改";
+"product.review.current" = "当前版本";
+"product.review.contested" = "两个版本都更改了此字段";
+"product.review.keep_field" = "保留我对此字段的值";
+"product.review.use_current" = "在草稿中使用当前版本";
+"product.review.edit_selected" = "使用所选字段继续编辑";
+"product.review.return" = "返回编辑";
+"product.review.discard_draft" = "放弃草稿";
+"product.review.updated" = "商品已更新。你的草稿已保留。";
+"product.review.conflict" = "此商品已更改。请先检查更改，再保存。";
+"product.review.action" = "检查更改";
+"product.review.save_retry" = "保存失败。你的更改已保留，请重试保存。";
+"product.review.field_unknown" = "字段";
+"product.resolution.title" = "检查已保存的更改";
+"product.resolution.explanation" = "这些目录更改已保存在设备上，需要处理。你的选择仅适用于此次对比中的已保存目录更改；已保存的价格历史独立保留。";
+"product.resolution.action" = "检查已保存的更改";
+"product.resolution.loading" = "正在保存选择";
+"product.resolution.unconfirmed" = "必须先核实此已保存更改的结果，才能完成处理。条件满足后将继续同步。";
+"product.resolution.error" = "无法保存你的选择。已保存的更改和草稿均已保留。请重新检查当前版本。";
+"product.resolution.apply_selected" = "保留所选的已保存字段";
+"product.resolution.adopt_remote" = "采用当前远程版本";
+"product.resolution.adopt_tombstone" = "接受远程删除";
+"product.resolution.adopted_remote" = "已采用远程版本。";
+"product.resolution.adopted_tombstone" = "已接受远程删除。";
+"product.resolution.successor_pending" = "选择已保存在设备上，等待同步。";
+"product.resolution.navigation_busy" = "请先完成或取消当前编辑，再检查另一项已保存的更改。";
+"product.resolution.invalidated" = "当前数据库已更改。你的草稿已保留；请重新打开已保存的更改进行检查。";
+"product.resolution.refresh" = "刷新对比";
+"product.resolution.linked_history" = "删除前需要核实关联的价格历史。已保存的更改会予以保留。";
+"product.resolution.relationship_unavailable" = "所选的供应商或类别已不可用。请先刷新对比，再重新选择。";
+"product.resolution.owner_busy" = "同步正在使用此记录。你的选择已保留，请在当前操作结束后重新检查。";
+"product.resolution.changed_again" = "已有更新的更改。请刷新对比，并重新检查你的选择。";
+"product.resolution.newer_revision" = "此次对比包含更新的已保存更改。请重新检查你的选择。";
+
+// TASK-145 contextual local capability and quiet synchronization.
+"sync.local.significantWork.title" = "正在同步";
+"sync.local.qualifying.title" = "正在准备目录";
+"sync.local.qualifying.detail" = "正在检查此设备上保存的数据。其他页面仍然可用。";
+"sync.local.firstDownload.title" = "等待首次下载";
+"sync.local.firstDownload.waiting" = "首次下载完成后即可使用目录。你可以继续使用选项。";
+"sync.local.restricted.title" = "目录访问受限";
+"sync.local.restricted.detail" = "请在选项中检查账户、店铺和设备访问权限。已保存的数据会保留。";
+"sync.local.unavailable.title" = "本地数据不可用";
+"sync.local.unavailable.detail" = "无法打开或验证本地数据。你仍可在选项中查看设置和详细信息。";
+"sync.local.openOptions" = "打开选项";
+"sync.account.restoring" = "正在恢复会话";
+"sync.account.temporarilyUnavailable" = "会话暂时不可用";
+"sync.account.resumeAutomatically" = "连接可用时将自动继续检查。";
+"options.safe.phase" = "阶段";
+"options.safe.opening" = "打开本地数据";
+"options.safe.code" = "代码";
+"options.safe.version" = "应用版本";
+"options.safe.availableLater" = "本地数据可以打开后，目录功能将恢复可用。";

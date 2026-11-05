@@ -18,6 +18,7 @@ struct iOSMerchandiseControlApp: App {
 
     init() {
         #if DEBUG
+        Task144RootObservation.performanceEntry() // TASK145_PERF first measurable app entry
         let controlledRoot = Task144LocalAvailabilityRootFixture.current
         if Self.task141ResetUIStateRequested {
             Self.resetTask141UIState()
@@ -107,9 +108,9 @@ struct iOSMerchandiseControlApp: App {
             }
             .environmentObject(syncStoreGenerationController)
             .modelContainer(syncStoreGenerationController.modelContainer)
-            .id(syncStoreGenerationController.presentationID)
             #if DEBUG
             .task144ControlledRootControls()
+            .background(Task145PerformanceWindowObservation().allowsHitTesting(false))
             .task { Task144LocalAvailabilityRootFixture.current?.prepareIfNeeded() }
             #endif
         }
@@ -117,8 +118,9 @@ struct iOSMerchandiseControlApp: App {
 
     @ViewBuilder
     private var standardRootView: some View {
-        if syncStoreGenerationController.loadFailureCode != nil {
-            SyncStoreGenerationFailureView()
+        if let failureCode = syncStoreGenerationController.loadFailureCode {
+            SyncStoreGenerationFailureView(failure: SafeLocalCatalogFailure(code: failureCode))
+                .environmentObject(supabaseAuthViewModel)
         } else if let task126SmokeKind = Self.task126UISmokeKind {
             Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
         } else {
@@ -154,7 +156,8 @@ struct iOSMerchandiseControlApp: App {
                 syncEventSignalWatcher: syncEventSignalWatcher,
                 shopDeviceRegistrationService: shopDeviceRegistrationService,
                 shopContextOverride: controlledShopContext,
-                syncStateOverride: controlledSyncState
+                syncStateOverride: controlledSyncState,
+                catalogConflictResolutionServiceOverride: controlledConflictResolutionService
             )
             .environment(\.localRootPresentationState, localRootPresentationState)
             .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence)
@@ -185,6 +188,14 @@ struct iOSMerchandiseControlApp: App {
         nil
         #endif
     }
+    private var controlledConflictResolutionService: CatalogConflictResolutionService? {
+        #if DEBUG
+        Task144LocalAvailabilityRootFixture.current?.catalogConflictResolutionService
+        #else
+        nil
+        #endif
+    }
+
     private var controlledSyncState: SyncStateStore? {
         #if DEBUG
         Task144LocalAvailabilityRootFixture.current?.stateStore
@@ -194,7 +205,16 @@ struct iOSMerchandiseControlApp: App {
     }
 
     private static var isRunningHostedXCTest: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        // B6 observes the ordinary root; admission stays in the gated test.
+        if environment["TEST_RUNNER_TASK145_B6_OBSERVE"] == "1",
+           environment["TEST_RUNNER_TASK145_B6_BINDING_PATH"]?.isEmpty == false,
+           environment["TEST_RUNNER_TASK145_B6_MANIFEST_PATH"]?.isEmpty == false {
+            return false
+        }
+        #endif
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             && ProcessInfo.processInfo.environment["TASK115_REAL_ROOT_LIFECYCLE_TEST"] != "1"
     }
 
@@ -385,13 +405,35 @@ struct iOSMerchandiseControlApp: App {
 }
 
 private struct SyncStoreGenerationFailureView: View {
+    let failure: SafeLocalCatalogFailure
+    @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("appLanguage") private var appLanguage = "system"
+    @State private var selectedTab = 0
+
     var body: some View {
-        ContentUnavailableView(
-            L("options.supabase.automaticSync.phase.recoveryRequired"),
-            systemImage: "externaldrive.badge.exclamationmark",
-            description: Text(L("options.accountDecision.localStateUnavailable.detail"))
-        )
-        .accessibilityIdentifier("sync-store-generation-fail-closed")
+        TabView(selection: $selectedTab) {
+            ForEach(0..<3) { index in
+                NavigationStack {
+                    ContentUnavailableView {
+                        Label(L("sync.local.unavailable.title"), systemImage: "externaldrive.badge.exclamationmark")
+                    } description: {
+                        Text(L("sync.local.unavailable.detail"))
+                    } actions: {
+                        Button(L("common.details")) { selectedTab = 3 }
+                    }
+                    .navigationTitle(L(["tab.inventory", "tab.database", "tab.history"][index]))
+                    .accessibilityIdentifier("sync-store-generation-fail-closed")
+                }
+                .tabItem {
+                    Label(L(["tab.inventory", "tab.database", "tab.history"][index]),
+                          systemImage: ["doc.on.doc", "shippingbox", "clock.arrow.circlepath"][index])
+                }.tag(index)
+            }
+            NavigationStack { SafeOptionsView(failure: failure) }
+                .tabItem { Label(L("tab.options"), systemImage: "gearshape") }.tag(3)
+        }
+        .localeOverride(for: appLanguage)
+        .preferredColorScheme(appTheme == "light" ? .light : appTheme == "dark" ? .dark : nil)
     }
 }
 

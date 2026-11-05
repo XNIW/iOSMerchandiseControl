@@ -16,6 +16,61 @@ nonisolated protocol ShopScopedIncrementalRPCAuthorizing: Sendable {
     var usesServerAuthorizedShopScope: Bool { get }
 }
 
+/// A fresh head is eligibility only. The original marker RPC still runs the
+/// complete checkpoint before this capability can authorize no-work.
+nonisolated protocol ShopScopedIncrementalNoWorkVerifying: Sendable {
+    func hasNoEvents(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint
+    ) async throws -> Bool
+    func verifyNoWork(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+        localVerification: ShopSyncRecoveryLocalVerificationReceipt
+    ) async throws
+}
+
+/// No new proof is synthesized from a fresh head or from counts. Both guards
+/// compare with the complete checkpoint persisted by the finalized generation.
+nonisolated enum ShopSyncOrdinaryNoWorkContract {
+    static func validateHead(
+        _ page: ShopSyncEventPageEnvelope, checkpoint: ShopSyncRecoveryCheckpoint,
+        watermark: Int64
+    ) throws -> Bool {
+        guard watermark >= 0, checkpoint.maxEventID == watermark,
+              page.schemaVersion == "shop-sync-event-page-v1",
+              page.shopId == checkpoint.shopId, page.scope == checkpoint.scope,
+              page.asOfEventMaxId == String(watermark), page.pageLimit == 1,
+              page.rows.isEmpty, !page.hasMore, page.nextAfterId == nil,
+              page.asOfDomainEventMaxIds == checkpoint.syncEvents.domainMaxIds else {
+            return false
+        }
+        // asOf is the requested W; scopeEventMaxId is the freshly resolved H.
+        // They must not be confused when a concurrent event has appeared.
+        return try ShopSyncRecoveryCanonical.eventID(page.scopeEventMaxId) == watermark
+    }
+
+    static func validateMarker(
+        _ marker: ShopSyncRecoveryConvergenceMarker,
+        checkpoint: ShopSyncRecoveryCheckpoint, watermark: Int64
+    ) throws {
+        guard watermark >= 0, checkpoint.maxEventID == watermark,
+              marker.schemaVersion == "shop-sync-convergence-marker-v1",
+              marker.status == "ready", marker.serverNoWorkEligible,
+              marker.integrity.totalViolationCount == 0,
+              marker.scope == checkpoint.scope, marker.shopId == checkpoint.shopId,
+              marker.syncEvents.maxId == String(watermark),
+              marker.syncEvents.verifiedBaselineId == String(watermark),
+              !marker.syncEvents.requiresFullRecovery,
+              marker.syncEvents.domainMaxIds == checkpoint.syncEvents.domainMaxIds,
+              marker.checkpointDigest == checkpoint.checkpointDigest,
+              marker.catalog == checkpoint.catalog, marker.prices == checkpoint.prices,
+              marker.history == checkpoint.history, marker.images == checkpoint.images else {
+            throw ShopSyncRecoveryContractError.markerNotVerified
+        }
+    }
+}
+
 nonisolated struct ShopSyncEventPageParameters: Encodable, Sendable {
     let shopID: UUID
     let deviceIdentifier: String
@@ -369,6 +424,57 @@ nonisolated struct ShopScopedIncrementalRPCClient: Sendable {
             try validateEvent(event, shopID: scope.shopID, recoveryScope: envelope.scope)
         }
         return envelope.rows
+    }
+
+    func hasNoEvents(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint
+    ) async throws -> Bool {
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        guard baselineCheckpoint.maxEventID == watermark else { return false }
+        let data = try await execute(
+            "shop_sync_event_page_v1",
+            parameters: ShopSyncEventPageParameters(
+                shopID: scope.shopID, deviceIdentifier: scope.deviceInstallID,
+                afterID: String(watermark), limit: 1,
+                expectedScopeKey: baselineCheckpoint.scope.key,
+                expectedEventMaxID: String(watermark)
+            ),
+            ownerUserID: ownerUserID, scope: scope
+        )
+        try Task.checkCancellation()
+        guard data.count <= Self.maximumEventPageResponseBytes else {
+            throw ShopSyncRecoveryContractError.totalResourceBudgetExceeded
+        }
+        let page = try JSONDecoder().decode(ShopSyncEventPageEnvelope.self, from: data)
+        try page.scope.validate(expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID, expectedOwnerUserID: ownerUserID)
+        return try ShopSyncOrdinaryNoWorkContract.validateHead(
+            page, checkpoint: baselineCheckpoint, watermark: watermark
+        )
+    }
+
+    func verifyNoWork(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+        localVerification: ShopSyncRecoveryLocalVerificationReceipt
+    ) async throws {
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        guard baselineCheckpoint.maxEventID == watermark,
+              localVerification.matches(baselineCheckpoint) else {
+            throw ShopSyncRecoveryContractError.markerNotVerified
+        }
+        let marker = try await ShopSyncRecoveryRemoteAdapter(
+            transport: SupabaseShopSyncRecoveryRPCTransport(remote: remote), defaults: defaultsBox.value
+        ).marker(ownerUserID: ownerUserID, scope: scope,
+            baselineCheckpoint: baselineCheckpoint, localVerification: localVerification)
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        try ShopSyncOrdinaryNoWorkContract.validateMarker(
+            marker, checkpoint: baselineCheckpoint, watermark: watermark
+        )
     }
 
     func advanceDurableFence(

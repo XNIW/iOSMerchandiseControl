@@ -405,6 +405,7 @@ nonisolated final class LocalPendingChangeAccumulator {
     private let storeIdentity: LocalStoreIdentity
     private let now: () -> Date
     private let maxActiveChanges: Int
+    private let emitsNotifications: Bool
     private var cachedActiveCount: Int?
 
     init(
@@ -412,7 +413,8 @@ nonisolated final class LocalPendingChangeAccumulator {
         ownerUserID: UUID? = nil,
         storeIdentity: LocalStoreIdentity = .anonymous,
         now: @escaping () -> Date = Date.init,
-        maxActiveChanges: Int = defaultMaxActiveChanges
+        maxActiveChanges: Int = defaultMaxActiveChanges,
+        emitsNotifications: Bool = true
     ) {
         self.context = context
         self.ownerUserID = ownerUserID
@@ -422,6 +424,7 @@ nonisolated final class LocalPendingChangeAccumulator {
         )
         self.now = now
         self.maxActiveChanges = max(1, maxActiveChanges)
+        self.emitsNotifications = emitsNotifications
     }
 
     private static func resolveStoreIdentity(
@@ -610,6 +613,7 @@ nonisolated final class LocalPendingChangeAccumulator {
     func supersedeProductPriceChanges(for product: Product) throws {
         let timestamp = now()
         var didSupersede = false
+        let protected = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context)
         let keys = Set(product.priceHistory.flatMap { price in
             [
                 LocalPendingChangeLogicalKey.productPrice(
@@ -626,13 +630,14 @@ nonisolated final class LocalPendingChangeAccumulator {
                 )
             ]
         })
-        for key in keys {
-            for change in try fetchChanges(entityKind: .productPrice, logicalKey: key)
-                where !change.status.isTerminal {
-                change.status = .superseded
-                change.updatedAt = timestamp
-                didSupersede = true
-            }
+        let changes = try keys.flatMap { try fetchChanges(entityKind: .productPrice, logicalKey: $0) }
+        guard changes.allSatisfy({ !protected.contains($0.changeID) }) else {
+            throw CatalogConflictResolutionError.reconciliationRequired
+        }
+        for change in changes where !change.status.isTerminal {
+            change.status = .superseded
+            change.updatedAt = timestamp
+            didSupersede = true
         }
         if didSupersede {
             cachedActiveCount = nil
@@ -687,8 +692,11 @@ nonisolated final class LocalPendingChangeAccumulator {
         let descriptor = FetchDescriptor<LocalPendingChange>(
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
+        let receipts = try LocalCatalogConflictResolutionStore.receipts(context: context)
+        let protected = Set(receipts.flatMap { Array($0.1.resolvedChangeIDs) + [$0.1.decision.successor?.changeID].compactMap { $0 } })
+            .union(try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context))
         let terminal = try context.fetch(descriptor).filter {
-            $0.status.isTerminal && isOwnerCompatible($0)
+            $0.status.isTerminal && isOwnerCompatible($0) && !protected.contains($0.changeID)
         }
         for change in terminal.dropFirst(max(0, limit)) {
             context.delete(change)
@@ -710,9 +718,10 @@ nonisolated final class LocalPendingChangeAccumulator {
             }
         )
         let changes = try fetchActiveChanges()
+        let protected = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context)
         let timestamp = now()
 
-        for change in changes {
+        for change in changes where !protected.contains(change.changeID) {
             guard let record = recordsByKey[change.logicalKey] else {
                 continue
             }
@@ -757,11 +766,19 @@ nonisolated final class LocalPendingChangeAccumulator {
         }
 
         let timestamp = now()
+        let resolutions = try LocalCatalogConflictResolutionStore.receipts(context: context)
+        let resolved = Set(resolutions.flatMap { $0.1.resolvedChangeIDs })
+        let reservedSuccessors = Set(resolutions.compactMap { $0.1.decision.successor?.changeID })
         let existing = try fetchChanges(entityKind: entityKind, logicalKey: logicalKey)
-            .filter { !$0.status.isTerminal }
+            .filter { !$0.status.isTerminal && !resolved.contains($0.changeID) }
             .sorted { $0.updatedAt > $1.updatedAt }
 
-        let unattempted = existing.filter { $0.lastAttemptAt == nil }
+        // Resolution successors already bind an exact R/base/choice. Even
+        // before dispatch, a later Save receives its own distinct revision.
+        let protected = try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context)
+        let unattempted = existing.filter {
+            $0.lastAttemptAt == nil && !reservedSuccessors.contains($0.changeID) && !protected.contains($0.changeID)
+        }
         if let current = unattempted.first {
             coalesce(
                 current,
@@ -822,7 +839,7 @@ nonisolated final class LocalPendingChangeAccumulator {
     }
 
     private func notifyActiveChangeIfNeeded(_ change: LocalPendingChange) {
-        guard !change.status.isTerminal else { return }
+        guard emitsNotifications, !change.status.isTerminal else { return }
         if Thread.isMainThread {
             NotificationCenter.default.post(
                 name: Self.activeChangesNotification,
@@ -928,8 +945,9 @@ nonisolated final class LocalPendingChangeAccumulator {
         let descriptor = FetchDescriptor<LocalPendingChange>(
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         return try context.fetch(descriptor).filter {
-            !$0.status.isTerminal && isOwnerCompatible($0)
+            !$0.status.isTerminal && isOwnerCompatible($0) && !resolved.contains($0.changeID)
         }
     }
 
@@ -992,8 +1010,10 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
             return Task126OwnerStoreScope.normalizedStoreId($0.storeId) == storeIdentity.storeId
         }
 
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         var snapshot = LocalPendingChangeSnapshot.empty
         for change in changes {
+            if resolved.contains(change.changeID) { snapshot.supersededRetainedCount += 1; continue }
             if change.status.isTerminal {
                 if change.status == .superseded {
                     snapshot.supersededRetainedCount += 1

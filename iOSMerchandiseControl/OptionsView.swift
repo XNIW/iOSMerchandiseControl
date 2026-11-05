@@ -13,6 +13,89 @@ private enum AccountStoreReplacementPreflightError: Error {
     case contextChanged
 }
 
+
+/// Sanitized values captured from the failed local opening path. This is not a
+/// model container, catalog snapshot, or an authority to repair local storage.
+struct SafeLocalCatalogFailure {
+    let code: String
+    let appVersion: String
+    init(code: String) {
+        self.code = code == "sync_store_generation_load_failed" ? code : "local_store_unavailable"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–"
+        appVersion = "\(version) (\(build))"
+    }
+}
+
+/// This branch intentionally has no ModelContext, Query, summary provider,
+/// replacement preflight, or business lifecycle callback.
+struct SafeOptionsView: View {
+    let failure: SafeLocalCatalogFailure
+    @EnvironmentObject private var auth: SupabaseAuthViewModel
+    @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("appLanguage") private var appLanguage = "system"
+
+    private var accountTitle: String {
+        if auth.isRestoringSessionForPresentation { return L("sync.account.restoring") }
+        if auth.isSessionTemporarilyUnavailableForPresentation { return L("sync.account.temporarilyUnavailable") }
+        if auth.isSignedIn { return L("options.cloud.account.signedIn.title") }
+        if auth.isTransitioning { return L("options.cloud.account.transitioning") }
+        return L(auth.requiresSignInForPresentation ? "options.cloud.account.signedOut.title" : "options.cloud.account.unconfigured.title")
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Label(L("sync.local.unavailable.title"), systemImage: "externaldrive.badge.exclamationmark")
+                Text(L("sync.local.unavailable.detail")).font(.footnote).foregroundStyle(.secondary)
+                DisclosureGroup(L("common.details")) {
+                    LabeledContent(L("options.safe.phase"), value: L("options.safe.opening"))
+                    LabeledContent(L("options.safe.code"), value: failure.code)
+                    LabeledContent(L("options.safe.version"), value: failure.appVersion)
+                }
+                .accessibilityIdentifier("options.safe.diagnostics")
+            } header: { SectionHeader(title: L("options.localDatabase.header"), systemImage: "externaldrive") }
+            footer: { Text(L("options.safe.availableLater")) }
+
+            Section {
+                Text(accountTitle)
+                if auth.isSignedIn {
+                    if let email = auth.sessionInfo?.privacySafeDisplayEmail { Text(email).font(.footnote) }
+                    Button(L("options.supabase.auth.signOut"), role: .destructive) { auth.signOut() }
+                        .disabled(!auth.canSignOut)
+                } else if auth.requiresSignInForPresentation {
+                    Button(L("options.cloud.account.action.signIn")) { auth.signInWithGoogle() }
+                        .disabled(!auth.canSignIn)
+                    if auth.isWeChatEnabled {
+                        Button(L("options.cloud.account.action.signInWeChat")) { auth.signInWithWeChat() }
+                            .disabled(!auth.canSignInWithWeChat)
+                    }
+                } else if auth.isRestoringSessionForPresentation || auth.isSessionTemporarilyUnavailableForPresentation {
+                    Text(L("sync.account.resumeAutomatically")).font(.footnote).foregroundStyle(.secondary)
+                }
+            } header: { SectionHeader(title: L("options.cloud.section.header"), systemImage: "icloud") }
+
+            Section {
+                ForEach(["system", "light", "dark"], id: \.self) { option in
+                    OptionRow(title: L("options.theme.\(option == "system" ? "auto" : option).title"),
+                        subtitle: L("options.theme.\(option == "system" ? "auto" : option).subtitle"),
+                        isSelected: appTheme == option) { appTheme = option }
+                }
+            } header: { SectionHeader(title: L("options.theme.header"), systemImage: "paintbrush.fill") }
+
+            Section {
+                ForEach(["system", "zh", "it", "es", "en"], id: \.self) { option in
+                    OptionRow(title: ["zh": "中文", "it": "Italiano", "es": "Español", "en": "English"][option]
+                        ?? L("options.language.system.title"), subtitle: L("options.language.\(option).subtitle"),
+                        isSelected: appLanguage == option) { appLanguage = option }
+                }
+            } header: { SectionHeader(title: L("options.language.header"), systemImage: "globe") }
+        }
+        .navigationTitle(L("options.title"))
+        .accessibilityIdentifier("options.safe.root")
+    }
+}
+
 // MARK: - Modelli per le opzioni
 
 struct ThemeOption: Identifiable {
@@ -41,12 +124,16 @@ struct OptionsView: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.localRootPresentationState) private var localPresentation
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @Environment(\.foregroundCloudWorkflowActivityCenter) private var foregroundActivityCenter
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @EnvironmentObject private var generationController: SyncStoreGenerationController
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var productImageStore: ProductImageStore
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
+    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
     @ObservedObject private var syncStateStore: SyncStateStore
     @StateObject private var syncSummaryProvider: OptionsSyncSummaryProvider
     @State private var isAccountDecisionDialogPresented = false
@@ -187,18 +274,24 @@ struct OptionsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section {
-                localDatabaseStatusPublicCard
-            } header: {
-                SectionHeader(title: L("options.localDatabase.header"), systemImage: "externaldrive")
-            } footer: {
-                Text(L("options.localDatabase.footer"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            if canPresentBusinessSummary {
+                Section {
+                    localDatabaseStatusPublicCard
+                        .accessibilityIdentifier("options.local-database-summary")
+                } header: {
+                    SectionHeader(title: L("options.localDatabase.header"), systemImage: "externaldrive")
+                } footer: {
+                    Text(L("options.localDatabase.footer"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .navigationTitle(L("options.title"))
         .onAppear {
+            refreshOptionsSummaryProvider()
+        }
+        .onChange(of: ObjectIdentifier(modelContext.container)) { _, _ in
             refreshOptionsSummaryProvider()
         }
         .onDisappear {
@@ -214,11 +307,16 @@ struct OptionsView: View {
         .onChange(of: shopContextStore.context) { _, _ in
             refreshOptionsSummaryProvider()
         }
-        .onChange(of: localDatabaseStatus) { _, _ in
+        .onChange(of: localAuthorizationRevision) { _, _ in
+            refreshOptionsSummaryProvider()
+        }
+        .onChange(of: presentedLocalDatabaseStatus) { _, _ in
             scheduleAutomaticCloudCheckIfNeeded()
         }
-        .onChange(of: accountDecisionPresentationIdentity, initial: true) { _, _ in
-            presentAccountDecisionAutomaticallyIfNeeded()
+        .onChange(of: accountDecisionPresentationIdentity) { _, _ in
+            // A new scope withdraws the old dialog. Recovery never opens one
+            // automatically; its relevant explicit action remains in Options.
+            isAccountDecisionDialogPresented = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
             refreshOptionsSummaryProvider()
@@ -228,7 +326,7 @@ struct OptionsView: View {
         }
         .accountSyncDecisionDialog(
             isPresented: $isAccountDecisionDialogPresented,
-            decision: syncSummaryProvider.accountSyncDecision,
+            decision: accountSyncDecisionForPublicBanner,
             isCloudReplacementEnabled: isCloudReplacementEnabled,
             onChoose: handleAccountSyncChoice
         )
@@ -256,18 +354,41 @@ struct OptionsView: View {
                 Divider()
             }
 
-            SupabaseAutomaticSyncStatusCard(
-                authViewModel: supabaseAuthViewModel,
-                syncState: syncStateStore.state,
-                pendingCount: syncSummaryProvider.localPendingAttentionCount,
-                baselineSummary: syncSummaryProvider.supabaseBaselineSummary,
-                accountSyncDecision: syncSummaryProvider.accountSyncDecision,
-                reviewAccountDecision: {
-                    presentAccountDecisionManually()
-                },
-                requestAutomaticCloudCheck: requestAutomaticCloudCheckNow,
-                requestExplicitRecovery: requestExplicitRecoveryNow
-            )
+            if canPresentBusinessSummary {
+                SupabaseAutomaticSyncStatusCard(
+                    authViewModel: supabaseAuthViewModel,
+                    syncState: syncStateStore.state,
+                    hasLiveInvocation: accountStoreReplacementRuntime?.hasCurrentPresentationInvocation == true,
+                    pendingCount: syncSummaryProvider.localPendingAttentionCount,
+                    baselineSummary: syncSummaryProvider.supabaseBaselineSummary,
+                    accountSyncDecision: accountSyncDecisionForPublicBanner,
+                    reviewAccountDecision: {
+                        presentAccountDecisionManually()
+                    },
+                    requestAutomaticCloudCheck: requestAutomaticCloudCheckNow,
+                    requestExplicitRecovery: requestExplicitRecoveryNow
+                )
+                .accessibilityIdentifier("options.sync-business-summary")
+                if !syncSummaryProvider.catalogConflictAttention.isEmpty {
+                    DisclosureGroup(L("product.resolution.action")) {
+                        ForEach(syncSummaryProvider.catalogConflictAttention) { item in
+                            Button(item.title) {
+                                guard canPresentBusinessSummary else { return }
+                                _ = localPresentation?.requestCatalogConflictReview(remoteID: item.remoteID,
+                                    changeID: item.changeID, presentationID: localPresentation?.currentPresentationID)
+                            }
+                            .accessibilityIdentifier("task145.catalog.attention.\(item.remoteID.uuidString.lowercased())")
+                        }
+                    }
+                    .accessibilityIdentifier("task145.catalog.attention")
+                }
+            } else {
+                Text(L(localSummaryUnavailableDetailKey))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("options.business-summary-unavailable")
+            }
         }
         .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .leading)
         .padding(.vertical, 4)
@@ -415,7 +536,7 @@ struct OptionsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-        } else {
+        } else if supabaseAuthViewModel.requiresSignInForPresentation {
             VStack(alignment: .leading, spacing: 10) {
                 Button {
                     supabaseAuthViewModel.signInWithGoogle()
@@ -489,6 +610,8 @@ struct OptionsView: View {
     }
 
     private var cloudAccountTitle: String {
+        if supabaseAuthViewModel.isRestoringSessionForPresentation { return L("sync.account.restoring") }
+        if supabaseAuthViewModel.isSessionTemporarilyUnavailableForPresentation { return L("sync.account.temporarilyUnavailable") }
         switch supabaseAuthViewModel.state {
         case .unconfigured:
             return L("options.cloud.account.unconfigured.title")
@@ -506,6 +629,8 @@ struct OptionsView: View {
     }
 
     private var cloudAccountDetail: String {
+        if supabaseAuthViewModel.isRestoringSessionForPresentation
+            || supabaseAuthViewModel.isSessionTemporarilyUnavailableForPresentation { return L("sync.account.resumeAutomatically") }
         switch supabaseAuthViewModel.state {
         case .unconfigured:
             return L("options.cloud.account.unconfigured.detail")
@@ -577,6 +702,27 @@ struct OptionsView: View {
         }
     }
 
+    private var canPresentBusinessSummary: Bool {
+        _ = localAuthorizationRevision
+        return modelGenerationIsCurrent()
+            && syncSummaryProvider.isBusinessSummaryCurrent(
+                context: modelContext,
+                localOwnerUserID: supabaseAuthViewModel.localMutationOwnerUserID
+            )
+    }
+
+    private var localSummaryUnavailableDetailKey: String {
+        if syncSummaryProvider.hasLocalStateReadFailure { return "sync.local.unavailable.detail" }
+        if case .blocked(.localStateUnavailable) = syncStateStore.state.phase { return "sync.local.unavailable.detail" }
+        if case .blocked(.deviceNotActive) = syncStateStore.state.phase { return "sync.local.restricted.detail" }
+        return generationController.activeManifest == nil
+            ? "sync.local.firstDownload.waiting" : "sync.local.qualifying.detail"
+    }
+
+    private var presentedLocalDatabaseStatus: LocalDatabaseCloudStatus? {
+        canPresentBusinessSummary ? localDatabaseStatus : nil
+    }
+
     private var hasSyncCountDrift: Bool {
         syncSummaryProvider.hasSyncCountDrift
     }
@@ -600,12 +746,26 @@ struct OptionsView: View {
             needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
             isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
             syncPhase: syncStateStore.state.phase,
-            lastOutcome: syncStateStore.state.lastOutcome
+            lastOutcome: syncStateStore.state.lastOutcome,
+            isAuthRestoring: supabaseAuthViewModel.isRestoringSessionForPresentation,
+            isAuthTemporarilyUnavailable: supabaseAuthViewModel.isSessionTemporarilyUnavailableForPresentation,
+            hasLocalStateReadFailure: syncSummaryProvider.hasLocalStateReadFailure,
+            isLocalSummaryQualified: canPresentBusinessSummary,
+            hasLiveInvocation: accountStoreReplacementRuntime?.hasCurrentPresentationInvocation == true,
+            hasCatalogConflictAttention: !syncSummaryProvider.catalogConflictAttention.isEmpty
         )
     }
 
     private var accountSyncDecisionForPublicBanner: AccountSyncDecision? {
-        syncSummaryProvider.accountSyncDecision
+        guard modelGenerationIsCurrent(), syncSummaryProvider.isAccountDecisionCurrent(
+            context: modelContext,
+            localOwnerUserID: supabaseAuthViewModel.localMutationOwnerUserID,
+            authSnapshot: OptionsSyncAuthSnapshot(
+                isSignedIn: supabaseAuthViewModel.isSignedIn,
+                userID: supabaseAuthViewModel.sessionInfo?.userID
+            )
+        ) else { return nil }
+        return syncSummaryProvider.accountSyncDecision
     }
 
     private var accountDecisionPresentationIdentity: String? {
@@ -682,7 +842,7 @@ struct OptionsView: View {
         switch localDatabaseStatus {
         case .empty:
             return "tray"
-        case .loading, .checkingCloud:
+        case .loading, .firstDownloadWaiting, .checkingCloud:
             return "arrow.triangle.2.circlepath.icloud"
         case .reconciling:
             return "arrow.triangle.2.circlepath"
@@ -703,7 +863,7 @@ struct OptionsView: View {
         switch localDatabaseStatus {
         case .empty, .needsDownload:
             return .secondary
-        case .loading:
+        case .loading, .firstDownloadWaiting:
             return .secondary
         case .checkingCloud, .reconciling:
             return .accentColor
@@ -732,6 +892,9 @@ struct OptionsView: View {
         case .cancel, .exportAndCancel, .keepLocalData:
             isAccountDecisionDialogPresented = false
         case .discardLocalAndBind:
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.discard-choice.enter")
+            #endif
             beginAccountStoreReplacement()
         case .merge,
              .replaceLocalWithCloud,
@@ -746,26 +909,44 @@ struct OptionsView: View {
     }
 
     private func beginAccountStoreReplacement() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("options.begin.enter")
+        #endif
         isAccountDecisionDialogPresented = false
         guard accountReplacementTask == nil else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.task-busy")
+            #endif
             accountReplacementError = L("options.accountDecision.error.busy")
             return
         }
         guard authenticatedUserID != nil else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.auth")
+            #endif
             accountReplacementError = L("options.accountDecision.error.auth")
             return
         }
         guard let initialPreflight = accountStoreReplacementPreflight else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.preflight")
+            #endif
             accountReplacementError = L("options.accountDecision.error.shop")
             return
         }
         guard let accountStoreReplacementRuntime,
               !foregroundActivityCenter.isBusy,
               productImageStore.beginAccountStoreReplacementLease() else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.reject.runtime-or-activity-or-image-lease")
+            #endif
             accountReplacementError = L("options.accountDecision.error.busy")
             return
         }
 
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("options.admission.passed")
+        #endif
         let replacementCoordinator = AccountStoreReplacementCoordinator(
             context: modelContext,
             bindingStore: bindingStore
@@ -782,6 +963,9 @@ struct OptionsView: View {
             token: accountReplacementActivityToken
         )
         accountReplacementTask = Task { @MainActor in
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("options.task.enter")
+            #endif
             defer {
                 productImageStore.endAccountStoreReplacementLease()
                 foregroundActivityCenter.setActive(
@@ -791,39 +975,84 @@ struct OptionsView: View {
                 )
                 accountReplacementTask = nil
                 refreshOptionsSummaryProvider()
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.task.exit")
+                #endif
             }
             do {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.runtime-call.enter")
+                #endif
                 _ = try await accountStoreReplacementRuntime.performAccountStoreReplacement {
+                    #if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("options.real-operation.enter")
+                    #endif
+                    #if DEBUG
+                    defer { Task144RootObservation.recordScopeReplacementPhase("options.real-operation.exit") }
+                    #endif
                     guard authenticatedUserID != nil else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.auth")
+                        #endif
                         throw AccountStoreReplacementPreflightError.authenticationUnavailable
                     }
                     guard let currentPreflight = accountStoreReplacementPreflight else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.preflight")
+                        #endif
                         throw AccountStoreReplacementPreflightError.shopUnavailable
                     }
                     guard currentPreflight == initialPreflight else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.context")
+                        #endif
                         throw AccountStoreReplacementPreflightError.contextChanged
                     }
                     guard foregroundActivityCenter.isExclusivelyActive(
                         .cloudReview,
                         token: accountReplacementActivityToken
                     ) else {
+                        #if DEBUG
+                        Task144RootObservation.recordScopeReplacementPhase("options.operation.reject.activity")
+                        #endif
                         throw AccountStoreReplacementPreflightError.contextChanged
                     }
+                    #if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("options.real-operation.invoke-journal")
+                    #endif
                     return try replacementCoordinator
                         .discardLocalDataAndBind(
                             userID: initialPreflight.userID,
                             storeIdentity: initialPreflight.storeIdentity
                         )
                 }
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.runtime-call.return")
+                #endif
             } catch AccountStoreReplacementPreflightError.authenticationUnavailable {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.auth")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.auth")
             } catch AccountStoreReplacementPreflightError.shopUnavailable {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.preflight")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.shop")
             } catch AccountStoreReplacementPreflightError.contextChanged {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.context")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.busy")
             } catch AccountStoreReplacementRuntimeError.alreadyInProgress {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.already-in-progress")
+                #endif
                 accountReplacementError = L("options.accountDecision.error.busy")
             } catch {
+                #if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("options.catch.other")
+                #endif
                 accountReplacementError = error.localizedDescription
             }
         }
@@ -870,14 +1099,17 @@ struct OptionsView: View {
 
     private func scheduleAutomaticCloudCheckIfNeeded() {
         cloudCheckRequestTask?.cancel()
+        cloudCheckRequestTask = nil
+        guard canPresentBusinessSummary else { return }
         cloudCheckRequestTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            do { try await Task.sleep(nanoseconds: 300_000_000) } catch { return }
+            guard !Task.isCancelled, canPresentBusinessSummary else { return }
             requestAutomaticCloudCheckIfNeeded()
         }
     }
 
     private func requestAutomaticCloudCheckIfNeeded(now: Date = Date()) {
-        guard shouldRequestAutomaticCloudCheck else {
+        guard canPresentBusinessSummary, shouldRequestAutomaticCloudCheck else {
             return
         }
         if let lastAutomaticCloudCheckRequestedAt,
@@ -889,6 +1121,7 @@ struct OptionsView: View {
     }
 
     private func requestAutomaticCloudCheckNow() {
+        guard canPresentBusinessSummary else { return }
         if let requestAutomaticCloudCheck {
             requestAutomaticCloudCheck()
         } else {
@@ -998,6 +1231,7 @@ nonisolated struct LocalDatabasePublicSummary: Equatable {
 
 enum LocalDatabaseCloudStatus: Equatable {
     case loading
+    case firstDownloadWaiting
     case empty
     case pendingLocalChanges
     case checkingCloud
@@ -1011,6 +1245,8 @@ enum LocalDatabaseCloudStatus: Equatable {
         switch self {
         case .loading:
             return "options.localDatabase.loading.title"
+        case .firstDownloadWaiting:
+            return "sync.local.firstDownload.title"
         case .empty:
             return "options.localDatabase.empty.title"
         case .pendingLocalChanges:
@@ -1034,6 +1270,8 @@ enum LocalDatabaseCloudStatus: Equatable {
         switch self {
         case .loading:
             return "options.localDatabase.loading.detail"
+        case .firstDownloadWaiting:
+            return "sync.local.firstDownload.waiting"
         case .empty:
             return "options.localDatabase.empty.detail"
         case .pendingLocalChanges:
@@ -1112,28 +1350,34 @@ struct LocalDatabaseCloudStatusInput: Equatable {
     var isCheckingRemoteCounts: Bool
     var syncPhase: SyncPhase
     var lastOutcome: SyncOutcome?
+    var isAuthRestoring = false
+    var isAuthTemporarilyUnavailable = false
+    var hasLocalStateReadFailure = false
+    var isLocalSummaryQualified = true
+    var hasLiveInvocation = true
+    var hasCatalogConflictAttention = false
 }
 
 enum LocalDatabaseCloudStatusResolver {
     static func resolve(_ input: LocalDatabaseCloudStatusInput) -> LocalDatabaseCloudStatus {
-        if input.isLoading {
-            return .loading
+        if input.hasLocalStateReadFailure || input.blockingReason == .localStateUnavailable {
+            return .requiresUserAction(.localStateUnavailable)
         }
-        if !input.isSignedIn {
+        if input.baselineStatus == .accountMismatch { return .requiresUserAction(.accountMismatch) }
+        if input.blockingReason == .deviceNotActive { return .requiresUserAction(.cloudPermissionProblem) }
+        if input.hasAccountDecision || input.hasCatalogConflictAttention { return .requiresUserAction(.requiresChoice) }
+        if !input.isSignedIn && !input.isAuthRestoring && !input.isAuthTemporarilyUnavailable {
             return .requiresUserAction(.signInRequired)
         }
-        if input.isAuthFailed {
+        if input.isAuthFailed && !input.isAuthRestoring && !input.isAuthTemporarilyUnavailable {
             return .requiresUserAction(.cloudPermissionProblem)
         }
-        if input.hasAccountDecision {
-            return .requiresUserAction(.requiresChoice)
+        if input.isLoading { return .loading }
+        if !input.isLocalSummaryQualified || (input.localSummary.isCatalogEmpty && input.baselineStatus != .valid) {
+            return .firstDownloadWaiting
         }
-        if input.baselineStatus == .accountMismatch {
-            return .requiresUserAction(.accountMismatch)
-        }
-        if input.localSummary.isCatalogEmpty {
-            return .empty
-        }
+        if input.localSummary.isCatalogEmpty { return .empty }
+        if input.isAuthRestoring || input.isAuthTemporarilyUnavailable { return .offlineCloudCheckPending }
         if input.isNetworkBlocked {
             return .offlineCloudCheckPending
         }
@@ -1191,9 +1435,12 @@ enum LocalDatabaseCloudStatusResolver {
     static func shouldRequestAutomaticCloudCheck(_ input: LocalDatabaseCloudStatusInput) -> Bool {
         guard input.isSignedIn,
               !input.isAuthFailed,
+              input.isLocalSummaryQualified,
+              !input.hasLocalStateReadFailure,
               !input.localSummary.isCatalogEmpty,
               input.pendingCount == 0,
               !input.hasAccountDecision,
+              !input.hasCatalogConflictAttention,
               !input.isNetworkBlocked,
               !input.isAutomaticWorkActive,
               input.blockingReason == nil,
@@ -1235,7 +1482,7 @@ enum LocalDatabaseCloudStatusResolver {
 
 private extension LocalDatabaseCloudStatusInput {
     var isAutomaticWorkActive: Bool {
-        syncPhase.isAutomaticWorkActive
+        hasLiveInvocation && syncPhase.isAutomaticWorkActive
     }
 
     var isNetworkBlocked: Bool {
@@ -1260,6 +1507,7 @@ private extension LocalDatabaseCloudStatusInput {
 
     var isAlignedWithTechnicalCloudEventNote: Bool {
         !hasAccountDecision
+            && !hasCatalogConflictAttention
             && pendingCount == 0
             && !hasCountDrift
             && !syncCountDriftCheckFailed
@@ -1278,6 +1526,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     @State private var currentDate = Date()
 
     private let syncState: SyncState
+    private let hasLiveInvocation: Bool
     private let pendingCount: Int
     private let baselineSummary: SupabaseCatalogBaselineDebugSummary
     private let accountSyncDecision: AccountSyncDecision?
@@ -1288,6 +1537,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     init(
         authViewModel: SupabaseAuthViewModel,
         syncState: SyncState,
+        hasLiveInvocation: Bool,
         pendingCount: Int,
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
         accountSyncDecision: AccountSyncDecision? = nil,
@@ -1297,6 +1547,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     ) {
         self.authViewModel = authViewModel
         self.syncState = syncState
+        self.hasLiveInvocation = hasLiveInvocation
         self.pendingCount = pendingCount
         self.baselineSummary = baselineSummary
         self.accountSyncDecision = accountSyncDecision
@@ -1318,7 +1569,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         let progress = progressState
         let isOwnerStoreBlocked = accountSyncDecision != nil
         let isRunning = !isOwnerStoreBlocked
-            && (authViewModel.isTransitioning || syncState.phase.isAutomaticWorkActive)
+            && hasLiveInvocation && syncState.phase.isSignificantAutomaticWork
         let isStalled = diagnostics.isStalled(isRunning: isRunning, now: currentDate)
             || diagnostics.hasRunningError(isRunning: isRunning, now: currentDate)
         let isTechnicalCloudEventNote = isTechnicalCloudEventNote(diagnostics)
@@ -1327,7 +1578,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             && (syncState.phase == .recoveryRequired
                 || isStalled
                 || syncState.lastOutcome.isRetryable)
-        let visibleProgress = progress.flatMap(SyncStatusPresenter.visibleProgress(from:))
+        let visibleProgress = isRunning ? progress.flatMap(SyncStatusPresenter.visibleProgress(from:)) : nil
 
         VStack(alignment: .leading, spacing: 12) {
             if dynamicTypeSize.isAccessibilitySize {
@@ -2375,6 +2626,7 @@ struct OptionRow: View {
     }
     .environmentObject(SupabaseAuthViewModel(authService: nil))
     .environmentObject(ShopContextStore())
+    .environmentObject(SyncStoreGenerationController.ephemeral())
     .environmentObject(ProductImageStore(service: nil))
     .modelContainer(
         for: [

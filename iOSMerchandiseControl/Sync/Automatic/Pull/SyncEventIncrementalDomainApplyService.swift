@@ -245,6 +245,8 @@ private nonisolated struct SyncIncrementalContinuationGeneration: Sendable {
     let lease: SyncStoreGenerationLease
     let generationID: UUID
     let fenceKey: String
+    let checkpoint: ShopSyncRecoveryCheckpoint
+    let localVerification: ShopSyncRecoveryLocalVerificationReceipt
 }
 
 nonisolated struct SyncEventIncrementalDomainApplyService {
@@ -324,6 +326,25 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             watermark: watermarkBefore
         )
         let eventFetchStarted = mcNowMillis()
+        // Only the exact persisted C may enter this no-work optimization.
+        // A later incremental W is ineligible, not a new recovery condition.
+        if let controller, let generation = continuationGeneration,
+           generation.checkpoint.maxEventID == watermarkBefore,
+           let verifier = eventFetcher as? any ShopScopedIncrementalNoWorkVerifying {
+            let noEvents = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await verifier.hasNoEvents(ownerUserID: ownerUserID, scope: scope,
+                    watermark: watermarkBefore, baselineCheckpoint: generation.checkpoint)
+            }
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            if noEvents {
+                return try await verifyStableContinuation(ownerUserID: ownerUserID,
+                    modelContainer: modelContainer, scope: scope, watermark: watermarkBefore,
+                    controller: controller, generation: generation,
+                    eventFetchMs: mcNowMillis() - eventFetchStarted, totalStarted: totalStarted)
+            }
+        }
+        // Delta, an unsafe head, or an ineligible C keeps the original initial
+        // checkpoint/preflight inside fetchSyncEventsAfter, before any apply.
         var scopedEvents: [RemoteSyncEventRow] = []
         var eventCursor = watermarkBefore
         var eventScanExhausted = true
@@ -880,7 +901,8 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                         generationID: manifest.generationID
                       ) else { return nil }
                 return SyncIncrementalContinuationGeneration(
-                    lease: lease, generationID: manifest.generationID, fenceKey: fenceKey
+                    lease: lease, generationID: manifest.generationID, fenceKey: fenceKey,
+                    checkpoint: manifest.checkpoint, localVerification: manifest.localVerification
                 )
             }
         }
@@ -922,16 +944,54 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         generation: SyncIncrementalContinuationGeneration, eventFetchMs: Int, totalStarted: Int,
         classifiedSummary: SyncIncrementalPullSummary? = nil
     ) async throws -> SyncIncrementalPullSummary {
-        // This path never uses the 15-second count cache. Count parity is only
-        // an eligibility guard, alongside finalized generation + scope fence,
-        // drained local work and a bounded tail after the fresh count response.
+        let strongVerifier = generation.checkpoint.maxEventID == watermark
+            ? eventFetcher as? any ShopScopedIncrementalNoWorkVerifying : nil
         let protectedIDs = try await protectedRemoteIDs(
             ownerUserID: ownerUserID, modelContainer: modelContainer, storeIdentity: scope.storeIdentity
         )
-        guard protectedIDs.suppliers.isEmpty, protectedIDs.categories.isEmpty,
-              protectedIDs.products.isEmpty, protectedIDs.prices.isEmpty,
-              protectedIDs.history.isEmpty, protectedIDs.logicalKeys.isEmpty,
-              !protectedIDs.hasCappedImportMarker else {
+        let localWorkPending = !protectedIDs.suppliers.isEmpty || !protectedIDs.categories.isEmpty
+            || !protectedIDs.products.isEmpty || !protectedIDs.prices.isEmpty
+            || !protectedIDs.history.isEmpty || !protectedIDs.logicalKeys.isEmpty
+            || protectedIDs.hasCappedImportMarker
+        var strongLocalCounts: SyncInventoryCountSnapshot?
+        if let strongVerifier {
+            if !localWorkPending {
+                // Retain current-local/count parity for a continuation. Local
+                // work keeps its original deferral to push, even if it changes
+                // counts; a strong marker still precedes that deferral below.
+                let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope, recoveryScope: generation.checkpoint.scope)
+                guard drift.isAligned else {
+                    var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
+                    summary.requiresFullRecoveryReason = "canonical_drift_detected"
+                    summary.eventPageFetchMs = eventFetchMs
+                    summary.totalElapsedMs = mcNowMillis() - totalStarted
+                    return summary
+                }
+                strongLocalCounts = drift.local
+            }
+            // The marker executes the original full checkpoint, including its
+            // global preflight. It precedes even a local-work deferral to push.
+            // Counts alone cannot detect a same-count material change or a
+            // deleted event whose visible head returned to W.
+            do {
+                try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                    try await strongVerifier.verifyNoWork(ownerUserID: ownerUserID, scope: scope,
+                        watermark: watermark, baselineCheckpoint: generation.checkpoint,
+                        localVerification: generation.localVerification)
+                }
+                try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            } catch {
+                guard let reason = boundedRecoveryReason(for: error) else { throw error }
+                var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
+                summary.requiresFullRecoveryReason = reason
+                summary.eventPageFetchMs = eventFetchMs
+                summary.totalElapsedMs = mcNowMillis() - totalStarted
+                return summary
+            }
+        }
+        // Legacy adapters and W beyond manifest C retain their original
+        // counts/tail path; that detector is not a new strong material proof.
+        guard !localWorkPending else {
             var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
             summary.requiresFullRecoveryReason = "ordinary_continuation_local_work_pending"
             if classifiedSummary == nil, !protectedIDs.hasCappedImportMarker {
@@ -943,7 +1003,19 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             }
             return summary
         }
-        let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope)
+        if strongVerifier != nil {
+            var summary = classifiedSummary ?? SyncIncrementalPullSummary(
+                syncType: .lightReconcile, watermarkBefore: watermark, watermarkAfter: watermark)
+            summary.continuationReceipt = try await issueContinuationReceipt(summary: summary,
+                controller: controller, container: modelContainer, scope: scope, generation: generation,
+                expectedCounts: strongLocalCounts)
+            try recordLightReconcileCompleted(ownerUserID: ownerUserID,
+                storeIdentity: scope.storeIdentity, scope: scope)
+            summary.eventPageFetchMs = eventFetchMs
+            summary.totalElapsedMs = mcNowMillis() - totalStarted
+            return summary
+        }
+        let drift = try await fetchCanonicalDrift(modelContainer: modelContainer, scope: scope, recoveryScope: generation.checkpoint.scope)
         var summary = classifiedSummary ?? SyncIncrementalPullSummary(
             syncType: .lightReconcile, watermarkBefore: watermark, watermarkAfter: watermark
         )
@@ -1068,6 +1140,10 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         }
         let defaults = defaults
         let atomicMutationProbeForTesting = atomicMutationProbeForTesting
+        #if DEBUG
+        // Detached SwiftData work does not inherit task-local correlation.
+        let b6Cycle = PilotCommitTrace.B6Context.cycle
+        #endif
         return try await Task.detached(priority: .userInitiated) {
             var forcedHistoryBlock: RemoteSyncEventRow?
             for attempt in 0..<2 {
@@ -1086,6 +1162,19 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                         try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(
                             modelContainer
                         )
+                        #if DEBUG
+                        let b6Apply = PilotCommitTrace.b6BeginApply(cycle: b6Cycle,
+                            productIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.productIDs }),
+                            priceIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.priceIDs }),
+                            catalogProducts: b6Cycle == nil ? [] : catalog.products,
+                            prices: b6Cycle == nil ? [] : priceRows,
+                            historyIDs: b6Cycle == nil ? [] : Set(candidates.flatMap { $0.ids.sessionIDs }))
+                        var b6Returned = false
+                        defer {
+                            if !b6Returned { PilotCommitTrace.b6ApplyEnd(b6Apply, returned: false,
+                                ns: PilotCommitTrace.b6Now()) }
+                        }
+                        #endif
                         try context.transaction {
                             let protected = try pendingRemoteIDs(
                                 context: context,
@@ -1100,6 +1189,17 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                     || !catalog.suppliers.isEmpty
                                     || !catalog.categories.isEmpty
                             )
+                            #if DEBUG
+                            // Existing identity index only: no observer database read.
+                            let b6BeforeBody = b6Apply.flatMap { ticket in
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                return matches.count == 1 ? PilotCommitTrace.b6ProductBody(matches[0]) : nil
+                            }
+                            let b6BeforeWasLive = b6Apply.map { ticket in
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                return matches.count == 1 && matches[0].remoteDeletedAt == nil
+                            } ?? false
+                            #endif
                             let localPriceIdentityIndex = try IncrementalLocalProductPriceIdentityIndex(
                                 context: context,
                                 includePrices: !priceRows.isEmpty
@@ -1202,11 +1302,18 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             try atomicMutationProbeForTesting?(.afterCatalog)
 
                             let priceStarted = mcNowMillis()
+                            #if DEBUG
+                            let priceResult = try PilotCommitTrace.B6Context.$apply.withValue(b6Apply) {
+                                try applyTargetedProductPriceMutationRows(selectedPrices,
+                                    protected: protected, context: context)
+                            }
+                            #else
                             let priceResult = try applyTargetedProductPriceMutationRows(
                                 selectedPrices,
                                 protected: protected,
                                 context: context
                             )
+                            #endif
                             for row in selectedPrices {
                                 try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
                             }
@@ -1214,6 +1321,12 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             try atomicMutationProbeForTesting?(.afterPrices)
 
                             let historyStarted = mcNowMillis()
+                            #if DEBUG
+                            let historyResult = try PilotCommitTrace.B6Context.$apply.withValue(b6Apply) {
+                                try HistoryIncrementalApplyService.applyRemoteSharedSheetSessions(
+                                    selectedHistory, ownerUserID: ownerUserID, context: context, scope: scope)
+                            }
+                            #else
                             let historyResult = try HistoryIncrementalApplyService
                                 .applyRemoteSharedSheetSessions(
                                     selectedHistory,
@@ -1221,6 +1334,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                     context: context,
                                     scope: scope
                                 )
+                            #endif
                             guard historyResult.skippedDirtyRemoteIDs.isEmpty else {
                                 throw SyncEventLateDirtyHistoryError(
                                     remoteIDs: historyResult.skippedDirtyRemoteIDs
@@ -1232,6 +1346,21 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                             // Calling save() here would publish the three domains
                             // before a later error could roll the transaction back.
                             try atomicMutationProbeForTesting?(.afterMutationsBeforeCommit)
+                            #if DEBUG
+                            if let ticket = b6Apply {
+                                let matches = localCatalogIdentityIndex.products(remoteID: ticket.targetID)
+                                let remoteRows = selectedCatalog.products.filter { $0.id == ticket.targetID }
+                                if matches.count == 1, remoteRows.count == 1 {
+                                    if remoteRows[0].deletedAt == nil {
+                                        PilotCommitTrace.b6MappedProduct(ticket, beforeBody: b6BeforeBody,
+                                            product: matches[0], rawVersion: remoteRows[0].updatedAt)
+                                    } else {
+                                        PilotCommitTrace.b6MappedDeletion(ticket, beforeBody: b6BeforeBody,
+                                            beforeWasLive: b6BeforeWasLive, product: matches[0], row: remoteRows[0])
+                                    }
+                                }
+                            }
+                            #endif
                             completed = SyncEventAtomicMutationResult(
                                 appliedEvents: applied.map(\.event),
                                 lateProtectedBlock: lateBlock,
@@ -1243,6 +1372,11 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
                                 historyApplyMs: historyApplyMs
                             )
                         }
+                        #if DEBUG
+                        let b6CommitReturnNS = PilotCommitTrace.b6Now()
+                        b6Returned = true
+                        PilotCommitTrace.b6ApplyEnd(b6Apply, returned: true, ns: b6CommitReturnNS)
+                        #endif
                         Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
                     }
                     return completed
@@ -1662,11 +1796,16 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
     }
 
     private func fetchCanonicalDrift(
-        modelContainer: ModelContainer, scope: Task126VerifiedOwnerStoreScope
+        modelContainer: ModelContainer, scope: Task126VerifiedOwnerStoreScope,
+        recoveryScope: ShopSyncRecoveryScope? = nil
     ) async throws -> SyncCountDriftReport {
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
         let remoteCounts = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
-            try await remote.fetchReconciliationRemoteCounts()
+            if let recoveryScope, let scopedRemote = remote as? any ShopScopedReconciliationRemoteCountFetching {
+                return try await scopedRemote.fetchReconciliationRemoteCounts(
+                    scope: scope, recoveryScope: recoveryScope, defaults: defaults)
+            }
+            return try await remote.fetchReconciliationRemoteCounts()
         }
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
         let localCounts = try await Task.detached(priority: .utility) {

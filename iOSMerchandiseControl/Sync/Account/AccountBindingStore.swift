@@ -857,6 +857,22 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
     private func persistReplacementJournalWithLeaseHeld(
         _ journal: AccountReplacementJournal
     ) -> Bool {
+        if let durableJournalURL,
+           let existingData = try? Self.boundedJournalData(at: durableJournalURL),
+           let existingJournal = try? JSONDecoder().decode(AccountReplacementJournal.self, from: existingData),
+           existingJournal == journal {
+            // An already-published journal is a sealed representation, not a
+            // request to reserialize identical facts or rename its file.
+            do {
+                try Self.synchronizeFile(durableJournalURL)
+                try Self.synchronizeDirectory(durableJournalURL.deletingLastPathComponent())
+                guard try Self.boundedJournalData(at: durableJournalURL) == existingData else { return false }
+            } catch {
+                return false
+            }
+            defaults.set(existingData, forKey: replacementKey)
+            return defaults.data(forKey: replacementKey) == existingData && replacementJournal == journal
+        }
         guard let data = try? JSONEncoder().encode(journal) else { return false }
         guard data.count <= Self.maximumDurableJournalBytes else { return false }
         if let durableJournalURL {

@@ -1859,6 +1859,10 @@ struct DatabaseView: View {
     @State private var showAddSheet = false
     @State private var namedEntityEditor: DatabaseNamedEntityEditorPresentation?
     @State private var productToEdit: Product?
+    @State private var persistedConflictChangeID: String?
+    @State private var conflictNavigationMessage: String?
+    @State private var unresolvedProductDraft: LocalRootPresentationState.EditorDraft?
+    @State private var showsUnresolvedProductDraft = false
     @State private var productForHistory: Product?
     @State private var mountedPresentationID: String?
     @State private var editorRestorationAttemptedPresentationID: String?
@@ -3328,6 +3332,7 @@ struct DatabaseView: View {
         let onEdit: () -> Void
         let onHistory: () -> Void
         let saveFeedback: String?
+        var b6LocalAccess: @MainActor () -> Bool = { false }
 
         private var hasMetrics: Bool {
             product.purchasePrice != nil || product.retailPrice != nil || product.stockQuantity != nil
@@ -3376,6 +3381,22 @@ struct DatabaseView: View {
                 onEdit()
             }
             .onTapGesture(perform: onEdit)
+            .task145B6Render(.entity(id: product.remoteID, kinds: ["create", "update"],
+                route: "database.products", visibleFields: b6VisibleFields), validate: b6LocalAccess)
+        }
+
+        // Same strings supplied to this row's Text/labels; no model fetch or body proof.
+        private var b6VisibleFields: [String: String] {
+            var fields = ["barcode": product.barcode,
+                "productName": product.productName ?? L("product.no_name")]
+            if let item = product.itemNumber, !item.isEmpty { fields["itemNumber"] = item }
+            if let second = product.secondProductName, !second.isEmpty { fields["secondProductName"] = second }
+            if let value = product.purchasePrice { fields["purchasePrice"] = formatCLPMoney(value) }
+            if let value = product.retailPrice { fields["retailPrice"] = formatCLPMoney(value) }
+            if let value = product.stockQuantity { fields["stockQuantity"] = Self.formatQuantity(value) }
+            if let value = product.supplier?.name, !value.isEmpty { fields["supplierName"] = value }
+            if let value = product.category?.name, !value.isEmpty { fields["categoryName"] = value }
+            return fields
         }
 
         private var titleBlock: some View {
@@ -3397,27 +3418,29 @@ struct DatabaseView: View {
         }
 
         private var metricsBlock: some View {
-            ViewThatFits(in: .horizontal) {
+            let pills = metricPills
+            let history = historyButton
+            return ViewThatFits(in: .horizontal) {
                 HStack(alignment: .center, spacing: 6) {
                     if hasMetrics {
-                        metricPills
+                        pills
                     }
-                    historyButton
+                    history
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     if hasMetrics {
                         ViewThatFits(in: .horizontal) {
                             HStack(spacing: 6) {
-                                metricPills
+                                pills
                             }
 
                             VStack(alignment: .leading, spacing: 6) {
-                                metricPills
+                                pills
                             }
                         }
                     }
-                    historyButton
+                    history
                 }
             }
         }
@@ -3541,6 +3564,10 @@ struct DatabaseView: View {
 
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
+        filteredProducts(from: products)
+    }
+
+    private func filteredProducts(from products: [Product]) -> [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
         let textFiltered: [Product]
         if trimmed.isEmpty {
@@ -3555,6 +3582,9 @@ struct DatabaseView: View {
             return false
             }
         }
+        #if DEBUG
+        if storefrontFilter == .all { Task144RootObservation.performanceQueryResult(query: trimmed, count: textFiltered.count) }
+        #endif
         guard storefrontFilter != .all else { return textFiltered }
         let allowed = storefrontFilter == .conflict
             ? storefrontAuthoringStore.conflictedProductIDs
@@ -3605,6 +3635,14 @@ struct DatabaseView: View {
             },
             set: { newValue in
                 if selectedDatabaseSection == .products {
+                    #if DEBUG
+                    if newValue == Task145PerformanceConfiguration.targetBarcode {
+                        Task144RootObservation.performanceMark("searchInputComplete", facts: "actual-binding-complete")
+                    }
+                    if newValue == "T20-000" {
+                        Task144RootObservation.performanceMark("searchBroadInputComplete", facts: "actual-binding-complete;broad-fixed-prefix")
+                    }
+                    #endif
                     barcodeFilter = newValue
                 } else {
                     namedEntityFilter = newValue
@@ -3656,6 +3694,11 @@ struct DatabaseView: View {
                         .focused($isSearchFocused)
                         .accessibilityLabel(activeSearchPlaceholder)
                         .accessibilityIdentifier("task144.database.search")
+                        .task145B6DeletionQueryControl(barcodeFilter, validate: {
+                            selectedDatabaseSection == .products && storefrontFilter == .all
+                                && isCurrentModelGeneration && Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                                    modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
+                        })
 
                     if !activeSearchIsEmpty {
                         Button {
@@ -3783,25 +3826,53 @@ struct DatabaseView: View {
 
     @ViewBuilder
     private var productsContent: some View {
-        if products.isEmpty {
+        // One @Query read and one filter per render; actions still query current state.
+        let currentProducts = products
+        let visibleProducts: [Product] = currentProducts.isEmpty ? [] : filteredProducts(from: currentProducts)
+        if currentProducts.isEmpty {
             databaseEmptyState
-        } else if filteredProducts.isEmpty {
+                .task145B6Render(.deletion(query: barcodeFilter, emptyMessage: L("database.empty.title")),
+                    validate: b6ExactEmptyQueryIsCurrent)
+        } else if visibleProducts.isEmpty {
             filteredProductsEmptyState
+                .task145B6Render(.deletion(query: barcodeFilter, emptyMessage: L("database.empty.filtered_title")),
+                    validate: b6ExactEmptyQueryIsCurrent)
         } else {
+            let rowImageScope = imageScope
+            let rowStorefrontScope = storefrontScope
             List {
-                ForEach(filteredProducts) { (product: Product) in
-                    DatabaseProductRow(
-                        product: product,
-                        imageScope: imageScope,
-                        storefrontScope: storefrontScope,
-                        onEdit: {
-                            productToEdit = product
-                        },
-                        onHistory: {
-                            productForHistory = product
-                        },
-                        saveFeedback: savedProductFeedback(for: product)
-                    )
+                ForEach(visibleProducts) { (product: Product) in
+                    VStack(alignment: .leading, spacing: 0) {
+                        DatabaseProductRow(
+                            product: product,
+                            imageScope: rowImageScope,
+                            storefrontScope: rowStorefrontScope,
+                            onEdit: {
+                                #if DEBUG
+                                Task144RootObservation.performanceAction("editor")
+                                #endif
+                                productToEdit = product
+                            },
+                            onHistory: {
+                                productForHistory = product
+                            },
+                            saveFeedback: savedProductFeedback(for: product),
+                            b6LocalAccess: {
+                                isCurrentModelGeneration && Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                                    modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
+                            }
+                        )
+                        .task145PerformanceRender("dataRender", qualifies: product.barcode == "T20-000001", validate: {
+                            Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
+                        })
+                        .task145PerformanceRender("searchBroadRender", qualifies: barcodeFilter == "T20-000" && product.barcode == "T20-000001",
+                            facts: product.productName ?? "")
+                        .task145PerformanceRender("searchRender", qualifies: barcodeFilter == "T20-020000" && product.barcode == "T20-020000",
+                            facts: product.productName ?? "")
+                        .task145PerformanceRender("saveRender", qualifies: product.barcode == "T20-020000"
+                            && task145PerformanceSaveMatches(product.productName) && savedProductFeedback(for: product) != nil,
+                            facts: product.productName ?? "", validate: { productToEdit == nil })
+                    }
                     .id(product.barcode)
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                 }
@@ -3827,6 +3898,14 @@ struct DatabaseView: View {
             .contentMargins(.bottom, 12, for: .scrollContent)
             .scrollPosition(id: $productScrollAnchor)
         }
+    }
+
+    private func b6ExactEmptyQueryIsCurrent() -> Bool {
+        // Existing @Query/filter output only. Never fetch or refresh to manufacture absence.
+        !isFirstSnapshotPreparing && selectedDatabaseSection == .products && storefrontFilter == .all
+            && !barcodeFilter.isEmpty && filteredProducts.isEmpty && isCurrentModelGeneration
+            && Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
     }
 
     @ViewBuilder
@@ -3971,6 +4050,15 @@ struct DatabaseView: View {
         ZStack {
             VStack(spacing: 0) {
                 databaseHeader
+                if let conflictNavigationMessage {
+                    Label(conflictNavigationMessage, systemImage: "exclamationmark.triangle")
+                        .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
+                        .accessibilityIdentifier("task145.product.resolution.navigation-message")
+                }
+                if unresolvedProductDraft != nil {
+                    Button(L("product.review.action")) { showsUnresolvedProductDraft = true }
+                        .accessibilityIdentifier("task145.product.unresolved.open")
+                }
                 databaseContent
             }
             .background(Color(.systemGroupedBackground))
@@ -3996,13 +4084,14 @@ struct DatabaseView: View {
         }
         .onReceive(localPresentation?.objectWillChange ?? ObservableObjectPublisher()) { _ in
             restoreSavedProductReceipt()
+            routePersistedCatalogConflictReview()
         }
     }
 
     private var activeDatabase: some View {
         databaseRootSurface
         .navigationTitle(L("database.title"))
-        .onAppear { restoreLocalPresentation() }
+        .onAppear { restoreLocalPresentation(); routePersistedCatalogConflictReview() }
         .background {
             DatabaseEditorRestorationHost(presentationID: generationController.presentationID) { presentationID in
                 restoreLocalPresentation(editorPresentationID: presentationID)
@@ -4098,8 +4187,18 @@ struct DatabaseView: View {
             NavigationStack {
                 EditProductView(
                     product: product,
-                    pendingOwnerUserID: currentPendingOwnerUserID
+                    pendingOwnerUserID: currentPendingOwnerUserID,
+                    persistedConflictChangeID: persistedConflictChangeID
                 )
+            }
+        }
+        .sheet(isPresented: $showsUnresolvedProductDraft) {
+            if let draft = unresolvedProductDraft {
+                UnresolvedProductDraftView(draft: draft) {
+                    guard isCurrentModelGeneration else { return }
+                    localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = nil }
+                    unresolvedProductDraft = nil
+                }
             }
         }
         // Sheet per storico prezzi
@@ -4418,17 +4517,61 @@ struct DatabaseView: View {
                 request.fetchLimit = 2
                 let matching = try context.fetch(request)
                 if matching.count == 1 { productToEdit = matching[0] }
+                else { unresolvedProductDraft = editor; showsUnresolvedProductDraft = true }
             } catch {
-                // A vanished/ambiguous target cannot rebind an old model or
-                // authorize a Save in a different generation.
+                // Preserve values only; no old-generation model and no implicit create.
+                unresolvedProductDraft = editor
+                showsUnresolvedProductDraft = true
             }
+        }
+    }
+
+    private func routePersistedCatalogConflictReview() {
+        guard isCurrentModelGeneration,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                modelContainer: context.container, ownerUserID: currentPendingOwnerUserID),
+              let request = localPresentation?.catalogConflictReviewRequest(presentationID: mountedPresentationID)
+        else { return }
+        if let editing = productToEdit {
+            guard editing.remoteID == request.remoteID else {
+                conflictNavigationMessage = L("product.resolution.navigation_busy")
+                return
+            }
+            // Reuse this editor and its retained input; only open its saved revision review.
+            persistedConflictChangeID = request.changeID
+            localPresentation?.clearCatalogConflictReviewRequest(id: request.id, presentationID: mountedPresentationID)
+            conflictNavigationMessage = nil
+            return
+        }
+        guard !showAddSheet, !showsUnresolvedProductDraft, unresolvedProductDraft == nil,
+              productForHistory == nil, namedEntityEditor == nil, !importProgress.isRunning, importAnalysisSession == nil else {
+            conflictNavigationMessage = L("product.resolution.navigation_busy")
+            return
+        }
+        do {
+            let remoteID = request.remoteID
+            var descriptor = FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == remoteID })
+            descriptor.fetchLimit = 2
+            let matches = try context.fetch(descriptor)
+            guard matches.count == 1 else {
+                conflictNavigationMessage = L("product.review.unavailable")
+                return
+            }
+            persistedConflictChangeID = request.changeID
+            productToEdit = matches[0]
+            localPresentation?.clearCatalogConflictReviewRequest(id: request.id, presentationID: mountedPresentationID)
+            conflictNavigationMessage = nil
+        } catch {
+            conflictNavigationMessage = L("product.resolution.invalidated")
         }
     }
 
     private func clearRetainedEditor() {
         guard isCurrentModelGeneration else { return }
         localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = nil }
+        persistedConflictChangeID = nil
         restoreSavedProductReceipt()
+        routePersistedCatalogConflictReview()
     }
 
     private func restoreSavedProductReceipt() {
@@ -4580,6 +4723,9 @@ struct DatabaseView: View {
     }
 
     private func confirmDeleteProducts() {
+        #if DEBUG
+        PilotCommitTrace.b6SourceMutationBegin(categories: ["delete"])
+        #endif
         defer { productsPendingDeletion = [] }
         let deletionTargets = productsPendingDeletion.map {
             (
@@ -4588,11 +4734,32 @@ struct DatabaseView: View {
             )
         }
 
+        #if DEBUG
+        // Observation only: capture outside the local mutation lease. The
+        // helper compares the lease carried by that fence without reacquiring it.
+        let b6Scope = PilotCommitTrace.b6ObservationEnabled
+            ? currentPendingOwnerUserID.flatMap {
+                try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: $0)
+            }
+            : nil
+        #endif
         do {
             try Task126OwnerStoreGate.withLocalMutationFence(
                 modelContainer: context.container,
                 ownerUserID: currentPendingOwnerUserID
             ) { freshContext in
+                #if DEBUG
+                var b6Tickets: [String] = []
+                var b6CommitReturned = false
+                defer {
+                    if !b6CommitReturned, !b6Tickets.isEmpty {
+                        let b6End = PilotCommitTrace.b6Now()
+                        for ticket in b6Tickets {
+                            PilotCommitTrace.b6LocalEnd(ticket, returned: false, ns: b6End)
+                        }
+                    }
+                }
+                #endif
                 let accumulator = LocalPendingChangeAccumulator(
                     context: freshContext,
                     ownerUserID: currentPendingOwnerUserID
@@ -4608,7 +4775,7 @@ struct DatabaseView: View {
                             == target.fingerprint else {
                         throw Task126OwnerStoreGateError.localRemoteConflictRequiresReview
                     }
-                    try accumulator.recordProductChange(
+                    let pendingChange = try accumulator.recordProductChange(
                         product: product,
                         operation: .delete,
                         origin: .manualCatalogSave,
@@ -4616,9 +4783,31 @@ struct DatabaseView: View {
                         baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
                     )
                     try accumulator.supersedeProductPriceChanges(for: product)
+                    #if DEBUG
+                    if PilotCommitTrace.b6ObservationEnabled,
+                       let pendingChange,
+                       let ticket = PilotCommitTrace.b6LocalDeleteBegin(
+                        product: product,
+                        intents: [LocalPendingChangeCASToken(pendingChange)],
+                        scope: b6Scope
+                       ) {
+                        b6Tickets.append(ticket)
+                    }
+                    #else
+                    _ = pendingChange
+                    #endif
                     freshContext.delete(product)
                 }
                 try freshContext.save()
+                #if DEBUG
+                if !b6Tickets.isEmpty {
+                    let b6End = PilotCommitTrace.b6Now()
+                    b6CommitReturned = true
+                    for ticket in b6Tickets {
+                        PilotCommitTrace.b6LocalEnd(ticket, returned: true, ns: b6End)
+                    }
+                }
+                #endif
             }
         } catch {
             #if DEBUG

@@ -71,12 +71,13 @@ final class SupabaseCatalogBaselineRun {
 
 @Model
 final class SupabaseCatalogBaselineRecord {
+    #Index<SupabaseCatalogBaselineRecord>([\.baselineRunID, \.entityType, \.remoteID])
     @Attribute(.unique) var recordKey: String
     var baselineRunID: UUID
     var ownerUserUUID: UUID
     var fingerprintSchemaVersion: Int
     var entityType: String
-    var remoteID: UUID
+    @Attribute(hashModifier: "task145-baseline-record-remoteID-readback-index-v1") var remoteID: UUID
     var remoteUpdatedAt: Date?
     var remoteDeletedAt: Date?
     var localModelID: String?

@@ -263,26 +263,63 @@ protocol SupabaseManualPushRemoteGateway {
     func verifyReadBack(expectation: SupabaseManualPushReadBackExpectation) async throws
 }
 
+nonisolated enum ManualPendingCatalogDispatchContext {
+    @TaskLocal static var beforeDispatch: (@MainActor @Sendable () throws -> Void)?
+}
+
+private nonisolated struct ManualCatalogDefaults: @unchecked Sendable { let value: UserDefaults }
+
+private nonisolated protocol ManualCatalogScopedRow: Decodable, Sendable {
+    var id: UUID { get }
+    var ownerUserID: UUID { get }
+    var shopID: UUID? { get }
+}
+extension RemoteInventorySupplierRow: ManualCatalogScopedRow {}
+extension RemoteInventoryCategoryRow: ManualCatalogScopedRow {}
+extension RemoteInventoryProductRow: ManualCatalogScopedRow {}
+
+private nonisolated struct ManualCatalogShopPayload<Value: Encodable>: Encodable {
+    let value: Value
+    let shopID: UUID
+    private enum CodingKeys: String, CodingKey { case shopID = "shop_id" }
+    func encode(to encoder: Encoder) throws {
+        try value.encode(to: encoder)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(shopID, forKey: .shopID)
+    }
+}
+
 actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     private enum Table {
         static let suppliers = "inventory_suppliers"
         static let categories = "inventory_categories"
         static let products = "inventory_products"
-        static let supplierColumns = "id,owner_user_id,name,updated_at,deleted_at"
-        static let categoryColumns = "id,owner_user_id,name,updated_at,deleted_at"
+        static let supplierColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"
+        static let categoryColumns = "id,owner_user_id,shop_id,name,updated_at,deleted_at"
         static let productColumns = "id,owner_user_id,shop_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at,primary_image_version_id,primary_image_updated_at"
     }
 
     private let clientProvider: SupabaseClientProvider
+    private let defaults: ManualCatalogDefaults
+    private nonisolated struct Admission: Sendable {
+        let owner: UUID
+        let auth: SupabaseAuthClientSnapshot
+        let scope: Task126VerifiedOwnerStoreScope?
+    }
 
-    init(clientProvider: SupabaseClientProvider) {
+    init(clientProvider: SupabaseClientProvider, defaults: UserDefaults = .standard) {
         self.clientProvider = clientProvider
+        self.defaults = ManualCatalogDefaults(value: defaults)
     }
 
     func createSuppliers(_ payloads: [SupabaseManualPushSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
-        let ownerUserID = try await requireAuthenticatedSession()
-        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
-        return try await insert(payloads, table: Table.suppliers, columns: Table.supplierColumns)
+        let admission = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: admission.owner)
+        if let scope = admission.scope {
+            return try await insert(payloads.map { ManualCatalogShopPayload(value: $0, shopID: scope.shopID) },
+                table: Table.suppliers, columns: Table.supplierColumns, admission: admission)
+        }
+        return try await insert(payloads, table: Table.suppliers, columns: Table.supplierColumns, admission: admission)
     }
 
     func updateSupplier(id: UUID, payload: SupabaseManualPushSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
@@ -298,9 +335,13 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 
     func createCategories(_ payloads: [SupabaseManualPushCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
-        let ownerUserID = try await requireAuthenticatedSession()
-        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
-        return try await insert(payloads, table: Table.categories, columns: Table.categoryColumns)
+        let admission = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: admission.owner)
+        if let scope = admission.scope {
+            return try await insert(payloads.map { ManualCatalogShopPayload(value: $0, shopID: scope.shopID) },
+                table: Table.categories, columns: Table.categoryColumns, admission: admission)
+        }
+        return try await insert(payloads, table: Table.categories, columns: Table.categoryColumns, admission: admission)
     }
 
     func updateCategory(id: UUID, payload: SupabaseManualPushCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
@@ -316,9 +357,13 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 
     func createProducts(_ payloads: [SupabaseManualPushProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
-        let ownerUserID = try await requireAuthenticatedSession()
-        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
-        return try await insert(payloads, table: Table.products, columns: Table.productColumns)
+        let admission = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: admission.owner)
+        if let scope = admission.scope {
+            return try await insert(payloads.map { ManualCatalogShopPayload(value: $0, shopID: scope.shopID) },
+                table: Table.products, columns: Table.productColumns, admission: admission)
+        }
+        return try await insert(payloads, table: Table.products, columns: Table.productColumns, admission: admission)
     }
 
     func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
@@ -404,21 +449,34 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         )
     }
 
-    private func insert<Row: Decodable & Sendable>(
-        _ payloads: some Encodable,
-        table: String,
-        columns: String
+    private func guardedClient(_ admission: Admission) -> PostgrestClient {
+        var configuration = admission.auth.client.schema("public").configuration
+        guard let scope = admission.scope else { return PostgrestClient(configuration: configuration) }
+        let provider = clientProvider, capturedDefaults = defaults
+        configuration.retryEnabled = false
+        configuration.fetch = { wire in
+            try await provider.performManualRequest(wire, snapshot: admission.auth, scope: scope,
+                validateScope: {
+                    try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: capturedDefaults.value)
+                }, beforeDispatch: { finalWire in
+                    try ManualPendingCatalogDispatchContext.beforeDispatch?()
+                    try ManualPendingAtomicDispatchContext.beforeDispatch?(finalWire)
+                })
+        }
+        return PostgrestClient(configuration: configuration)
+    }
+
+    private func insert<Row: ManualCatalogScopedRow>(
+        _ payloads: some Encodable, table: String, columns: String, admission: Admission
     ) async throws -> [Row] {
         do {
-            return try await clientProvider.client
-                .from(table)
-                .insert(payloads)
-                .select(columns)
-                .execute()
-                .value
-        } catch {
-            throw mapRemoteError(error)
-        }
+            try await validate(admission, beforeHTTP: true)
+            let rows: [Row] = try await guardedClient(admission).from(table).insert(payloads)
+                .select(columns).execute().value
+            try await validate(admission)
+            try validateRows(rows, admission: admission)
+            return rows
+        } catch { throw mapRemoteError(error) }
     }
 
     private func validateCreatePayloadOwners(_ payloadOwnerIDs: [UUID], ownerUserID: UUID) throws {
@@ -431,74 +489,91 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         }
     }
 
-    private func update<Row: Decodable & Sendable>(
-        _ payload: some Encodable,
-        table: String,
-        columns: String,
-        id: UUID
+    private func update<Row: ManualCatalogScopedRow>(
+        _ payload: some Encodable, table: String, columns: String, id: UUID
     ) async throws -> Row {
-        let ownerUserID = try await requireAuthenticatedSession()
+        let admission = try await requireAuthenticatedSession()
         do {
-            return try await clientProvider.client
-                .from(table)
-                .update(payload)
-                .eq("id", value: id.uuidString)
-                .eq("owner_user_id", value: ownerUserID.uuidString)
-                .select(columns)
-                .single()
-                .execute()
-                .value
-        } catch {
-            throw mapRemoteError(error)
-        }
+            var request = try guardedClient(admission).from(table).update(payload)
+                .eq("id", value: id.uuidString).eq("owner_user_id", value: admission.owner.uuidString)
+            if let scope = admission.scope { request = request.eq("shop_id", value: scope.shopID.uuidString) }
+            try await validate(admission, beforeHTTP: true)
+            let row: Row = try await request.select(columns).single().execute().value
+            try await validate(admission)
+            try validateRows([row], admission: admission)
+            guard admission.scope == nil || row.id == id else { throw LocalPendingManualDispatchError.staleBatch }
+            return row
+        } catch { throw mapRemoteError(error) }
     }
 
-    private func fetchByID<Row: Decodable & Sendable>(
-        table: String,
-        columns: String,
-        id: UUID
-    ) async throws -> Row {
-        let ownerUserID = try await requireAuthenticatedSession()
+    private func fetchByID<Row: ManualCatalogScopedRow>(table: String, columns: String, id: UUID) async throws -> Row {
+        let admission = try await requireAuthenticatedSession()
         do {
-            return try await clientProvider.client
-                .from(table)
-                .select(columns)
-                .eq("id", value: id.uuidString)
-                .eq("owner_user_id", value: ownerUserID.uuidString)
-                .limit(1)
-                .single()
-                .execute()
-                .value
-        } catch {
-            throw mapRemoteError(error)
-        }
+            var request = guardedClient(admission).from(table).select(columns)
+                .eq("id", value: id.uuidString).eq("owner_user_id", value: admission.owner.uuidString)
+            if let scope = admission.scope { request = request.eq("shop_id", value: scope.shopID.uuidString) }
+            try await validate(admission, beforeHTTP: true)
+            let row: Row = try await request.limit(1).single().execute().value
+            try await validate(admission)
+            try validateRows([row], admission: admission)
+            guard admission.scope == nil || row.id == id else { throw LocalPendingManualDispatchError.staleBatch }
+            return row
+        } catch { throw mapRemoteError(error) }
     }
 
-    private func fetchByIDs<Row: Decodable & Sendable>(
-        table: String,
-        columns: String,
-        ids: Set<UUID>
-    ) async throws -> [Row] {
-        let ownerUserID = try await requireAuthenticatedSession()
+    private func fetchByIDs<Row: ManualCatalogScopedRow>(table: String, columns: String, ids: Set<UUID>) async throws -> [Row] {
+        let admission = try await requireAuthenticatedSession()
         do {
-            return try await clientProvider.client
-                .from(table)
-                .select(columns)
-                .eq("owner_user_id", value: ownerUserID.uuidString)
+            var request = guardedClient(admission).from(table).select(columns)
+                .eq("owner_user_id", value: admission.owner.uuidString)
                 .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
-                .execute()
-                .value
+            if let scope = admission.scope { request = request.eq("shop_id", value: scope.shopID.uuidString) }
+            try await validate(admission, beforeHTTP: true)
+            let rows: [Row] = try await request.execute().value
+            try await validate(admission)
+            try validateRows(rows, admission: admission)
+            return rows
+        } catch { throw mapRemoteError(error) }
+    }
+
+    private func requireAuthenticatedSession() async throws -> Admission {
+        let scope = Task126OwnerStoreGate.currentAutomaticScope
+        if let scope { try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults.value) }
+        let snapshot = await clientProvider.authSnapshot
+        do {
+            let session = try await snapshot.client.auth.session
+            let admission = Admission(owner: session.user.id, auth: snapshot, scope: scope)
+            try await validate(admission)
+            return admission
         } catch {
-            throw mapRemoteError(error)
+            if scope != nil {
+                await clientProvider.recordSessionReadFailure(error, generation: snapshot.generation)
+                throw error
+            }
+            throw SupabaseTransportClientError.sessionMissing
         }
     }
 
-    private func requireAuthenticatedSession() async throws -> UUID {
-        do {
-            let session = try await clientProvider.client.auth.session
-            return session.user.id
-        } catch {
-            throw SupabaseTransportClientError.sessionMissing
+    private func validate(_ admission: Admission, beforeHTTP: Bool = false) async throws {
+        let provider = clientProvider, capturedDefaults = defaults
+        try await MainActor.run {
+            // One synchronous main-actor admission after auth awaits. No other
+            // async hop separates the batch check from auth/scope validation.
+            if beforeHTTP { try ManualPendingCatalogDispatchContext.beforeDispatch?() }
+            guard provider.acceptsAuthGeneration(admission.auth.generation) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            if let scope = admission.scope {
+                try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: capturedDefaults.value)
+                guard admission.owner == scope.ownerUserID else { throw LocalPendingManualDispatchError.staleBatch }
+            }
+        }
+    }
+
+    private func validateRows<Row: ManualCatalogScopedRow>(_ rows: [Row], admission: Admission) throws {
+        guard let scope = admission.scope else { return }
+        guard rows.allSatisfy({ $0.ownerUserID == scope.ownerUserID && $0.shopID == scope.shopID }) else {
+            throw LocalPendingManualDispatchError.staleBatch
         }
     }
 
@@ -534,6 +609,285 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 }
 
+/// Invocation-local values for the guarded aggregate path. Business values are
+/// captured once; only verified metadata links are added after remote replies.
+@MainActor
+final class ManualPendingCatalogExecution {
+    private struct Lookup {
+        let id: PersistentIdentifier
+        let name: String
+        let remoteID: UUID?
+    }
+    private struct Item {
+        let id: PersistentIdentifier
+        let remoteID: UUID?
+        let values: CatalogConflictProductValues
+        let supplierID: PersistentIdentifier?
+        let categoryID: PersistentIdentifier?
+    }
+    private let snapshot: LocalPendingManualDispatchSnapshot
+    private let container: ModelContainer
+    private let owner: UUID
+    private let defaults: UserDefaults
+    private let suppliers: [String: Lookup]
+    private let categories: [String: Lookup]
+    private let products: [String: Item]
+    private let tombstoneTimestamp: String
+    private let readOnlyMemberIDsByTarget: [String: Set<String>]
+    private(set) var verifiedReadOnlyChangeIDs: Set<String> = []
+    private var supplierLinks: [PersistentIdentifier: UUID] = [:]
+    private var categoryLinks: [PersistentIdentifier: UUID] = [:]
+    private var productLinks: [PersistentIdentifier: UUID] = [:]
+
+    init(snapshot: LocalPendingManualDispatchSnapshot, plan: ManualPushPlan,
+         container: ModelContainer, ownerUserID: UUID, defaults: UserDefaults) throws {
+        self.snapshot = snapshot; self.container = container; self.owner = ownerUserID; self.defaults = defaults
+        let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        tombstoneTimestamp = formatter.string(from: plan.generatedAt)
+        let captured = try snapshot.withFence(modelContainer: container, ownerUserID: ownerUserID, defaults: defaults) { context in
+            _ = try snapshot.exactRowsWithFenceHeld(context: context, ownerUserID: ownerUserID, defaults: defaults)
+            var suppliers: [String: Lookup] = [:], categories: [String: Lookup] = [:], products: [String: Item] = [:]
+            for candidate in plan.writeCandidates {
+                switch candidate.entityKind {
+                case .supplier:
+                    let name = candidate.localID
+                    let matches = try context.fetch(FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == name }))
+                    guard matches.count == 1, let row = matches.first,
+                          candidate.fingerprint == ManualPushFingerprintNormalizer.supplier(remoteID: row.remoteID, name: row.name) else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    suppliers[name] = Lookup(id: row.persistentModelID, name: row.name, remoteID: row.remoteID)
+                case .productCategory:
+                    let name = candidate.localID
+                    let matches = try context.fetch(FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == name }))
+                    guard matches.count == 1, let row = matches.first,
+                          candidate.fingerprint == ManualPushFingerprintNormalizer.category(remoteID: row.remoteID, name: row.name) else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    categories[name] = Lookup(id: row.persistentModelID, name: row.name, remoteID: row.remoteID)
+                case .product:
+                    if candidate.action == .dryRunTombstoneCandidate { continue }
+                    let barcode = candidate.localID
+                    let matches = try context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode }))
+                    guard matches.count == 1, let row = matches.first, row.remoteDeletedAt == nil else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    let values = CatalogConflictProductValues(product: row)
+                    guard candidate.fingerprint.map({ LocalPendingChangeLogicalKey.privacyHash($0.canonicalString) }) == values.fingerprint else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    products[barcode] = Item(id: row.persistentModelID, remoteID: row.remoteID, values: values,
+                        supplierID: row.supplier?.persistentModelID, categoryID: row.category?.persistentModelID)
+                case .productPrice: throw LocalPendingManualDispatchError.staleBatch
+                }
+            }
+            return (suppliers, categories, products)
+        }
+        suppliers = captured.0; categories = captured.1; products = captured.2
+        var readOnly: [String: Set<String>] = [:]
+        for candidate in plan.writeCandidates where candidate.action == .dryRunLinkCandidate {
+            let kind: LocalPendingChangeEntityKind, key: String
+            switch candidate.entityKind {
+            case .supplier:
+                kind = .supplier
+                key = LocalPendingChangeLogicalKey.supplier(remoteID: captured.0[candidate.localID]?.remoteID, name: candidate.localID)
+            case .productCategory:
+                kind = .productCategory
+                key = LocalPendingChangeLogicalKey.category(remoteID: captured.1[candidate.localID]?.remoteID, name: candidate.localID)
+            case .product:
+                kind = .product
+                key = LocalPendingChangeLogicalKey.product(remoteID: captured.2[candidate.localID]?.remoteID, barcode: candidate.localID)
+            case .productPrice: throw LocalPendingManualDispatchError.staleBatch
+            }
+            let tokens = snapshot.tokens.filter { $0.entityKindRaw == kind.rawValue && $0.logicalKey == key }
+            guard tokens.count == 1 else { throw LocalPendingManualDispatchError.staleBatch }
+            readOnly[kind.rawValue + ":" + candidate.localID] = Set(tokens.map(\.changeID))
+        }
+        readOnlyMemberIDsByTarget = readOnly
+    }
+
+    private func expected(_ item: Item) -> CatalogConflictProductValues {
+        var value = item.values
+        if let id = item.supplierID, let linked = supplierLinks[id] { value.supplierID = linked }
+        if let id = item.categoryID, let linked = categoryLinks[id] { value.categoryID = linked }
+        return value
+    }
+
+    private func withCurrent<Result>(_ body: (ModelContext) throws -> Result) throws -> Result {
+        try snapshot.withFence(modelContainer: container, ownerUserID: owner, defaults: defaults) { context in
+            _ = try snapshot.exactRowsWithFenceHeld(context: context, ownerUserID: owner, defaults: defaults)
+            for value in suppliers.values {
+                let row = try Task126OwnerStoreGate.requireLocalModel(Supplier.self, id: value.id, in: context)
+                guard row.name == value.name, row.remoteDeletedAt == nil,
+                      row.remoteID == (supplierLinks[value.id] ?? value.remoteID) else { throw LocalPendingManualDispatchError.staleBatch }
+            }
+            for value in categories.values {
+                let row = try Task126OwnerStoreGate.requireLocalModel(ProductCategory.self, id: value.id, in: context)
+                guard row.name == value.name, row.remoteDeletedAt == nil,
+                      row.remoteID == (categoryLinks[value.id] ?? value.remoteID) else { throw LocalPendingManualDispatchError.staleBatch }
+            }
+            for item in products.values {
+                let row = try Task126OwnerStoreGate.requireLocalModel(Product.self, id: item.id, in: context)
+                guard CatalogConflictProductValues(product: row) == expected(item), row.remoteDeletedAt == nil,
+                      row.supplier?.persistentModelID == item.supplierID, row.category?.persistentModelID == item.categoryID,
+                      row.remoteID == (productLinks[item.id] ?? item.remoteID) else { throw LocalPendingManualDispatchError.staleBatch }
+            }
+            return try body(context)
+        }
+    }
+
+    func beforeRequest() throws { try withCurrent { _ in } }
+    func supplierName(_ localID: String) throws -> String {
+        guard let value = suppliers[localID] else { throw LocalPendingManualDispatchError.staleBatch }
+        return value.name
+    }
+    func categoryName(_ localID: String) throws -> String {
+        guard let value = categories[localID] else { throw LocalPendingManualDispatchError.staleBatch }
+        return value.name
+    }
+    func createProduct(_ localID: String) throws -> SupabaseManualPushProductCreatePayload {
+        guard let item = products[localID] else { throw LocalPendingManualDispatchError.staleBatch }
+        let v = expected(item)
+        return .init(ownerUserID: owner, barcode: v.barcode,
+            itemNumber: SupabasePullPreviewNormalizer.semanticString(v.itemNumber),
+            productName: SupabasePullPreviewNormalizer.semanticString(v.productName),
+            secondProductName: SupabasePullPreviewNormalizer.semanticString(v.secondProductName),
+            purchasePrice: v.purchasePrice, retailPrice: v.retailPrice,
+            supplierID: v.supplierID, categoryID: v.categoryID, stockQuantity: v.stockQuantity)
+    }
+    func updateProduct(_ localID: String) throws -> SupabaseManualPushProductUpdatePayload {
+        let value = try createProduct(localID)
+        return .init(barcode: value.barcode, itemNumber: value.itemNumber, productName: value.productName,
+            secondProductName: value.secondProductName, purchasePrice: value.purchasePrice, retailPrice: value.retailPrice,
+            supplierID: value.supplierID, categoryID: value.categoryID, stockQuantity: value.stockQuantity)
+    }
+
+    func apply(_ row: RemoteInventorySupplierRow, localID: String) throws {
+        guard let target = suppliers[localID], let scope = snapshot.scope,
+              row.ownerUserID == owner, row.shopID == scope.shopID, row.deletedAt == nil,
+              SupabaseRemoteDateParser.parse(row.updatedAt) != nil,
+              ManualPushFingerprintNormalizer.supplier(remoteID: row.id, name: row.name) == ManualPushFingerprintNormalizer.supplier(remoteID: row.id, name: target.name),
+              target.remoteID == nil || row.id == target.remoteID else { throw LocalPendingManualDispatchError.staleBatch }
+        try withCurrent { context in
+            let value = try Task126OwnerStoreGate.requireLocalModel(Supplier.self, id: target.id, in: context)
+            let id = row.id
+            guard try context.fetch(FetchDescriptor<Supplier>(predicate: #Predicate { $0.remoteID == id }))
+                .allSatisfy({ $0.persistentModelID == target.id }) else { throw LocalPendingManualDispatchError.staleBatch }
+            value.remoteID = row.id; value.remoteUpdatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
+            value.remoteDeletedAt = nil
+            try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            try context.save()
+        }
+        supplierLinks[target.id] = row.id
+        verifiedReadOnlyChangeIDs.formUnion(readOnlyMemberIDsByTarget[LocalPendingChangeEntityKind.supplier.rawValue + ":" + localID] ?? [])
+    }
+    func apply(_ row: RemoteInventoryCategoryRow, localID: String) throws {
+        guard let target = categories[localID], let scope = snapshot.scope,
+              row.ownerUserID == owner, row.shopID == scope.shopID, row.deletedAt == nil,
+              SupabaseRemoteDateParser.parse(row.updatedAt) != nil,
+              ManualPushFingerprintNormalizer.category(remoteID: row.id, name: row.name) == ManualPushFingerprintNormalizer.category(remoteID: row.id, name: target.name),
+              target.remoteID == nil || row.id == target.remoteID else { throw LocalPendingManualDispatchError.staleBatch }
+        try withCurrent { context in
+            let value = try Task126OwnerStoreGate.requireLocalModel(ProductCategory.self, id: target.id, in: context)
+            let id = row.id
+            guard try context.fetch(FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.remoteID == id }))
+                .allSatisfy({ $0.persistentModelID == target.id }) else { throw LocalPendingManualDispatchError.staleBatch }
+            value.remoteID = row.id; value.remoteUpdatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
+            value.remoteDeletedAt = nil
+            try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            try context.save()
+        }
+        categoryLinks[target.id] = row.id
+        verifiedReadOnlyChangeIDs.formUnion(readOnlyMemberIDsByTarget[LocalPendingChangeEntityKind.productCategory.rawValue + ":" + localID] ?? [])
+    }
+    func apply(_ row: RemoteInventoryProductRow, localID: String) throws {
+        guard let target = products[localID], let scope = snapshot.scope,
+              row.ownerUserID == owner, row.shopID == scope.shopID, row.deletedAt == nil,
+              SupabaseRemoteDateParser.parse(row.updatedAt) != nil,
+              CatalogConflictProductValues(row: row).fingerprint == expected(target).fingerprint,
+              target.remoteID == nil || row.id == target.remoteID else { throw LocalPendingManualDispatchError.staleBatch }
+        try withCurrent { context in
+            let value = try Task126OwnerStoreGate.requireLocalModel(Product.self, id: target.id, in: context)
+            let id = row.id
+            guard try context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == id }))
+                .allSatisfy({ $0.persistentModelID == target.id }) else { throw LocalPendingManualDispatchError.staleBatch }
+            value.remoteID = row.id; value.remoteUpdatedAt = SupabaseRemoteDateParser.parse(row.updatedAt)
+            value.remoteDeletedAt = nil; value.primaryImageVersionID = row.primaryImageVersionID
+            value.primaryImageUpdatedAt = SupabaseRemoteDateParser.parse(row.primaryImageUpdatedAt)
+            try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            try context.save()
+        }
+        productLinks[target.id] = row.id
+        verifiedReadOnlyChangeIDs.formUnion(readOnlyMemberIDsByTarget[LocalPendingChangeEntityKind.product.rawValue + ":" + localID] ?? [])
+    }
+    func tombstonePayload() -> SupabaseManualPushProductUpdatePayload {
+        .init(barcode: nil, itemNumber: nil, productName: nil, secondProductName: nil,
+            purchasePrice: nil, retailPrice: nil, supplierID: nil, categoryID: nil,
+            stockQuantity: nil, deletedAt: tombstoneTimestamp)
+    }
+    func validateTombstone(_ row: RemoteInventoryProductRow, remoteID: UUID) throws {
+        guard let scope = snapshot.scope, row.id == remoteID, row.ownerUserID == owner,
+              row.shopID == scope.shopID, let deletedAt = row.deletedAt.flatMap(SupabaseRemoteDateParser.parse),
+              deletedAt == SupabaseRemoteDateParser.parse(tombstoneTimestamp) else {
+            throw LocalPendingManualDispatchError.staleBatch
+        }
+        try withCurrent { context in
+            try LocalCatalogBodyProofStore.record(row, context: context, scope: scope)
+            try context.save()
+        }
+    }
+    func readBackExpectation(touchedIDs: SupabaseManualPushTouchedIDs) throws -> SupabaseManualPushReadBackExpectation {
+        try withCurrent { _ in
+            var value = SupabaseManualPushReadBackExpectation()
+            for target in suppliers.values {
+                if let id = supplierLinks[target.id] ?? target.remoteID, touchedIDs.suppliers.contains(id) {
+                    value.supplierFingerprintsByID[id] = ManualPushFingerprintNormalizer.supplier(remoteID: id, name: target.name)
+                }
+            }
+            for target in categories.values {
+                if let id = categoryLinks[target.id] ?? target.remoteID, touchedIDs.categories.contains(id) {
+                    value.categoryFingerprintsByID[id] = ManualPushFingerprintNormalizer.category(remoteID: id, name: target.name)
+                }
+            }
+            for target in products.values {
+                if let id = productLinks[target.id] ?? target.remoteID, touchedIDs.products.contains(id) {
+                    let p = expected(target)
+                    value.productFingerprintsByID[id] = ManualPushFingerprintNormalizer.product(barcode: p.barcode,
+                        itemNumber: p.itemNumber, productName: p.productName, secondProductName: p.secondProductName,
+                        purchasePrice: p.purchasePrice, retailPrice: p.retailPrice, stockQuantity: p.stockQuantity,
+                        supplierRemoteID: p.supplierID, categoryRemoteID: p.categoryID)
+                }
+            }
+            guard value.touchedIDs == touchedIDs else { throw LocalPendingManualDispatchError.staleBatch }
+            return value
+        }
+    }
+    func commitBaseline(writer: SupabaseCatalogBaselineWriter) throws -> SupabaseCatalogBaselineCommitResult {
+        try withCurrent { context in
+            // A global baseline must not absorb an independent unsent D.
+            // Preserve the previous baseline while the confirmed original batch
+            // may still receive its own exact ACK.
+            let retired = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+            let ownerString = owner.uuidString.lowercased()
+            var descriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
+                $0.ownerUserID == ownerString && $0.statusRaw != "acknowledged" && $0.statusRaw != "superseded"
+            })
+            descriptor.fetchLimit = LocalPendingAggregatedPushPlanner.defaultHardCap + 1
+            let active = try context.fetch(descriptor)
+            guard active.count <= LocalPendingAggregatedPushPlanner.defaultHardCap,
+                  active.filter({ $0.entityKind.isCatalogKind && !retired.contains($0.changeID) })
+                    .allSatisfy({ row in snapshot.tokens.contains { $0.changeID == row.changeID } }) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            // The explicit expected-scope fence is already held. The baseline
+            // writer's optional implicit TaskLocal lease must not lock it twice.
+            return try Task126OwnerStoreGate.$currentAutomaticScope.withValue(nil) {
+                try writer.commitLatestBaseline(context: context, ownerUserUUID: owner)
+            }
+        }
+    }
+}
+
 @MainActor
 final class SupabaseManualPushService {
     private let remote: SupabaseManualPushRemoteGateway
@@ -557,7 +911,8 @@ final class SupabaseManualPushService {
     func execute(
         plan: ManualPushPlan,
         context: ModelContext,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        pendingExecution: ManualPendingCatalogExecution? = nil
     ) async -> SupabaseManualPushResult {
         guard plan.ownerUserID == ownerUserID,
               plan.isSendable,
@@ -583,6 +938,7 @@ final class SupabaseManualPushService {
                 plan: plan,
                 context: context,
                 ownerUserID: ownerUserID,
+                pendingExecution: pendingExecution,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
                 readBackIDs: &readBackIDs,
@@ -593,6 +949,7 @@ final class SupabaseManualPushService {
                 plan: plan,
                 context: context,
                 ownerUserID: ownerUserID,
+                pendingExecution: pendingExecution,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
                 readBackIDs: &readBackIDs,
@@ -603,6 +960,7 @@ final class SupabaseManualPushService {
                 plan: plan,
                 context: context,
                 ownerUserID: ownerUserID,
+                pendingExecution: pendingExecution,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
                 tombstoneIDs: &tombstoneIDs,
@@ -632,15 +990,24 @@ final class SupabaseManualPushService {
             )
         }
 
+        if let pendingExecution, !readBackIDs.isEmpty {
+            do {
+                let expectation = try pendingExecution.readBackExpectation(touchedIDs: readBackIDs)
+                try await remote.verifyReadBack(expectation: expectation)
+            } catch {
+                return makeResult(status: didConfirmAnyRemoteWrite ? .partial : .failedBeforeWrite,
+                    counters: counters, touchedIDs: touchedIDs, tombstoneIDs: tombstoneIDs,
+                    baselineRunID: nil, message: sanitized(error))
+            }
+        }
         do {
-            if !readBackIDs.isEmpty {
-                let expectation = try makeReadBackExpectation(context: context, touchedIDs: readBackIDs)
+            if pendingExecution == nil, !readBackIDs.isEmpty {
+                let expectation = try pendingExecution?.readBackExpectation(touchedIDs: readBackIDs)
+                    ?? makeReadBackExpectation(context: context, touchedIDs: readBackIDs)
                 try await remote.verifyReadBack(expectation: expectation)
             }
-            let baseline = try baselineWriter.commitLatestBaseline(
-                context: context,
-                ownerUserUUID: ownerUserID
-            )
+            let baseline = try pendingExecution?.commitBaseline(writer: baselineWriter)
+                ?? baselineWriter.commitLatestBaseline(context: context, ownerUserUUID: ownerUserID)
             return makeResult(
                 status: .completed,
                 counters: counters,
@@ -718,6 +1085,7 @@ final class SupabaseManualPushService {
         plan: ManualPushPlan,
         context: ModelContext,
         ownerUserID: UUID,
+        pendingExecution: ManualPendingCatalogExecution?,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
         readBackIDs: inout SupabaseManualPushTouchedIDs,
@@ -732,19 +1100,32 @@ final class SupabaseManualPushService {
         let createSuppliers = candidates
             .filter { $0.action == .dryRunCreateCandidate }
             .compactMap { suppliersByName[$0.localID] }
-        let createRows = try await createSupplierRows(createSuppliers, ownerUserID: ownerUserID)
+        let createRows = try await createSupplierRows(createSuppliers, ownerUserID: ownerUserID, pendingExecution: pendingExecution)
         if !createSuppliers.isEmpty {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createSuppliers.count else {
             throw SupabaseTransportClientError.schemaDrift(message: "Supplier create response count mismatch.")
         }
+        if pendingExecution != nil {
+            let requested = createSuppliers.map(\.name)
+            guard Set(requested).count == requested.count,
+                  Set(createRows.map(\.id)).count == createRows.count,
+                  Set(createRows.map(\.name)).count == createRows.count,
+                  Set(createRows.map(\.name)) == Set(requested) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+        }
         for row in createRows {
             guard let supplier = suppliersByName[row.name] else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Supplier create response did not match a local record.")
             }
-            apply(row: row, to: supplier)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: supplier.name)
+            } else {
+                apply(row: row, to: supplier)
+                try save(context)
+            }
             counters.supplierCreates += 1
             touchedIDs.suppliers.insert(row.id)
             readBackIDs.suppliers.insert(row.id)
@@ -757,9 +1138,15 @@ final class SupabaseManualPushService {
                   let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name) else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing supplier link target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.verifySupplier(id: remoteID, normalizedName: normalizedName)
-            apply(row: row, to: supplier)
-            try save(context)
+            if pendingExecution != nil, row.id != remoteID { throw LocalPendingManualDispatchError.staleBatch }
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: supplier.name)
+            } else {
+                apply(row: row, to: supplier)
+                try save(context)
+            }
             counters.supplierLinks += 1
             touchedIDs.suppliers.insert(row.id)
             readBackIDs.suppliers.insert(row.id)
@@ -771,13 +1158,18 @@ final class SupabaseManualPushService {
                   let remoteID = supplier.remoteID else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing supplier update target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.updateSupplier(
                 id: remoteID,
-                payload: SupabaseManualPushSupplierUpdatePayload(name: supplier.name)
+                payload: SupabaseManualPushSupplierUpdatePayload(name: try pendingExecution?.supplierName(candidate.localID) ?? supplier.name)
             )
             didConfirmAnyRemoteWrite = true
-            apply(row: row, to: supplier)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: supplier.name)
+            } else {
+                apply(row: row, to: supplier)
+                try save(context)
+            }
             counters.supplierUpdates += 1
             touchedIDs.suppliers.insert(row.id)
             readBackIDs.suppliers.insert(row.id)
@@ -789,6 +1181,7 @@ final class SupabaseManualPushService {
         plan: ManualPushPlan,
         context: ModelContext,
         ownerUserID: UUID,
+        pendingExecution: ManualPendingCatalogExecution?,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
         readBackIDs: inout SupabaseManualPushTouchedIDs,
@@ -803,19 +1196,32 @@ final class SupabaseManualPushService {
         let createCategories = candidates
             .filter { $0.action == .dryRunCreateCandidate }
             .compactMap { categoriesByName[$0.localID] }
-        let createRows = try await createCategoryRows(createCategories, ownerUserID: ownerUserID)
+        let createRows = try await createCategoryRows(createCategories, ownerUserID: ownerUserID, pendingExecution: pendingExecution)
         if !createCategories.isEmpty {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createCategories.count else {
             throw SupabaseTransportClientError.schemaDrift(message: "Category create response count mismatch.")
         }
+        if pendingExecution != nil {
+            let requested = createCategories.map(\.name)
+            guard Set(requested).count == requested.count,
+                  Set(createRows.map(\.id)).count == createRows.count,
+                  Set(createRows.map(\.name)).count == createRows.count,
+                  Set(createRows.map(\.name)) == Set(requested) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+        }
         for row in createRows {
             guard let category = categoriesByName[row.name] else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Category create response did not match a local record.")
             }
-            apply(row: row, to: category)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: category.name)
+            } else {
+                apply(row: row, to: category)
+                try save(context)
+            }
             counters.categoryCreates += 1
             touchedIDs.categories.insert(row.id)
             readBackIDs.categories.insert(row.id)
@@ -828,9 +1234,15 @@ final class SupabaseManualPushService {
                   let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(category.name) else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing category link target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.verifyCategory(id: remoteID, normalizedName: normalizedName)
-            apply(row: row, to: category)
-            try save(context)
+            if pendingExecution != nil, row.id != remoteID { throw LocalPendingManualDispatchError.staleBatch }
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: category.name)
+            } else {
+                apply(row: row, to: category)
+                try save(context)
+            }
             counters.categoryLinks += 1
             touchedIDs.categories.insert(row.id)
             readBackIDs.categories.insert(row.id)
@@ -842,13 +1254,18 @@ final class SupabaseManualPushService {
                   let remoteID = category.remoteID else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing category update target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.updateCategory(
                 id: remoteID,
-                payload: SupabaseManualPushCategoryUpdatePayload(name: category.name)
+                payload: SupabaseManualPushCategoryUpdatePayload(name: try pendingExecution?.categoryName(candidate.localID) ?? category.name)
             )
             didConfirmAnyRemoteWrite = true
-            apply(row: row, to: category)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: category.name)
+            } else {
+                apply(row: row, to: category)
+                try save(context)
+            }
             counters.categoryUpdates += 1
             touchedIDs.categories.insert(row.id)
             readBackIDs.categories.insert(row.id)
@@ -860,6 +1277,7 @@ final class SupabaseManualPushService {
         plan: ManualPushPlan,
         context: ModelContext,
         ownerUserID: UUID,
+        pendingExecution: ManualPendingCatalogExecution?,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
         tombstoneIDs: inout SupabaseManualPushTouchedIDs,
@@ -880,19 +1298,32 @@ final class SupabaseManualPushService {
                 }
                 return product
             }
-        let createRows = try await createProductRows(createProducts, ownerUserID: ownerUserID)
+        let createRows = try await createProductRows(createProducts, ownerUserID: ownerUserID, pendingExecution: pendingExecution)
         if !createProducts.isEmpty {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createProducts.count else {
             throw SupabaseTransportClientError.schemaDrift(message: "Product create response count mismatch.")
         }
+        if pendingExecution != nil {
+            let requested = createProducts.map(\.barcode)
+            guard Set(requested).count == requested.count,
+                  Set(createRows.map(\.id)).count == createRows.count,
+                  Set(createRows.map(\.barcode)).count == createRows.count,
+                  Set(createRows.map(\.barcode)) == Set(requested) else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+        }
         for row in createRows {
             guard let product = productsByBarcode[row.barcode] else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Product create response did not match a local record.")
             }
-            apply(row: row, to: product)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: product.barcode)
+            } else {
+                apply(row: row, to: product)
+                try save(context)
+            }
             counters.productCreates += 1
             touchedIDs.products.insert(row.id)
             readBackIDs.products.insert(row.id)
@@ -905,9 +1336,15 @@ final class SupabaseManualPushService {
                   let normalizedBarcode = ManualPushFingerprintNormalizer.semanticString(product.barcode) else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing product link target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.verifyProduct(id: remoteID, normalizedBarcode: normalizedBarcode)
-            apply(row: row, to: product)
-            try save(context)
+            if pendingExecution != nil, row.id != remoteID { throw LocalPendingManualDispatchError.staleBatch }
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: product.barcode)
+            } else {
+                apply(row: row, to: product)
+                try save(context)
+            }
             counters.productLinks += 1
             touchedIDs.products.insert(row.id)
             readBackIDs.products.insert(row.id)
@@ -918,10 +1355,12 @@ final class SupabaseManualPushService {
             guard let remoteID = candidate.remoteID else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing product tombstone target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.updateProduct(
                 id: remoteID,
-                payload: makeProductTombstonePayload()
+                payload: pendingExecution?.tombstonePayload() ?? makeProductTombstonePayload()
             )
+            try pendingExecution?.validateTombstone(row, remoteID: remoteID)
             guard SupabasePullPreviewNormalizer.semanticString(row.deletedAt) != nil else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Product tombstone response did not include deleted_at.")
             }
@@ -937,13 +1376,18 @@ final class SupabaseManualPushService {
                   let remoteID = product.remoteID else {
                 throw SupabaseTransportClientError.schemaDrift(message: "Missing product update target.")
             }
+            try pendingExecution?.beforeRequest()
             let row = try await remote.updateProduct(
                 id: remoteID,
-                payload: makeProductUpdatePayload(product)
+                payload: try pendingExecution?.updateProduct(candidate.localID) ?? makeProductUpdatePayload(product)
             )
             didConfirmAnyRemoteWrite = true
-            apply(row: row, to: product)
-            try save(context)
+            if let pendingExecution {
+                try pendingExecution.apply(row, localID: product.barcode)
+            } else {
+                apply(row: row, to: product)
+                try save(context)
+            }
             counters.productUpdates += 1
             touchedIDs.products.insert(row.id)
             readBackIDs.products.insert(row.id)
@@ -951,32 +1395,44 @@ final class SupabaseManualPushService {
         }
     }
 
-    private func createSupplierRows(_ suppliers: [Supplier], ownerUserID: UUID) async throws -> [RemoteInventorySupplierRow] {
-        try await createBatched(suppliers) { batch in
-            try await remote.createSuppliers(batch.map {
-                SupabaseManualPushSupplierCreatePayload(ownerUserID: ownerUserID, name: $0.name)
-            })
+    private func createSupplierRows(_ suppliers: [Supplier], ownerUserID: UUID,
+                                    pendingExecution: ManualPendingCatalogExecution?) async throws -> [RemoteInventorySupplierRow] {
+        let payloads = try suppliers.map {
+            SupabaseManualPushSupplierCreatePayload(ownerUserID: ownerUserID,
+                name: try pendingExecution?.supplierName($0.name) ?? $0.name)
+        }
+        return try await createBatched(payloads, allowsFallback: pendingExecution == nil) { batch in
+            try pendingExecution?.beforeRequest()
+            return try await remote.createSuppliers(batch)
         }
     }
 
-    private func createCategoryRows(_ categories: [ProductCategory], ownerUserID: UUID) async throws -> [RemoteInventoryCategoryRow] {
-        try await createBatched(categories) { batch in
-            try await remote.createCategories(batch.map {
-                SupabaseManualPushCategoryCreatePayload(ownerUserID: ownerUserID, name: $0.name)
-            })
+    private func createCategoryRows(_ categories: [ProductCategory], ownerUserID: UUID,
+                                    pendingExecution: ManualPendingCatalogExecution?) async throws -> [RemoteInventoryCategoryRow] {
+        let payloads = try categories.map {
+            SupabaseManualPushCategoryCreatePayload(ownerUserID: ownerUserID,
+                name: try pendingExecution?.categoryName($0.name) ?? $0.name)
+        }
+        return try await createBatched(payloads, allowsFallback: pendingExecution == nil) { batch in
+            try pendingExecution?.beforeRequest()
+            return try await remote.createCategories(batch)
         }
     }
 
-    private func createProductRows(_ products: [Product], ownerUserID: UUID) async throws -> [RemoteInventoryProductRow] {
-        try await createBatched(products) { batch in
-            try await remote.createProducts(batch.map {
-                makeProductCreatePayload($0, ownerUserID: ownerUserID)
-            })
+    private func createProductRows(_ products: [Product], ownerUserID: UUID,
+                                   pendingExecution: ManualPendingCatalogExecution?) async throws -> [RemoteInventoryProductRow] {
+        let payloads = try products.map {
+            try pendingExecution?.createProduct($0.barcode) ?? makeProductCreatePayload($0, ownerUserID: ownerUserID)
+        }
+        return try await createBatched(payloads, allowsFallback: pendingExecution == nil) { batch in
+            try pendingExecution?.beforeRequest()
+            return try await remote.createProducts(batch)
         }
     }
 
     private func createBatched<Item, Row>(
         _ items: [Item],
+        allowsFallback: Bool,
         send: ([Item]) async throws -> [Row]
     ) async throws -> [Row] {
         guard !items.isEmpty else { return [] }
@@ -985,7 +1441,7 @@ final class SupabaseManualPushService {
         while start < items.count {
             let end = min(start + maxBatchSize, items.count)
             let batch = Array(items[start..<end])
-            rows += try await createBatchWithFallback(batch, send: send)
+            rows += try await createBatchWithFallback(batch, allowsFallback: allowsFallback, send: send)
             start = end
         }
         return rows
@@ -993,15 +1449,16 @@ final class SupabaseManualPushService {
 
     private func createBatchWithFallback<Item, Row>(
         _ batch: [Item],
+        allowsFallback: Bool,
         send: ([Item]) async throws -> [Row]
     ) async throws -> [Row] {
         do {
             return try await send(batch)
         } catch {
-            guard batch.count > 1 else { throw error }
+            guard allowsFallback, batch.count > 1 else { throw error }
             let midpoint = batch.count / 2
-            let left = try await createBatchWithFallback(Array(batch[..<midpoint]), send: send)
-            let right = try await createBatchWithFallback(Array(batch[midpoint...]), send: send)
+            let left = try await createBatchWithFallback(Array(batch[..<midpoint]), allowsFallback: allowsFallback, send: send)
+            let right = try await createBatchWithFallback(Array(batch[midpoint...]), allowsFallback: allowsFallback, send: send)
             return left + right
         }
     }

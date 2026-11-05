@@ -116,6 +116,14 @@ struct ProductPriceHistoryView: View {
                         }
                         .padding(.vertical, 4)
                         .accessibilityElement(children: .combine)
+                        .task145B6Render(.entity(id: price.remoteID, kinds: ["price"],
+                            route: "database.product-prices.\(product.remoteID?.uuidString.lowercased() ?? "unbound").\(selectedType.rawValue)",
+                            visibleFields: b6VisibleFields(price)), validate: {
+                                price.product?.remoteID == product.remoteID && product.remoteID != nil
+                                    && price.type == selectedType
+                                    && Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                                        modelContainer: context.container, ownerUserID: pendingOwnerUserID)
+                            })
                     }
                 }
             }
@@ -149,6 +157,12 @@ struct ProductPriceHistoryView: View {
                 )
             }
         }
+    }
+
+    private func b6VisibleFields(_ price: ProductPrice) -> [String: String] {
+        var fields = ["amount": formatMoney(price.price), "effectiveAt": formatDate(price.effectiveAt)]
+        if let source = price.source, !source.isEmpty { fields["source"] = displaySource(source) }
+        return fields
     }
 
     private func currentPriceLabel(for type: PriceType) -> String {

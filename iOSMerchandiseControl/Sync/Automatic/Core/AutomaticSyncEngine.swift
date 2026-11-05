@@ -76,7 +76,8 @@ actor AutomaticSyncEngine {
         let cancellationToken = await cancellationPolicy.makeToken()
         recordAttempt(source: source)
         var didRun = false
-        let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect)
+        var hasRejectedCatalogChanges = false
+        let isAutomaticRecoveryResumePlan = (source == .rootForeground || source == .networkReconnect || source == .releaseCard)
             && action == .sequence([.pushPending, .bootstrap])
         var verifiedConvergence = false
         var verifiedFinalization: SyncStoreRecoveryFinalization?
@@ -116,13 +117,40 @@ actor AutomaticSyncEngine {
             } else {
                 steps = shouldRecoverReplacement ? [.bootstrap] : action.flattenedAutomaticSteps
             }
+            if AutomaticSyncAttemptContext.legacyContinuation != nil {
+                guard action == .fullRecovery, steps == [.fullRecovery],
+                      bindingStore.pendingRecoveryJournal?.mode == .sameScopeRecovery else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+            }
             let hasRemotePlan = steps.contains { step in
                 switch step {
                 case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery: true
                 default: false
                 }
             }
-            if hasRemotePlan,
+            if hasRemotePlan, AutomaticSyncAttemptContext.publishedFinalization != nil {
+                // Published recovery can only finish the exact existing
+                // generation. Reserve its durable floor/claim after admission
+                // and single-flight, before any provider or marker is entered.
+                guard action == .fullRecovery, steps == [.fullRecovery],
+                      AutomaticSyncAttemptContext.legacyContinuation == nil,
+                      AutomaticSyncAttemptContext.reconciliation == nil,
+                      let beginPublished = AutomaticSyncAttemptContext.beginPublishedFinalization else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+                switch await beginPublished() {
+                case .ready:
+                    break
+                case .cooldown(let delay):
+                    recordDiagnostic("lastOutcome", "scheduled_retry")
+                    return await complete(.scheduledRetry(after: delay), observationSource: observationSource)
+                case .rejected:
+                    return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
+                        observationSource: observationSource)
+                }
+            } else if hasRemotePlan, AutomaticSyncAttemptContext.legacyContinuation == nil,
+               AutomaticSyncAttemptContext.reconciliation == nil,
                let begin = AutomaticSyncAttemptContext.begin, !((await begin())) {
                 return await complete(.failed(errorCode: "automatic_recovery_attempt_budget_unavailable"),
                     observationSource: observationSource)
@@ -143,7 +171,9 @@ actor AutomaticSyncEngine {
                         try await cancellationPolicy.checkCancellation(token: cancellationToken)
                         try await runAdmissionValidator?()
                     }
-                    didRun = try await pushPending(ownerUserID: ownerUserID, cancellationToken: cancellationToken) || didRun
+                    let push = try await pushPending(ownerUserID: ownerUserID, cancellationToken: cancellationToken)
+                    didRun = push.didWork || didRun
+                    hasRejectedCatalogChanges = push.hasRejectedCatalogChanges || hasRejectedCatalogChanges
                     // Discard all pre-push authority. Only a later fresh full
                     // domain pipeline can close the specifically deferred plan.
                     continuationReceipt = nil
@@ -170,6 +200,7 @@ actor AutomaticSyncEngine {
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
                         verifiedFinalization = drain.verifiedFinalization
+                        hasRejectedCatalogChanges = false // Published runtime must recompute its own local diagnosis.
                         break syncPlan
                     }
                 case .lightReconcile:
@@ -193,6 +224,7 @@ actor AutomaticSyncEngine {
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
                         verifiedFinalization = drain.verifiedFinalization
+                        hasRejectedCatalogChanges = false
                         break syncPlan
                     }
                 case .requestRecovery:
@@ -218,6 +250,7 @@ actor AutomaticSyncEngine {
                     if drain.didRecoverSnapshot {
                         verifiedConvergence = drain.verifiedRecoveryConvergence
                         verifiedFinalization = drain.verifiedFinalization
+                        hasRejectedCatalogChanges = false
                         break syncPlan
                     }
                 case .bootstrap, .fullRecovery:
@@ -231,6 +264,7 @@ actor AutomaticSyncEngine {
                     didRun = recovery.didWork || didRun
                     verifiedConvergence = recovery.verifiedConvergence
                     verifiedFinalization = recovery.verifiedFinalization
+                    hasRejectedCatalogChanges = false
                     // Atomic recovery may have replaced the active container.
                     // Providers owned by this engine were built for the prior
                     // generation and must never execute after publication.
@@ -248,6 +282,17 @@ actor AutomaticSyncEngine {
                 case .noOp, .sequence:
                     break
                 }
+            }
+            if hasRejectedCatalogChanges {
+                // Independent push/notification/drain steps have already run.
+                // Partial catalog progress is not an all-clear or a new proof.
+                let code = "catalog_local_changes_blocked"
+                recordDiagnostic("lastOutcome", "failed")
+                recordDiagnostic("lastError", code)
+                var result = SyncAutomaticRunResult.failed(errorCode: code,
+                    failure: AutomaticSyncFailure(disposition: .stable, category: .payload))
+                result.didWork = didRun
+                return await complete(result, observationSource: observationSource)
             }
             recordDiagnostic(
                 "lastOutcome",
@@ -268,6 +313,9 @@ actor AutomaticSyncEngine {
             recordDiagnostic("lastOutcome", "recovery_required")
             return await complete(.recoveryRequired(didWork: didRun || recoveryDidWork), observationSource: observationSource)
         } catch is CancellationError {
+            recordDiagnostic("lastOutcome", "cancelled")
+            return await complete(.cancelled(), observationSource: observationSource)
+        } catch Task126OwnerStoreGateError.cancelled {
             recordDiagnostic("lastOutcome", "cancelled")
             return await complete(.cancelled(), observationSource: observationSource)
         } catch {
@@ -328,17 +376,24 @@ actor AutomaticSyncEngine {
         if finalResult.observation == nil, let observationSource {
             finalResult = observationSource.completed(finalResult, now: completedAt)
         }
+        #if DEBUG
+        NSLog("%@", "ordinary-automatic-cycle-terminal status.\(finalResult.status.rawValue)")
+        #endif
         return finalResult
     }
 
-    private func pushPending(ownerUserID: UUID, cancellationToken: Int) async throws -> Bool {
+    private func pushPending(ownerUserID: UUID, cancellationToken: Int) async throws -> (didWork: Bool, hasRejectedCatalogChanges: Bool) {
         var didWork = false
+        var hasRejectedCatalogChanges = false
 
         if let catalogPushProvider {
             let result = try await catalogPushProvider.pushPendingCatalog(ownerUserID: ownerUserID)
             try await cancellationPolicy.checkCancellation(token: cancellationToken)
             didWork = didWork || result.totalChanged > 0
             recordDiagnostic("catalogPush.lastChanged", result.totalChanged)
+            hasRejectedCatalogChanges = result.plan?.blockers.contains {
+                $0.hasPrefix("invalidCatalogText:") || $0.hasPrefix("unresolvedCatalogReference:")
+            } == true
         }
 
         if let productPriceProvider {
@@ -369,7 +424,7 @@ actor AutomaticSyncEngine {
             recordDiagnostic("outbox.lastNotRegisterable", registration.summary.notRegisterable)
         }
 
-        return didWork
+        return (didWork, hasRejectedCatalogChanges)
     }
 
     private func drainRemoteEvents(
@@ -391,9 +446,17 @@ actor AutomaticSyncEngine {
                 forceLightReconcile: true
             )
         } else {
+            #if DEBUG
+            let b6Cycle = PilotCommitTrace.b6ReceiverAdmission(
+                scope: Task126OwnerStoreGate.currentAutomaticScope, source: source.rawValue)
+            summary = try await PilotCommitTrace.B6Context.$cycle.withValue(b6Cycle) {
+                try await incrementalPullProvider.applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
+            }
+            #else
             summary = try await incrementalPullProvider.applyIncrementalRemoteChanges(
                 ownerUserID: ownerUserID
             )
+            #endif
         }
         try await cancellationPolicy.checkCancellation(token: cancellationToken)
         recordIncrementalSummary(summary, source: source)

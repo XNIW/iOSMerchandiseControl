@@ -239,6 +239,120 @@ final class CatalogTextIntegrationTests: XCTestCase {
         )
     }
 
+    func testCanonicalPersistenceBoundaryLeavesSavedModelsCleanAndScalarExact() throws {
+        let context = try makeContext()
+        let supplier = Supplier(name: "Fornitore Caf\u{00E9}")
+        let category = ProductCategory(name: "Categoria Caf\u{00E9}")
+        let product = Product(
+            barcode: "TASK146-CLEAN-e\u{0301}",
+            itemNumber: "ITEM-e\u{0301}",
+            productName: "Caf\u{00E9}",
+            secondProductName: "Secondo Caf\u{00E9}",
+            supplier: supplier,
+            category: category
+        )
+        let nilProduct = Product(barcode: "TASK146-CLEAN-NILS")
+        context.insert(supplier)
+        context.insert(category)
+        context.insert(product)
+        context.insert(nilProduct)
+        try context.save()
+        let supplierScalars = Array(supplier.name.unicodeScalars)
+        let categoryScalars = Array(category.name.unicodeScalars)
+        let barcodeScalars = Array(product.barcode.unicodeScalars)
+        let itemNumberScalars = product.itemNumber.map { Array($0.unicodeScalars) }
+        let productNameScalars = product.productName.map { Array($0.unicodeScalars) }
+        let secondNameScalars = product.secondProductName.map { Array($0.unicodeScalars) }
+        XCTAssertFalse(context.hasChanges)
+
+        try CatalogTextPersistenceBoundary.canonicalize(supplier)
+        XCTAssertFalse(context.hasChanges)
+        try CatalogTextPersistenceBoundary.canonicalize(category)
+        XCTAssertFalse(context.hasChanges)
+        try CatalogTextPersistenceBoundary.canonicalize(product)
+        XCTAssertFalse(context.hasChanges)
+        try CatalogTextPersistenceBoundary.canonicalize(nilProduct)
+        XCTAssertFalse(context.hasChanges)
+
+        XCTAssertEqual(Array(supplier.name.unicodeScalars), supplierScalars)
+        XCTAssertEqual(Array(category.name.unicodeScalars), categoryScalars)
+        XCTAssertEqual(Array(product.barcode.unicodeScalars), barcodeScalars)
+        XCTAssertEqual(product.itemNumber.map { Array($0.unicodeScalars) }, itemNumberScalars)
+        XCTAssertEqual(product.productName.map { Array($0.unicodeScalars) }, productNameScalars)
+        XCTAssertEqual(product.secondProductName.map { Array($0.unicodeScalars) }, secondNameScalars)
+        XCTAssertNil(nilProduct.itemNumber)
+        XCTAssertNil(nilProduct.productName)
+        XCTAssertNil(nilProduct.secondProductName)
+        XCTAssertTrue(product.supplier === supplier)
+        XCTAssertTrue(product.category === category)
+    }
+
+    func testPendingNFDDisplayRepairPersistsScalarsAndSecondPassLeavesContextClean() throws {
+        let context = try makeContext()
+        let owner = UUID()
+        let barcode = "TASK146-NFD-ONLY"
+        let nfd = "Cafe\u{0301}"
+        let nfc = "Caf\u{00E9}"
+        let product = Product(barcode: barcode, productName: nfd)
+        let changeID = UUID()
+        let idempotencyKey = UUID().uuidString.lowercased()
+        let change = LocalPendingChange(
+            changeID: changeID,
+            ownerUserID: owner,
+            storeId: LocalStoreIdentity.anonymous.storeId,
+            localStoreId: LocalStoreIdentity.anonymous.localStoreId,
+            idempotencyKey: idempotencyKey,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: barcode),
+            changedFields: ["productName"],
+            intendedFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+        )
+        context.insert(product)
+        context.insert(change)
+        try context.save()
+        XCTAssertFalse(context.hasChanges)
+        XCTAssertEqual(nfd, nfc)
+        XCTAssertNotEqual(Array(nfd.unicodeScalars), Array(nfc.unicodeScalars))
+        XCTAssertEqual(Array(try XCTUnwrap(product.productName).unicodeScalars), Array(nfd.unicodeScalars))
+
+        let first = try CatalogTextPendingRepair.repair(
+            context: context, ownerUserID: owner, storeIdentity: .anonymous
+        )
+        XCTAssertEqual(first.repairedProducts, 1)
+        XCTAssertEqual(first.repairedCount, 1)
+        XCTAssertFalse(context.hasChanges)
+        XCTAssertEqual(change.changeID, changeID.uuidString.lowercased())
+        XCTAssertEqual(change.idempotencyKey, idempotencyKey)
+        XCTAssertEqual(change.status, .pending)
+        XCTAssertEqual(change.intendedFingerprintHash, LocalPendingChangeLogicalKey.productFingerprintHash(product))
+        let afterFirst = LocalPendingChangeCASToken(change)
+        let createdAt = change.createdAt
+
+        let persistedContext = ModelContext(context.container)
+        let persistedProducts = try persistedContext.fetch(FetchDescriptor<Product>())
+        XCTAssertEqual(persistedProducts.count, 1)
+        let persistedProduct = try XCTUnwrap(persistedProducts.first)
+        XCTAssertEqual(persistedProduct.barcode, barcode)
+        XCTAssertEqual(Array(try XCTUnwrap(persistedProduct.productName).unicodeScalars), Array(nfc.unicodeScalars))
+        let persistedChanges = try persistedContext.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(persistedChanges.count, 1)
+        XCTAssertEqual(LocalPendingChangeCASToken(try XCTUnwrap(persistedChanges.first)), afterFirst)
+
+        let second = try CatalogTextPendingRepair.repair(
+            context: context, ownerUserID: owner, storeIdentity: .anonymous
+        )
+        XCTAssertEqual(second.repairedCount, 0)
+        XCTAssertFalse(context.hasChanges)
+        let finalChanges = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(finalChanges.count, 1)
+        let finalChange = try XCTUnwrap(finalChanges.first)
+        XCTAssertEqual(LocalPendingChangeCASToken(finalChange), afterFirst)
+        XCTAssertEqual(finalChange.createdAt, createdAt)
+        XCTAssertEqual(Array(try XCTUnwrap(product.productName).unicodeScalars), Array(nfc.unicodeScalars))
+    }
+
     func testPendingRepairPreflightRejectsAtomicallyBeforeAnyMutation() throws {
         let context = try makeContext()
         let owner = UUID()
