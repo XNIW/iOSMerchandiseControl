@@ -23,7 +23,7 @@ def write(path, value):
 def load_manifest():
     manifest = json.loads(MANIFEST.read_text())
     ids = [case for shard in manifest['shards'] for case in shard['expected']]
-    assert len(ids) == len(set(ids)) == 2040
+    assert len(ids) == len(set(ids)) == 2043
     assert all(ID.fullmatch(case) for case in ids)
     assert set(manifest['allowedOptInSkips']).issubset(ids)
     return manifest
@@ -150,7 +150,7 @@ def qualify(shard_id):
         run_record = json.loads((output / 'run.json').read_text())
         assert {key: run_record[key] for key in current_provenance()} == current_provenance()
         assert run_record['shard'] == shard_id and run_record['expected'] == expected
-        assert run_record['discovery'] == {'missing': [], 'unexpected': [], 'count': 2040}
+        assert run_record['discovery'] == {'missing': [], 'unexpected': [], 'count': 2043}
         exported = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-failure-summary'
         provenance = json.loads((exported / 'provenance.json').read_text())
         for name in ['summary.json', 'tests.json']:

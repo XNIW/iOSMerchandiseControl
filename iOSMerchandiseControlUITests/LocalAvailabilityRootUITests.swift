@@ -246,6 +246,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             && app.staticTexts["task144.controlled.held"].exists, "fresh-file-backed-Save-A-readback-while-held")
         try t14Require(app.staticTexts["Saved on this device · Waiting for cloud confirmation"].exists,
             "honest-Save-A-feedback-before-release")
+        // Finish the normal search before shell visits; its restored keyboard covers the tabs.
+        if app.keyboards.count > 0 {
+            try t14Require(search.value as? String == "LOCAL-ROOT" && search.isHittable,
+                "search-before-shell-use")
+            search.typeText("\n")
+            let keyboardHidden = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+            try t14Require(XCTWaiter.wait(for: [keyboardHidden], timeout: 5) == .completed,
+                "search-keyboard-hidden-before-shell-use")
+        }
         let draft = "Unsaved second draft"
 
         for segment in 0..<30 {
@@ -4429,6 +4439,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let initial = try t18Snapshot(state: state, language: language, category: category, theme: theme)
             for (index, route) in routes.enumerated() {
                 currentCell = index
+                if route == "options" && state != "action" && app.keyboards.count > 0 {
+                    let search = app.textFields.matching(identifier: "task140.database.root").firstMatch
+                    try t18Require(search.value as? String == "LOCAL-ROOT" && search.isHittable,
+                        "database-search-before-keyboard-dismissal")
+                    search.typeText("\n")
+                    let keyboardHidden = XCTNSPredicateExpectation(
+                        predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+                    try t18Require(XCTWaiter.wait(for: [keyboardHidden], timeout: 5) == .completed,
+                        "database-keyboard-not-dismissed-before-options")
+                }
                 let tab = app.tabBars.buttons[titles[index]]
                 try t18Require(tab.waitForExistence(timeout: 5) && tab.isHittable, route + "-tab-not-reachable")
                 tab.tap()
@@ -4807,8 +4827,8 @@ extension LocalAvailabilityRootUITests {
         }
     }
 
-    private func t19State() throws -> [String: Any] {
-        let readback = app.buttons["task144.controlled.release"].value as? String ?? ""
+    private func t19State(_ publishedReadback: String? = nil) throws -> [String: Any] {
+        let readback = publishedReadback ?? (app.buttons["task144.controlled.release"].value as? String ?? "")
         let prefix = "task145.t19.state."
         let encoded = try XCTUnwrap(readback.components(separatedBy: ";").first { $0.hasPrefix(prefix) })
         let data = try XCTUnwrap(Data(base64Encoded: String(encoded.dropFirst(prefix.count))))
@@ -4822,8 +4842,11 @@ extension LocalAvailabilityRootUITests {
     private func t19Wait(deadline: TimeInterval, predicate: ([String: Any]) -> Bool) throws -> [String: Any] {
         // Polls read-only accessibility. No Retry, hidden runtime trigger, or direct producer call.
         while ProcessInfo.processInfo.systemUptime < deadline {
-            if app.buttons["task144.controlled.release"].exists {
-                let value = try t19State()
+            let control = app.buttons["task144.controlled.release"]
+            if control.exists, let readback = control.value as? String,
+               readback.components(separatedBy: ";").contains(where: { $0.hasPrefix("task145.t19.") }) {
+                // Existence precedes the first passive publication; present malformed T19 data still fails below.
+                let value = try t19State(readback)
                 if value["error"] != nil {
                     let evidence = XCTAttachment(data: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
                     evidence.name = "T19 original failure"; evidence.lifetime = .keepAlways; add(evidence)

@@ -7205,6 +7205,11 @@ private final class Task145Seq6ObservedIncrementalProvider: SyncIncrementalPullP
 @MainActor
 private final class Task145RetryControl {
     static let savedName = "Saved during real recovery cooldown"
+    nonisolated struct AttemptLifecycle: Codable {
+        let formatVersion: Int
+        let operation: String
+        let state: String
+    }
     nonisolated struct Attempt: Codable {
         let schemaVersion: Int
         let identity: String
@@ -7217,6 +7222,7 @@ private final class Task145RetryControl {
         let failure: AutomaticSyncFailure?
         let nextAllowedAt: TimeInterval
         let retryAfterUntil: TimeInterval?
+        let lifecycle: AttemptLifecycle
     }
     nonisolated struct Entry: Codable {
         let utc: TimeInterval
@@ -7322,7 +7328,10 @@ private final class Task145RetryControl {
             uptime: ProcessInfo.processInfo.systemUptime, pid: ProcessInfo.processInfo.processIdentifier,
             budgetBytes: bytes, journalIdentity: identity, journalPhase: journal.phase.rawValue))
         try persist()
-        guard attempt.schemaVersion == 2, attempt.identity == state.journalIdentity,
+        // The actual automatic claim writer emits v4 with a running lifecycle.
+        guard attempt.schemaVersion == 4, attempt.lifecycle.formatVersion == 1,
+              attempt.lifecycle.operation == "automatic", attempt.lifecycle.state == "running",
+              attempt.identity == state.journalIdentity,
               identity == state.journalIdentity, attempt.lastCompletedAt == nil,
               attempt.totalAttempts <= 6, attempt.totalAttempts > 0 else {
             throw SyncStoreGenerationError.activationReadBackFailed

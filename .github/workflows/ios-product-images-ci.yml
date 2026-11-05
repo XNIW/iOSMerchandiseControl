@@ -210,7 +210,7 @@ jobs:
           exit "$campaign_status"
 
       - name: Preserve A campaign results
-        if: ${{ always() && (steps.a_campaign.outcome == 'success' || steps.a_campaign.outcome == 'failure') }}
+        if: ${{ always() && (steps.a_campaign.outcome == 'success' || steps.a_campaign.outcome == 'failure' || steps.a_campaign.outcome == 'cancelled') }}
         timeout-minutes: 5
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -223,7 +223,7 @@ jobs:
 
       - name: Export small XCTest failure summary
         id: xctest_failure_summary
-        if: ${{ always() && matrix.shard != 'campaign-a' && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
+        if: ${{ always() && matrix.shard != 'campaign-a' && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure' || steps.xctest.outcome == 'cancelled') }}
         continue-on-error: true
         timeout-minutes: 5
         env:

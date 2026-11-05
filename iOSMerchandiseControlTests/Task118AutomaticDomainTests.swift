@@ -1309,7 +1309,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testCatalogLostAckThenSecondSaveReopensAndReplaysOriginalPayloadBeforeLaterIntent() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("catalog.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -1382,7 +1383,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testSealedCreateWithoutSupplierReplaysAfterLaterSaveAddsReliableSupplier() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("sealed-relation.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -1551,7 +1553,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testInvalidPendingSupplierPreservesDependentProductAndAllowsIndependentProduct() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("t11-catalog.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -2755,7 +2758,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testR23ConditionalCommitLostResponseReopensAndZeroReplayRemainsUnconfirmed() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let url = directory.appendingPathComponent("r23-conditional.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -2809,7 +2813,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testR23LegacyLostResponseThenTypedReplayRejectionCannotProveNoCommit() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let url = directory.appendingPathComponent("r23-legacy-unknown.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -2853,7 +2858,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testR23ManualUnknownCannotBeResealedAndIndependentFreshWorkStillProceeds() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let url = directory.appendingPathComponent("r23-manual-to-automatic-unknown.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -2920,7 +2926,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testR23DurableManualAtomicUnknownKeepsOriginalRequestWhileIndependentAutomaticWorkProceeds() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let url = directory.appendingPathComponent("r23-durable-manual-atomic-unknown.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)
@@ -3005,7 +3012,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
     func testR23AdoptionPreservesPriceThenRealPriceWriterAcknowledgesExactlyOnce() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "task118", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let url = directory.appendingPathComponent("r23-price.sqlite")
         let owner = UUID()
         let fixture = try makeAutomaticScopeFixture(ownerUserID: owner)

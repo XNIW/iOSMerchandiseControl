@@ -1272,12 +1272,14 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
     func testLegacyExhaustedRecoveryBudgetNeverAutomaticallyReplaysOrMutatesRealLocalBody() async throws {
         let closure = Task145AtomicStoreClosureProbe()
+        let cancellationObservation = AutomaticSyncCancellationLifecycleObservation()
         typealias Released = (storage: Task145ReleasedFixtureSeed, published: SyncStoreGenerationManifest,
             body: [String], identity: String, completed: Data, legacy: Data, prefix: String)
         func prepareAndRelease() async throws -> Released {
             let proof = try await makeRealContinuationProof()
             let fixture = proof.fixture
             closure.observe(proof.engine, role: "initial-proof-engine")
+            closure.observe(proof.stateStore, role: "initial-proof-state-store")
             closure.observe(fixture.controller, role: "initial-controller")
             closure.observe(fixture.controller.modelContainer, role: "initial-container")
             let binding = AccountBindingStore(defaults: fixture.defaults)
@@ -1295,6 +1297,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             ])
             fixture.defaults.set(legacyBytes, forKey: "\(prefix).automaticRecoveryAttempt.v1")
             let state = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix, storeGenerationController: fixture.controller)
+            closure.observe(state, role: "legacy-test-state-store")
             state.recordRunResult(.recoveryRequired())
             fixture.defaults.set("HTTP500 timeout networkError", forKey: "\(prefix).lastRunErrorCode")
             let bodyBefore = try completedRecoveryBusinessSnapshot(fixture)
@@ -1319,83 +1322,104 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                             XCTAssertEqual(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode"), "HTTP500 timeout networkError")
                         }
                     })
+            closure.observe(transport, role: "legacy-checkpoint-transport")
             let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
-            let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(
+            let recoveryService = makeService(fixture: fixture, transport: transport)
+            closure.observe(recoveryService, role: "legacy-recovery-service")
+            let facade = AutomaticSyncRuntimeFacade(
                 authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
                 historySessionProvider: nil, incrementalPullProvider: nil,
-                recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+                recoverySnapshotPullProvider: recoveryService,
                 activityRegistrationProvider: nil,
                 deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
                 defaults: fixture.defaults,
-                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+                runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } })
+            closure.observe(facade, role: "legacy-facade")
+            facade.cancellationLifecycleObservationForTesting = cancellationObservation
+            let runtime = RI08ObservedRealRuntime(facade: facade)
             // The valid prepared journal now authorizes a qualified v4 phase, never
             // an error-text replay or a reset of the three historical attempts.
             let completed = expectation(description: "Qualified prepared legacy completes with its original history")
             runtime.expectedCompletions = [completed]
+            let decisionProvider = completedRecoveryDecisionProvider(fixture)
+            closure.observe(decisionProvider, role: "legacy-decision-provider")
             let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
                 activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
                 stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
-                defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
+                defaults: fixture.defaults, decisionInputProvider: decisionProvider,
                 backgroundScheduler: SyncNoopBackgroundTaskScheduler())
-            defer { orchestrator.stop() }
-            orchestrator.handleScenePhaseChanged(.active)
-            for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect, .foregroundPoll] {
-                orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+            do {
+                orchestrator.handleScenePhaseChanged(.active)
+                for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect, .foregroundPoll] {
+                    orchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+                }
+                await fulfillment(of: [completed], timeout: 2)
+                for _ in 0..<100 where state.state.phase.isAutomaticWorkActive { await Task.yield() }
+                orchestrator.stop()
+                XCTAssertEqual(runtime.actions, [.fullRecovery])
+                XCTAssertTrue(runtime.results.last?.verifiedConvergence == true)
+                XCTAssertNotNil(runtime.results.last?.verifiedFinalization)
+                XCTAssertEqual(transport.counts().checkpoints, 2)
+                XCTAssertEqual(transport.counts().pages, 6)
+                XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+                let currentBinding = try XCTUnwrap(binding.currentBinding)
+                XCTAssertEqual(currentBinding.accountHash, originalBinding.accountHash)
+                XCTAssertEqual(currentBinding.storeIdentity, originalBinding.storeIdentity)
+                XCTAssertNil(binding.pendingRecoveryJournal)
+                let published = try XCTUnwrap(fixture.controller.activeManifest)
+                XCTAssertNotEqual(published.generationID, manifest.generationID)
+                let expectedCheckpointB = ShopSyncRecoveryCheckpoint(schemaVersion: proof.checkpoint.schemaVersion,
+                    status: proof.checkpoint.status, shopId: proof.checkpoint.shopId, scope: proof.checkpoint.scope,
+                    syncEvents: ShopSyncRecoveryEventCheckpoint(maxId: proof.checkpoint.syncEvents.maxId,
+                        verifiedBaselineId: proof.checkpoint.syncEvents.maxId,
+                        requiresFullRecovery: proof.checkpoint.syncEvents.requiresFullRecovery,
+                        domainMaxIds: proof.checkpoint.syncEvents.domainMaxIds),
+                    catalog: proof.checkpoint.catalog, prices: proof.checkpoint.prices,
+                    history: proof.checkpoint.history, images: proof.checkpoint.images,
+                    integrity: proof.checkpoint.integrity, checkpointDigest: proof.checkpoint.checkpointDigest)
+                XCTAssertEqual(published.checkpoint, expectedCheckpointB,
+                    "The actual B response carries its requested verified baseline, with all scoped body digests unchanged")
+                let bodyAfter = try completedRecoveryBusinessSnapshot(fixture)
+                XCTAssertEqual(Array(bodyAfter.dropFirst()), Array(bodyBefore.dropFirst()),
+                    "The presentation generation changes; every business fingerprint/intent/outbox value stays exact")
+                XCTAssertNotEqual(bodyAfter.first, bodyBefore.first)
+                XCTAssertEqual(try Data(contentsOf: storeURL), storeBytes)
+                XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v1"), legacyBytes)
+                XCTAssertNil(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode"))
+                let completedBytes = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+                let completedRecord = try XCTUnwrap(JSONSerialization.jsonObject(with: completedBytes) as? [String: Any])
+                let lifecycle = try XCTUnwrap(completedRecord["lifecycle"] as? [String: Any])
+                XCTAssertEqual(completedRecord["schemaVersion"] as? Int, 4)
+                XCTAssertEqual(completedRecord["totalAttempts"] as? Int, 4)
+                XCTAssertEqual(lifecycle["state"] as? String, "completed")
+                XCTAssertEqual(Data(base64Encoded: try XCTUnwrap(lifecycle["originPayload"] as? String)), legacyBytes)
+                XCTAssertEqual(lifecycle["originSHA256"] as? String,
+                    SHA256.hash(data: legacyBytes).map { String(format: "%02x", $0) }.joined())
+                XCTAssertEqual(state.state.phase, .idle)
+                XCTAssertNotNil(state.state.lastVerifiedAt)
+                await runtime.cancelAndWait()
+                await runtime.resumeAfterStoreReplacement()
+                _ = await fixture.controller.awaitLocalBodyQualification()
+                closure.observe(runtime, role: "completed-runtime")
+                closure.observe(orchestrator, role: "completed-orchestrator")
+                closure.observe(fixture.controller.modelContainer, role: "published-container")
+                try closure.captureBeforeRelease(fixture)
+                return (Task145ReleasedFixtureSeed(fixture), published, bodyAfter, identity,
+                    completedBytes, legacyBytes, prefix)
+            } catch {
+                // Stop before the awaited cleanup on every throwing path. A
+                // deferred stop here would enqueue new work after that join.
+                orchestrator.stop()
+                await runtime.cancelAndWait()
+                await runtime.resumeAfterStoreReplacement()
+                throw error
             }
-            await fulfillment(of: [completed], timeout: 2)
-            for _ in 0..<100 where state.state.phase.isAutomaticWorkActive { await Task.yield() }
-            orchestrator.stop()
-            XCTAssertEqual(runtime.actions, [.fullRecovery])
-            XCTAssertTrue(runtime.results.last?.verifiedConvergence == true)
-            XCTAssertNotNil(runtime.results.last?.verifiedFinalization)
-            XCTAssertEqual(transport.counts().checkpoints, 2)
-            XCTAssertEqual(transport.counts().pages, 6)
-            XCTAssertEqual(auth.networkBlocker.requestCount, 0)
-            let currentBinding = try XCTUnwrap(binding.currentBinding)
-            XCTAssertEqual(currentBinding.accountHash, originalBinding.accountHash)
-            XCTAssertEqual(currentBinding.storeIdentity, originalBinding.storeIdentity)
-            XCTAssertNil(binding.pendingRecoveryJournal)
-            let published = try XCTUnwrap(fixture.controller.activeManifest)
-            XCTAssertNotEqual(published.generationID, manifest.generationID)
-            let expectedCheckpointB = ShopSyncRecoveryCheckpoint(schemaVersion: proof.checkpoint.schemaVersion,
-                status: proof.checkpoint.status, shopId: proof.checkpoint.shopId, scope: proof.checkpoint.scope,
-                syncEvents: ShopSyncRecoveryEventCheckpoint(maxId: proof.checkpoint.syncEvents.maxId,
-                    verifiedBaselineId: proof.checkpoint.syncEvents.maxId,
-                    requiresFullRecovery: proof.checkpoint.syncEvents.requiresFullRecovery,
-                    domainMaxIds: proof.checkpoint.syncEvents.domainMaxIds),
-                catalog: proof.checkpoint.catalog, prices: proof.checkpoint.prices,
-                history: proof.checkpoint.history, images: proof.checkpoint.images,
-                integrity: proof.checkpoint.integrity, checkpointDigest: proof.checkpoint.checkpointDigest)
-            XCTAssertEqual(published.checkpoint, expectedCheckpointB,
-                "The actual B response carries its requested verified baseline, with all scoped body digests unchanged")
-            let bodyAfter = try completedRecoveryBusinessSnapshot(fixture)
-            XCTAssertEqual(Array(bodyAfter.dropFirst()), Array(bodyBefore.dropFirst()),
-                "The presentation generation changes; every business fingerprint/intent/outbox value stays exact")
-            XCTAssertNotEqual(bodyAfter.first, bodyBefore.first)
-            XCTAssertEqual(try Data(contentsOf: storeURL), storeBytes)
-            XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v1"), legacyBytes)
-            XCTAssertNil(fixture.defaults.string(forKey: "\(prefix).lastRunErrorCode"))
-            let completedBytes = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
-            let completedRecord = try XCTUnwrap(JSONSerialization.jsonObject(with: completedBytes) as? [String: Any])
-            let lifecycle = try XCTUnwrap(completedRecord["lifecycle"] as? [String: Any])
-            XCTAssertEqual(completedRecord["schemaVersion"] as? Int, 4)
-            XCTAssertEqual(completedRecord["totalAttempts"] as? Int, 4)
-            XCTAssertEqual(lifecycle["state"] as? String, "completed")
-            XCTAssertEqual(Data(base64Encoded: try XCTUnwrap(lifecycle["originPayload"] as? String)), legacyBytes)
-            XCTAssertEqual(lifecycle["originSHA256"] as? String,
-                SHA256.hash(data: legacyBytes).map { String(format: "%02x", $0) }.joined())
-            XCTAssertEqual(state.state.phase, .idle)
-            XCTAssertNotNil(state.state.lastVerifiedAt)
-            await runtime.cancelAndWait()
-            _ = await fixture.controller.awaitLocalBodyQualification()
-            closure.observe(runtime, role: "completed-runtime")
-            closure.observe(orchestrator, role: "completed-orchestrator")
-            closure.observe(fixture.controller.modelContainer, role: "published-container")
-            try closure.captureBeforeRelease(fixture)
-            return (Task145ReleasedFixtureSeed(fixture), published, bodyAfter, identity,
-                completedBytes, legacyBytes, prefix)
         }
         let released = try await prepareAndRelease()
+        let cancellation = cancellationObservation.snapshot()
+        print("TASK145_CANCEL_LIFECYCLE scheduled.\(cancellation.scheduled)"
+            + " entered.\(cancellation.entered) engineReturned.\(cancellation.engineReturned)"
+            + " captureReleased.\(cancellation.captureReleased) engineAlive.\(cancellation.engineAlive)")
         try closure.requireReleasedAndNoSQLiteDescriptors()
         let published = released.published
         let bodyAfter = released.body
@@ -1472,6 +1496,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
     private func assertLegacyStagingUpgrade(mode: String) async throws {
         let isTransient = ["transient", "metadata", "successor", "successor-missing", "successor-corrupt", "successor-flush"].contains(mode)
+        let isPacedReconciliation = isTransient || ["unknown", "cancel"].contains(mode)
         let isDurabilityFault = ["claim-readback", "interrupted-metadata", "claim-flush", "claim-v2-flush"].contains(mode)
         if ["stable", "unknown", "checkpoint-changed", "cancel"].contains(mode) {
             task145PublishedAttachJSON(["fixture_mode": mode, "boundary": "entry"],
@@ -1673,7 +1698,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             stateStore: state, storeGenerationController: reopened.controller, storeGenerationLease: lease,
             defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(reopened),
             backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value })
-        defer { orchestrator.stop() }
+        // No throwing operation precedes the explicit stop below. A deferred
+        // second stop would enqueue cancellation after the later join/resume.
         orchestrator.handleScenePhaseChanged(.active)
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
         await fulfillment(of: [diagnostic, completed], timeout: 2)
@@ -1914,7 +1940,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             }
             let afterRestart = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
                 storeGenerationController: reopened.controller)
-            if isTransient {
+            if isPacedReconciliation {
                 // Schema4 reconciliation is admitted by the same phase API as
                 // the ordinary orchestrator, not the intentionally v2-only reader.
                 let earlyPhase = afterRestart.recoveryReconciliationOpportunity(identity: identity,
@@ -1967,7 +1993,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 XCTAssertEqual(afterRestart.automaticRecoveryAttemptEligibility(identity: identity,
                     now: Date(timeIntervalSince1970: nextAllowedAt)), isTransient ? .ready : .exhausted)
             }
-            clock.value = Date(timeIntervalSince1970: isTransient ? nextAllowedAt - 1 : nextAllowedAt + 86_400)
+            clock.value = Date(timeIntervalSince1970: isPacedReconciliation ? nextAllowedAt - 1 : nextAllowedAt + 86_400)
             let duplicate = expectation(description: "Repeated launch and reconnect cannot repeat the consumed opportunity")
             duplicate.isInverted = true
             runtime.expectedCompletions.append(duplicate)
@@ -2002,6 +2028,76 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             }
             XCTAssertEqual(transport.counts().checkpoints, 1)
             XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), budgetData)
+            if ["unknown", "cancel"].contains(mode) {
+                // R23 §7.2 permits one phase diagnostic at its durable due, not
+                // another business mutation or a permanent v2-only exhaustion.
+                await runtime.cancelAndWait()
+                await runtime.resumeAfterStoreReplacement()
+                let dueState = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                    storeGenerationController: reopened.controller)
+                clock.value = Date(timeIntervalSince1970: nextAllowedAt)
+                let dueCompleted = expectation(description: "One due unknown/interrupted phase diagnostic completes")
+                runtime.expectedCompletions = [completed, dueCompleted]
+                let dueOrchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+                    activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+                    stateStore: dueState, storeGenerationController: reopened.controller, storeGenerationLease: lease,
+                    defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(reopened),
+                    backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value })
+                dueOrchestrator.handleScenePhaseChanged(.active)
+                for source in [SyncAutomaticTriggerSource.rootForeground, .networkReconnect, .foregroundPoll] {
+                    dueOrchestrator.submitForegroundTrigger(source: source, forceIncremental: true)
+                }
+                await fulfillment(of: [dueCompleted], timeout: 2)
+                for _ in 0..<100 where dueState.state.phase.isAutomaticWorkActive { await Task.yield() }
+                dueOrchestrator.stop()
+                await runtime.cancelAndWait()
+                await runtime.resumeAfterStoreReplacement()
+                XCTAssertEqual(runtime.actions, [.fullRecovery, .fullRecovery])
+                XCTAssertEqual(runtime.results.count, 2)
+                let initialResult = try XCTUnwrap(runtime.results.first)
+                let dueResult = try XCTUnwrap(runtime.results.last)
+                if mode == "unknown" {
+                    XCTAssertEqual(initialResult.status, .failed)
+                    XCTAssertEqual(dueResult.status, .failed)
+                    let initialFailure = try XCTUnwrap(initialResult.failure)
+                    let dueFailure = try XCTUnwrap(dueResult.failure)
+                    XCTAssertEqual(initialFailure.disposition, .unknown)
+                    XCTAssertEqual(initialFailure.category, .unknown)
+                    XCTAssertEqual(dueFailure.disposition, .unknown)
+                    XCTAssertEqual(dueFailure.category, .unknown)
+                } else {
+                    XCTAssertEqual(initialResult.status, .cancelled)
+                    XCTAssertEqual(dueResult.status, .cancelled)
+                    XCTAssertNil(initialResult.failure)
+                    XCTAssertNil(dueResult.failure)
+                }
+                XCTAssertEqual(transport.counts().checkpoints, 2)
+                XCTAssertEqual(transport.counts().pages, 0, "Unresolved checkpoint evidence cannot replay accepted pages")
+                XCTAssertEqual(auth.networkBlocker.requestCount, 0)
+                let dueBytes = try XCTUnwrap(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"))
+                let dueRecord = try XCTUnwrap(JSONSerialization.jsonObject(with: dueBytes) as? [String: Any])
+                let dueLifecycle = try XCTUnwrap(dueRecord["lifecycle"] as? [String: Any])
+                XCTAssertEqual(dueRecord["schemaVersion"] as? Int, 4)
+                XCTAssertEqual(dueRecord["identity"] as? String, identity)
+                XCTAssertEqual(dueRecord["totalAttempts"] as? Int, 5)
+                XCTAssertEqual(dueRecord["attemptsInWindow"] as? Int, 2)
+                XCTAssertEqual(dueRecord["windowIndex"] as? Int, 2)
+                XCTAssertEqual(dueLifecycle["state"] as? String, "waiting")
+                XCTAssertEqual(dueLifecycle["operation"] as? String, "reconciliation")
+                XCTAssertEqual(dueLifecycle["phase"] as? String, "staging")
+                XCTAssertEqual(UUID(uuidString: try XCTUnwrap(dueLifecycle["generationID"] as? String)), stagedID)
+                XCTAssertEqual(Data(base64Encoded: try XCTUnwrap(dueLifecycle["originPayload"] as? String)), legacyBytes)
+                XCTAssertEqual(dueLifecycle["originSHA256"] as? String,
+                    SHA256.hash(data: legacyBytes).map { String(format: "%02x", $0) }.joined())
+                XCTAssertGreaterThanOrEqual(try XCTUnwrap(dueRecord["nextAllowedAt"] as? Double), nextAllowedAt + 300)
+                XCTAssertNil(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryLegacyClaim.v1"))
+                let postDue = SyncStateStore(defaults: fixture.defaults, keyPrefix: prefix,
+                    storeGenerationController: reopened.controller)
+                guard case .cooldown(let delay) = postDue.recoveryReconciliationOpportunity(
+                    identity: identity, now: clock.value) else { return XCTFail("The next diagnostic must retain its new due") }
+                XCTAssertGreaterThanOrEqual(delay, 300)
+                XCTAssertEqual(fixture.defaults.data(forKey: "\(prefix).automaticRecoveryAttempt.v2"), dueBytes)
+            }
             if mode == "metadata" {
                 let key = "\(prefix).automaticRecoveryAttempt.v2"
                 guard case .ready(let descriptor) = afterRestart.recoveryReconciliationOpportunity(identity: identity,
@@ -12797,7 +12893,7 @@ extension XCTestCase {
         let temporaryRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("AtomicGenerationRecovery-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
-        let physicalLifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(temporaryRoot)
+        let physicalLifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(temporaryRoot, testName: self.name)
 
         let ownerUserID = UUID()
         let shopID = UUID()
@@ -12982,7 +13078,7 @@ private struct Task145ReleasedFixtureSeed {
 }
 
 @MainActor
-private final class Task145AtomicStoreClosureProbe {
+final class Task145AtomicStoreClosureProbe {
     enum Failure: Error { case ownership, limits, ownersLive, descriptorRead, descriptorChanged, sqliteStillOpen }
     private final class WeakOwner {
         weak var value: AnyObject?
@@ -13004,18 +13100,22 @@ private final class Task145AtomicStoreClosureProbe {
         path.hasSuffix(".store") || path.hasSuffix(".store-wal") || path.hasSuffix(".store-shm")
     }
 
-    func captureBeforeRelease(_ fixture: AtomicRecoveryFixture) throws {
-        let path = fixture.temporaryRoot.standardizedFileURL
+    fileprivate func captureBeforeRelease(_ fixture: AtomicRecoveryFixture) throws {
+        try captureBeforeRelease(root: fixture.temporaryRoot, defaults: fixture.defaults, controller: fixture.controller)
+    }
+
+    func captureBeforeRelease(root: URL, defaults: UserDefaults, controller: SyncStoreGenerationController) throws {
+        let path = root.standardizedFileURL
         guard path == path.resolvingSymlinksInPath(),
               path.lastPathComponent.hasPrefix("AtomicGenerationRecovery-") else { throw Failure.ownership }
         var rootInfo = stat()
         guard Darwin.lstat(path.path, &rootInfo) == 0, rootInfo.st_mode & S_IFMT == S_IFDIR,
               rootInfo.st_uid == Darwin.geteuid() else { throw Failure.ownership }
-        guard fixture.defaults.synchronize() else { throw Failure.ownership }
-        root = path
+        guard defaults.synchronize() else { throw Failure.ownership }
+        self.root = path
         // Reflect the exact private ownership chain without opening or mutating a store.
         // Absence is reported as unavailable, never interpreted as release.
-        if let repositorySlot = Mirror(reflecting: fixture.controller).children.first(where: { $0.label == "repository" }),
+        if let repositorySlot = Mirror(reflecting: controller).children.first(where: { $0.label == "repository" }),
            let repository = Mirror(reflecting: repositorySlot.value).children.first?.value as? SyncStoreGenerationRepository {
             resourceOwners.append(WeakOwner(repository, role: "repository"))
             resourceObservation = "REPOSITORY_CAPTURED_STAGING_ABSENT"
@@ -13076,7 +13176,9 @@ private final class Task145AtomicStoreClosureProbe {
     func requireReleasedAndNoSQLiteDescriptors() throws {
         let liveOwners = owners.filter { $0.value != nil }.map(\.role)
         guard liveOwners.isEmpty else {
-            print("TASK145_ATOMIC_STORE_CLOSE_REFUSED reason.owners-live roles." + liveOwners.joined(separator: ","))
+            print("TASK145_ATOMIC_STORE_CLOSE_REFUSED reason.owners-live roles." + liveOwners.joined(separator: ",")
+                + " resourceObservation." + resourceObservation
+                + " resourceRoles." + resourceOwners.filter { $0.value != nil }.map(\.role).joined(separator: ","))
             throw Failure.ownersLive
         }
         guard let root, let limits, !families.isEmpty else { throw Failure.ownership }
@@ -13115,7 +13217,7 @@ private final class Task145AtomicStoreClosureProbe {
     }
 }
 
-private struct AtomicRecoveryFixture {
+fileprivate struct AtomicRecoveryFixture {
     let controller: SyncStoreGenerationController
     let defaults: UserDefaults
     let suiteName: String
@@ -17550,33 +17652,119 @@ private final class RI08UnqualifiedScopedCountSentinel: ShopScopedReconciliation
 
 /// TEST-only physical-root custody. No ModelContainer/ModelContext is retained.
 /// The Root host consumer is inseparable: only it may unlink after real owner exit.
-nonisolated private struct Task145AtomicOwnedRootLifetime: Sendable {
+nonisolated struct Task145AtomicOwnedRootLifetime: Sendable {
     private static let processInstance = UUID().uuidString.lowercased()
     private let root: URL
     private let registry: URL
     private let facts: [String: String]
     private let registeredHash: String
 
-    private enum Failure: Error { case invalidAdmission, ownership, publication }
+    private enum Failure: Error { case invalidAdmission(String), ownership, publication, limits }
 
-    static func registerIfAdmitted(_ root: URL) throws -> Self? {
+    nonisolated struct Admission: Decodable {
+        let schema: String
+        let runID: String
+        let destination: String
+        let hostUID: UInt32
+        let simulatorRoot: String
+        let selectors: [String]
+        let rootBounds: [String: Int]
+    }
+    @MainActor private static var counts: [String: Int] = [:]
+
+    @MainActor
+    static func registerIfAdmitted(_ root: URL, family: String = "atomic", testName: String) throws -> Self? {
         let environment = ProcessInfo.processInfo.environment
-        guard let rawRun = environment["TEST_RUNNER_TASK145_ATOMIC_ROOT_RUN_ID"] else { return nil }
-        guard let run = UUID(uuidString: rawRun), run.uuidString.lowercased() == rawRun,
-              Bundle.main.bundleIdentifier == "com.niwcyber.iOSMerchandiseControl" else {
-            throw Failure.invalidAdmission
+        guard let rawRun = environment["TEST_RUNNER_TASK145_ATOMIC_ROOT_RUN_ID"] else {
+            guard environment["TEST_RUNNER_TASK145_OWNED_ROOT_ADMISSION"] == nil else { throw Failure.invalidAdmission("missing-root-run-id") }
+            return nil
+        }
+        guard let run = UUID(uuidString: rawRun), run.uuidString.lowercased() == rawRun else {
+            throw Failure.invalidAdmission("noncanonical-root-run-id")
+        }
+        guard Bundle.main.bundleIdentifier == "com.niwcyber.iOSMerchandiseControl" else {
+            throw Failure.invalidAdmission("unexpected-host-bundle")
         }
         let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true).standardizedFileURL
         let temporary = FileManager.default.temporaryDirectory.standardizedFileURL
-        let isolatedPrefix = "/Users/minxiang/Library/Developer/CoreSimulator/Devices/4AEEF3F6-6B70-49DB-A87A-651FAFD85AC7/data/Containers/Data/Application/"
+        var isolatedPrefix = "/Users/minxiang/Library/Developer/CoreSimulator/Devices/4AEEF3F6-6B70-49DB-A87A-651FAFD85AC7/data/Containers/Data/Application/"
+        var destination = "4AEEF3F6-6B70-49DB-A87A-651FAFD85AC7"
+        var extra: [String: String] = [:]
+        if let encoded = environment["TEST_RUNNER_TASK145_OWNED_ROOT_ADMISSION"] {
+            guard let bytes = Data(base64Encoded: encoded), bytes.count <= 262_144 else {
+                throw Failure.invalidAdmission("payload-base64-or-byte-cap")
+            }
+            guard let admission = try? JSONDecoder().decode(Admission.self, from: bytes) else {
+                throw Failure.invalidAdmission("payload-decoding")
+            }
+            guard admission.schema == "task145-owned-root-admission-v1" else { throw Failure.invalidAdmission("schema") }
+            guard admission.runID == rawRun else { throw Failure.invalidAdmission("run-id-mismatch") }
+            guard UUID(uuidString: admission.destination) != nil else { throw Failure.invalidAdmission("destination-format") }
+            guard environment["SIMULATOR_UDID"]?.uppercased() == admission.destination.uppercased() else {
+                throw Failure.invalidAdmission("simulator-udid-mismatch")
+            }
+            guard admission.hostUID == Darwin.geteuid() else { throw Failure.invalidAdmission("host-uid-mismatch") }
+            guard !admission.selectors.isEmpty, Set(admission.selectors).count == admission.selectors.count else {
+                throw Failure.invalidAdmission("empty-or-duplicate-selectors")
+            }
+            guard Set(admission.rootBounds.keys).isSubset(of: Set(admission.selectors)) else {
+                throw Failure.invalidAdmission("bounds-unselected-key")
+            }
+            guard admission.rootBounds.values.allSatisfy({ $0 > 0 && $0 <= 13 }) else {
+                throw Failure.invalidAdmission("per-selector-bound")
+            }
+            guard admission.rootBounds.values.reduce(0, +) <= 492 else { throw Failure.invalidAdmission("aggregate-bound") }
+            let deviceRoot = URL(fileURLWithPath: admission.simulatorRoot, isDirectory: true).standardizedFileURL
+            guard deviceRoot.resolvingSymlinksInPath() == deviceRoot,
+                  deviceRoot.lastPathComponent == admission.destination,
+                  deviceRoot.deletingLastPathComponent().lastPathComponent == "Devices",
+                  deviceRoot.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent == "CoreSimulator" else {
+                throw Failure.ownership
+            }
+            isolatedPrefix = deviceRoot.appendingPathComponent("data/Containers/Data/Application").path + "/"
+            destination = admission.destination
+            let prefix = "-[iOSMerchandiseControlTests."
+            let matchingSelectors = admission.selectors.filter { selector in
+                let parts = selector.split(separator: "/", omittingEmptySubsequences: false)
+                guard parts.count == 3, parts[0] == "iOSMerchandiseControlTests",
+                      !parts[1].isEmpty, !parts[2].isEmpty else { return false }
+                let classAndMethod = String(parts[1]) + " " + String(parts[2]) + "]"
+                return testName == "-[" + classAndMethod || testName == prefix + classAndMethod
+            }
+            guard matchingSelectors.count == 1, let selector = matchingSelectors.first else {
+                let nameHash = SHA256.hash(data: Data(testName.utf8)).map { String(format: "%02x", $0) }.joined()
+                let unqualifiedSelected = admission.selectors.contains { selector in
+                    let parts = selector.split(separator: "/")
+                    return parts.count == 3 && testName == "-[" + String(parts[1]) + " " + String(parts[2]) + "]"
+                }
+                throw Failure.invalidAdmission("test-name-format;objc=\(testName.hasPrefix("-["));module=\(testName.hasPrefix(prefix));closing=\(testName.hasSuffix("]"));unqualifiedSelected=\(unqualifiedSelected);sha256=\(nameHash)")
+            }
+            guard let bound = admission.rootBounds[selector], admission.selectors.contains(selector) else {
+                throw Failure.invalidAdmission("test-selector-not-admitted")
+            }
+            let key = rawRun + ":" + selector
+            let count = (counts[key] ?? 0) + 1
+            guard count <= bound else { throw Failure.limits }
+            counts[key] = count
+            extra = ["admissionSHA256": SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(),
+                     "selector": selector, "fixtureOrdinal": String(count), "family": family]
+        } else {
+            guard family == "atomic" else { throw Failure.invalidAdmission("non-atomic-family-without-admission") }
+        }
+        let prefixByFamily = ["atomic": "AtomicGenerationRecovery-", "options": "OptionsQualifiedSummary.",
+            "task118": "", "incremental-rollback": "task139-file-rollback-",
+            "incremental-lease": "task139-file-lease-", "incremental-writer": "task139-file-local-writer-",
+            "incremental-relation": "task139-relation-rollback-"]
+        guard let rootPrefix = prefixByFamily[family], root.lastPathComponent.hasPrefix(rootPrefix),
+              UUID(uuidString: String(root.lastPathComponent.dropFirst(rootPrefix.count))) != nil else {
+            throw Failure.ownership
+        }
         guard home.path.hasPrefix(isolatedPrefix),
               UUID(uuidString: home.lastPathComponent) != nil,
               home.deletingLastPathComponent().path + "/" == isolatedPrefix,
               temporary == home.appendingPathComponent("tmp", isDirectory: true),
               root.standardizedFileURL == root, root.resolvingSymlinksInPath() == root,
-              root.deletingLastPathComponent() == temporary,
-              root.lastPathComponent.hasPrefix("AtomicGenerationRecovery-"),
-              UUID(uuidString: String(root.lastPathComponent.dropFirst("AtomicGenerationRecovery-".count))) != nil else {
+              root.deletingLastPathComponent() == temporary else {
             throw Failure.ownership
         }
         let rootStat = try directoryStat(root)
@@ -17589,18 +17777,28 @@ nonisolated private struct Task145AtomicOwnedRootLifetime: Sendable {
         guard registry.resolvingSymlinksInPath() == registry else { throw Failure.ownership }
         var facts = ["schema": "task145-atomic-owned-root-v1", "runID": rawRun,
             "processInstance": processInstance, "pid": String(Darwin.getpid()), "uid": String(Darwin.geteuid()),
-            "bundle": "com.niwcyber.iOSMerchandiseControl", "isolatedUDID": "4AEEF3F6-6B70-49DB-A87A-651FAFD85AC7",
+            "bundle": "com.niwcyber.iOSMerchandiseControl", "isolatedUDID": destination,
             "container": home.path, "root": root.path, "rootName": root.lastPathComponent,
             "rootDevice": String(rootStat.st_dev), "rootInode": String(rootStat.st_ino),
             "rootUID": String(rootStat.st_uid), "parent": temporary.path,
             "parentDevice": String(parentStat.st_dev), "parentInode": String(parentStat.st_ino),
             "parentUID": String(parentStat.st_uid)]
+        facts.merge(extra) { _, fresh in fresh }
         facts["stage"] = "registered-before-store-open"
         let file = registry.appendingPathComponent(root.lastPathComponent + ".registered.json")
         let hash = try publish(facts, to: file)
         // Completion log appears only after full write/fsync/close. The host never reads partial markers.
         emit("REGISTERED", file: file, hash: hash)
         return Self(root: root, registry: registry, facts: facts, registeredHash: hash)
+    }
+
+    static func finishOrRemove(_ root: URL, lifetime: Self?, file: StaticString = #filePath, line: UInt = #line) {
+        do {
+            if let lifetime { try lifetime.logicalTeardownCompleted() }
+            else { try FileManager.default.removeItem(at: root) }
+        } catch {
+            XCTFail("Owned fixture teardown failed; physical root retained for diagnosis.", file: file, line: line)
+        }
     }
 
     func logicalTeardownCompleted() throws {

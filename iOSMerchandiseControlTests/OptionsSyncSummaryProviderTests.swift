@@ -513,13 +513,14 @@ struct OptionsQualifiedSummaryFixture {
         defaults.removePersistentDomain(forName: suite)
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(suite, isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(root, family: "options", testName: testCase.name)
         let cleanupState = OptionsSummaryFixtureCleanupState(defaults: defaults)
         testCase.addTeardownBlock {
             await MainActor.run {
                 // A failed/cancelled drain retains the isolated store for diagnosis.
                 guard cleanupState.pendingProviderDrains == 0 else { return }
                 cleanupState.defaults.removePersistentDomain(forName: suite)
-                try? FileManager.default.removeItem(at: root)
+                Task145AtomicOwnedRootLifetime.finishOrRemove(root, lifetime: lifetime)
             }
         }
         let owner = UUID()

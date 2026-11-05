@@ -413,6 +413,15 @@ nonisolated enum LocalCatalogBodyProofStore {
         var prior: String?
         var exhausted = false
         let maximum: Int
+// TASK145_PRICE_DETAIL_BEGIN pager-cost-properties
+#if DEBUG
+        var priceFetchNS: UInt64 = 0
+        var pricePrepareNS: UInt64 = 0
+        var priceOverridesNS: UInt64 = 0
+        var pricePageFetches: UInt64 = 0
+        var pricePreparedRows: UInt64 = 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-cost-properties
 
         init(context: ModelContext, manifest: SyncStoreGenerationManifest, kind: String,
              sort: [SortDescriptor<Model>], maximum: Int, id: @escaping (Model) -> UUID?) {
@@ -424,12 +433,53 @@ nonisolated enum LocalCatalogBodyProofStore {
             if index == rows.count {
                 if exhausted { return nil }
                 descriptor.fetchOffset = offset
+// TASK145_PRICE_DETAIL_BEGIN pager-fetch-start
+#if DEBUG
+                let priceFetchStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-fetch-start
                 rows = try context.fetch(descriptor); index = 0
+// TASK145_PRICE_DETAIL_BEGIN pager-fetch-end
+#if DEBUG
+                if priceFetchStart != 0 {
+                    priceFetchNS &+= DispatchTime.now().uptimeNanoseconds &- priceFetchStart
+                    pricePageFetches &+= 1
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-fetch-end
                 exhausted = rows.count < batchSize
                 offset += rows.count
                 guard offset <= maximum else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+// TASK145_PRICE_DETAIL_BEGIN pager-prepare-start
+#if DEBUG
+                let pricePrepareStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-prepare-start
                 try prepareRows?(rows)
+// TASK145_PRICE_DETAIL_BEGIN pager-prepare-end
+#if DEBUG
+                if pricePrepareStart != 0 {
+                    pricePrepareNS &+= DispatchTime.now().uptimeNanoseconds &- pricePrepareStart
+                    pricePreparedRows &+= UInt64(rows.count)
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-prepare-end
+// TASK145_PRICE_DETAIL_BEGIN pager-overrides-start
+#if DEBUG
+                let priceOverridesStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-overrides-start
                 overrides = try localOverrides(kind: kind, ids: rows.compactMap(id), context: context, manifest: manifest)
+// TASK145_PRICE_DETAIL_BEGIN pager-overrides-end
+#if DEBUG
+                if priceOverridesStart != 0 {
+                    priceOverridesNS &+= DispatchTime.now().uptimeNanoseconds &- priceOverridesStart
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-overrides-end
             }
             return rows.isEmpty ? nil : rows[index]
         }
@@ -489,6 +539,28 @@ nonisolated enum LocalCatalogBodyProofStore {
         let pager = BodyRowPager<ProductPrice>(context: context, manifest: manifest, kind: kind,
             sort: [SortDescriptor(\ProductPrice.remoteID)], maximum: ShopSyncRecoveryLimits.maximumRows(for: .prices),
             id: { $0.remoteID })
+// TASK145_PRICE_DETAIL_BEGIN price-cost-start
+#if DEBUG
+        let detailStart = DispatchTime.now().uptimeNanoseconds
+        var detailPhaseStart = detailStart
+        var detailPhase = 0 // setup, ledger dispatch, parse, inactive, merge, extra, overrides
+        var detailNS = [UInt64](repeating: 0, count: 7)
+        var detailBatches: UInt64 = 0
+        var detailRows: UInt64 = 0
+        var detailReturned = false
+        func detailEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            detailNS[detailPhase] &+= now &- detailPhaseStart
+            detailPhase = next
+            detailPhaseStart = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            detailNS[detailPhase] &+= ended &- detailPhaseStart
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.price-detail elapsed_ns.\(ended &- detailStart, privacy: .public) returned.\(detailReturned, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(detailPhase, privacy: .public) batches.\(detailBatches, privacy: .public) rows.\(detailRows, privacy: .public) setup_ns.\(detailNS[0], privacy: .public) ledger_dispatch_ns.\(detailNS[1], privacy: .public) parse_ns.\(detailNS[2], privacy: .public) inactive_ns.\(detailNS[3], privacy: .public) merge_ns.\(detailNS[4], privacy: .public) extra_ns.\(detailNS[5], privacy: .public) overrides_ns.\(detailNS[6], privacy: .public) nested_pager_fetch_ns.\(pager.priceFetchNS, privacy: .public) nested_parent_prepare_ns.\(pager.pricePrepareNS, privacy: .public) nested_pager_overrides_ns.\(pager.priceOverridesNS, privacy: .public) page_fetches.\(pager.pricePageFetches, privacy: .public) prepared_rows.\(pager.pricePreparedRows, privacy: .public)")
+        }
+#endif
+// TASK145_PRICE_DETAIL_END price-cost-start
         pager.descriptor.relationshipKeyPathsForPrefetching = [\ProductPrice.product]
         var physicalParents: [PersistentIdentifier: PhysicalPriceParent] = [:]
         pager.prepareRows = { rows in
@@ -519,7 +591,19 @@ nonisolated enum LocalCatalogBodyProofStore {
             if parsedDates.count < batchSize * 2 { parsedDates[bytes] = date }
             return date
         }
+// TASK145_PRICE_DETAIL_BEGIN ledger-start
+#if DEBUG
+        detailEnter(1)
+#endif
+// TASK145_PRICE_DETAIL_END ledger-start
         try forEachBatch(ledger: ledger, domain: .prices) { batch in
+// TASK145_PRICE_DETAIL_BEGIN parse-start
+#if DEBUG
+            detailEnter(2)
+            detailBatches &+= 1
+            detailRows &+= UInt64(batch.count)
+#endif
+// TASK145_PRICE_DETAIL_END parse-start
             let parsed = try batch.map { record -> (UUID, UUID, String) in
                 let parts = record.versionLine.components(separatedBy: ShopSyncRecoveryCanonical.separator)
                 guard parts.count == 9, let id = UUID(uuidString: parts[0]), let parent = UUID(uuidString: parts[2]),
@@ -537,8 +621,18 @@ nonisolated enum LocalCatalogBodyProofStore {
                 return (id, parent, priceBody(parent: parent, type: type, price: price, effectiveAt: effective,
                     createdAt: created, sourceHash: parts[7], noteHash: parts[8]))
             }
+// TASK145_PRICE_DETAIL_BEGIN inactive-start
+#if DEBUG
+            detailEnter(3)
+#endif
+// TASK145_PRICE_DETAIL_END inactive-start
             let inactive = try inactiveParents(Array(Set(parsed.map { $0.1 })), context: context,
                 manifest: manifest, pending: pending)
+// TASK145_PRICE_DETAIL_BEGIN merge-start
+#if DEBUG
+            detailEnter(4)
+#endif
+// TASK145_PRICE_DETAIL_END merge-start
             for (id, parent, expected) in parsed {
                 while let row = try pager.peek(), row.remoteID == nil
                     || row.remoteID!.uuidString.lowercased() < id.uuidString.lowercased() {
@@ -553,10 +647,25 @@ nonisolated enum LocalCatalogBodyProofStore {
                     try pager.advance()
                 } else if !inactive.contains(parent) { throw SyncStoreGenerationError.activationReadBackFailed }
             }
+// TASK145_PRICE_DETAIL_BEGIN batch-end
+#if DEBUG
+            detailEnter(1)
+#endif
+// TASK145_PRICE_DETAIL_END batch-end
         }
+// TASK145_PRICE_DETAIL_BEGIN extra-start
+#if DEBUG
+        detailEnter(5)
+#endif
+// TASK145_PRICE_DETAIL_END extra-start
         while let row = try pager.peek() { try validateExtra(row); try pager.advance() }
         // Sparse ACK rows absent from original C must also exist physically;
         // otherwise an acknowledged price could be silently removed on disk.
+// TASK145_PRICE_DETAIL_BEGIN overrides-start
+#if DEBUG
+        detailEnter(6)
+#endif
+// TASK145_PRICE_DETAIL_END overrides-start
         try forEachOverrideBatch(kind: kind, context: context, manifest: manifest) { proofs in
             let ids = proofs.map(\.remoteID)
             let optionalIDs = ids.map(Optional.some)
@@ -586,6 +695,11 @@ nonisolated enum LocalCatalogBodyProofStore {
                 }
             }
         }
+// TASK145_PRICE_DETAIL_BEGIN price-returned
+#if DEBUG
+        detailReturned = true
+#endif
+// TASK145_PRICE_DETAIL_END price-returned
     }
 
     private static func historyFingerprint(_ row: HistoryEntry, payloadVersion: Int) throws -> String {

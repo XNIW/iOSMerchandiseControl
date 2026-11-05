@@ -369,12 +369,14 @@
         "iOSMerchandiseControlTests/CatalogGeneratedProductPriceSyncEventRecorderTests/testRemoteGeneratedPriceRowsStillEnqueuePricesEvent",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testAllSupportedLocalizationsContainCatalogTextMessages",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testCSVParserPreservesEscapedQuoteAndRejectsUnclosedQuote",
+        "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testCanonicalPersistenceBoundaryLeavesSavedModelsCleanAndScalarExact",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testExistingDirtyPendingRepairKeepsSameOutboxAndCanonicalFingerprint",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testFinalPersistenceBoundaryCanonicalizesBeforePendingFingerprint",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testFullCatalogExportPreflightRejectsUnreferencedNamedEntities",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testImportRejectsProhibitedTextWithoutExposingRawInvisibleValue",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testInboundCatalogApplyCanonicalizesWithoutCreatingLocalPendingChange",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testInboundRejectsStrictIdentityWithControl",
+        "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testPendingNFDDisplayRepairPersistsScalarsAndSecondPassLeavesContextClean",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testPendingRepairFiltersOwnerStoreScopeBeforeApplyingLimit",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testPendingRepairIndexesTargetsAcrossReasonableCatalogScale",
         "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testPendingRepairPreflightRejectsAtomicallyBeforeAnyMutation",
@@ -1844,6 +1846,7 @@
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testExplicitPendingRetryRunsForcedReconcileBeforeSuccess",
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testExplicitRecoveryCancellationPreservesPhaseAcrossRelaunch",
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testExplicitRetryPushesPendingThenRunsVerifiedSnapshotWhenGapPersists",
+        "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testFacadeRepeatedCancellationDrainsConcurrentWaitersAndResumesAdmission",
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testForcedForegroundSafetyCheckUpgradesOnlyNoOpToLightReconcile",
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testHostedXCTestDoesNotRegisterOrScheduleProductionBackgroundSync",
         "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testImmediateRetryAfterCancellationRunsWhenCancelledFlightFinishes",
@@ -2295,7 +2298,7 @@
     "iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests/testMetadataOnlyMissingBindingAndUnqualifiedSameScopeStayUnavailable",
     "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_en_normal_dark_idle"
   ],
-  "source": "Exact original unit selectors plus all UI selectors, including3shared-source test methods discovered in original compiledUI target. Actual flatJSON enumeration must match all2040 enabled selectors before each shard dispatch; errors[] and disabledTests[] must be empty. No disabled/skip-testing selectors. Includes two approved B21 concrete auth storage methods; actual compiled enumeration required for this composed candidate. Includes one approved physical parent batch integrity method; compiled full enumeration remains mandatory.",
+  "source": "Exact original unit selectors plus all UI selectors, including3shared-source test methods discovered in original compiledUI target. Actual flatJSON enumeration must match all2043 enabled selectors before each shard dispatch; errors[] and disabledTests[] must be empty. No disabled/skip-testing selectors. Includes two approved B21 concrete auth storage methods; actual compiled enumeration required for this composed candidate. Includes one approved physical parent batch integrity method; compiled full enumeration remains mandatory. TASK-146 A2 adds exactly two catalog scalar persistence regressions and one facade concurrent-cancellation regression to the unit target; baseline original2040/1896 metadata remains historical.",
   "limitations": [
     "40 observed opt-in skips remain Skipped, never Passed; unknown skips fail qualification.",
     "Counts/selectors must be updated explicitly for any future added/removed methods; static manifest alone is not execution.",
@@ -2309,7 +2312,7 @@
       "iOSMerchandiseControlUITests/MobileSyncPerformanceProbeTests/testRecoveryHoldQualificationRejectsLateEntryEarlyReleaseAndMissingEndpoints"
     ],
     "actualEnumeration": {
-      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/performance/ios40t2-operational-integration01/b19-selective-publication01/publication-execution01/ci40805769796-terminal01/ci-shard-successor-private01/real-enumeration01/enumeration.json",
+      "path": "PRIVATE_EVIDENCE/CI_ENUMERATION_2040_87416a34",
       "sha256": "87416a34fe916f7bb8ce3a9baac851ac48eb6868a66dc28973b0f2f3a09c0161",
       "bytes": 344871
     },
@@ -2321,11 +2324,11 @@
       "iOSMerchandiseControlTests/SupabaseAuthLifecycleTests/testConcreteAuthStorageRetiresHeldRefreshAndPublishesWorkerPKCEOnMain"
     ],
     "source": {
-      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/ios-r23-prepatch/composed-candidate-source-v21/iOSMerchandiseControlTests/SupabaseAuthLifecycleTests.swift",
+      "path": "PRIVATE_EVIDENCE/AUTH_LIFECYCLE_SOURCE_38caa215",
       "sha256": "38caa215d278d3ac9ea79e2c208951dec56932035e6eb3fafef27b79e87663c2"
     },
     "prior2037Manifest": {
-      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/performance/ios40t2-operational-integration01/b19-selective-publication01/publication-execution01/ci40805769796-terminal01/ci-shard-successor-private02/candidate/.github/ci/ios-xctest-coverage.json",
+      "path": "PRIVATE_EVIDENCE/CI_MANIFEST_2037_aa416779",
       "sha256": "aa41677972cd26ba5d80706f75915ece28c29269e756321fe323278eb6d56144"
     },
     "status": "FILE_PROPOSAL_NOT_NATIVE_ENUMERATION",
@@ -2336,5 +2339,58 @@
     "prior2039ManifestSHA256": "d4ddfffa3a8d731c65020cba295e020d68da40bcb43cdc3384c04c0d5228a0d7",
     "testSourceSHA256": "a258b4f8303b4cea0f5b13763122af44587e46e339fee9db9a888e05e859cb49",
     "runtimeFullEnumeration": "NOT_RUN"
+  },
+  "task146A2Addendum": {
+    "status": "FILE_PROPOSAL_RUNTIME_FULL_ENUMERATION_NOT_RUN",
+    "sourceCompositionSHA256": "e735555230533eec9004b259e35494b0ff9f92e0a29ff9724dc87a67fb928a00",
+    "sourceComposition": "PRIVATE_EVIDENCE/TASK146_A2_SOURCE_COMPOSITION_e7355552",
+    "preservedBaseline": {
+      "originalTotalMethods": 2040,
+      "originalStaticUnitMethods": 1896,
+      "originalStaticUIMethods": 144
+    },
+    "addedUnitSelectors": [
+      "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testCanonicalPersistenceBoundaryLeavesSavedModelsCleanAndScalarExact",
+      "iOSMerchandiseControlTests/CatalogTextIntegrationTests/testPendingNFDDisplayRepairPersistsScalarsAndSecondPassLeavesContextClean",
+      "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests/testFacadeRepeatedCancellationDrainsConcurrentWaitersAndResumesAdmission"
+    ],
+    "testSources": [
+      {
+        "path": "iOSMerchandiseControlTests/CatalogTextIntegrationTests.swift",
+        "PR28SHA256": "05760168279c2c82d00c2cbca1eabd5f493b0f34d33b732740939076aad95477",
+        "canonicalISHA256": "05760168279c2c82d00c2cbca1eabd5f493b0f34d33b732740939076aad95477",
+        "currentPSSHA256": "998a36a3e61672a60421564ac46e7e2761a0f668ef96a29cb7792ef6b17eb18a",
+        "newMethods": [
+          "testCanonicalPersistenceBoundaryLeavesSavedModelsCleanAndScalarExact",
+          "testPendingNFDDisplayRepairPersistsScalarsAndSecondPassLeavesContextClean"
+        ],
+        "priorMethods": 14,
+        "currentMethods": 16
+      },
+      {
+        "path": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+        "PR28SHA256": "159fe230a4a61d76a48c5ee4069a0bdd0b9d9f4f2e8ea30712fdab377c8b9faa",
+        "canonicalISHA256": "159fe230a4a61d76a48c5ee4069a0bdd0b9d9f4f2e8ea30712fdab377c8b9faa",
+        "currentPSSHA256": "edfad0b4d397f3aff1920c736cb3f4483a59e56752e44122e8b0aef01309dc36",
+        "newMethods": [
+          "testFacadeRepeatedCancellationDrainsConcurrentWaitersAndResumesAdmission"
+        ],
+        "priorMethods": 39,
+        "currentMethods": 40
+      }
+    ],
+    "expectedCurrentMethods": {
+      "unit-target": 1899,
+      "ui-core": 62,
+      "ui-long-observation": 2,
+      "ui-t18-it": 20,
+      "ui-t18-en": 20,
+      "ui-t18-es": 20,
+      "ui-t18-zh": 20,
+      "total": 2043
+    },
+    "allowedOptInSkipsUnchanged": 40,
+    "compiledFullEnumerationRequired": true,
+    "noDisabledSkipOrShardReduction": true
   }
 }

@@ -451,38 +451,72 @@ final class ManualPendingDispatchCASTests: XCTestCase {
     }
 
     func testActualManualUnknownSurvivesControllerReopenWithExactAtomicBytesAndNoResend() async throws {
-        let fixture = try await makeFixture()
-        try addSibling(fixture)
-        let plan = try await fixture.provider.makePushPlan(ownerUserID: fixture.owner)
-        fixture.remote.loseBatchResponse = true
-        _ = await fixture.provider.execute(plan: plan, ownerUserID: fixture.owner)
-        XCTAssertEqual(fixture.remote.productBatchSizes, [2])
-        let original = try ManualPendingAtomicRequestStore.records(context: ModelContext(fixture.container))
-        XCTAssertEqual(original.count, 1)
-        let receipt = try XCTUnwrap(original.first?.1)
-        XCTAssertEqual(receipt.request.body, fixture.remote.lastWireBody)
-        XCTAssertEqual(receipt.request.members.count, 2)
-        XCTAssertEqual(receipt.request.requestMemberIDs.count, 2)
-        XCTAssertEqual(original.first?.0.lastErrorKindRaw, ManualPendingAtomicRequestStore.Phase.inFlight.rawValue)
-        XCTAssertFalse(try XCTUnwrap(original.first?.0.metadataPayloadJSON).contains("never-persist-test-secret"))
-        let manifest = try XCTUnwrap(fixture.controller.active.manifest)
-        var base = try XCTUnwrap(fixture.container.configurations.first?.url)
-        for _ in manifest.relativeStorePath.split(separator: "/") { base.deleteLastPathComponent() }
-        let repository = try SyncStoreGenerationRepository(baseDirectory: base, defaults: fixture.defaults)
-        let reopened = try SyncStoreGenerationController(repository: repository, defaults: fixture.defaults)
-        let qualified = await reopened.awaitLocalBodyQualification()
-        XCTAssertTrue(qualified)
-        let read = ModelContext(reopened.modelContainer)
-        let persisted = try ManualPendingAtomicRequestStore.records(context: read)
-        XCTAssertEqual(persisted.first?.1, receipt)
-        XCTAssertEqual(persisted.first?.0.metadataPayloadJSON, original.first?.0.metadataPayloadJSON)
-        XCTAssertEqual(try ManualPendingAtomicRequestStore.protectedChangeIDs(context: read), receipt.request.changeIDs)
-        let adapter = SyncCatalogPushAdapter(context: read,
-            manualPushService: SupabaseManualPushService(remote: fixture.remote), defaults: fixture.defaults)
-        let next = try await adapter.makePushPlan(ownerUserID: fixture.owner)
-        XCTAssertFalse(next.isSendable)
-        _ = await adapter.execute(plan: plan, ownerUserID: fixture.owner)
-        XCTAssertEqual(fixture.remote.productBatchSizes, [2], "Unknown atomic batch is never rebuilt or split after reopen")
+        let initialClosure = Task145AtomicStoreClosureProbe()
+        let reopenedClosure = Task145AtomicStoreClosureProbe()
+        typealias Released = (defaults: UserDefaults, owner: UUID, remote: ManualCASRemote,
+            plan: ManualPushPlan, receipt: ManualPendingAtomicRequestStore.Receipt,
+            metadata: String, base: URL, root: URL)
+        func createUnknownAndRelease() async throws -> Released {
+            let fixture = try await makeFixture()
+            initialClosure.observe(fixture.controller, role: "manual-initial-controller")
+            initialClosure.observe(fixture.container, role: "manual-initial-container")
+            initialClosure.observe(fixture.provider, role: "manual-initial-provider")
+            try addSibling(fixture)
+            let plan = try await fixture.provider.makePushPlan(ownerUserID: fixture.owner)
+            fixture.remote.loseBatchResponse = true
+            _ = await fixture.provider.execute(plan: plan, ownerUserID: fixture.owner)
+            XCTAssertEqual(fixture.remote.productBatchSizes, [2])
+            let read = ModelContext(fixture.container)
+            initialClosure.observe(read, role: "manual-initial-read-context")
+            let original = try ManualPendingAtomicRequestStore.records(context: read)
+            for (record, _) in original {
+                initialClosure.observe(record, role: "manual-initial-atomic-record")
+            }
+            XCTAssertEqual(original.count, 1)
+            let receipt = try XCTUnwrap(original.first?.1)
+            XCTAssertEqual(receipt.request.body, fixture.remote.lastWireBody)
+            XCTAssertEqual(receipt.request.members.count, 2)
+            XCTAssertEqual(receipt.request.requestMemberIDs.count, 2)
+            XCTAssertEqual(original.first?.0.lastErrorKindRaw, ManualPendingAtomicRequestStore.Phase.inFlight.rawValue)
+            XCTAssertFalse(try XCTUnwrap(original.first?.0.metadataPayloadJSON).contains("never-persist-test-secret"))
+            let metadata = try XCTUnwrap(original.first?.0.metadataPayloadJSON)
+            let manifest = try XCTUnwrap(fixture.controller.active.manifest)
+            var base = try XCTUnwrap(fixture.container.configurations.first?.url)
+            for _ in manifest.relativeStorePath.split(separator: "/") { base.deleteLastPathComponent() }
+            let root = base.deletingLastPathComponent()
+            // The continuing remote owns only wire values/counters, never a callback into the old store.
+            XCTAssertNil(fixture.remote.beforeResponse)
+            XCTAssertNil(fixture.remote.beforeSupplierResponse)
+            try initialClosure.captureBeforeRelease(root: root, defaults: fixture.defaults, controller: fixture.controller)
+            return (fixture.defaults, fixture.owner, fixture.remote, plan, receipt, metadata, base, root)
+        }
+        let released = try await createUnknownAndRelease()
+        try initialClosure.requireReleasedAndNoSQLiteDescriptors()
+        func reopenAndRelease() async throws {
+            let repository = try SyncStoreGenerationRepository(baseDirectory: released.base, defaults: released.defaults)
+            let reopened = try SyncStoreGenerationController(repository: repository, defaults: released.defaults)
+            reopenedClosure.observe(repository, role: "manual-reopened-repository")
+            reopenedClosure.observe(reopened, role: "manual-reopened-controller")
+            reopenedClosure.observe(reopened.modelContainer, role: "manual-reopened-container")
+            let qualified = await reopened.awaitLocalBodyQualification()
+            XCTAssertTrue(qualified)
+            let read = ModelContext(reopened.modelContainer)
+            reopenedClosure.observe(read, role: "manual-reopened-read-context")
+            let persisted = try ManualPendingAtomicRequestStore.records(context: read)
+            XCTAssertEqual(persisted.first?.1, released.receipt)
+            XCTAssertEqual(persisted.first?.0.metadataPayloadJSON, released.metadata)
+            XCTAssertEqual(try ManualPendingAtomicRequestStore.protectedChangeIDs(context: read), released.receipt.request.changeIDs)
+            let adapter = SyncCatalogPushAdapter(context: read,
+                manualPushService: SupabaseManualPushService(remote: released.remote), defaults: released.defaults)
+            reopenedClosure.observe(adapter, role: "manual-reopened-adapter")
+            let next = try await adapter.makePushPlan(ownerUserID: released.owner)
+            XCTAssertFalse(next.isSendable)
+            _ = await adapter.execute(plan: released.plan, ownerUserID: released.owner)
+            XCTAssertEqual(released.remote.productBatchSizes, [2], "Unknown atomic batch is never rebuilt or split after reopen")
+            try reopenedClosure.captureBeforeRelease(root: released.root, defaults: released.defaults, controller: reopened)
+        }
+        try await reopenAndRelease()
+        try reopenedClosure.requireReleasedAndNoSQLiteDescriptors()
     }
 
     func testUnknownTransferKeepsOriginalRequestAndWholeMembership() async throws {
