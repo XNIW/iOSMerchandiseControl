@@ -113,12 +113,15 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         ) else {
             return XCTFail("Production background registration was not found.")
         }
-        let guardPrefix = app[..<registration.lowerBound].suffix(400)
-
+        let guardPrefix = app[..<registration.lowerBound].suffix(900)
         XCTAssertTrue(
-            guardPrefix.contains("if !Self.isRunningHostedXCTest"),
+            guardPrefix.contains("let shouldScheduleBackground = !Self.isRunningHostedXCTest")
+                && guardPrefix.contains("let ordinaryRoot = shouldScheduleBackground")
+                && guardPrefix.contains("if ordinaryRoot { "),
             "Hosted XCTest must not inherit a pending production BGTask lifecycle."
         )
+        XCTAssertTrue(app.contains("if ordinaryRoot, controller.loadFailureCode == nil {\n"
+            + "                SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)"))
     }
 
     func testBackgroundSchedulerFailsClosedBeforeRegistration() throws {

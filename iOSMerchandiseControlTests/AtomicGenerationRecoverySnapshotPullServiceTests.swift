@@ -9850,12 +9850,15 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
     }
 
     private func assertOnlyCurrentBodyProofEntries(context: ModelContext,
-            fixture: AtomicRecoveryFixture, expectedCount: Int) throws {
+            fixture: AtomicRecoveryFixture, expectedBodyProofs: Int, materialThrough: Int64?) throws {
         let all = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
-        XCTAssertEqual(all.count, expectedCount, "No business attempt or technical event may remain in this fixture")
-        XCTAssertTrue(all.allSatisfy { $0.domain == LocalCatalogBodyProofStore.domain && $0.status == .localOnly },
-            "Only typed non-work current-body receipts may remain; an unknown local-only row is not ignored")
         let manifest = try XCTUnwrap(fixture.controller.activeManifest)
+        let material = try WatermarkStore.MaterialCheckpoint.read(in: context, finalizedManifest: manifest)
+        XCTAssertEqual(material?.through, materialThrough)
+        XCTAssertEqual(all.filter { $0.domain == LocalCatalogBodyProofStore.domain }.count, expectedBodyProofs)
+        XCTAssertEqual(all.count, expectedBodyProofs + (materialThrough == nil ? 0 : 1),
+            "Only the expected body receipts and the validated material cursor may remain")
+        XCTAssertTrue(all.allSatisfy { $0.status == .localOnly }, "Receipts must not be dispatchable")
         let storeURL = try XCTUnwrap(context.container.configurations.first?.url)
         try LocalCatalogBodyProofStore.validate(container: context.container, manifest: manifest, storeURL: storeURL)
     }
@@ -10146,7 +10149,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), includeFirstCanonicalDelta ? 1 : 0)
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
             try assertOnlyCurrentBodyProofEntries(context: context, fixture: fixture,
-                expectedCount: includeFirstCanonicalDelta ? 1 : 0)
+                expectedBodyProofs: includeFirstCanonicalDelta ? 1 : 0,
+                materialThrough: includeFirstCanonicalDelta ? watermarkBefore : nil)
             orchestrator.stop()
             await runtime.cancelAndWait()
             await runtime.resumeAfterStoreReplacement()
@@ -10531,7 +10535,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(recoveryTransport.counts().pages, recoveryCountsBeforeEvents.pages)
             let context = ModelContext(fixture.controller.modelContainer)
             XCTAssertEqual(try context.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
-            try assertOnlyCurrentBodyProofEntries(context: context, fixture: fixture, expectedCount: 1)
+            try assertOnlyCurrentBodyProofEntries(context: context, fixture: fixture,
+                expectedBodyProofs: 1, materialThrough: 43)
             let advances = remote.fenceAdvances
             XCTAssertEqual(advances.map(\.from), [41, 42])
             XCTAssertEqual(advances.map(\.through), [42, 43])
@@ -10603,7 +10608,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 XCTAssertEqual(remote.fenceAdvances.map(\.through), [42, 43, 44])
                 let finalContext = ModelContext(fixture.controller.modelContainer)
                 XCTAssertEqual(try finalContext.fetchCount(FetchDescriptor<LocalPendingChange>()), 0)
-                try assertOnlyCurrentBodyProofEntries(context: finalContext, fixture: fixture, expectedCount: 1)
+                try assertOnlyCurrentBodyProofEntries(context: finalContext, fixture: fixture,
+                    expectedBodyProofs: 1, materialThrough: 44)
             }
             XCTAssertEqual(auth.networkBlocker.requestCount, 0, "Synthetic SDK auth must not use network")
             orchestrator.stop()
