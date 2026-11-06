@@ -4075,13 +4075,19 @@ struct DatabaseView: View {
         .accessibilityIdentifier("task140.database.root")
         .background {
             if let receipt = savedProductReceipt, receipt.matches(generationController.activeManifest) {
-                SavedProductReceiptReadback(receipt: receipt) { readback in
+                SavedProductReceiptReadback(receipt: receipt, container: context.container) {
                     guard !Task.isCancelled, isCurrentModelGeneration, savedProductReceipt == receipt,
                           receipt.matches(generationController.activeManifest),
                           currentPendingOwnerUserID.map(AccountBindingStore.accountHash(for:)) == receipt.accountHash,
                           Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container,
                             ownerUserID: currentPendingOwnerUserID) else { return }
-                    savedProductReadback = readback
+                    let ids = Array(receipt.intents.prefix(5).map(\.changeID))
+                    var request = FetchDescriptor<LocalPendingChange>(predicate: #Predicate { ids.contains($0.changeID) })
+                    request.fetchLimit = 6 // Duplicate/extra IDs fail the exact readback.
+                    let readContext = ModelContext(context.container)
+                    guard let changes = try? readContext.fetch(request) else { return }
+                    let readback = receipt.readback(by: changes)
+                    if savedProductReadback != readback { savedProductReadback = readback }
                 }
             }
         }
@@ -4592,34 +4598,26 @@ struct DatabaseView: View {
         return L(savedProductReadback?.isCloudConfirmed == true ? "product.save.cloud_confirmed" : "product.save.local_pending")
     }
 
-    /// One bounded exact-ID query for the current Save, outside list rows.
-    /// SwiftData pointers stay in this mounted generation; the receipt is values.
+    /// The ACK commits from a separate context. Re-read the current Save
+    /// after that store commits instead of relying on the view's cached models.
     private struct SavedProductReceiptReadback: View {
         let receipt: LocalProductSaveReceipt
-        let publish: (LocalProductSaveReadback) -> Void
-        @Query private var changes: [LocalPendingChange]
+        let container: ModelContainer
+        let refresh: () -> Void
 
-        init(receipt: LocalProductSaveReceipt, publish: @escaping (LocalProductSaveReadback) -> Void) {
-            self.receipt = receipt
-            self.publish = publish
-            let ids = Array(receipt.intents.prefix(5).map(\.changeID))
-            var request = FetchDescriptor<LocalPendingChange>(predicate: #Predicate { ids.contains($0.changeID) })
-            request.fetchLimit = 6 // Duplicate/extra IDs fail the exact readback.
-            _changes = Query(request)
-        }
         var body: some View {
-            let readback = receipt.readback(by: changes)
-            let scopeID = [receipt.accountHash, receipt.storeIdentity.storeId,
-                receipt.storeIdentity.localStoreId, receipt.shopID.uuidString,
-                receipt.deviceIdentityHash].joined(separator: "|")
-            let readbackID = scopeID + "|" + receipt.productFingerprint + "|"
-                + receipt.intents.map(\.eventFingerprint).joined(separator: "|") + ":\(readback.isCloudConfirmed)"
-                + ":\(readback.supplierRemoteID?.uuidString ?? "none"):\(readback.categoryRemoteID?.uuidString ?? "none")"
             Color.clear.frame(width: 0, height: 0)
-                .task(id: readbackID) {
-                    guard !Task.isCancelled else { return }
-                    publish(readback)
+                .task(id: receipt) { refresh() }
+                .onReceive(NotificationCenter.default.publisher(for: ModelContext.didSave)
+                    .compactMap(Self.savedContainerID)
+                    .receive(on: DispatchQueue.main)) { savedContainerID in
+                    guard savedContainerID == ObjectIdentifier(container) else { return }
+                    refresh()
                 }
+        }
+
+        nonisolated private static func savedContainerID(_ notification: Notification) -> ObjectIdentifier? {
+            (notification.object as? ModelContext).map { ObjectIdentifier($0.container) }
         }
     }
 
