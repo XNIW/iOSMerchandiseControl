@@ -17,6 +17,100 @@ Entrypoint: `./tools/agent/mc-agent.sh`
 - `lib/redact.sh`: redaction token/JWT/email/path/device/query sensitive.
 - `mcp/server.mjs`: wrapper MCP allowlisted sopra la CLI.
 
+## Controllo dello spazio
+
+Prima di acquisire lo slot Xcode o avviare Gradle, `mc-agent` misura lo spazio
+disponibile sui volumi di checkout, evidence, temporanei e Gradle User Home.
+Sotto 100 GB decimali scrive un avviso. Il lavoro parte se restano almeno
+30 GB dopo la crescita prevista del batch. I valori iniziali sono 3,5 GB per
+Xcode e 2 GB per Gradle, basati sui batch locali comparabili. Impostare
+`MC_IOS_BATCH_GROWTH_BYTES` o `MC_ANDROID_BATCH_GROWTH_BYTES` per un batch con
+un profilo misurato diverso. Se la misura fallisce o il margine è insufficiente,
+produce `BLOCKED_EXTERNAL` / `BLOCKED_DISK_SPACE`, exit 2.
+Le verifiche statiche e i comandi diagnostici che non avviano questi strumenti
+restano utilizzabili. I driver esterni a `mc-agent` richiedono il proprio controllo.
+
+## Conservazione degli output gestiti
+
+`mc_run_wrapped` registra l'esecuzione prima del comando e finalizza dopo avere
+verificato il report JSON/Markdown/log. L'indice locale si trova in
+`agent-runs/managed-artifacts/index.jsonl`. Il codice del test e l'esito del cleanup
+sono separati; il secondo compare anche nel file `.artifacts.txt` del report.
+Prima del batch viene tentata la pulizia dei soli output conclusi registrati.
+Il registro riesamina le esecuzioni interrotte e conserva la diagnostica.
+Il postflight riesegue la pulizia dopo l'esito o un'interruzione gestita.
+
+I comandi Xcode raggruppano i prodotti per scheme, configurazione, piattaforma,
+architettura e toolchain. Rimane l'ultimo prodotto valido del gruppo.
+`reuse-products` del registro restituisce un prodotto già completato con
+input e dipendenze corrispondenti e registra il consumer. Chi lo usa verifica
+il descriptor e la provenienza del prodotto per la prova prevista.
+`build-for-testing` e i successivi
+`test-without-building` mantengono descriptor e prodotti insieme fino alla
+conclusione del comando e dei suoi consumatori. I risultati integrali riusciti
+ripetitivi conservano gli ultimi due per configurazione e tipo di verifica.
+Gli output Android in `app/build` e le cache Gradle continuano a essere riusati
+nel progetto; questo runner non crea copie storiche aggiuntive degli APK.
+
+Il limite operativo è 20 GB decimali per gli output sacrificabili, scelto rispetto
+alle DerivedData misurate di circa 2–3 GB. Il materiale protetto non viene rimosso
+per rispettare il limite: l'indice segnala l'eccesso e le dimensioni non ancora note.
+Report compatti, failure, retry, risultati finali, pin e riferimenti esterni restano
+protetti. Anche un SDK fallito seguito da un fallback complessivamente riuscito
+mantiene prodotti e diagnostica del fallimento.
+I log completi di build/test falliti vengono conservati nel `raw` del run con
+un riferimento protetto; il report mantiene anche la coda sintetica. Il file viene
+rinominato sullo stesso volume e rimane al percorso originale se ciò non riesce.
+
+Impostare `MC_ARTIFACT_PIN_REASON`, `MC_ARTIFACT_RETRY_PENDING=1` o
+`MC_ARTIFACT_FINAL_EVIDENCE=1` prima del comando quando sono previsti ulteriori
+consumatori, una baseline o evidence finale. L'opzione facoltativa
+`MC_IOS_SOURCE_PACKAGES_DIR` riusa un percorso SourcePackages esplicito;
+la disponibilità viene verificata contro Package.resolved, revisioni dei checkout
+e modifiche locali. In assenza di prova completa gli intermedi vengono conservati.
+Le directory miste contenenti APK/app richiedono anch'esse tale prova, anche quando
+registrate come risultati integrali. Per Gradle, il frontdoor di una vera qualifica
+completa Debug/Release può chiamare `capture-gradle --run TOKEN --qualification Q`
+in analisi, oppure aggiungere `--apply` per allegare una prova verificata. Servono
+ricevute del vero processo SDK terminato con exit 0, entrambe le APK vincolate alla
+qualifica, fonti/configurazioni invariate e percorsi esatti di dipendenze, SDK,
+distribuzione Gradle, JDK e chiave Debug effettivamente usati. La manutenzione non
+avvia nuove build per produrre questa prova e non riusa attestazioni parziali di
+vecchie configurazioni. I profili `--fixture` sono esclusi dall'ammissione reale.
+
+Il witness è limitato a 50.000 file, 30 GB logici inventariati e 8 MB di metadati:
+registra identità/metadati dei componenti, hash delle fonti e dei file piccoli,
+senza copie di dipendenze o segreti. Le fonti includono la membership; nuovi file
+cache aggiuntivi non invalidano la prova, mentre file richiesti cambiati o mancanti
+e dichiarazioni opzionali prima assenti causano HOLD. Dopo un vero PASS, solo
+`GRADLE_AVAILABILITY_ATTACHED` con `applied: true` conferma l'allegato. Un errore
+del collector mantiene gli output e non cambia il risultato dei test. AVD e dati
+applicativi rimangono esclusi; il keystore è soltanto un file di input protetto.
+
+Il piccolo helper `lib/artifact_lifecycle.py` opera soltanto nel root esplicito
+`agent-runs/managed-artifacts`. Per un controllo senza rimozioni:
+
+```bash
+python3 tools/agent/lib/artifact_lifecycle.py --root /percorso/evidence/agent-runs/managed-artifacts cleanup
+```
+
+L'applicazione richiede `cleanup --apply`. `protect --run TOKEN --pin MOTIVO`
+protegge ulteriori consumatori. `release-products --run TOKEN --receipt FILE`
+richiede una ricevuta JSON legata al token con `disposition: products_superseded`,
+`consumers_complete: true`, `retry_pending: false`, `reason`, `closed_pins` e
+`diagnostic_paths` esistenti. Gli esiti storici e i risultati diagnostici falliti
+rimangono invariati. Una copertura processi incerta richiede anche
+`unattributed_consumers_reviewed_closed: true`; i processi propri ancora vivi
+impediscono sempre il rilascio.
+
+Le lease usano identità kernel del processo e nonce. I figli osservati, il gruppo
+del comando e un token ereditato dai processi impediscono la rimozione di output
+ancora utilizzati. Un confronto dei processi alla fine del comando conserva anche
+eventuali nuovi sopravvissuti non attribuibili. Non vengono segnalati o terminati
+processi estranei. Dopo un crash, il successivo avvio marca il run interrotto come
+da verificare e conserva la diagnostica. Non vengono adottate o eliminate
+automaticamente vecchie cartelle esterne al registro, né attraversati symlink.
+
 ## Setup config
 
 ```bash

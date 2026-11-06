@@ -1,0 +1,456 @@
+#!/usr/bin/env python3
+"""Finite tiny-directory/process tests. No SDK, dependency download or Git mutation."""
+import argparse
+import importlib.util
+import json
+import os
+from pathlib import Path
+import signal
+import shutil
+import subprocess
+import sys
+import time
+import unittest
+import uuid
+import zipfile
+from unittest.mock import patch
+
+sys.dont_write_bytecode = True
+HELPER = Path(__file__).parent / "lib/artifact_lifecycle.py"
+spec = importlib.util.spec_from_file_location("artifact_lifecycle", HELPER)
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+ROOT = Path(os.environ.get("MC_ARTIFACT_TEST_ROOT", "/Users/minxiang/DiskSpaceReports/maintenance-20261105/prevention/lifecycle-fixtures"))
+REPO = Path(__file__).resolve().parents[2]
+
+
+def args(**values):
+    return argparse.Namespace(**values)
+
+
+class LifecycleTests(unittest.TestCase):
+    def setUp(self):
+        self.base = ROOT / uuid.uuid4().hex
+        self.root = self.base / "agent-runs/managed-artifacts"
+        self.reg = m.Registry(self.root)
+        self.context = {"repo": str(REPO), "head": "fixture", "delta_sha256": "fixture",
+                        "complete": True, "clean_inputs": False, "toolchain": {}}
+        self.source = patch.object(m, "source_context", return_value=self.context)
+        self.deps = patch.object(m, "dependencies", return_value={"complete": True, "pins": []})
+        self.source.start()
+        self.deps.start()
+        self.addCleanup(self.source.stop)
+        self.addCleanup(self.deps.stop)
+        self.base.mkdir(parents=True, exist_ok=True)
+        self.diag = self.base / "diagnostic.log"
+        self.diag.write_text("unique diagnostic\n")
+
+    def begin(self, **overrides):
+        values = dict(run_id=uuid.uuid4().hex, owner=os.getpid(), repo=str(REPO),
+                      command="fixture only", pin=[], retry_pending=False, final_evidence=False, dependency_root=None)
+        values.update(overrides)
+        with self.reg.exclusive():
+            return self.reg.begin(args(**values))
+
+    def output(self, token, kind="integral-result", config="Debug"):
+        with self.reg.exclusive():
+            path = Path(self.reg.path(args(run=token, kind=kind, configuration=config)))
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "fixture.bin").write_bytes(b"compiled fixture")
+        if kind == "products":
+            (path / "Build/Products").mkdir(parents=True, exist_ok=True)
+            (path / "Build/Products/app.bin").write_bytes(b"generated app")
+            db = path / "Build/Intermediates.noindex/XCBuildData/build.db"
+            db.parent.mkdir(parents=True, exist_ok=True)
+            db.write_bytes(b"SQLite format 3\0" + b"generated Xcode database")
+        return path
+
+    def finish(self, token, code=0):
+        report = self.base / (token + ".json")
+        report.write_text(json.dumps({"registry_token": token, "exit_code": code,
+                                      "diagnostic_paths": [str(self.diag)]}))
+        with self.reg.exclusive():
+            self.reg.finish(args(run=token, code=code, report=str(report)))
+
+    def clean(self, apply=False):
+        with self.reg.exclusive():
+            return self.reg.clean(apply)
+
+    def release(self, token, closed):
+        receipt = self.base / (token + ".release.json")
+        receipt.write_text(json.dumps({"registry_token": token, "disposition": "products_superseded",
+                                       "consumers_complete": True, "retry_pending": False,
+                                       "closed_pins": closed, "reason": "fixture successor qualified",
+                                       "diagnostic_paths": [str(self.diag)]}))
+        with self.reg.exclusive():
+            self.reg.release_products(args(run=token, receipt=str(receipt)))
+
+    def test_completed_result_deleted_latest_two_kept_and_idempotent(self):
+        outputs = []
+        for _ in range(3):
+            token = self.begin()
+            outputs.append(self.output(token))
+            self.finish(token)
+        analysis = self.clean()
+        self.assertTrue(outputs[0].exists())
+        self.assertEqual([r["path"] for r in analysis["eligible"]], [str(outputs[0])])
+        result = self.clean(True)
+        self.assertEqual(result["removed_outputs"], [str(outputs[0])])
+        self.assertTrue(all(p.exists() for p in outputs[1:]))
+        self.assertEqual(self.clean(True)["removed_outputs"], [])
+
+    def test_generated_build_db_allowed_real_app_database_protected(self):
+        first = self.begin(pin=["pending-native"])
+        old = self.output(first, "products")
+        self.finish(first)
+        for _ in range(2):
+            token = self.begin()
+            self.output(token, "products")
+            self.finish(token)
+        self.assertTrue(old.exists())
+        self.release(first, ["pending-native"])
+        self.assertIn(str(old), self.clean(True)["removed_outputs"])
+        active = self.begin()
+        protected = self.output(active)
+        (protected / "app.sqlite").write_bytes(b"SQLite format 3\0data")
+        self.assertRaises(m.Hold, m.tree, protected)
+
+    def test_reused_products_remain_until_the_registered_consumer_finishes(self):
+        first = self.begin()
+        old = self.output(first, "products")
+        self.finish(first)
+        consumer = self.begin()
+        with self.reg.exclusive():
+            reused = self.reg.reuse_products(args(run=consumer, configuration="Debug"))
+        self.assertEqual(reused, str(old))
+        successor = self.begin()
+        current = self.output(successor, "products")
+        self.finish(successor)
+        self.assertEqual(self.clean(True)["removed_outputs"], [])
+        self.finish(consumer)
+        self.assertEqual(self.clean(True)["removed_outputs"], [str(old)])
+        self.assertTrue(current.exists())
+
+    def test_active_retry_pin_final_and_external_symlink_kept(self):
+        protected = []
+        for settings in ({}, {"retry_pending": True}, {"pin": ["open-issue"]}, {"final_evidence": True}):
+            token = self.begin(**settings)
+            protected.append(self.output(token, config=uuid.uuid4().hex))
+            if settings:
+                self.finish(token)
+        external = self.base / "important"
+        external.mkdir()
+        (external / "keep").write_text("personal fixture")
+        linked_run = self.begin()
+        linked = self.output(linked_run, config="linked")
+        (linked / "external").symlink_to(external, target_is_directory=True)
+        self.finish(linked_run)
+        self.clean(True)
+        self.assertTrue(all(p.exists() for p in protected))
+        self.assertEqual((external / "keep").read_text(), "personal fixture")
+        self.assertRaises(m.Hold, m.tree, linked)
+
+    def test_mixed_android_apk_result_requires_available_inputs(self):
+        outputs = []
+        for _ in range(3):
+            token = self.begin()
+            directory = self.output(token, kind="integral-directory")
+            (directory / "copy.apk").write_bytes(b"generated APK fixture")
+            outputs.append(directory)
+            self.finish(token)
+            self.assertTrue(self.reg.read(token)["outputs"][0]["requires_rebuild"])
+        with patch.object(m, "dependencies", return_value={"complete": False}):
+            result = self.clean(True)
+        self.assertEqual(result["removed_outputs"], [])
+        self.assertTrue(all(path.exists() for path in outputs))
+
+    def test_exclusive_lease_nonce_prevents_concurrent_owner(self):
+        one, two = self.begin(), self.begin()
+        with self.reg.exclusive():
+            self.reg.lease(args(run=one, action="lease-acquire"))
+            self.assertRaises(m.Hold, self.reg.lease, args(run=two, action="lease-acquire"))
+            self.assertRaises(m.Hold, self.reg.lease, args(run=two, action="lease-release"))
+            self.reg.lease(args(run=one, action="lease-release"))
+            self.reg.lease(args(run=two, action="lease-acquire"))
+            self.reg.lease(args(run=two, action="lease-release"))
+
+    def test_timeout_and_sdk_failure_survive_overall_success(self):
+        token = self.begin()
+        rc = m.execute(self.reg, args(run=token, timeout=0.2,
+                                     argv=[sys.executable, "-c", "import time; time.sleep(4)"]))
+        self.assertEqual(rc, 124)
+        self.finish(token, 0)  # Models a legacy runtime fallback returning aggregate PASS.
+        run = self.reg.read(token)
+        self.assertIn("sdk_failure_diagnostic_and_retry", run["pins"])
+        self.assertTrue(run["retry_pending"])
+        execution = json.loads(next((self.root / "executions").iterdir()).read_text())
+        self.assertTrue(execution["timed_out"])
+        self.assertNotEqual(execution["raw_returncode"], 0)
+
+    def test_harmless_execution_becomes_quiescent(self):
+        token = self.begin()
+        rc = m.execute(self.reg, args(run=token, timeout=0, argv=[sys.executable, "-c", "pass"]))
+        self.assertEqual(rc, 0)
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            if self.reg.quiescent(self.reg.read(token)):
+                break
+            time.sleep(0.05)
+        self.assertTrue(self.reg.quiescent(self.reg.read(token)))
+
+    def test_detached_child_with_and_without_environment_blocks_cleanup(self):
+        for drop_environment in (False, True):
+            token = self.begin()
+            pidfile = self.base / (uuid.uuid4().hex + ".pid")
+            child = "import os,time;open(" + repr(str(pidfile)) + ",'w').write(str(os.getpid()));time.sleep(1.6)"
+            program = "import subprocess,sys,time;time.sleep(.03);subprocess.Popen([sys.executable,'-c'," + repr(child) + "],start_new_session=True" + (",env={}" if drop_environment else "") + ")"
+            rc = m.execute(self.reg, args(run=token, timeout=0, argv=[sys.executable, "-c", program]))
+            self.assertEqual(rc, 0)
+            self.assertTrue(pidfile.exists())
+            self.assertIsNotNone(m.birth(int(pidfile.read_text())))
+            self.assertFalse(self.reg.quiescent(self.reg.read(token)))
+            time.sleep(1.8)  # Owned fixture ends naturally; no external process is signalled.
+
+    def test_signal_preserves_raw_exit_and_diagnostic_metadata(self):
+        token = self.begin()
+        process = subprocess.Popen([sys.executable, str(HELPER), "--root", str(self.root), "exec",
+                                    "--run", token, "--", sys.executable, "-c", "import time;time.sleep(5)"])
+        deadline = time.monotonic() + 3
+        while not list((self.root / "executions").iterdir()) and time.monotonic() < deadline:
+            time.sleep(0.02)
+        process.send_signal(signal.SIGTERM)
+        self.assertEqual(process.wait(timeout=5), 143)
+        execution = json.loads(next((self.root / "executions").iterdir()).read_text())
+        self.assertEqual(execution["cancel_signal"], signal.SIGTERM)
+        self.assertNotEqual(execution["raw_returncode"], 0)
+
+    def test_two_cleanup_processes_do_not_delete_twice(self):
+        outputs = []
+        for _ in range(3):
+            token = self.begin()
+            outputs.append(self.output(token))
+            self.finish(token)
+        command = [sys.executable, str(HELPER), "--root", str(self.root), "cleanup", "--apply"]
+        processes = [subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(2)]
+        removed = []
+        for process in processes:
+            stdout, stderr = process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 0, stderr)
+            removed.extend(json.loads(stdout)["removed_outputs"])
+        self.assertEqual(removed, [str(outputs[0])])
+        self.assertTrue(all(p.exists() for p in outputs[1:]))
+
+    def test_source_context_covers_tests_vendor_and_configuration(self):
+        required = {"iOSMerchandiseControlTests", "iOSMerchandiseControlUITests", "Vendor", "Vendor 2", "Configuration"}
+        seen = []
+        def fake_git(command, **kwargs):
+            seen.append(command)
+            return b"fixture-head\n" if "rev-parse" in command else b""
+        self.source.stop()
+        with patch.object(m.subprocess, "check_output", side_effect=fake_git):
+            m.source_context(REPO)
+        diff = next(c for c in seen if "diff" in c)
+        self.assertTrue(required.issubset(set(diff)))
+        self.source.start()
+
+    def test_cleanup_error_under_errexit_preserves_command_status(self):
+        script = f'''source {str(HELPER.parent / 'common.sh')!r}
+MC_ARTIFACT_RUN=fixture
+MC_ARTIFACT_BASE={str(self.root)!r}
+MC_JSON_PATH={str(self.base / 'fixture.json')!r}
+mc_artifact_call() {{ case "$1" in finish) return 0;; cleanup) return 7;; esac; }}
+set -e
+mc_artifact_finish 65
+exit 65
+'''
+        result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 65)
+        self.assertIn("ARTIFACT_CLEANUP_EXIT=7", result.stdout)
+
+    def test_low_space_runs_cleanup_then_remeasures(self):
+        budget = self.base / "budget.txt"
+        budget.write_text("1000000000\n")
+        script = f'''source {str(HELPER.parent / 'common.sh')!r}
+mc_disk_available_bytes() {{ cat {str(budget)!r}; }}
+mc_artifact_maintain() {{ printf '30000000000\\n' > {str(budget)!r}; }}
+mc_require_disk_space {str(REPO)!r}
+'''
+        result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("WARNING_DISK_SPACE", result.stderr)
+
+    def test_reserve_subtracts_predicted_growth(self):
+        script = f'''source {str(HELPER.parent / 'common.sh')!r}
+mc_disk_available_bytes() {{ printf '32500000000\\n'; }}
+mc_artifact_maintain() {{ :; }}
+MC_EXIT_BLOCKED=2
+MC_ARTIFACT_BATCH_GROWTH_BYTES=3500000000 mc_require_disk_space {str(REPO)!r}
+'''
+        result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("32500000000 bytes available minus 3500000000 predicted", result.stderr)
+
+    def test_complete_failure_log_retained_without_changing_sdk_code(self):
+        token = self.begin()
+        original = self.base / "fixture-failure.log"
+        content = "UNIQUE_FIRST_FAILURE_LINE\n" + "diagnostic line\n" * 300
+        original.write_text(content)
+        script = f'''source {str(HELPER.parent / 'common.sh')!r}
+source {str(HELPER.parent / 'redact.sh')!r}
+source {str(HELPER.parent / 'report.sh')!r}
+MC_ARTIFACT_BASE={str(self.root)!r}
+MC_ARTIFACT_RUN={token!r}
+MC_LOG_TMP={str(self.base / 'report.tmp')!r}
+code=65
+mc_preserve_failure_log {str(original)!r} "$code"
+test "$code" -eq 65
+'''
+        result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(original.exists())
+        output = self.reg.read(token)["outputs"][-1]
+        self.assertFalse(output["managed"])
+        self.assertEqual(Path(output["path"]).read_text(), content)
+
+    def test_real_mc_agent_entrypoint_with_sdk_stub_registers_and_finalizes(self):
+        binaries = self.base / "bin"
+        binaries.mkdir()
+        stub = binaries / "xcodebuild"
+        stub.write_text(f'''#!{sys.executable}
+import os, pathlib, sys
+a = sys.argv[1:]
+if '-derivedDataPath' in a:
+ p = pathlib.Path(a[a.index('-derivedDataPath')+1]) / 'Build/Products'
+ p.mkdir(parents=True, exist_ok=True)
+ (p/'fixture.bin').write_bytes(b'fixture compiled product')
+if '-resultBundlePath' in a:
+ p = pathlib.Path(a[a.index('-resultBundlePath')+1]);p.mkdir(parents=True)
+ (p/'result.txt').write_text('fixture success')
+print('SDK_STUB_ONLY')
+''')
+        stub.chmod(0o755)
+        config = self.base / "config.env"
+        config.write_text(f'''source {str(REPO / 'tools/agent/config.example.env')!r}
+MC_IOS_SCHEME=Fixture
+PATH={str(binaries)!r}:"$PATH"
+mc_disk_available_bytes() {{ printf '100000000000\\n'; }}
+''')
+        env = os.environ.copy()
+        env.update(MC_AGENT_CONFIG=str(config), MC_EVIDENCE_DIR=str(self.base / "evidence"),
+                   MC_TASK_ID="TASK-146", MC_ARTIFACT_FINAL_EVIDENCE="1")
+        result = subprocess.run(["bash", str(REPO / "tools/agent/mc-agent.sh"), "ios", "build", "debug"],
+                                env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        managed = self.base / "evidence/agent-runs/managed-artifacts"
+        run = json.loads(next((managed / "runs").glob("*.json")).read_text())
+        self.assertEqual(run["status"], "success")
+        self.assertTrue(run["final_evidence"])
+        self.assertEqual({o["kind"] for o in run["outputs"]}, {"products", "integral-result"})
+        self.assertTrue(Path(run["report"]).is_file())
+        self.assertIn("ARTIFACT_CLEANUP_EXIT=0", result.stdout)
+
+    def gradle_fixture(self, execute=True, prefix=""):
+        token = self.begin()
+        workspace = self.base / prefix
+        workspace.mkdir(parents=True, exist_ok=True)
+        if execute:
+            # This fixture verifies Gradle retention, not attribution of unrelated
+            # processes on the host. The child and its group are still observed.
+            with patch.object(m, "unattributed_survivors", return_value=[]):
+                self.assertEqual(m.execute(self.reg, args(run=token, timeout=0,
+                                                          argv=[sys.executable, "-c", "pass"])), 0)
+        source = workspace / "fake-source"
+        (source / "app/src").mkdir(parents=True)
+        (source / "app/src/Main.kt").write_text("class Fixture\n")
+        declaration = source / "build.gradle.kts"
+        declaration.write_text("plugins {}\n")
+        cache = workspace / "fake-cache"
+        cache.mkdir()
+        (cache / "required.jar").write_bytes(b"fixture dependency bytes")
+        apks = []
+        for variant in ("debug", "release"):
+            path = workspace / (variant + ".apk")
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("AndroidManifest.xml", "fixture " + variant)
+                archive.writestr("classes.dex", b"fixture dex " + variant.encode())
+            apks.append({"variant": variant, "path": str(path), "sha256": m.file_sha256(path)})
+        full = workspace / "fake-full.json"
+        full.write_text(json.dumps({"status": "FIXTURE_FULL_PASS", "exit_code": 0,
+                                    "finalizationErrors": [], "registry_token": token,
+                                    "admission": {"registryToken": token}, "artifacts": apks}))
+        qualification = workspace / "fake-qualification.json"
+        qualification.write_text(json.dumps({"registry_token": token, "evidence_kind": "fixture_full_pass",
+                                             "qualified": True, "source_before_after_identical": True,
+                                             "full_variants": ["debug", "release"], "apks": apks,
+                                             "source_roots": [str(source / "app/src")],
+                                             "declaration_files": [str(declaration)], "dependency_roots": [str(cache)],
+                                             "expected_absent": [str(workspace / "optional.properties")],
+                                             "full_qualification": {"path": str(full), "sha256": m.file_sha256(full)}}))
+        return token, qualification, source, cache
+
+    def test_gradle_capture_defaults_analysis_and_fixture_not_production(self):
+        token, qualification, _, _ = self.gradle_fixture()
+        with self.reg.exclusive():
+            result = self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=False, fixture=True))
+            self.assertFalse(result["applied"])
+            self.assertNotIn("gradle_profile", self.reg.read(token))
+            result = self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=True, fixture=True))
+        self.assertTrue(result["applied"])
+        self.assertTrue(m.verify_gradle_profile(self.reg.read(token), allow_fixture=True))
+        self.assertFalse(m.input_available(self.reg.read(token)))
+
+    def test_gradle_source_change_holds_availability(self):
+        token, qualification, source, _ = self.gradle_fixture()
+        with self.reg.exclusive():
+            self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=True, fixture=True))
+        extra = source / "app/src/New.kt"
+        extra.write_text("class New\n")
+        self.assertFalse(m.verify_gradle_profile(self.reg.read(token), allow_fixture=True))
+        extra.unlink()
+        (source / "app/src/Main.kt").write_text("class Changed\n")
+        self.assertFalse(m.verify_gradle_profile(self.reg.read(token), allow_fixture=True))
+
+    def test_gradle_dependency_change_holds_availability(self):
+        token, qualification, _, cache = self.gradle_fixture()
+        with self.reg.exclusive():
+            self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=True, fixture=True))
+        (cache / "required.jar").write_bytes(b"changed dependency bytes")
+        self.assertFalse(m.verify_gradle_profile(self.reg.read(token), allow_fixture=True))
+
+    def test_gradle_optional_declaration_appearance_holds_availability(self):
+        token, qualification, _, _ = self.gradle_fixture()
+        with self.reg.exclusive():
+            self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=True, fixture=True))
+        (self.base / "optional.properties").write_text("changed=true\n")
+        self.assertFalse(m.verify_gradle_profile(self.reg.read(token), allow_fixture=True))
+
+    def test_gradle_qualified_mixed_retention_after_consumer_closure_fixture_only(self):
+        outputs = []
+        for index in range(3):
+            token, qualification, _, _ = self.gradle_fixture(prefix=str(index))
+            directory = self.output(token, kind="integral-directory")
+            for apk in json.loads(qualification.read_text())["apks"]:
+                shutil.copy2(apk["path"], directory / (apk["variant"] + ".apk"))
+            with self.reg.exclusive():
+                self.reg.protect(args(run=token, pin=["pending-native"], retry_pending=True, final_evidence=False))
+                self.reg.capture_gradle(args(run=token, qualification=str(qualification), apply=True, fixture=True))
+            self.finish(token)
+            self.release(token, ["pending-native"])
+            outputs.append(directory)
+        verifier = m.verify_gradle_profile
+        with patch.object(m, "verify_gradle_profile", side_effect=lambda run: verifier(run, allow_fixture=True)):
+            result = self.clean(True)
+        self.assertEqual(result["removed_outputs"], [str(outputs[0])])
+        self.assertTrue(all(path.exists() for path in outputs[1:]))
+
+    def test_gradle_capture_rejects_missing_execution_and_wrong_scope(self):
+        token, qualification, _, _ = self.gradle_fixture(execute=False)
+        with self.reg.exclusive():
+            self.assertRaises(m.Hold, self.reg.capture_gradle,
+                              args(run=token, qualification=str(qualification), apply=True, fixture=True))
+            self.assertRaises(m.Hold, self.reg.capture_gradle,
+                              args(run=token, qualification=str(qualification), apply=True, fixture=False))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

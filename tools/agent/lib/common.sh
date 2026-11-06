@@ -363,6 +363,164 @@ mc_task118_evidence_context_mismatch() {
   [[ "$MC_TASK_ID" == "TASK-118" && "$MC_EVIDENCE_DIR" != "docs/TASKS/EVIDENCE/TASK-118" ]]
 }
 
+mc_disk_available_bytes() {
+  # Include build, evidence, temporary and dependency volumes without creating paths.
+  python3 - "$@" "${MC_EVIDENCE_ABS:-$MC_IOS_REPO}" "${TMPDIR:-/tmp}" <<'PY'
+import os, sys
+free = []
+seen = set()
+for path in sys.argv[1:]:
+    path = os.path.abspath(os.path.expanduser(path))
+    while not os.path.exists(path):
+        parent = os.path.dirname(path)
+        if parent == path:
+            raise SystemExit("Cannot locate storage volume")
+        path = parent
+    dev = os.stat(path).st_dev
+    if dev not in seen:
+        seen.add(dev)
+        stat = os.statvfs(path)
+        free.append(stat.f_bavail * stat.f_frsize)
+print(min(free))
+PY
+}
+
+mc_artifact_call() {
+  python3 "${MC_AGENT_ROOT}/lib/artifact_lifecycle.py" --root "$MC_ARTIFACT_BASE" "$@"
+}
+
+mc_artifact_begin() {
+  MC_ARTIFACT_BASE="${MC_EVIDENCE_ABS}/agent-runs/managed-artifacts"
+  local repo="$MC_IOS_REPO"
+  case "$MC_COMMAND" in android*|physical\ android*) repo="$MC_ANDROID_REPO" ;; esac
+  local protections=()
+  [[ -n "${MC_ARTIFACT_PIN_REASON:-}" ]] && protections+=(--pin "$MC_ARTIFACT_PIN_REASON")
+  [[ "${MC_ARTIFACT_RETRY_PENDING:-0}" == "1" ]] && protections+=(--retry-pending)
+  [[ "${MC_ARTIFACT_FINAL_EVIDENCE:-0}" == "1" ]] && protections+=(--final-evidence)
+  MC_ARTIFACT_RUN="$(mc_artifact_call begin --run-id "$MC_RUN_ID" --owner "$$" --repo "$repo" --command "$MC_COMMAND" --dependency-root "${MC_IOS_SOURCE_PACKAGES_DIR:-$MC_ARTIFACT_BASE/shared-packages}" "${protections[@]}")" || {
+    MC_ARTIFACT_RUN=""
+    MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}artifact_registry_unavailable"
+    return 1
+  }
+  export MC_ARTIFACT_BASE MC_ARTIFACT_RUN
+  MC_ARTIFACT_PREVIOUS_TRAPS="$(trap -p EXIT INT TERM)"
+  trap 'mc_artifact_interrupt "$?"' EXIT
+  trap 'mc_artifact_interrupt 130; exit 130' INT
+  trap 'mc_artifact_interrupt 143; exit 143' TERM
+}
+
+mc_artifact_interrupt() {
+  local code="${1:-1}"
+  [[ -n "${MC_ARTIFACT_RUN:-}" ]] || return 0
+  mc_artifact_call interrupt --run "$MC_ARTIFACT_RUN" --code "$code" >/dev/null 2>&1 || true
+  mc_artifact_maintain
+  # Raw output remains in the registered run's raw directory for crash diagnosis.
+}
+
+mc_artifact_maintain() {
+  [[ -n "${MC_ARTIFACT_RUN:-}" ]] || return 0
+  local receipt code
+  if receipt="$(mc_artifact_call cleanup --apply)"; then
+    mc_report_log "ARTIFACT_CLEANUP ${receipt}"
+  else
+    code=$?
+    mc_report_log "ARTIFACT_CLEANUP_HOLD exit=${code}; test result unchanged."
+  fi
+  return 0
+}
+
+mc_artifact_finish() {
+  local code="$1" cleanup_code
+  if [[ -n "${MC_ARTIFACT_RUN:-}" ]]; then
+    if mc_artifact_call finish --run "$MC_ARTIFACT_RUN" --code "$code" --report "$MC_JSON_PATH"; then
+      if mc_artifact_call cleanup --apply > "${MC_JSON_PATH%.json}.artifacts.txt"; then
+        cleanup_code=0
+      else
+        cleanup_code=$?
+      fi
+      printf 'ARTIFACT_CLEANUP_EXIT=%s ARTIFACT_INDEX=%s\n' "$cleanup_code" "$MC_ARTIFACT_BASE/index.jsonl"
+    else
+      mc_artifact_interrupt "$code"
+      printf 'ARTIFACT_CLEANUP_EXIT=2 ARTIFACT_DIAGNOSTICS_PRESERVED=%s\n' "$MC_ARTIFACT_RUN"
+    fi
+  fi
+  trap - EXIT INT TERM
+  if [[ -n "${MC_ARTIFACT_PREVIOUS_TRAPS:-}" ]]; then
+    eval "$MC_ARTIFACT_PREVIOUS_TRAPS"
+  fi
+  MC_ARTIFACT_RUN=""
+  export MC_ARTIFACT_RUN
+  return 0
+}
+
+mc_artifact_path() {
+  [[ -n "${MC_ARTIFACT_RUN:-}" ]] || return "$MC_EXIT_BLOCKED"
+  mc_artifact_call path --run "$MC_ARTIFACT_RUN" --kind "$1" --configuration "$2"
+}
+
+mc_artifact_exec() {
+  if [[ -z "${MC_ARTIFACT_RUN:-}" ]]; then
+    MC_SUMMARY="BLOCKED_ARTIFACT_REGISTRY: heavy command has no registered run; not started."
+    printf '%s\n' "$MC_SUMMARY" >&2
+    return "$MC_EXIT_BLOCKED"
+  fi
+  local timeout=0
+  if [[ "${1:-}" == "--timeout" ]]; then timeout="$2"; shift 2; fi
+  [[ "${1:-}" == "--" ]] && shift
+  mc_artifact_call exec --run "$MC_ARTIFACT_RUN" --timeout "$timeout" -- "$@"
+}
+
+mc_preserve_failure_log() {
+  local source="$1" code="$2" destination
+  [[ "$code" -ne 0 ]] || return 0
+  if [[ -z "${MC_ARTIFACT_RUN:-}" ]]; then
+    mc_report_log "FAILURE_LOG_PRESERVED at ${source}; no registry available."
+    return 1
+  fi
+  destination="$MC_ARTIFACT_BASE/raw/$MC_ARTIFACT_RUN-failure-$(basename "$source")"
+  # Rename only; cross-volume moves fail closed and keep the original file.
+  if ! python3 - "$source" "$destination" <<'PY'
+import os, sys
+source, destination = sys.argv[1:]
+if os.path.lexists(destination):
+    raise SystemExit("Failure log destination already exists")
+os.rename(source, destination)
+PY
+  then
+    mc_report_log "FAILURE_LOG_PRESERVED at ${source}; rename unavailable."
+    return 1
+  fi
+  mc_artifact_call reference --run "$MC_ARTIFACT_RUN" --path "$destination" \
+    --kind integral-directory --configuration failure-diagnostic-log || return 1
+  mc_report_log "COMPLETE_FAILURE_LOG_PRESERVED at ${destination}; summary tail retained in report."
+  return 0
+}
+
+mc_require_disk_space() {
+  local available growth="${MC_ARTIFACT_BATCH_GROWTH_BYTES:-0}"
+  # Reconcile and retire eligible outputs even if the initial reserve is sufficient.
+  mc_artifact_maintain
+  if [[ ! "$growth" =~ ^(0|[1-9][0-9]{0,14})$ ]]; then
+    MC_DISK_BLOCK_SUMMARY="BLOCKED_DISK_SPACE: invalid predicted batch growth; new heavy job not started."
+  elif ! available="$(mc_disk_available_bytes "$@")" || [[ ! "$available" =~ ^[0-9]+$ ]]; then
+    MC_DISK_BLOCK_SUMMARY="BLOCKED_DISK_SPACE: storage measurement unavailable; new heavy job not started."
+  elif (( available - growth < 30000000000 )); then
+    MC_DISK_BLOCK_SUMMARY="BLOCKED_DISK_SPACE: ${available} bytes available minus ${growth} predicted leaves less than the 30 GB reserve; new heavy job not started."
+  else
+    if (( available < 100000000000 )); then
+      printf 'WARNING_DISK_SPACE: %s bytes available, below 100 GB decimal.\n' "$available" >&2
+      MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}disk_space_below_100GB"
+    fi
+    return "$MC_EXIT_PASS"
+  fi
+  MC_DISK_BLOCKED=1
+  MC_SUMMARY="$MC_DISK_BLOCK_SUMMARY"
+  MC_NEXT_ACTION="Recover verified disposable data and remeasure the 30 GB reserve after predicted growth."
+  MC_RESULT_OVERRIDE="BLOCKED_EXTERNAL"
+  printf '%s\n' "$MC_SUMMARY" >&2
+  return "$MC_EXIT_BLOCKED"
+}
+
 mc_run_wrapped() {
   MC_COMMAND="$1"
   shift
@@ -396,17 +554,31 @@ mc_run_wrapped() {
   fi
   mc_report_init_paths
   mc_report_log "=== mc-agent ${MC_COMMAND} ==="
+  mc_artifact_begin || true
 
   local raw_tmp raw_status exit_code end_ms duration_ms had_errexit
-  raw_tmp="$(mktemp)"
+  if [[ -n "${MC_ARTIFACT_RUN:-}" ]]; then
+    raw_tmp="$MC_ARTIFACT_BASE/raw/$MC_ARTIFACT_RUN.stdout"
+    : > "$raw_tmp"
+  else
+    raw_tmp="$(mktemp)"
+  fi
   had_errexit=0
   case "$-" in
     *e*) had_errexit=1; set +e ;;
   esac
   MC_IN_WRAPPER=1
+  MC_DISK_BLOCKED=0
   "$@" > "$raw_tmp" 2>&1
   raw_status="$?"
   MC_IN_WRAPPER=0
+  # Some legacy callers map every nonzero SDK exit to FAIL. Preserve admission BLOCKED.
+  if [[ "$MC_DISK_BLOCKED" == "1" ]]; then
+    raw_status="$MC_EXIT_BLOCKED"
+    MC_RESULT_OVERRIDE="BLOCKED_EXTERNAL"
+    MC_SUMMARY="$MC_DISK_BLOCK_SUMMARY"
+    MC_NEXT_ACTION="Recover verified disposable data and remeasure the 30 GB reserve after predicted growth."
+  fi
   if [[ "$had_errexit" == "1" ]]; then
     set -e
   fi
@@ -427,6 +599,7 @@ mc_run_wrapped() {
   mc_report_write "$exit_code" "$MC_SUMMARY" "$MC_NEXT_ACTION" "$duration_ms" \
     "${MC_ROWS_CREATED:-0}" "${MC_ROWS_DELETED:-0}" "${MC_RESIDUE_COUNT:-0}" "${MC_TEST_PREFIX:-}"
   mc_release_live_lock
+  mc_artifact_finish "$exit_code"
   if [[ "${MC_QUIET:-0}" != "1" ]]; then
     mc_print_final_summary "$exit_code"
   fi

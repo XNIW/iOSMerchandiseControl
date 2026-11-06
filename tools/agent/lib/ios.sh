@@ -83,18 +83,50 @@ PY
 
 mc_ios_result_bundle() {
   local slug="$1"
-  printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}.xcresult"
+  local target
+  target="$(mc_ios_destination)"
+  mc_artifact_path integral-result "ios|${MC_IOS_SCHEME}|${target%%,*}|${slug}"
+}
+
+mc_ios_product_configuration() {
+  local target="${2#generic/}" architecture="${3:-$(uname -m)}"
+  printf '%s' "ios|${MC_IOS_SCHEME}|$1|${target%%,*}|${architecture}|${DEVELOPER_DIR:-default}"
+}
+
+mc_ios_xcodebuild() {
+  local args=("$@") extra=() config="Debug" target derived architecture="" has_derived=0 has_packages=0 without_build=0 i
+  target="$(mc_ios_destination)"
+  for ((i=0; i<${#args[@]}; i++)); do
+    case "${args[$i]}" in
+      -derivedDataPath) has_derived=1 ;;
+      -clonedSourcePackagesDirPath) has_packages=1 ;;
+      -configuration) config="${args[$((i+1))]:-Debug}" ;;
+      -destination) target="${args[$((i+1))]:-$target}" ;;
+      ARCHS=*) architecture="${args[$i]#ARCHS=}" ;;
+      test-without-building) without_build=1 ;;
+    esac
+  done
+  if [[ "$has_derived" == "0" && "$without_build" == "0" ]]; then
+    derived="$(mc_artifact_path products "$(mc_ios_product_configuration "$config" "$target" "$architecture")")" || return $?
+    extra+=(-derivedDataPath "$derived")
+  fi
+  if [[ "$has_packages" == "0" ]]; then
+    extra+=(-clonedSourcePackagesDirPath "${MC_IOS_SOURCE_PACKAGES_DIR:-$MC_ARTIFACT_BASE/shared-packages}")
+  fi
+  mc_artifact_exec --timeout "${MC_IOS_EXEC_TIMEOUT:-0}" -- xcodebuild "${args[@]}" "${extra[@]}"
 }
 
 mc_ios_xcodebuild_timed() {
   local seconds="$1"
   shift
-  perl -e 'alarm shift @ARGV; exec @ARGV' "$seconds" xcodebuild "$@"
+  MC_IOS_EXEC_TIMEOUT="$seconds" mc_ios_xcodebuild "$@"
 }
 
 mc_ios_runtime_derived_data() {
-  local slug="$1"
-  printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}-DerivedData"
+  local slug="$1" config="${2:-Debug}" target
+  target="$(mc_ios_destination)"
+  case "$slug" in *physical*) target="generic/platform=iOS" ;; esac
+  mc_artifact_path products "$(mc_ios_product_configuration "$config" "$target")"
 }
 
 mc_ios_app_bundle_id() {
@@ -114,7 +146,7 @@ mc_ios_build_app_for_runtime() {
   dest="$(mc_ios_destination)"
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild build -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild build -project iOSMerchandiseControl.xcodeproj \
       -scheme "${MC_IOS_SCHEME}" \
       -configuration Debug \
       -destination "$dest" \
@@ -130,7 +162,7 @@ mc_ios_build_app_for_physical() {
   local derived_data="$1"
   local app_path
   local args=(
-    xcodebuild build
+    mc_ios_xcodebuild build
     -project iOSMerchandiseControl.xcodeproj
     -scheme "${MC_IOS_SCHEME}"
     -configuration Debug
@@ -192,7 +224,7 @@ mc_ios_task126_ui_smoke() {
   target="$(mc_ios_simulator_target)" || return $?
   bundle_id="$(mc_ios_app_bundle_id)"
   run_id="${MC_RUN_ID:-${MC_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}-ios-smoke-${kind}-p$$}"
-  derived_data="$(mc_ios_runtime_derived_data "task126-ui-smoke-${kind}")"
+  derived_data="$(mc_ios_runtime_derived_data "task126-ui-smoke-${kind}")" || return $?
 
   mc_ios_acquire_xcode_lock || return $?
   app_path="$(mc_ios_build_app_for_runtime "$derived_data")"
@@ -1102,38 +1134,18 @@ mc_ios_xcode_lock_path() {
 }
 
 mc_ios_acquire_xcode_lock() {
-  local lock now lock_mtime lock_pid
-  lock="$(mc_ios_xcode_lock_path)"
-  mkdir -p "$(dirname "$lock")"
-  if mkdir "$lock" 2>/dev/null; then
-    printf 'pid=%s command=%s timestamp=%s\n' "$$" "${MC_COMMAND:-unknown}" "$(mc_now_iso)" > "$lock/owner"
-    MC_IOS_XCODE_LOCK="$lock"
-    trap mc_ios_release_xcode_lock EXIT INT TERM
-    return "$MC_EXIT_PASS"
-  fi
-  now="$(date +%s)"
-  lock_mtime="$(stat -f %m "$lock" 2>/dev/null || stat -c %Y "$lock" 2>/dev/null || echo "$now")"
-  lock_pid="$(sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$lock/owner" 2>/dev/null | head -1)"
-  if { [[ -n "$lock_pid" ]] && ! kill -0 "$lock_pid" 2>/dev/null; } || (( now - lock_mtime >= ${MC_LOCK_STALE_SECONDS:-3600} )); then
-    rm -rf "$lock"
-    if mkdir "$lock" 2>/dev/null; then
-      printf 'pid=%s command=%s timestamp=%s\n' "$$" "${MC_COMMAND:-unknown}" "$(mc_now_iso)" > "$lock/owner"
-      MC_IOS_XCODE_LOCK="$lock"
-      trap mc_ios_release_xcode_lock EXIT INT TERM
-      return "$MC_EXIT_PASS"
-    fi
-  fi
-  MC_SUMMARY="Xcode build/test lock is already held."
-  MC_NEXT_ACTION="Wait for pid=${lock_pid:-unknown} or inspect $(mc_relpath "$lock")."
-  return "$MC_EXIT_BLOCKED"
+  MC_ARTIFACT_BATCH_GROWTH_BYTES="${MC_IOS_BATCH_GROWTH_BYTES:-3500000000}" \
+    mc_require_disk_space "$MC_IOS_REPO" || return $?
+  [[ -n "${MC_ARTIFACT_RUN:-}" ]] || { MC_SUMMARY="Xcode requires a registered mc-agent run."; return "$MC_EXIT_BLOCKED"; }
+  mc_artifact_call lease-acquire --run "$MC_ARTIFACT_RUN" || return "$MC_EXIT_BLOCKED"
+  MC_IOS_XCODE_LOCK="$MC_ARTIFACT_BASE/xcode-lease.json"
 }
 
 mc_ios_release_xcode_lock() {
-  if [[ -n "${MC_IOS_XCODE_LOCK:-}" ]]; then
-    rm -rf "$MC_IOS_XCODE_LOCK"
-    MC_IOS_XCODE_LOCK=""
+  if [[ -n "${MC_IOS_XCODE_LOCK:-}" && -n "${MC_ARTIFACT_RUN:-}" ]]; then
+    mc_artifact_call lease-release --run "$MC_ARTIFACT_RUN" || return "$MC_EXIT_BLOCKED"
   fi
-  trap - EXIT INT TERM
+  MC_IOS_XCODE_LOCK=""
 }
 
 mc_ios_build() {
@@ -1148,13 +1160,13 @@ mc_ios_build() {
   esac
   local dest bundle code
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle "build-${config}")"
+  bundle="$(mc_ios_result_bundle "build-${config}")" || return $?
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild -project iOSMerchandiseControl.xcodeproj \
       -scheme "${MC_IOS_SCHEME}" \
       -configuration "$config" \
       -destination "$dest" \
@@ -1181,7 +1193,7 @@ mc_ios_test() {
   local dest bundle code
   local tests=()
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle "test-${suite}")"
+  bundle="$(mc_ios_result_bundle "test-${suite}")" || return $?
   MC_ARTIFACT_XCRESULT="$bundle"
   case "$suite" in
     sync)
@@ -1311,7 +1323,7 @@ mc_ios_test() {
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild test -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild test -project iOSMerchandiseControl.xcodeproj \
       -scheme "${MC_IOS_SCHEME}" \
       -configuration Debug \
       -destination "$dest" \
@@ -1356,7 +1368,7 @@ mc_ios_smoke() {
       mc_ios_acquire_xcode_lock || return $?
       (
         cd "$MC_IOS_REPO" || exit 3
-        xcodebuild build -project iOSMerchandiseControl.xcodeproj \
+        mc_ios_xcodebuild build -project iOSMerchandiseControl.xcodeproj \
           -scheme "${MC_IOS_SCHEME}" -configuration Debug -destination "$dest" build
         xcrun simctl bootstatus "$MC_IOS_SIMULATOR_NAME" -b 2>/dev/null || true
       )
@@ -1506,16 +1518,16 @@ mc_ios_auth_preflight() {
   mc_require_live || return $?
   local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle auth-preflight)"
+  bundle="$(mc_ios_result_bundle auth-preflight)" || return $?
   test_log="$(mktemp -t mc-agent-ios-auth-preflight)"
-  derived_data="/tmp/mc-agent-ios-auth-preflight-${MC_TIMESTAMP}-DerivedData"
+  derived_data="$(mc_ios_runtime_derived_data auth-preflight)" || return $?
   xctestrun="${derived_data}/Build/Products/task114-ios-auth-preflight.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
         -scheme "${MC_IOS_SCHEME}" -configuration Debug \
         -destination "$dest" -derivedDataPath "$derived_data" \
         -parallel-testing-enabled NO \
@@ -1540,8 +1552,7 @@ mc_ios_auth_preflight() {
       fi
       (
         cd "$MC_IOS_REPO" || exit 3
-        rm -rf "$bundle"
-        xcodebuild test-without-building -xctestrun "$xctestrun" \
+        mc_ios_xcodebuild test-without-building -xctestrun "$xctestrun" \
           -destination "$dest" -resultBundlePath "$bundle" \
           -only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled
       ) >>"$test_log" 2>&1
@@ -1554,8 +1565,7 @@ mc_ios_auth_preflight() {
     skipped=1
   fi
   mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
-  rm -f "$test_log"
-  rm -rf "$derived_data"
+  if mc_preserve_failure_log "$test_log" "$code"; then rm -f "$test_log"; fi
   if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
     MC_SUMMARY="iOS auth-preflight PASS. xcresult=${bundle}"
     MC_NEXT_ACTION="Run scoped live-write."
@@ -1588,9 +1598,9 @@ mc_ios_live_full_pull() {
   mc_require_live || return $?
   local dest bundle before_json after_json code test_log store_path store_hash derived_data xctestrun generated_xctestrun detail_status physical_wait
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle live-full-pull)"
+  bundle="$(mc_ios_result_bundle live-full-pull)" || return $?
   test_log="$(mktemp -t mc-agent-ios-live-full-pull)"
-  derived_data="/tmp/mc-agent-ios-live-full-pull-${MC_TIMESTAMP}-DerivedData"
+  derived_data="$(mc_ios_runtime_derived_data live-full-pull)" || return $?
   xctestrun="${derived_data}/Build/Products/task114-ios-live-full-pull.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
@@ -1620,7 +1630,7 @@ mc_ios_live_full_pull() {
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
       -scheme "${MC_IOS_SCHEME}" -configuration Debug \
       -destination "$dest" -derivedDataPath "$derived_data" \
       -parallel-testing-enabled NO
@@ -1644,7 +1654,7 @@ mc_ios_live_full_pull() {
       fi
       (
         cd "$MC_IOS_REPO" || exit 3
-        xcodebuild test-without-building -xctestrun "$xctestrun" \
+        mc_ios_xcodebuild test-without-building -xctestrun "$xctestrun" \
           -destination "$dest" -resultBundlePath "$bundle" \
           -only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore
       ) >>"$test_log" 2>&1
@@ -1793,8 +1803,8 @@ print(json.dumps(payload, sort_keys=True))
 PY
   MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-live-full-pull.$$.json)"
   detail_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
-  rm -f /tmp/mc-agent-ios-live-full-pull.$$.json "$test_log"
-  rm -rf "$derived_data"
+  rm -f /tmp/mc-agent-ios-live-full-pull.$$.json
+  if mc_preserve_failure_log "$test_log" "$code"; then rm -f "$test_log"; fi
   mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
 
   if [[ "$detail_status" == "PASS" ]]; then
@@ -1871,13 +1881,12 @@ PY
     return "$MC_EXIT_BLOCKED"
   fi
   local derived_data app_path code wait_seconds container store status
-  derived_data="$(mc_ios_runtime_derived_data runtime-ui-counts)"
+  derived_data="$(mc_ios_runtime_derived_data runtime-ui-counts)" || return $?
   wait_seconds="${MC_IOS_RUNTIME_WAIT_SECONDS:-20}"
   if [[ "${MC_IOS_RUNTIME_REUSE_LAUNCHED:-0}" == "1" ]]; then
     wait_seconds="${MC_IOS_RUNTIME_REUSE_WAIT_SECONDS:-0}"
   elif [[ "${MC_IOS_RUNTIME_FOREGROUND_ONLY:-0}" == "1" ]]; then
     mc_ios_runtime_foreground_installed_app || {
-      rm -rf "$derived_data"
       MC_SUMMARY="iOS runtime-ui-counts BLOCKED: installed runtime app could not be launched foreground."
       MC_NEXT_ACTION="Install/launch the app once, then retry the live gate."
       return "$MC_EXIT_BLOCKED"
@@ -1889,13 +1898,11 @@ PY
     code=$?
     mc_ios_release_xcode_lock
     if [[ "$code" -ne 0 || -z "$app_path" ]]; then
-      rm -rf "$derived_data"
       MC_SUMMARY="iOS runtime-ui-counts BLOCKED: Debug app build failed or app bundle was not found."
       MC_NEXT_ACTION="Inspect xcodebuild log, then rerun ios runtime-ui-counts --live."
       return "$MC_EXIT_BLOCKED"
     fi
     mc_ios_runtime_launch_app "$app_path" || {
-      rm -rf "$derived_data"
       MC_SUMMARY="iOS runtime-ui-counts BLOCKED: install/launch failed for the simulator app."
       MC_NEXT_ACTION="Boot the configured simulator and retry; verify bundle id $(mc_ios_app_bundle_id)."
       return "$MC_EXIT_BLOCKED"
@@ -1907,7 +1914,6 @@ PY
   container="$(mc_sync_ios_container 2>/dev/null || true)"
   store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
   mc_ios_store_runtime_guard "$store" || {
-    rm -rf "$derived_data"
     return $?
   }
   if [[ "${MC_IOS_RUNTIME_REUSE_LAUNCHED:-0}" == "1" ]]; then
@@ -1915,7 +1921,6 @@ PY
   else
     mc_ios_runtime_counts_payload "ios.runtime-ui-counts" "$wait_seconds" "$container" "$store"
   fi
-  rm -rf "$derived_data"
   status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
   case "$status" in
     PASS)
@@ -1947,14 +1952,14 @@ mc_ios_live_write() {
   MC_TEST_PREFIX="$prefix"
   local dest bundle code
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle live-write)"
+  bundle="$(mc_ios_result_bundle live-write)" || return $?
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
     TASK114_LIVE_ACCEPTANCE=1 TASK114_RUN_PREFIX="$prefix" \
-      xcodebuild test -project iOSMerchandiseControl.xcodeproj \
+      mc_ios_xcodebuild test -project iOSMerchandiseControl.xcodeproj \
         -scheme "${MC_IOS_SCHEME}" -configuration Debug \
         -destination "$dest" -resultBundlePath "$bundle" \
         -parallel-testing-enabled NO \
@@ -1985,9 +1990,9 @@ mc_ios_task114_matrix_step() {
   local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path build_timeout test_timeout invocation_id
   dest="$(mc_ios_destination)"
   invocation_id="$(mc_now_ms)"
-  bundle="$(mc_ios_result_bundle "task114-${method}-${invocation_id}")"
+  bundle="$(mc_ios_result_bundle "task114-${method}")" || return $?
   test_log="$(mktemp -t "mc-agent-ios-task114-${method}")"
-  derived_data="/tmp/mc-agent-ios-task114-${method}-${MC_TIMESTAMP}-${invocation_id}-DerivedData"
+  derived_data="$(mc_ios_runtime_derived_data "task114-${method}")" || return $?
   xctestrun="${derived_data}/Build/Products/task114-${method}.xctestrun"
   build_timeout="${MC_IOS_XCODEBUILD_BUILD_TIMEOUT_SECONDS:-240}"
   test_timeout="${MC_IOS_XCODEBUILD_TEST_TIMEOUT_SECONDS:-120}"
@@ -2007,7 +2012,7 @@ mc_ios_task114_matrix_step() {
         "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
   ) >"$test_log" 2>&1
   code=$?
-  if [[ "$code" -eq 142 ]]; then
+  if [[ "$code" -eq 124 || "$code" -eq 142 ]]; then
     printf '\nTASK114_IOS_MATRIX_BUILD_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$build_timeout" >>"$test_log"
   fi
   if [[ "$code" -eq 0 ]]; then
@@ -2026,7 +2031,6 @@ mc_ios_task114_matrix_step() {
         mc_ios_xctestrun_set_env "$xctestrun" "TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
         mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
 	      fi
-	      rm -rf "$bundle"
 	      (
 	        cd "$MC_IOS_REPO" || exit 3
 	        mc_ios_xcodebuild_timed "$test_timeout" test-without-building -xctestrun "$xctestrun" \
@@ -2034,7 +2038,7 @@ mc_ios_task114_matrix_step() {
           "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
       ) >>"$test_log" 2>&1
       code=$?
-      if [[ "$code" -eq 142 ]]; then
+      if [[ "$code" -eq 124 || "$code" -eq 142 ]]; then
         printf '\nTASK114_IOS_MATRIX_TEST_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$test_timeout" >>"$test_log"
       fi
     fi
@@ -2045,8 +2049,7 @@ mc_ios_task114_matrix_step() {
     skipped=1
   fi
   mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
-  rm -f "$test_log"
-  rm -rf "$derived_data"
+  if mc_preserve_failure_log "$test_log" "$code"; then rm -f "$test_log"; fi
   if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
     MC_SUMMARY="iOS TASK-114 matrix step ${method} PASS for prefix ${prefix}. xcresult=${bundle}"
     MC_NEXT_ACTION="Continue TASK-114 live sync-matrix."
@@ -2075,9 +2078,9 @@ mc_ios_task072d_harness_step() {
   local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path build_timeout test_timeout invocation_id
   dest="$(mc_ios_destination)"
   invocation_id="$(mc_now_ms)"
-  bundle="$(mc_ios_result_bundle "task072d-${method}-${invocation_id}")"
+  bundle="$(mc_ios_result_bundle "task072d-${method}")" || return $?
   test_log="$(mktemp -t "mc-agent-ios-task072d-${method}")"
-  derived_data="/tmp/mc-agent-ios-task072d-${method}-${MC_TIMESTAMP}-${invocation_id}-DerivedData"
+  derived_data="$(mc_ios_runtime_derived_data "task072d-${method}")" || return $?
   xctestrun="${derived_data}/Build/Products/task072d-${method}.xctestrun"
   build_timeout="${MC_IOS_XCODEBUILD_BUILD_TIMEOUT_SECONDS:-240}"
   test_timeout="${MC_IOS_XCODEBUILD_TEST_TIMEOUT_SECONDS:-180}"
@@ -2097,7 +2100,7 @@ mc_ios_task072d_harness_step() {
       "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/${method}"
   ) >"$test_log" 2>&1
   code=$?
-  if [[ "$code" -eq 142 ]]; then
+  if [[ "$code" -eq 124 || "$code" -eq 142 ]]; then
     printf '\nTASK072D_IOS_HARNESS_BUILD_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$build_timeout" >>"$test_log"
   fi
   if [[ "$code" -eq 0 ]]; then
@@ -2128,7 +2131,6 @@ mc_ios_task072d_harness_step() {
         mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_REQUIRE_EXTERNAL_RECEIVE" "1" >>"$test_log" 2>&1
         mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_REQUIRE_EXTERNAL_RECEIVE" "1" >>"$test_log" 2>&1
       fi
-      rm -rf "$bundle"
       (
         cd "$MC_IOS_REPO" || exit 3
         mc_ios_xcodebuild_timed "$test_timeout" test-without-building -xctestrun "$xctestrun" \
@@ -2136,7 +2138,7 @@ mc_ios_task072d_harness_step() {
           "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/${method}"
       ) >>"$test_log" 2>&1
       code=$?
-      if [[ "$code" -eq 142 ]]; then
+      if [[ "$code" -eq 124 || "$code" -eq 142 ]]; then
         printf '\nTASK072D_IOS_HARNESS_TEST_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$test_timeout" >>"$test_log"
       fi
     fi
@@ -2147,8 +2149,7 @@ mc_ios_task072d_harness_step() {
     skipped=1
   fi
   mc_report_log "$(mc_redact_text "$(tail -n 120 "$test_log")")"
-  rm -f "$test_log"
-  rm -rf "$derived_data"
+  if mc_preserve_failure_log "$test_log" "$code"; then rm -f "$test_log"; fi
   if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
     MC_SUMMARY="iOS TASK-072D harness ${method} PASS for prefix ${prefix}. xcresult=${bundle}"
     MC_NEXT_ACTION="Continue TASK-072D runtime matrix and cleanup."

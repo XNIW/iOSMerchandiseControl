@@ -233,10 +233,12 @@ mc_android_device_state_redacted() {
 }
 
 mc_android_gradle() {
+  MC_ARTIFACT_BATCH_GROWTH_BYTES="${MC_ANDROID_BATCH_GROWTH_BYTES:-2000000000}" \
+    mc_require_disk_space "$MC_ANDROID_REPO" "${GRADLE_USER_HOME:-$HOME/.gradle}" || return $?
   (
     cd "$MC_ANDROID_REPO" || exit 3
     export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djdk.attach.allowAttachSelf=true"
-    ./gradlew "$@"
+    mc_artifact_exec ./gradlew "$@"
   )
 }
 
@@ -1109,7 +1111,7 @@ mc_android_test_broad() {
   mc_report_log "$(tail -n 220 "$gradle_log" || true)"
   payload="$(mc_android_broad_assess_results "$code" "$gradle_log" "$started" "broad")"
   mc_android_broad_set_detail "$payload"
-  rm -f "$gradle_log"
+  if mc_preserve_failure_log "$gradle_log" "$code"; then rm -f "$gradle_log"; fi
 
   status="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status","MISCONFIGURED"))' "$payload")"
   tests="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("tests",0))' "$payload")"
