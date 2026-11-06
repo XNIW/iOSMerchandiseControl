@@ -17,6 +17,14 @@ protocol ShopScopedIncrementalFencePersisting: Sendable {
     ) async throws
 }
 
+/// Production V6 binds a local material receipt to the opaque authorization
+/// of the page that was applied, including when its previous cursor was zero.
+protocol ShopScopedMaterialFencePersisting: ShopScopedIncrementalFencePersisting {
+    func verifiedScopeKey(scope: Task126VerifiedOwnerStoreScope, baseline: Int64, through: Int64) async throws -> String
+    func advanceDurableFence(ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope,
+                             from: Int64, through: Int64, expectedScopeKey: String) async throws
+}
+
 nonisolated enum SupabaseSyncEventIncrementalLimits {
     // Frozen V6 event-page contract: 150 rows maximum.
     static let maximumLimit = 150

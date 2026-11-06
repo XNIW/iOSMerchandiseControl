@@ -31,6 +31,68 @@ final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
     func resumeAfterStoreReplacement() async {}
 }
 
+#if DEBUG
+/// Opt-in observation of this facade's existing cancellation tasks.
+/// No task handle or resource owner is retained by the observer.
+nonisolated final class AutomaticSyncCancellationLifecycleObservation: @unchecked Sendable {
+    nonisolated struct Snapshot: Sendable {
+        let scheduled: Int
+        let entered: Int
+        let engineReturned: Int
+        let captureReleased: Int
+        let engineAlive: Bool
+    }
+
+    private let lock = NSLock()
+    private var scheduled = 0
+    private var entered = 0
+    private var engineReturned = 0
+    private var captureReleased = 0
+    private weak var engine: AnyObject?
+
+    func bindEngine(_ engine: AnyObject) {
+        lock.lock()
+        self.engine = engine
+        lock.unlock()
+    }
+
+    func makeTicket() -> Ticket {
+        lock.lock()
+        scheduled += 1
+        lock.unlock()
+        return Ticket(observation: self)
+    }
+
+    func snapshot() -> Snapshot {
+        lock.lock()
+        defer { lock.unlock() }
+        return Snapshot(scheduled: scheduled, entered: entered,
+            engineReturned: engineReturned, captureReleased: captureReleased,
+            engineAlive: engine != nil)
+    }
+
+    private func record(_ phase: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        switch phase {
+        case 0: entered += 1
+        case 1: engineReturned += 1
+        default: captureReleased += 1
+        }
+    }
+
+    nonisolated final class Ticket: @unchecked Sendable {
+        private let observation: AutomaticSyncCancellationLifecycleObservation
+        fileprivate init(observation: AutomaticSyncCancellationLifecycleObservation) {
+            self.observation = observation
+        }
+        func didEnter() { observation.record(0) }
+        func didReturnFromEngine() { observation.record(1) }
+        deinit { observation.record(2) }
+    }
+}
+#endif
+
 @MainActor
 final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     private let authViewModel: SupabaseAuthViewModel
@@ -40,6 +102,14 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     private let defaults: UserDefaults
     private let authenticatedOwnerProvider: @MainActor () -> UUID?
     private var facadeIsRunning = false
+    private var cancellationTail: Task<Void, Never>?
+    private var cancellationGeneration = UUID()
+
+    #if DEBUG
+    var cancellationLifecycleObservationForTesting: AutomaticSyncCancellationLifecycleObservation? {
+        didSet { cancellationLifecycleObservationForTesting?.bindEngine(engine) }
+    }
+    #endif
 
     init(
         authViewModel: SupabaseAuthViewModel,
@@ -161,13 +231,33 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     }
 
     func cancel() {
-        Task {
+        #if DEBUG
+        let cancellationTicket = cancellationLifecycleObservationForTesting?.makeTicket()
+        #endif
+        let predecessor = cancellationTail
+        cancellationGeneration = UUID()
+        cancellationTail = Task { [engine, predecessor] in
+            #if DEBUG
+            cancellationTicket?.didEnter()
+            #endif
             await engine.cancel()
+            #if DEBUG
+            cancellationTicket?.didReturnFromEngine()
+            #endif
+            await predecessor?.value
         }
     }
 
     func cancelAndWait() async {
-        await engine.cancelAndWait()
+        while true {
+            let generation = cancellationGeneration
+            let tail = cancellationTail
+            await tail?.value
+            await engine.cancelAndWait()
+            guard generation == cancellationGeneration else { continue }
+            cancellationTail = nil
+            return
+        }
     }
 
     func resumeAfterStoreReplacement() async {
@@ -224,7 +314,7 @@ private extension SyncAction {
     /// A destructive account/shop replacement may only execute recovery work.
     /// A same-scope journal may first drain its own pending writes, but only in
     /// the coordinator's exact push-then-recover sequence, or push-then-bootstrap
-    /// for an admitted automatic foreground/reconnect resume. This keeps the
+    /// for an admitted foreground/reconnect/explicit CTA resume. This keeps the
     /// durable latch fail-closed without creating a retry deadlock.
     nonisolated func allowsPendingRecoveryAdmission(
         mode: AccountRecoveryJournalMode,
@@ -236,7 +326,7 @@ private extension SyncAction {
         case .sameScopeRecovery:
             if isRecoveryOnlyAdmission { return true }
             if self == .sequence([.pushPending, .requestRecovery]) { return true }
-            return (source == .rootForeground || source == .networkReconnect)
+            return (source == .rootForeground || source == .networkReconnect || source == .releaseCard)
                 && self == .sequence([.pushPending, .bootstrap])
         }
     }

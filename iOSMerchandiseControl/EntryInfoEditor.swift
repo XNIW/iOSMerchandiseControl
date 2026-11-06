@@ -162,6 +162,9 @@ struct EntryInfoEditor: View {
     }
 
     private func saveAndDismiss() {
+        #if DEBUG
+        PilotCommitTrace.b6SourceMutationBegin(categories: ["history"])
+        #endif
         let newTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let newSupplier: String
         let newCategory: String
@@ -193,11 +196,29 @@ struct EntryInfoEditor: View {
             newSupplier: newSupplier,
             newCategory: newCategory
         )
+        #if DEBUG
+        let b6Scope = PilotCommitTrace.b6ObservationEnabled
+            ? pendingOwnerUserID.flatMap {
+                try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: $0)
+            }
+            : nil
+        #endif
         do {
             try Task126OwnerStoreGate.withLocalMutationFence(
                 modelContainer: modelContext.container,
                 ownerUserID: pendingOwnerUserID
             ) { freshContext in
+                #if DEBUG
+                var b6Ticket: String?
+                var b6CommitReturned = false
+                defer {
+                    if !b6CommitReturned, let b6Ticket {
+                        PilotCommitTrace.b6LocalEnd(
+                            b6Ticket, returned: false, ns: PilotCommitTrace.b6Now()
+                        )
+                    }
+                }
+                #endif
                 let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
                     HistoryEntry.self,
                     id: entryID,
@@ -253,14 +274,32 @@ struct EntryInfoEditor: View {
                 }
 
                 if !userChangedFields.isEmpty {
-                    try recordHistorySessionPending(
+                    let pendingChange = try recordHistorySessionPending(
                         entry: freshEntry,
                         accumulator: accumulator,
                         changedFields: userChangedFields
                     )
+                    #if DEBUG
+                    if PilotCommitTrace.b6ObservationEnabled, let pendingChange {
+                        b6Ticket = PilotCommitTrace.b6LocalHistoryBegin(
+                            entry: freshEntry,
+                            intents: [LocalPendingChangeCASToken(pendingChange)],
+                            scope: b6Scope
+                        )
+                    }
+                    #else
+                    _ = pendingChange
+                    #endif
                 }
 
                 try freshContext.save()
+                #if DEBUG
+                if let b6Ticket {
+                    let b6End = PilotCommitTrace.b6Now()
+                    b6CommitReturned = true
+                    PilotCommitTrace.b6LocalEnd(b6Ticket, returned: true, ns: b6End)
+                }
+                #endif
             }
             _ = try Task126OwnerStoreGate.requireLocalModel(
                 HistoryEntry.self,
@@ -305,13 +344,14 @@ struct EntryInfoEditor: View {
         return fields
     }
 
+    @discardableResult
     private func recordHistorySessionPending(
         entry: HistoryEntry,
         accumulator: LocalPendingChangeAccumulator,
         changedFields: [String]
-    ) throws {
+    ) throws -> LocalPendingChange? {
         entry.markHistorySessionLocalMutation()
-        _ = try accumulator.recordHistorySessionChange(
+        return try accumulator.recordHistorySessionChange(
             entry: entry,
             operation: .upsert,
             changedFields: changedFields

@@ -1,5 +1,15 @@
 import Foundation
 import SwiftData
+import CryptoKit
+import Security
+#if canImport(Darwin)
+import Darwin
+#endif
+// TASK145_COST39_BEGIN oslog-import
+#if DEBUG
+import OSLog
+#endif
+// TASK145_COST39_END oslog-import
 
 /// Current business-body readback, independent of the immutable cloud checkpoint.
 /// Only validated remote apply/ACK writes these sparse local-only receipts.
@@ -97,7 +107,6 @@ nonisolated enum LocalCatalogBodyProofStore {
         descriptor.fetchLimit = 2
         let existing = try context.fetch(descriptor)
         guard existing.count <= 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
-        if let old = existing.first { context.delete(old) }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(Body(generationID: generationID, kind: kind,
             remoteID: id, canonical: canonical, updatedAt: updatedAt, deletedAt: deletedAt, payloadVersion: payloadVersion))
@@ -105,13 +114,35 @@ nonisolated enum LocalCatalogBodyProofStore {
               let json = String(data: data, encoding: .utf8) else {
             throw SyncStoreGenerationError.generationResourceBudgetExceeded
         }
+        let owner = scope.ownerUserID.uuidString.lowercased()
+        let changedCount = deletedAt == nil ? 1 : 0
+        let bodyHash = ShopSyncRecoveryCanonical.sha256(json)
+        if let old = existing.first {
+            // An identical, fully scoped receipt needs no SwiftData transaction.
+            if old.ownerUserID == owner, old.storeId == scope.storeIdentity.storeId,
+               old.localStoreId == scope.storeIdentity.localStoreId,
+               old.syncProtocolVersion == scope.storeIdentity.syncProtocolVersion,
+               old.schemaVersion == scope.storeIdentity.schemaVersion, old.storeEpoch == scope.storeIdentity.storeEpoch,
+               old.clientEventID == key, old.batchID == key, old.domain == domain, old.eventType == kind,
+               old.changedCount == changedCount, old.entityIDsShape == bodyHash, old.metadataShape == format,
+               old.entityIDsPayloadJSON == nil, old.metadataPayloadJSON?.utf8.elementsEqual(data) == true,
+               old.status == .localOnly, old.attemptCount == 0, old.maxAttempts == 3,
+               old.lastAttemptAt == nil, old.lastErrorCode == nil,
+               old.lastErrorKindRaw == SyncEventOutboxErrorKind.none.rawValue,
+               old.lastErrorMessageSanitized == nil, old.sentAt == nil,
+               old.createdAt == old.updatedAt, old.nextRetryAt == old.createdAt,
+               old.sourceDeviceID == scope.deviceInstallID {
+                return
+            }
+            context.delete(old)
+        }
         let now = Date()
         context.insert(SyncEventOutboxEntry(id: key,
-            ownerUserID: scope.ownerUserID.uuidString.lowercased(), storeId: scope.storeIdentity.storeId,
+            ownerUserID: owner, storeId: scope.storeIdentity.storeId,
             localStoreId: scope.storeIdentity.localStoreId, syncProtocolVersion: scope.storeIdentity.syncProtocolVersion,
             schemaVersion: scope.storeIdentity.schemaVersion, storeEpoch: scope.storeIdentity.storeEpoch,
             clientEventID: key, batchID: key, domain: domain, eventType: kind,
-            changedCount: deletedAt == nil ? 1 : 0, entityIDsShape: ShopSyncRecoveryCanonical.sha256(json),
+            changedCount: changedCount, entityIDsShape: bodyHash,
             metadataShape: format, metadataPayloadJSON: json, status: .localOnly, nextRetryAt: now,
             createdAt: now, updatedAt: now, sourceDeviceID: scope.deviceInstallID))
     }
@@ -149,16 +180,70 @@ nonisolated enum LocalCatalogBodyProofStore {
             scope: scope, overlayGenerationID: generationID)
     }
 
+    /// Verifies the already persisted projection of a previous owned transfer.
+    /// The caller separately proves the exact original manual request/members
+    /// and generation mapping. This grants neither an ACK nor a new request.
+    static func matchesTransferredProductBody(_ row: Product, context: ModelContext,
+                                             scope: Task126VerifiedOwnerStoreScope,
+                                             generationID: UUID) throws -> Bool {
+        guard let id = row.remoteID else { return false }
+        let key = recordID(kind: SupabaseCatalogBaselineEntityType.product.rawValue, id: id)
+        let proofDomain = domain
+        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(predicate: #Predicate {
+            $0.domain == proofDomain && $0.id == key
+        })
+        descriptor.fetchLimit = 2
+        let entries = try context.fetch(descriptor)
+        guard entries.count <= 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
+        guard let entry = entries.first else { return false }
+        let proof = try decode(entry, accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+            deviceIdentityHash: scope.deviceIdentityHash, generationID: generationID)
+        let canonical = ManualPushFingerprintNormalizer.product(barcode: row.barcode, itemNumber: row.itemNumber,
+            productName: row.productName, secondProductName: row.secondProductName,
+            purchasePrice: row.purchasePrice, retailPrice: row.retailPrice, stockQuantity: row.stockQuantity,
+            supplierRemoteID: row.supplier?.remoteID, categoryRemoteID: row.category?.remoteID).canonicalString
+        return proof.kind == SupabaseCatalogBaselineEntityType.product.rawValue && proof.remoteID == id
+            && proof.updatedAt == row.remoteUpdatedAt && proof.deletedAt == row.remoteDeletedAt
+            && proof.canonical == canonical
+    }
+
     /// Called off Main under a before/after physical-file fence. Retained
     /// pending intent explains only its own exact current business body.
-    static func validate(container: ModelContainer, manifest: SyncStoreGenerationManifest, storeURL: URL) throws {
+    static func validate(container: ModelContainer, manifest: SyncStoreGenerationManifest, storeURL: URL,
+                         domain: Task126LocalReadDomain? = nil) throws {
+// TASK145_COST39_BEGIN validate-start
+#if DEBUG
+        let costStartNS = DispatchTime.now().uptimeNanoseconds
+        var costPhaseStartNS = costStartNS
+        var costPhase = 0 // setup, products, suppliers, categories, ledger, prices, history
+        var costNS = [UInt64](repeating: 0, count: 7)
+        var costReturnedNormally = false
+        func costEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= now &- costPhaseStartNS
+            costPhase = next
+            costPhaseStartNS = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= ended &- costPhaseStartNS
+            let elapsed = ended &- costStartNS
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.validate start_ns.\(costStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) returned.\(costReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(costPhase, privacy: .public) setup_ns.\(costNS[0], privacy: .public) products_ns.\(costNS[1], privacy: .public) suppliers_ns.\(costNS[2], privacy: .public) categories_ns.\(costNS[3], privacy: .public) ledger_ns.\(costNS[4], privacy: .public) prices_ns.\(costNS[5], privacy: .public) history_ns.\(costNS[6], privacy: .public)")
+        }
+#endif
+// TASK145_COST39_END validate-start
         let context = ModelContext(container); context.autosaveEnabled = false
         let ownerHash = manifest.accountHash
+        let resolutions = try LocalCatalogConflictResolutionStore.receipts(context: context)
+        guard resolutions.allSatisfy({ $0.1.currentGenerationID == manifest.generationID }) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        let resolved = Set(resolutions.flatMap { $0.1.resolvedChangeIDs })
         var pendingDescriptor = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
             $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
         })
-        pendingDescriptor.fetchLimit = LocalPendingChangeAccumulator.defaultMaxActiveChanges + 1
-        let pending = try context.fetch(pendingDescriptor)
+        pendingDescriptor.fetchLimit = LocalPendingChangeAccumulator.defaultMaxActiveChanges + resolved.count + 1
+        let pending = try context.fetch(pendingDescriptor).filter { !resolved.contains($0.changeID) }
         guard pending.count <= LocalPendingChangeAccumulator.defaultMaxActiveChanges,
               pending.allSatisfy({ change in
                   guard let rawOwner = change.ownerUserID, let owner = UUID(uuidString: rawOwner) else { return false }
@@ -179,33 +264,86 @@ nonisolated enum LocalCatalogBodyProofStore {
               baseline.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
+        if domain == nil || domain == .catalog {
+// TASK145_COST39_BEGIN validate-phase-1
+#if DEBUG
+        costEnter(1)
+#endif
+// TASK145_COST39_END validate-phase-1
         try scan(Product.self, kind: .product, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\Product.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.product(remoteID: row.remoteID, barcode: row.barcode)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.product.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.product(barcode: row.barcode, itemNumber: row.itemNumber,
                     productName: row.productName, secondProductName: row.secondProductName,
                     purchasePrice: row.purchasePrice, retailPrice: row.retailPrice, stockQuantity: row.stockQuantity,
                     supplierRemoteID: row.supplier?.remoteID, categoryRemoteID: row.category?.remoteID).canonicalString,
-                 LocalPendingChangeLogicalKey.product(remoteID: row.remoteID, barcode: row.barcode),
-                 LocalPendingChangeLogicalKey.productFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.productFingerprintHash(row) : "")
             }
+// TASK145_COST39_BEGIN validate-phase-2
+#if DEBUG
+        costEnter(2)
+#endif
+// TASK145_COST39_END validate-phase-2
         try scan(Supplier.self, kind: .supplier, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\Supplier.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.supplier(remoteID: row.remoteID, name: row.name)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.supplier.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.supplier(remoteID: row.remoteID, name: row.name).canonicalString,
-                 LocalPendingChangeLogicalKey.supplier(remoteID: row.remoteID, name: row.name),
-                 LocalPendingChangeLogicalKey.supplierFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.supplierFingerprintHash(row) : "")
             }
+// TASK145_COST39_BEGIN validate-phase-3
+#if DEBUG
+        costEnter(3)
+#endif
+// TASK145_COST39_END validate-phase-3
         try scan(ProductCategory.self, kind: .productCategory, context: context, manifest: manifest, pending: grouped,
             sort: [SortDescriptor(\ProductCategory.remoteID)]) { row in
-                (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
+                let key = LocalPendingChangeLogicalKey.category(remoteID: row.remoteID, name: row.name)
+                let needsIntentHash = grouped[key]?.contains { $0.entityKindRaw == SupabaseCatalogBaselineEntityType.productCategory.rawValue } ?? false
+                return (row.remoteID, row.remoteUpdatedAt, row.remoteDeletedAt,
                  ManualPushFingerprintNormalizer.category(remoteID: row.remoteID, name: row.name).canonicalString,
-                 LocalPendingChangeLogicalKey.category(remoteID: row.remoteID, name: row.name),
-                 LocalPendingChangeLogicalKey.categoryFingerprintHash(row))
+                 key,
+                 needsIntentHash ? LocalPendingChangeLogicalKey.categoryFingerprintHash(row) : "")
             }
+        }
+        if domain == .catalog {
+            #if DEBUG
+            costReturnedNormally = true
+            #endif
+            return
+        }
+// TASK145_COST39_BEGIN validate-phase-4
+#if DEBUG
+        costEnter(4)
+#endif
+// TASK145_COST39_END validate-phase-4
         let ledger = try ShopSyncRecoveryLedger(generationStoreURL: storeURL, mode: .readExisting)
-        try validatePrices(context: context, manifest: manifest, pending: grouped, ledger: ledger)
-        try validateHistory(context: context, manifest: manifest, pending: grouped, ledger: ledger)
+// TASK145_COST39_BEGIN validate-phase-5
+#if DEBUG
+        costEnter(5)
+#endif
+// TASK145_COST39_END validate-phase-5
+        if domain != .sessions {
+            try validatePrices(context: context, manifest: manifest, pending: grouped, ledger: ledger)
+        }
+// TASK145_COST39_BEGIN validate-phase-6
+#if DEBUG
+        costEnter(6)
+#endif
+// TASK145_COST39_END validate-phase-6
+        if domain != .priceHistory {
+            try validateHistory(context: context, manifest: manifest, pending: grouped, ledger: ledger)
+        }
+// TASK145_COST39_BEGIN validate-returned
+#if DEBUG
+        costReturnedNormally = true
+#endif
+// TASK145_COST39_END validate-returned
     }
 
     private static func priceBody(parent: UUID, type: String, price: Double, effectiveAt: Date,
@@ -215,8 +353,37 @@ nonisolated enum LocalCatalogBodyProofStore {
             ProductPriceEffectiveAtCanonicalizer.canonicalString(from: createdAt), sourceHash, noteHash)
     }
 
-    private static func priceBody(_ row: ProductPrice) throws -> String {
-        guard let parent = row.product, let parentID = parent.remoteID, parent.remoteDeletedAt == nil,
+    private struct PhysicalPriceParent {
+        let remoteID: UUID?
+        let deletedAt: Date?
+    }
+
+    /// Read the current physical relationships in one bounded page. The keys
+    /// come from the price rows, never from a ledger or an expected remote ID.
+    /// These values live only until this page is consumed inside the existing
+    /// before/after physical-file fence; they grant no reusable authority.
+    private static func physicalPriceParents(_ rows: [ProductPrice], context: ModelContext) throws
+        -> [PersistentIdentifier: PhysicalPriceParent] {
+        guard rows.count <= batchSize else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+        let ids = Array(Set(rows.compactMap { $0.product?.persistentModelID }))
+        guard !ids.isEmpty else { return [:] }
+        var descriptor = FetchDescriptor<Product>(predicate: #Predicate { ids.contains($0.persistentModelID) })
+        descriptor.fetchLimit = ids.count + 1
+        descriptor.propertiesToFetch = [\Product.remoteID, \Product.remoteDeletedAt]
+        let parents = try context.fetch(descriptor)
+        var values: [PersistentIdentifier: PhysicalPriceParent] = [:]
+        for parent in parents {
+            let id = parent.persistentModelID
+            guard values[id] == nil, ids.contains(id) else { throw SyncStoreGenerationError.activationReadBackFailed }
+            values[id] = PhysicalPriceParent(remoteID: parent.remoteID, deletedAt: parent.remoteDeletedAt)
+        }
+        guard values.count == ids.count else { throw SyncStoreGenerationError.activationReadBackFailed }
+        return values
+    }
+
+    private static func priceBody(_ row: ProductPrice, parents: [PersistentIdentifier: PhysicalPriceParent]) throws -> String {
+        guard let physicalID = row.product?.persistentModelID, let parent = parents[physicalID],
+              let parentID = parent.remoteID, parent.deletedAt == nil,
               row.price.isFinite, row.price >= 0 else { throw SyncStoreGenerationError.activationReadBackFailed }
         return priceBody(parent: parentID, type: row.type.rawValue, price: row.price,
             effectiveAt: row.effectiveAt, createdAt: row.createdAt,
@@ -239,9 +406,12 @@ nonisolated enum LocalCatalogBodyProofStore {
                                         manifest: SyncStoreGenerationManifest,
                                         pending: [String: [LocalPendingChange]]) throws -> Set<UUID> {
         let bodies = try expectedBodies(kind: .product, ids: ids, context: context, manifest: manifest)
-        let deletes = Set(pending.values.flatMap { $0 }.filter {
-            $0.entityKind == .product && $0.operation == .delete
-        }.compactMap(\.entityRemoteID))
+        let allPending: [LocalPendingChange] = pending.values.flatMap { $0 }
+        let productDeletes: [LocalPendingChange] = allPending.filter { change in
+            change.entityKind == .product && change.operation == .delete
+        }
+        let deleteIDs: [UUID] = productDeletes.compactMap { $0.entityRemoteID }
+        let deletes: Set<UUID> = Set(deleteIDs)
         var inactive: Set<UUID> = []
         for id in ids {
             guard let proof = bodies[id] else { throw SyncStoreGenerationError.activationReadBackFailed }
@@ -270,12 +440,22 @@ nonisolated enum LocalCatalogBodyProofStore {
         let id: (Model) -> UUID?
         var descriptor: FetchDescriptor<Model>
         var rows: [Model] = []
+        var prepareRows: (([Model]) throws -> Void)?
         var overrides: [UUID: Body] = [:]
         var offset = 0
         var index = 0
         var prior: String?
         var exhausted = false
         let maximum: Int
+// TASK145_PRICE_DETAIL_BEGIN pager-cost-properties
+#if DEBUG
+        var priceFetchNS: UInt64 = 0
+        var pricePrepareNS: UInt64 = 0
+        var priceOverridesNS: UInt64 = 0
+        var pricePageFetches: UInt64 = 0
+        var pricePreparedRows: UInt64 = 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-cost-properties
 
         init(context: ModelContext, manifest: SyncStoreGenerationManifest, kind: String,
              sort: [SortDescriptor<Model>], maximum: Int, id: @escaping (Model) -> UUID?) {
@@ -287,11 +467,53 @@ nonisolated enum LocalCatalogBodyProofStore {
             if index == rows.count {
                 if exhausted { return nil }
                 descriptor.fetchOffset = offset
+// TASK145_PRICE_DETAIL_BEGIN pager-fetch-start
+#if DEBUG
+                let priceFetchStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-fetch-start
                 rows = try context.fetch(descriptor); index = 0
+// TASK145_PRICE_DETAIL_BEGIN pager-fetch-end
+#if DEBUG
+                if priceFetchStart != 0 {
+                    priceFetchNS &+= DispatchTime.now().uptimeNanoseconds &- priceFetchStart
+                    pricePageFetches &+= 1
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-fetch-end
                 exhausted = rows.count < batchSize
                 offset += rows.count
                 guard offset <= maximum else { throw SyncStoreGenerationError.generationResourceBudgetExceeded }
+// TASK145_PRICE_DETAIL_BEGIN pager-prepare-start
+#if DEBUG
+                let pricePrepareStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-prepare-start
+                try prepareRows?(rows)
+// TASK145_PRICE_DETAIL_BEGIN pager-prepare-end
+#if DEBUG
+                if pricePrepareStart != 0 {
+                    pricePrepareNS &+= DispatchTime.now().uptimeNanoseconds &- pricePrepareStart
+                    pricePreparedRows &+= UInt64(rows.count)
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-prepare-end
+// TASK145_PRICE_DETAIL_BEGIN pager-overrides-start
+#if DEBUG
+                let priceOverridesStart = kind == LocalPendingChangeEntityKind.productPrice.rawValue
+                    ? DispatchTime.now().uptimeNanoseconds : 0
+#endif
+// TASK145_PRICE_DETAIL_END pager-overrides-start
                 overrides = try localOverrides(kind: kind, ids: rows.compactMap(id), context: context, manifest: manifest)
+// TASK145_PRICE_DETAIL_BEGIN pager-overrides-end
+#if DEBUG
+                if priceOverridesStart != 0 {
+                    priceOverridesNS &+= DispatchTime.now().uptimeNanoseconds &- priceOverridesStart
+                }
+#endif
+// TASK145_PRICE_DETAIL_END pager-overrides-end
             }
             return rows.isEmpty ? nil : rows[index]
         }
@@ -351,6 +573,33 @@ nonisolated enum LocalCatalogBodyProofStore {
         let pager = BodyRowPager<ProductPrice>(context: context, manifest: manifest, kind: kind,
             sort: [SortDescriptor(\ProductPrice.remoteID)], maximum: ShopSyncRecoveryLimits.maximumRows(for: .prices),
             id: { $0.remoteID })
+// TASK145_PRICE_DETAIL_BEGIN price-cost-start
+#if DEBUG
+        let detailStart = DispatchTime.now().uptimeNanoseconds
+        var detailPhaseStart = detailStart
+        var detailPhase = 0 // setup, ledger dispatch, parse, inactive, merge, extra, overrides
+        var detailNS = [UInt64](repeating: 0, count: 7)
+        var detailBatches: UInt64 = 0
+        var detailRows: UInt64 = 0
+        var detailReturned = false
+        func detailEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            detailNS[detailPhase] &+= now &- detailPhaseStart
+            detailPhase = next
+            detailPhaseStart = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            detailNS[detailPhase] &+= ended &- detailPhaseStart
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.price-detail elapsed_ns.\(ended &- detailStart, privacy: .public) returned.\(detailReturned, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(detailPhase, privacy: .public) batches.\(detailBatches, privacy: .public) rows.\(detailRows, privacy: .public) setup_ns.\(detailNS[0], privacy: .public) ledger_dispatch_ns.\(detailNS[1], privacy: .public) parse_ns.\(detailNS[2], privacy: .public) inactive_ns.\(detailNS[3], privacy: .public) merge_ns.\(detailNS[4], privacy: .public) extra_ns.\(detailNS[5], privacy: .public) overrides_ns.\(detailNS[6], privacy: .public) nested_pager_fetch_ns.\(pager.priceFetchNS, privacy: .public) nested_parent_prepare_ns.\(pager.pricePrepareNS, privacy: .public) nested_pager_overrides_ns.\(pager.priceOverridesNS, privacy: .public) page_fetches.\(pager.pricePageFetches, privacy: .public) prepared_rows.\(pager.pricePreparedRows, privacy: .public)")
+        }
+#endif
+// TASK145_PRICE_DETAIL_END price-cost-start
+        pager.descriptor.relationshipKeyPathsForPrefetching = [\ProductPrice.product]
+        var physicalParents: [PersistentIdentifier: PhysicalPriceParent] = [:]
+        pager.prepareRows = { rows in
+            physicalParents = try physicalPriceParents(rows, context: context)
+        }
         func validateExtra(_ row: ProductPrice) throws {
             // A new locally created product has no remote ID until its own
             // catalog ACK. Its exact scoped price intent is still usable.
@@ -361,20 +610,43 @@ nonisolated enum LocalCatalogBodyProofStore {
                 }
                 return
             }
-            let body = try priceBody(row)
+            let body = try priceBody(row, parents: physicalParents)
             guard row.remoteID.flatMap({ pager.overrides[$0]?.canonical }) == body else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
         }
+        // Pure successful parses only, bounded to this validation invocation.
+        // Every row still validates its own contract and complete current body.
+        var parsedDates: [Data: Date] = [:]
+        func parsedDate(_ value: String) -> Date? {
+            let bytes = Data(value.utf8)
+            if let date = parsedDates[bytes] { return date }
+            guard let date = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: value) else { return nil }
+            if parsedDates.count < batchSize * 2 { parsedDates[bytes] = date }
+            return date
+        }
+// TASK145_PRICE_DETAIL_BEGIN ledger-start
+#if DEBUG
+        detailEnter(1)
+#endif
+// TASK145_PRICE_DETAIL_END ledger-start
         try forEachBatch(ledger: ledger, domain: .prices) { batch in
+// TASK145_PRICE_DETAIL_BEGIN parse-start
+#if DEBUG
+            detailEnter(2)
+            detailBatches &+= 1
+            detailRows &+= UInt64(batch.count)
+#endif
+// TASK145_PRICE_DETAIL_END parse-start
             let parsed = try batch.map { record -> (UUID, UUID, String) in
                 let parts = record.versionLine.components(separatedBy: ShopSyncRecoveryCanonical.separator)
                 guard parts.count == 9, let id = UUID(uuidString: parts[0]), let parent = UUID(uuidString: parts[2]),
                       id.uuidString.lowercased() == record.orderingID, !record.isTombstone,
                       let amount = Decimal(string: parts[3], locale: Locale(identifier: "en_US_POSIX")),
                       let type = SupabasePullPreviewNormalizer.normalizedPriceType(parts[4]),
-                      let effective = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: parts[5]),
-                      let created = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: parts[6]),
+                      let effective = parsedDate(parts[5]),
+                      let created = parts[6].utf8.elementsEqual(parts[5].utf8)
+                        ? effective : parsedDate(parts[6]),
                       ShopSyncRecoveryCanonical.isRedactedKey(parts[7]), ShopSyncRecoveryCanonical.isRedactedKey(parts[8]) else {
                     throw SyncStoreGenerationError.activationReadBackFailed
                 }
@@ -383,15 +655,25 @@ nonisolated enum LocalCatalogBodyProofStore {
                 return (id, parent, priceBody(parent: parent, type: type, price: price, effectiveAt: effective,
                     createdAt: created, sourceHash: parts[7], noteHash: parts[8]))
             }
+// TASK145_PRICE_DETAIL_BEGIN inactive-start
+#if DEBUG
+            detailEnter(3)
+#endif
+// TASK145_PRICE_DETAIL_END inactive-start
             let inactive = try inactiveParents(Array(Set(parsed.map { $0.1 })), context: context,
                 manifest: manifest, pending: pending)
+// TASK145_PRICE_DETAIL_BEGIN merge-start
+#if DEBUG
+            detailEnter(4)
+#endif
+// TASK145_PRICE_DETAIL_END merge-start
             for (id, parent, expected) in parsed {
                 while let row = try pager.peek(), row.remoteID == nil
                     || row.remoteID!.uuidString.lowercased() < id.uuidString.lowercased() {
                     try validateExtra(row); try pager.advance()
                 }
                 if let row = try pager.peek(), row.remoteID == id {
-                    let actual = try priceBody(row)
+                    let actual = try priceBody(row, parents: physicalParents)
                     guard !inactive.contains(parent),
                           actual == (pager.overrides[id]?.canonical ?? expected) || priceIntentMatches(row, pending: pending) else {
                         throw SyncStoreGenerationError.activationReadBackFailed
@@ -399,10 +681,25 @@ nonisolated enum LocalCatalogBodyProofStore {
                     try pager.advance()
                 } else if !inactive.contains(parent) { throw SyncStoreGenerationError.activationReadBackFailed }
             }
+// TASK145_PRICE_DETAIL_BEGIN batch-end
+#if DEBUG
+            detailEnter(1)
+#endif
+// TASK145_PRICE_DETAIL_END batch-end
         }
+// TASK145_PRICE_DETAIL_BEGIN extra-start
+#if DEBUG
+        detailEnter(5)
+#endif
+// TASK145_PRICE_DETAIL_END extra-start
         while let row = try pager.peek() { try validateExtra(row); try pager.advance() }
         // Sparse ACK rows absent from original C must also exist physically;
         // otherwise an acknowledged price could be silently removed on disk.
+// TASK145_PRICE_DETAIL_BEGIN overrides-start
+#if DEBUG
+        detailEnter(6)
+#endif
+// TASK145_PRICE_DETAIL_END overrides-start
         try forEachOverrideBatch(kind: kind, context: context, manifest: manifest) { proofs in
             let ids = proofs.map(\.remoteID)
             let optionalIDs = ids.map(Optional.some)
@@ -414,6 +711,7 @@ nonisolated enum LocalCatalogBodyProofStore {
                 guard let id = row.remoteID, current[id] == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
                 current[id] = row
             }
+            let currentParents = try physicalPriceParents(rows, context: context)
             let parents = try proofs.map { proof -> UUID in
                 guard let part = proof.canonical.components(separatedBy: ShopSyncRecoveryCanonical.separator).first,
                       let id = UUID(uuidString: part) else { throw SyncStoreGenerationError.activationReadBackFailed }
@@ -424,13 +722,18 @@ nonisolated enum LocalCatalogBodyProofStore {
                 if inactive.contains(parents[index]) {
                     guard current[proof.remoteID] == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
                 } else {
-                    guard let row = current[proof.remoteID], try priceBody(row) == proof.canonical
+                    guard let row = current[proof.remoteID], try priceBody(row, parents: currentParents) == proof.canonical
                             || priceIntentMatches(row, pending: pending) else {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
                 }
             }
         }
+// TASK145_PRICE_DETAIL_BEGIN price-returned
+#if DEBUG
+        detailReturned = true
+#endif
+// TASK145_PRICE_DETAIL_END price-returned
     }
 
     private static func historyFingerprint(_ row: HistoryEntry, payloadVersion: Int) throws -> String {
@@ -534,17 +837,62 @@ nonisolated enum LocalCatalogBodyProofStore {
         manifest: SyncStoreGenerationManifest, pending: [String: [LocalPendingChange]],
         sort: [SortDescriptor<Model>], body: (Model) -> Current
     ) throws {
+// TASK145_COST39_BEGIN scan-start
+#if DEBUG
+        let costStartNS = DispatchTime.now().uptimeNanoseconds
+        var costPhaseStartNS = costStartNS
+        var costPhase = 0 // setup, fetch, current body, expected body, compare, count
+        var costNS = [UInt64](repeating: 0, count: 6)
+        var costBatches: UInt64 = 0
+        var costRows: UInt64 = 0
+        var costReturnedNormally = false
+        func costEnter(_ next: Int) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= now &- costPhaseStartNS
+            costPhase = next
+            costPhaseStartNS = now
+        }
+        defer {
+            let ended = DispatchTime.now().uptimeNanoseconds
+            costNS[costPhase] &+= ended &- costPhaseStartNS
+            let elapsed = ended &- costStartNS
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.scan entity.\(kind.rawValue, privacy: .public) start_ns.\(costStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) returned.\(costReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_phase.\(costPhase, privacy: .public) batches.\(costBatches, privacy: .public) rows.\(costRows, privacy: .public) setup_ns.\(costNS[0], privacy: .public) fetch_ns.\(costNS[1], privacy: .public) current_ns.\(costNS[2], privacy: .public) expected_ns.\(costNS[3], privacy: .public) compare_ns.\(costNS[4], privacy: .public) count_ns.\(costNS[5], privacy: .public)")
+        }
+#endif
+// TASK145_COST39_END scan-start
         var descriptor = FetchDescriptor<Model>(sortBy: sort)
         descriptor.fetchLimit = batchSize
         var offset = 0; var prior: UUID?; var physicalActive = 0
         while true {
             try Task.checkCancellation()
             descriptor.fetchOffset = offset
+// TASK145_COST39_BEGIN scan-fetch
+#if DEBUG
+            costEnter(1)
+#endif
+// TASK145_COST39_END scan-fetch
             let rows = try context.fetch(descriptor)
             if rows.isEmpty { break }
+// TASK145_COST39_BEGIN scan-current
+#if DEBUG
+            costBatches &+= 1
+            costRows &+= UInt64(rows.count)
+            costEnter(2)
+#endif
+// TASK145_COST39_END scan-current
             let current = rows.map(body)
             let ids = current.compactMap { $0.0 }
+// TASK145_COST39_BEGIN scan-expected
+#if DEBUG
+            costEnter(3)
+#endif
+// TASK145_COST39_END scan-expected
             let expected = try expectedBodies(kind: kind, ids: ids, context: context, manifest: manifest)
+// TASK145_COST39_BEGIN scan-compare
+#if DEBUG
+            costEnter(4)
+#endif
+// TASK145_COST39_END scan-compare
             for item in current {
                 let activePending = (pending[item.4] ?? []).filter { $0.entityKindRaw == kind.rawValue }
                 let intentMatches = activePending.contains { $0.intendedFingerprintHash == item.5 }
@@ -570,6 +918,11 @@ nonisolated enum LocalCatalogBodyProofStore {
             }
             if rows.count < batchSize { break }
         }
+// TASK145_COST39_BEGIN scan-count
+#if DEBUG
+        costEnter(5)
+#endif
+// TASK145_COST39_END scan-count
         var expectedActive = try expectedActiveCount(kind: kind, context: context, manifest: manifest)
         let deletes = Set(pending.values.flatMap { $0 }.filter {
             $0.entityKindRaw == kind.rawValue && $0.operation == .delete
@@ -580,6 +933,11 @@ nonisolated enum LocalCatalogBodyProofStore {
                 .values.filter { $0.deletedAt == nil }.count
         }
         guard expectedActive == physicalActive else { throw SyncStoreGenerationError.activationReadBackFailed }
+// TASK145_COST39_BEGIN scan-returned
+#if DEBUG
+        costReturnedNormally = true
+#endif
+// TASK145_COST39_END scan-returned
     }
 
     private static func expectedActiveCount(kind: SupabaseCatalogBaselineEntityType, context: ModelContext,
@@ -627,9 +985,19 @@ nonisolated enum LocalCatalogBodyProofStore {
             $0.baselineRunID == runID && $0.entityType == kindRaw && ids.contains($0.remoteID)
         }))
         var result: [UUID: Body] = [:]
+        // This memo contains only a pure UUID-to-hash conversion for this batch.
+        // Every record still checks its own owner, schema, identity and body.
+        var ownerHashes: [UUID: String] = [:]
         for record in records {
+            let ownerHash: String
+            if let computed = ownerHashes[record.ownerUserUUID] {
+                ownerHash = computed
+            } else {
+                ownerHash = AccountBindingStore.accountHash(for: record.ownerUserUUID)
+                ownerHashes[record.ownerUserUUID] = ownerHash
+            }
             guard result[record.remoteID] == nil,
-                  AccountBindingStore.accountHash(for: record.ownerUserUUID) == manifest.accountHash,
+                  ownerHash == manifest.accountHash,
                   record.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
@@ -652,18 +1020,25 @@ nonisolated enum LocalCatalogBodyProofStore {
     }
 
     private static func decode(_ entry: SyncEventOutboxEntry, manifest: SyncStoreGenerationManifest) throws -> Body {
+        try decode(entry, accountHash: manifest.accountHash, storeIdentity: manifest.storeIdentity,
+            deviceIdentityHash: manifest.deviceIdentityHash, generationID: manifest.generationID)
+    }
+
+    private static func decode(_ entry: SyncEventOutboxEntry, accountHash: String,
+                               storeIdentity: LocalStoreIdentity, deviceIdentityHash: String,
+                               generationID: UUID) throws -> Body {
         guard entry.status == .localOnly, entry.metadataShape == format,
-              UUID(uuidString: entry.ownerUserID).map(AccountBindingStore.accountHash(for:)) == manifest.accountHash,
-              entry.storeId == manifest.storeIdentity.storeId, entry.localStoreId == manifest.storeIdentity.localStoreId,
-              entry.schemaVersion == manifest.storeIdentity.schemaVersion,
-              entry.syncProtocolVersion == manifest.storeIdentity.syncProtocolVersion,
-              entry.storeEpoch == manifest.storeIdentity.storeEpoch,
-              entry.sourceDeviceID.map(DeviceInstallIDStore.identityHash(for:)) == manifest.deviceIdentityHash,
+              UUID(uuidString: entry.ownerUserID).map(AccountBindingStore.accountHash(for:)) == accountHash,
+              entry.storeId == storeIdentity.storeId, entry.localStoreId == storeIdentity.localStoreId,
+              entry.schemaVersion == storeIdentity.schemaVersion,
+              entry.syncProtocolVersion == storeIdentity.syncProtocolVersion,
+              entry.storeEpoch == storeIdentity.storeEpoch,
+              entry.sourceDeviceID.map(DeviceInstallIDStore.identityHash(for:)) == deviceIdentityHash,
               let json = entry.metadataPayloadJSON, json.utf8.count <= ShopSyncRecoveryLimits.maximumGenerationManifestBytes,
               ShopSyncRecoveryCanonical.sha256(json) == entry.entityIDsShape,
               let data = json.data(using: .utf8) else { throw SyncStoreGenerationError.activationReadBackFailed }
         let proof = try JSONDecoder().decode(Body.self, from: data)
-        guard proof.generationID == manifest.generationID,
+        guard proof.generationID == generationID,
               entry.id == recordID(kind: proof.kind, id: proof.remoteID), entry.clientEventID == entry.id,
               entry.batchID == entry.id, entry.eventType == proof.kind, proof.updatedAt != nil else {
             throw SyncStoreGenerationError.activationReadBackFailed
@@ -674,4 +1049,573 @@ nonisolated enum LocalCatalogBodyProofStore {
     private static func recordID(kind: String, id: UUID) -> String {
         "local-body:\(kind):\(id.uuidString.lowercased())"
     }
+}
+
+/// An authenticated memo of a REAL complete body validation, never an authority
+/// token. Only unchanged complete post-open content and physical identity can
+/// reuse its work. Persisted SHM timestamps may differ; live stability may not.
+/// Every unavailable key, unsupported layout or changed byte falls back to the
+/// original validator. Ordinary writers never update or reseal this memo.
+nonisolated enum LocalCatalogPhysicalProofStore {
+    // Bump whenever the complete validator's contract/encoding changes.
+    static let version = "local-catalog-complete-physical-proof-v2"
+    private static let keyService = "com.niwcyber.local-catalog-physical-proof.v1"
+    private static let maximumCapsuleBytes = 128 * 1_024
+
+    struct File: Codable, Equatable, Sendable {
+        let state: SyncStoreGenerationMutationFence.FileState
+        let sha256: String
+        let deviceID: Int64
+        let changeTimeSeconds: Int64
+        let changeTimeNanoseconds: Int64
+    }
+    struct Snapshot: Codable, Equatable, Sendable {
+        let version: String
+        let keyAccount: String
+        let generationID: UUID
+        let contextSHA256: String
+        let files: [File]
+
+        /// Used ONLY after the saved capsule's MAC and latest binding pass.
+        /// SQLite may retouch its SHM on process open without changing a byte.
+        /// Keep the full stored/live snapshots: their synthesized == still
+        /// checks both timestamps during read, recapture and publication.
+        func hasSameAuthenticatedContent(as other: Snapshot) -> Bool {
+            guard version == other.version, keyAccount == other.keyAccount,
+                  generationID == other.generationID, contextSHA256 == other.contextSHA256,
+                  files.count == other.files.count else { return false }
+            for (saved, current) in zip(files, other.files) {
+                guard Self.persistedComparisonValue(saved) == Self.persistedComparisonValue(current) else {
+                    return false
+                }
+            }
+            return true
+        }
+
+        private static func persistedComparisonValue(_ file: File) -> File {
+            guard file.state.relativePath == "store.store-shm" else { return file }
+            let state = SyncStoreGenerationMutationFence.FileState(
+                relativePath: file.state.relativePath, fileSize: file.state.fileSize,
+                allocatedSize: file.state.allocatedSize, modificationTimeBits: 0,
+                systemFileNumber: file.state.systemFileNumber)
+            return File(state: state, sha256: file.sha256, deviceID: file.deviceID,
+                changeTimeSeconds: 0, changeTimeNanoseconds: 0)
+        }
+    }
+    private struct Capsule: Codable {
+        let payload: Data
+        let authenticationCode: Data
+    }
+    enum Failure: Error { case unavailable }
+
+    static func hash(_ data: Data) -> String {
+        let digits = Array("0123456789abcdef".utf8)
+        var bytes: [UInt8] = []; bytes.reserveCapacity(64)
+        for byte in SHA256.hash(data: data) {
+            bytes.append(digits[Int(byte >> 4)]); bytes.append(digits[Int(byte & 15)])
+        }
+        return String(decoding: bytes, as: UTF8.self)
+    }
+
+    static func keyAccount(baseDirectory: URL, deviceIdentityHash: String) -> String {
+        // A relocated/restored sandbox has no authority to reuse another path's
+        // proof. Fixture roots also get separate keys, without touching Auth keys.
+        hash(Data((baseDirectory.standardizedFileURL.path + "\u{0}" + deviceIdentityHash).utf8))
+    }
+
+    struct ReuseToken: Sendable {
+        let keyAccount: String
+        let protectedRecordSHA256: String
+        let capsuleSHA256: String
+        let contextSHA256: String
+        let generationID: UUID
+    }
+    private struct SignedPayload: Codable {
+        let sealID: UUID
+        let snapshot: Snapshot
+    }
+    private struct ProtectedRecord: Codable {
+        let format: String
+        let key: Data
+        var latestCapsuleSHA256: String?
+        var latestContextSHA256: String?
+        var latestGenerationID: UUID?
+    }
+    private static let keyLock = NSRecursiveLock()
+    private static let protectedRecordFormat = "local-body-physical-proof-protected-key-v1"
+
+    static func matches(_ snapshot: Snapshot, capsuleURL: URL) -> Bool {
+        reuseToken(snapshot, capsuleURL: capsuleURL) != nil
+    }
+
+    /// The lease-held writer replaces the capsule before it can commit. A
+    /// reuse token captured earlier must still name the on-disk capsule.
+    /// This check takes no Keychain lock, so it can run under the writer lease.
+    static func capsuleStillMatches(_ token: ReuseToken, capsuleURL: URL) -> Bool {
+        guard let data = try? readData(capsuleURL, maximumBytes: maximumCapsuleBytes) else { return false }
+        return hash(data) == token.capsuleSHA256
+    }
+
+    private static func dirtyRecord(_ generationID: UUID) -> Data {
+        Data("local-body-dirty-v1:\(generationID.uuidString)\n".utf8)
+    }
+
+    static func isDirty(generationID: UUID, capsuleURL: URL) -> Bool {
+        let dirty = dirtyRecord(generationID)
+        return (try? readData(capsuleURL, maximumBytes: dirty.count)) == dirty
+    }
+
+    static func markDirty(generationID: UUID, capsuleURL: URL) throws {
+        let dirty = dirtyRecord(generationID)
+        if (try? readData(capsuleURL, maximumBytes: dirty.count)) != dirty {
+            try dirty.write(to: capsuleURL, options: .atomic)
+        }
+        // Sync even when the marker already exists: a previous attempt may
+        // have renamed it but failed before the parent directory was synced.
+        try synchronize(capsuleURL)
+        try synchronize(capsuleURL.deletingLastPathComponent())
+    }
+
+    static func reuseToken(_ snapshot: Snapshot, capsuleURL: URL) -> ReuseToken? {
+#if DEBUG
+        enum ReuseFrontier: String {
+            case capsuleRead, capsuleDecode, payloadBound, authenticationLength, protectedKey
+            case latestCapsule, latestContext, latestGeneration, authentication, payloadDecode
+            case snapshotVersion, snapshotEquality, protectedRecordDigest, complete
+        }
+        var reuseFrontier = ReuseFrontier.capsuleRead
+        var contextSame = -1, identitySame = -1, membershipSame = -1
+        var metadataChangedKinds = -1, digestChangedKinds = -1
+        defer {
+            // Same closed kind bits as eligibility: main=1/WAL=2/SHM=4/ledger=8/other=16.
+            // -1 means not compared. No paths, identities, hashes, tags or key data.
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.reuse-token frontier.\(reuseFrontier.rawValue, privacy: .public) context_same.\(contextSame, privacy: .public) identity_same.\(identitySame, privacy: .public) membership_same.\(membershipSame, privacy: .public) metadata_changed_kinds.\(metadataChangedKinds, privacy: .public) digest_changed_kinds.\(digestChangedKinds, privacy: .public)")
+        }
+#endif
+        keyLock.lock(); defer { keyLock.unlock() }
+        do {
+            let data = try readData(capsuleURL, maximumBytes: maximumCapsuleBytes)
+#if DEBUG
+            reuseFrontier = .capsuleDecode
+#endif
+            let capsule = try JSONDecoder().decode(Capsule.self, from: data)
+#if DEBUG
+            reuseFrontier = .payloadBound
+#endif
+            guard capsule.payload.count <= maximumCapsuleBytes else { return nil }
+#if DEBUG
+            reuseFrontier = .authenticationLength
+#endif
+            guard capsule.authenticationCode.count == 32 else { return nil }
+#if DEBUG
+            reuseFrontier = .protectedKey
+#endif
+            guard let record = try key(account: snapshot.keyAccount, create: false) else { return nil }
+#if DEBUG
+            reuseFrontier = .latestCapsule
+#endif
+            guard record.latestCapsuleSHA256 == hash(data) else { return nil }
+#if DEBUG
+            reuseFrontier = .latestContext
+#endif
+            guard record.latestContextSHA256 == snapshot.contextSHA256 else { return nil }
+#if DEBUG
+            reuseFrontier = .latestGeneration
+#endif
+            guard record.latestGenerationID == snapshot.generationID else { return nil }
+#if DEBUG
+            reuseFrontier = .authentication
+#endif
+            guard HMAC<SHA256>.isValidAuthenticationCode(capsule.authenticationCode,
+                    authenticating: capsule.payload, using: SymmetricKey(data: record.key)) else { return nil }
+#if DEBUG
+            reuseFrontier = .payloadDecode
+#endif
+            let saved = try JSONDecoder().decode(SignedPayload.self, from: capsule.payload)
+#if DEBUG
+            reuseFrontier = .snapshotVersion
+#endif
+            guard saved.snapshot.version == version else { return nil }
+#if DEBUG
+            reuseFrontier = .snapshotEquality
+#endif
+            guard saved.snapshot.hasSameAuthenticatedContent(as: snapshot) else {
+#if DEBUG
+                let earlier = saved.snapshot, later = snapshot
+                contextSame = earlier.contextSHA256 == later.contextSHA256 ? 1 : 0
+                identitySame = earlier.version == later.version && earlier.keyAccount == later.keyAccount
+                    && earlier.generationID == later.generationID ? 1 : 0
+                membershipSame = earlier.files.map { $0.state.relativePath }
+                    == later.files.map { $0.state.relativePath } ? 1 : 0
+                if membershipSame == 1 {
+                    metadataChangedKinds = 0; digestChangedKinds = 0
+                    for pair in zip(earlier.files, later.files) {
+                        let path = pair.0.state.relativePath
+                        let kind: Int
+                        if path.hasSuffix("-wal") { kind = 2 }
+                        else if path.hasSuffix("-shm") { kind = 4 }
+                        else if path.hasPrefix("recovery-ledger-v1/") { kind = 8 }
+                        else if path == "store.store" { kind = 1 }
+                        else { kind = 16 }
+                        if pair.0.state != pair.1.state || pair.0.deviceID != pair.1.deviceID
+                            || pair.0.changeTimeSeconds != pair.1.changeTimeSeconds
+                            || pair.0.changeTimeNanoseconds != pair.1.changeTimeNanoseconds {
+                            metadataChangedKinds |= kind
+                        }
+                        if pair.0.sha256 != pair.1.sha256 { digestChangedKinds |= kind }
+                    }
+                }
+#endif
+                return nil
+            }
+#if DEBUG
+            reuseFrontier = .protectedRecordDigest
+#endif
+            let token = ReuseToken(keyAccount: snapshot.keyAccount,
+                protectedRecordSHA256: try protectedRecordDigest(record), capsuleSHA256: hash(data),
+                contextSHA256: snapshot.contextSHA256, generationID: snapshot.generationID)
+#if DEBUG
+            reuseFrontier = .complete
+#endif
+            return token
+        } catch { return nil }
+    }
+
+    /// Serializes this installation's capsule/key operations through the ORIGINAL
+    /// lease publication. A latest-binding change cannot race the admission.
+    /// No await, DB read or authorization is performed by this lock itself.
+    static func withLatestBinding(_ token: ReuseToken?, publication: () -> Bool) -> Bool {
+        keyLock.lock(); defer { keyLock.unlock() }
+        guard let token else { return publication() } // REAL full-validation path.
+        do {
+            guard let current = try key(account: token.keyAccount, create: false),
+                  try protectedRecordDigest(current) == token.protectedRecordSHA256,
+                  current.latestCapsuleSHA256 == token.capsuleSHA256,
+                  current.latestContextSHA256 == token.contextSHA256,
+                  current.latestGenerationID == token.generationID else { return false }
+            return publication()
+        } catch { return false }
+    }
+
+    static func seal(_ snapshot: Snapshot, capsuleURL: URL) throws {
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-internal
+#if DEBUG
+        var sealFrontier = "key", sealCompleted = false
+        defer {
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.seal-internal frontier.\(sealFrontier, privacy: .public) completed.\(sealCompleted, privacy: .public)")
+        }
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-internal
+        keyLock.lock(); defer { keyLock.unlock() }
+        guard snapshot.version == version, var record = try key(account: snapshot.keyAccount, create: true) else {
+            throw Failure.unavailable
+        }
+// TASK145_PHYSICAL_FRONTIER_BEGIN encode
+#if DEBUG
+        sealFrontier = "encode"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END encode
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        // Even two full validations of identical bytes produce different latest
+        // bindings. An old authentic capsule is not the currently trusted seal.
+        let payload = try encoder.encode(SignedPayload(sealID: UUID(), snapshot: snapshot))
+        let capsule = Capsule(payload: payload,
+            authenticationCode: Data(HMAC<SHA256>.authenticationCode(for: payload, using: SymmetricKey(data: record.key))))
+        let encoded = try encoder.encode(capsule)
+        guard encoded.count <= maximumCapsuleBytes else { throw Failure.unavailable }
+        // Crash order: durable capsule FIRST, external trusted latest SECOND.
+        // Interrupted/missing/mismatched pairs are misses, never startup repairs.
+// TASK145_PHYSICAL_FRONTIER_BEGIN write
+#if DEBUG
+        sealFrontier = "write"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END write
+        try encoded.write(to: capsuleURL, options: [.atomic])
+// TASK145_PHYSICAL_FRONTIER_BEGIN fsync-file
+#if DEBUG
+        sealFrontier = "fsync-file"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END fsync-file
+        try synchronize(capsuleURL)
+// TASK145_PHYSICAL_FRONTIER_BEGIN fsync-directory
+#if DEBUG
+        sealFrontier = "fsync-directory"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END fsync-directory
+        try synchronize(capsuleURL.deletingLastPathComponent())
+        record.latestCapsuleSHA256 = hash(encoded)
+        record.latestContextSHA256 = snapshot.contextSHA256
+        record.latestGenerationID = snapshot.generationID
+// TASK145_PHYSICAL_FRONTIER_BEGIN latest-encode
+#if DEBUG
+        sealFrontier = "latest-encode"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END latest-encode
+        let update: [String: Any] = [kSecValueData as String: try encoder.encode(record)]
+// TASK145_PHYSICAL_FRONTIER_BEGIN latest-update
+#if DEBUG
+        sealFrontier = "latest-update"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END latest-update
+        guard SecItemUpdate(keyQuery(account: snapshot.keyAccount) as CFDictionary,
+                            update as CFDictionary) == errSecSuccess else { throw Failure.unavailable }
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-internal-success
+#if DEBUG
+        sealFrontier = "success"; sealCompleted = true
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-internal-success
+    }
+
+    private static func protectedRecordDigest(_ record: ProtectedRecord) throws -> String {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        return hash(try encoder.encode(record))
+    }
+
+    static func fileDigest(_ url: URL, expected: SyncStoreGenerationMutationFence.FileState) throws -> File {
+        var hasher = SHA256()
+        let metadata = try read(url, maximumBytes: expected.fileSize, expected: expected) { hasher.update(data: $0) }
+        let digits = Array("0123456789abcdef".utf8)
+        var bytes: [UInt8] = []; bytes.reserveCapacity(64)
+        for byte in hasher.finalize() {
+            bytes.append(digits[Int(byte >> 4)]); bytes.append(digits[Int(byte & 15)])
+        }
+        return File(state: expected, sha256: String(decoding: bytes, as: UTF8.self),
+            deviceID: metadata.deviceID, changeTimeSeconds: metadata.seconds, changeTimeNanoseconds: metadata.nanoseconds)
+    }
+
+    static func readData(_ url: URL, maximumBytes: Int) throws -> Data {
+        var data = Data()
+        _ = try read(url, maximumBytes: maximumBytes, expected: nil) { data.append($0) }
+        return data
+    }
+
+    private static func read(_ url: URL, maximumBytes: Int,
+                             expected: SyncStoreGenerationMutationFence.FileState?, consume: (Data) -> Void)
+        throws -> (deviceID: Int64, seconds: Int64, nanoseconds: Int64) {
+        #if canImport(Darwin)
+// TASK145_CAPTURE_FRONTIER_BEGIN read-start
+#if DEBUG
+        enum ReadFrontier: String {
+            case byteLimit, open, fdStatBefore, pathStatBefore, regularFile, singleLink
+            case pathMatchBefore, sizeBound, expectedSize, expectedInode
+            case readChunk, cancellation, readBound, readCount
+            case fdStatAfter, pathStatAfter, fdStable, pathStable, complete
+        }
+        enum ReadKind: String { case manifest, journal, finalization, capsule, main, wal, shm, ledger, other }
+        let readKind: ReadKind
+        let name = url.lastPathComponent
+        if name == "active-generation.json" { readKind = .manifest }
+        else if name == "recovery-journal.json" { readKind = .journal }
+        else if name == "recovery-finalization.json" { readKind = .finalization }
+        else if name == "local-body-physical-proof-v1.json" { readKind = .capsule }
+        else if name == "store.store" { readKind = .main }
+        else if name.hasSuffix("-wal") { readKind = .wal }
+        else if name.hasSuffix("-shm") { readKind = .shm }
+        else if expected?.relativePath.hasPrefix("recovery-ledger-v1/") == true { readKind = .ledger }
+        else { readKind = .other }
+        var readFrontier = ReadFrontier.byteLimit
+        var readCompleted = false
+        defer {
+            if !readCompleted {
+                Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.read-failure frontier.\(readFrontier.rawValue, privacy: .public) file_kind.\(readKind.rawValue, privacy: .public)")
+            }
+        }
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-start
+        guard maximumBytes >= 0 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-open
+#if DEBUG
+        readFrontier = .open
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-open
+        let fd = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard fd >= 0 else { throw Failure.unavailable }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var before = stat(); var pathBefore = stat()
+// TASK145_CAPTURE_FRONTIER_BEGIN read-fdStatBefore
+#if DEBUG
+        readFrontier = .fdStatBefore
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-fdStatBefore
+        guard Darwin.fstat(fd, &before) == 0 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-pathStatBefore
+#if DEBUG
+        readFrontier = .pathStatBefore
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-pathStatBefore
+        guard Darwin.lstat(url.path, &pathBefore) == 0 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-regularFile
+#if DEBUG
+        readFrontier = .regularFile
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-regularFile
+        guard before.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-singleLink
+#if DEBUG
+        readFrontier = .singleLink
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-singleLink
+        guard before.st_nlink == 1 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-pathMatchBefore
+#if DEBUG
+        readFrontier = .pathMatchBefore
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-pathMatchBefore
+        guard same(before, pathBefore) else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-sizeBound
+#if DEBUG
+        readFrontier = .sizeBound
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-sizeBound
+        guard before.st_size >= 0, before.st_size <= Int64(maximumBytes) else { throw Failure.unavailable }
+        if let expected {
+// TASK145_CAPTURE_FRONTIER_BEGIN read-expectedSize
+#if DEBUG
+        readFrontier = .expectedSize
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-expectedSize
+            guard before.st_size == Int64(expected.fileSize) else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-expectedInode
+#if DEBUG
+        readFrontier = .expectedInode
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-expectedInode
+            guard before.st_ino == expected.systemFileNumber else { throw Failure.unavailable }
+        }
+        var count = 0
+// TASK145_CAPTURE_FRONTIER_BEGIN read-readChunk
+#if DEBUG
+        readFrontier = .readChunk
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-readChunk
+        while let chunk = try handle.read(upToCount: min(256 * 1_024, maximumBytes - count + 1)), !chunk.isEmpty {
+// TASK145_CAPTURE_FRONTIER_BEGIN read-cancellation
+#if DEBUG
+        readFrontier = .cancellation
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-cancellation
+            try Task.checkCancellation()
+            let (next, overflow) = count.addingReportingOverflow(chunk.count)
+// TASK145_CAPTURE_FRONTIER_BEGIN read-readBound
+#if DEBUG
+        readFrontier = .readBound
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-readBound
+            guard !overflow, next <= maximumBytes else { throw Failure.unavailable }
+            count = next; consume(chunk)
+// TASK145_CAPTURE_FRONTIER_BEGIN read-readChunk
+#if DEBUG
+        readFrontier = .readChunk
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-readChunk
+        }
+        var after = stat(); var pathAfter = stat()
+// TASK145_CAPTURE_FRONTIER_BEGIN read-readCount
+#if DEBUG
+        readFrontier = .readCount
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-readCount
+        guard Int64(count) == before.st_size else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-fdStatAfter
+#if DEBUG
+        readFrontier = .fdStatAfter
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-fdStatAfter
+        guard Darwin.fstat(fd, &after) == 0 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-pathStatAfter
+#if DEBUG
+        readFrontier = .pathStatAfter
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-pathStatAfter
+        guard Darwin.lstat(url.path, &pathAfter) == 0 else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-fdStable
+#if DEBUG
+        readFrontier = .fdStable
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-fdStable
+        guard same(before, after) else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-pathStable
+#if DEBUG
+        readFrontier = .pathStable
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-pathStable
+        guard same(before, pathAfter) else { throw Failure.unavailable }
+// TASK145_CAPTURE_FRONTIER_BEGIN read-complete
+#if DEBUG
+        readFrontier = .complete
+        readCompleted = true
+#endif
+// TASK145_CAPTURE_FRONTIER_END read-complete
+        return (Int64(before.st_dev), Int64(before.st_ctimespec.tv_sec), Int64(before.st_ctimespec.tv_nsec))
+        #else
+        throw Failure.unavailable
+        #endif
+    }
+
+    #if canImport(Darwin)
+    private static func same(_ a: stat, _ b: stat) -> Bool {
+        a.st_dev == b.st_dev && a.st_ino == b.st_ino && a.st_mode == b.st_mode
+            && a.st_nlink == b.st_nlink && a.st_size == b.st_size
+            && a.st_mtimespec.tv_sec == b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec == b.st_mtimespec.tv_nsec
+            && a.st_ctimespec.tv_sec == b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec == b.st_ctimespec.tv_nsec
+    }
+    #endif
+
+    private static func synchronize(_ url: URL) throws {
+        #if canImport(Darwin)
+        let fd = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard fd >= 0 else { throw Failure.unavailable }
+        defer { _ = Darwin.close(fd) }
+        guard Darwin.fsync(fd) == 0 else { throw Failure.unavailable }
+        #else
+        throw Failure.unavailable
+        #endif
+    }
+
+    private static func keyQuery(account: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: keyService, kSecAttrAccount as String: account,
+         kSecAttrSynchronizable as String: false]
+    }
+
+    /// Call only while keyLock is held. Never rewrites a latest binding on read.
+    private static func key(account: String, create: Bool) throws -> ProtectedRecord? {
+        var query = keyQuery(account: account)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecSuccess {
+            guard let data = result as? Data, data.count <= 2 * 1_024 else { throw Failure.unavailable }
+            let record = try JSONDecoder().decode(ProtectedRecord.self, from: data)
+            let absent = record.latestCapsuleSHA256 == nil && record.latestContextSHA256 == nil && record.latestGenerationID == nil
+            let complete = record.latestCapsuleSHA256?.count == 64 && record.latestContextSHA256?.count == 64 && record.latestGenerationID != nil
+            guard record.format == protectedRecordFormat, record.key.count == 32,
+                  absent || complete else { throw Failure.unavailable }
+            return record
+        }
+        guard status == errSecItemNotFound else { throw Failure.unavailable }
+        guard create else { return nil }
+        var bytes = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+            throw Failure.unavailable
+        }
+        let record = ProtectedRecord(format: protectedRecordFormat, key: Data(bytes),
+            latestCapsuleSHA256: nil, latestContextSHA256: nil, latestGenerationID: nil)
+        var item = keyQuery(account: account)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        item[kSecValueData as String] = try JSONEncoder().encode(record)
+        let added = SecItemAdd(item as CFDictionary, nil)
+        if added == errSecDuplicateItem { return try key(account: account, create: false) }
+        guard added == errSecSuccess else { throw Failure.unavailable }
+        return record
+    }
+
+    #if DEBUG
+    static func removeOwnedKeyForTesting(account: String) {
+        keyLock.lock(); defer { keyLock.unlock() }
+        _ = SecItemDelete(keyQuery(account: account) as CFDictionary)
+    }
+    #endif
 }

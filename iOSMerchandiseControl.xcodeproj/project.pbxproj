@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		430006012F6B000100000001 /* WechatOpenSDK-NoPay.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 430006002F6B000100000001 /* WechatOpenSDK-NoPay.xcframework */; platformFilters = (ios, ); };
+		145000000000000000000001 /* iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 145000000000000000000002 /* iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift */; };
 		415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EE2EE4CE13008233E0 /* SwiftSoup */; };
 		415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */ = {isa = PBXBuildFile; productRef = 415227F72EE5059D008233E0 /* xlsxwriter */; };
 		41B18CAB2EE7614A00FE61E2 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 41B18CAA2EE7614A00FE61E2 /* ZIPFoundation */; };
@@ -17,6 +17,7 @@
 		41B18D092EE7A90100FE61E2 /* ole.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEA2EE7A90100FE61E2 /* ole.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CED2EE7A90100FE61E2 /* xlstool.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		42D034012F3A034000000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 42D034032F3A034000000003 /* Supabase */; };
+		430006012F6B000100000001 /* Vendor/WeChat/WechatOpenSDK-NoPay.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 430006002F6B000100000001 /* Vendor/WeChat/WechatOpenSDK-NoPay.xcframework */; platformFilter = ios; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,7 +38,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		430006002F6B000100000001 /* WechatOpenSDK-NoPay.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "Vendor/WeChat/WechatOpenSDK-NoPay.xcframework"; sourceTree = "<group>"; };
+		145000000000000000000002 /* iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift; sourceTree = SOURCE_ROOT; };
 		415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSMerchandiseControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		41B18CAC2EE7A90100FE61E2 /* build.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = build.yml; sourceTree = "<group>"; };
 		41B18CAD2EE7A90100FE61E2 /* fuzz.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = fuzz.yml; sourceTree = "<group>"; };
@@ -71,6 +72,7 @@
 		41B18D3B2EE7B0B400FE61E2 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		42C0DF112F2A000100000001 /* iOSMerchandiseControlUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		430006002F6B000100000001 /* Vendor/WeChat/WechatOpenSDK-NoPay.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "Vendor/WeChat/WechatOpenSDK-NoPay.xcframework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -109,7 +111,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				430006012F6B000100000001 /* WechatOpenSDK-NoPay.xcframework in Frameworks */,
+				430006012F6B000100000001 /* Vendor/WeChat/WechatOpenSDK-NoPay.xcframework in Frameworks */,
 				42D034012F3A034000000001 /* Supabase in Frameworks */,
 				415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */,
 				415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */,
@@ -137,12 +139,13 @@
 		415227AA2EE0B07D008233E0 = {
 			isa = PBXGroup;
 			children = (
-				430006002F6B000100000001 /* WechatOpenSDK-NoPay.xcframework */,
+				430006002F6B000100000001 /* Vendor/WeChat/WechatOpenSDK-NoPay.xcframework */,
 				41B18CFF2EE7A90100FE61E2 /* Vendor 2 */,
 				415227B52EE0B07D008233E0 /* iOSMerchandiseControl */,
 				42C0DE122F2A000100000001 /* iOSMerchandiseControlTests */,
 				42C0DF122F2A000100000001 /* iOSMerchandiseControlUITests */,
 				415227B42EE0B07D008233E0 /* Products */,
+				41EB40EC308EE90400CB4DA0 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -247,6 +250,14 @@
 				41B18CFE2EE7A90100FE61E2 /* libxls */,
 			);
 			path = "Vendor 2";
+			sourceTree = "<group>";
+		};
+		41EB40EC308EE90400CB4DA0 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				145000000000000000000002 /* iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -425,6 +436,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				145000000000000000000001 /* iOSMerchandiseControlTests/MobileSyncPerformanceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -582,11 +594,11 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"BUILD_WITHOUT_PAY=1",
 				);
+				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare codici a barre e acquisire immagini dei prodotti.";
@@ -605,7 +617,11 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "$(inherited) -ObjC -all_load";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-all_load",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.niwcyber.iOSMerchandiseControl;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -636,11 +652,11 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"BUILD_WITHOUT_PAY=1",
 				);
+				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare codici a barre e acquisire immagini dei prodotti.";
@@ -659,7 +675,11 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "$(inherited) -ObjC -all_load";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-all_load",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.niwcyber.iOSMerchandiseControl;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote, ShopScopedIncrementalRPCAuthorizing, ShopScopedIncrementalFencePersisting {
+struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote, ShopScopedIncrementalRPCAuthorizing, ShopScopedMaterialFencePersisting, ShopScopedIncrementalNoWorkVerifying, ShopScopedReconciliationRemoteCountFetching {
     let remote: SupabaseTransportClient
     private let scopedRPC: ShopScopedIncrementalRPCClient
 
@@ -27,6 +27,34 @@ struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote, ShopScope
             from: watermark,
             through: newWatermark
         )
+    }
+
+    func verifiedScopeKey(scope: Task126VerifiedOwnerStoreScope, baseline: Int64, through: Int64) async throws -> String {
+        try await scopedRPC.verifiedScopeKey(scope: scope, baseline: baseline, through: through)
+    }
+
+    func advanceDurableFence(ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope,
+                             from: Int64, through: Int64, expectedScopeKey: String) async throws {
+        try await scopedRPC.advanceDurableFence(ownerUserID: ownerUserID, scope: scope,
+            from: from, through: through, expectedScopeKey: expectedScopeKey)
+    }
+
+    func hasNoEvents(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint
+    ) async throws -> Bool {
+        try await scopedRPC.hasNoEvents(ownerUserID: ownerUserID, scope: scope,
+            watermark: watermark, baselineCheckpoint: baselineCheckpoint)
+    }
+
+    func verifyNoWork(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+        localVerification: ShopSyncRecoveryLocalVerificationReceipt
+    ) async throws {
+        try await scopedRPC.verifyNoWork(ownerUserID: ownerUserID, scope: scope,
+            watermark: watermark, baselineCheckpoint: baselineCheckpoint,
+            localVerification: localVerification)
     }
 
     private var query: SupabaseRemoteQueryExecutor {
@@ -139,6 +167,14 @@ struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote, ShopScope
 
     func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
         try await OptionsRemoteCountSupabaseAdapter(remote: remote).fetchReconciliationRemoteCounts()
+    }
+
+    func fetchReconciliationRemoteCounts(
+        scope: Task126VerifiedOwnerStoreScope, recoveryScope: ShopSyncRecoveryScope,
+        defaults: UserDefaults
+    ) async throws -> SyncInventoryCountSnapshot {
+        try await OptionsRemoteCountSupabaseAdapter(remote: remote).fetchReconciliationRemoteCounts(
+            scope: scope, recoveryScope: recoveryScope, defaults: defaults)
     }
 
     private func scopedRows<Row: ShopSyncAuthorizedRow>(

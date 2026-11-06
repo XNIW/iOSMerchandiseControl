@@ -2,10 +2,10 @@ import Foundation
 
 /// Durable retry decisions use structured transport facts, never diagnostics.
 nonisolated struct AutomaticSyncFailure: Error, Codable, Equatable, Sendable {
-    enum Disposition: String, Codable, Sendable { case transient, stable, unknown }
+    enum Disposition: String, Codable, Sendable { case transient, stable, unknown, reconciliation }
     enum Category: String, Codable, Sendable {
         case network, timeout, rateLimited, server, authentication, authorization
-        case schema, payload, integrity, cancelled, unknown
+        case schema, payload, integrity, cancelled, unknown, snapshotChanged
     }
 
     let disposition: Disposition
@@ -44,6 +44,9 @@ nonisolated struct AutomaticSyncFailure: Error, Codable, Equatable, Sendable {
     static func classify(_ error: any Error) -> Self {
         if let failure = error as? Self { return failure }
         if error is CancellationError { return Self(disposition: .stable, category: .cancelled) }
+        if error as? Task126OwnerStoreGateError == .cancelled {
+            return Self(disposition: .stable, category: .cancelled)
+        }
         if let error = error as? URLError {
             let category: Category
             let disposition: Disposition
@@ -99,7 +102,8 @@ nonisolated struct AutomaticSyncFailure: Error, Codable, Equatable, Sendable {
         switch disposition {
         case .transient: return [.network, .timeout, .rateLimited, .server].contains(category)
         case .unknown: return category == .unknown
-        case .stable: return ![.network, .timeout, .rateLimited, .server, .unknown].contains(category)
+        case .reconciliation: return category == .snapshotChanged && httpStatus == nil && urlErrorCode == nil && sqlState == nil
+        case .stable: return ![.network, .timeout, .rateLimited, .server, .unknown, .snapshotChanged].contains(category)
         }
     }
 }

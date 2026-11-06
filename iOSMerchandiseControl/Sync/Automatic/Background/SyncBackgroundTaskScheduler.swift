@@ -138,8 +138,24 @@ nonisolated enum SyncBackgroundTaskRunner {
                 return false
             }
 
+            // Join the App-owned opener; expiry cancels this waiter, never the shared worker.
+            let openedController = try await SyncStoreBootstrap.shared.waitUntilOpened()
+            try Task.checkCancellation()
+            // Opening may outlive auth/device authority. Recheck before any business consumer.
+            guard let currentSession = await MainActor.run(body: { authService.currentSession }),
+                  !currentSession.isExpired, currentSession.userID == session.userID else {
+                throw SyncStoreGenerationError.unavailable
+            }
+            _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "background_refresh_after_store_open")
+            try Task.checkCancellation()
+            guard !AccountBindingStore().hasPendingReplacementJournal else { throw SyncStoreGenerationError.unavailable }
             let (modelContainer, generationLease, generationController) = try await MainActor.run {
-                let controller = SyncStoreGenerationController.shared
+                try Task.checkCancellation()
+                guard SyncStoreBootstrap.shared.controller === openedController,
+                      let current = authService.currentSession, !current.isExpired,
+                      current.userID == session.userID,
+                      !AccountBindingStore().hasPendingReplacementJournal else { throw SyncStoreGenerationError.unavailable }
+                let controller = openedController
                 guard controller.loadFailureCode == nil else {
                     throw SyncStoreGenerationError.unavailable
                 }

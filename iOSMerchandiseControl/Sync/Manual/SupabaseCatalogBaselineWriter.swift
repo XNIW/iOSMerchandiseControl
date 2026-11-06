@@ -65,12 +65,15 @@ nonisolated struct SupabaseCatalogBaselineWriter {
         context: ModelContext,
         ownerUserUUID: UUID,
         source: SupabaseCatalogBaselineSource = .fullPullApply,
+        writerLeaseHeld: Bool = false,
         validateBeforeSave: () throws -> Void = {}
     ) throws -> SupabaseCatalogBaselineCommitResult {
         func saveValidated() throws {
             try validateBeforeSave()
-            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                try context.save()
+            if writerLeaseHeld {
+                try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
+            } else {
+                try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
             }
         }
 

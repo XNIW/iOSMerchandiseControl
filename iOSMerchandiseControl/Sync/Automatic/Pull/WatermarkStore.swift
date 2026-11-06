@@ -1,7 +1,126 @@
 import CryptoKit
 import Foundation
+import SwiftData
 
 nonisolated struct WatermarkStore {
+    /// The row lives in the same SwiftData store as the changes it accepts.
+    /// Defaults remains the mirror used by V6, including verified no-op advances.
+    nonisolated struct MaterialCheckpoint: Codable, Equatable, Sendable {
+        private static let format = "incremental-material-checkpoint-v1"
+        let generationID: UUID?
+        let from: Int64
+        let through: Int64
+        let verifiedScopeKey: String?
+        private let shopID: UUID
+        private let deviceIdentityHash: String
+        private let storeIdentity: LocalStoreIdentity
+
+        private static func recordID(accountHash: String, shopID: UUID) -> String {
+            "\(format):\(accountHash):\(shopID.uuidString.lowercased())"
+        }
+
+        private static func row(in context: ModelContext, accountHash: String, shopID: UUID) throws -> SyncEventOutboxEntry? {
+            let id = recordID(accountHash: accountHash, shopID: shopID)
+            var descriptor = FetchDescriptor<SyncEventOutboxEntry>(predicate: #Predicate { $0.id == id })
+            descriptor.fetchLimit = 2
+            let rows = try context.fetch(descriptor)
+            guard rows.count <= 1 else { throw ShopSyncRecoveryContractError.scopeFenceMissing }
+            return rows.first
+        }
+
+        static func read(in context: ModelContext, scope: Task126VerifiedOwnerStoreScope) throws -> Self? {
+            guard let row = try row(in: context, accountHash: scope.accountHash, shopID: scope.shopID) else { return nil }
+            return try decode(row, in: context, scope: scope)
+        }
+
+        /// Bootstrap does not register the opened container until the terminal
+        /// manifest has been checked. Use that exact manifest as the read fence.
+        static func read(in context: ModelContext, finalizedManifest manifest: SyncStoreGenerationManifest) throws -> Self? {
+            guard let row = try row(in: context, accountHash: manifest.accountHash, shopID: manifest.shopID) else { return nil }
+            return try decode(row, accountHash: manifest.accountHash, shopID: manifest.shopID,
+                storeIdentity: manifest.storeIdentity, deviceIdentityHash: manifest.deviceIdentityHash,
+                generationID: manifest.generationID)
+        }
+
+        private static func decode(_ row: SyncEventOutboxEntry, in context: ModelContext,
+                                   scope: Task126VerifiedOwnerStoreScope) throws -> Self {
+            let manifest = Task126OwnerStoreGate.activeManifestWithLeaseHeld(context.container)
+            if let manifest {
+                guard manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+                      manifest.deviceIdentityHash == scope.deviceIdentityHash,
+                      manifest.storeIdentity.hasSameProvenance(as: scope.storeIdentity) else {
+                    throw ShopSyncRecoveryContractError.scopeFenceMissing
+                }
+            }
+            return try decode(row, accountHash: scope.accountHash, shopID: scope.shopID,
+                storeIdentity: scope.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                generationID: manifest?.generationID)
+        }
+
+        private static func decode(_ row: SyncEventOutboxEntry, accountHash: String, shopID: UUID,
+                                   storeIdentity: LocalStoreIdentity, deviceIdentityHash: String,
+                                   generationID: UUID?) throws -> Self {
+            guard row.status == .localOnly, row.domain == format, row.metadataShape == format,
+                  let owner = UUID(uuidString: row.ownerUserID),
+                  AccountBindingStore.accountHash(for: owner) == accountHash,
+                  let payload = row.metadataPayloadJSON, payload.utf8.count <= 2_048,
+                  ShopSyncRecoveryCanonical.sha256(payload) == row.entityIDsShape,
+                  let receipt = try? JSONDecoder().decode(Self.self, from: Data(payload.utf8)),
+                  receipt.generationID == generationID,
+                  receipt.shopID == shopID, receipt.deviceIdentityHash == deviceIdentityHash,
+                  receipt.storeIdentity.hasSameProvenance(as: storeIdentity),
+                  receipt.verifiedScopeKey.map(ShopSyncRecoveryCanonical.isRedactedKey) ?? true,
+                  receipt.from >= 0, receipt.through > receipt.from else {
+                throw ShopSyncRecoveryContractError.scopeFenceMissing
+            }
+            return receipt
+        }
+
+        /// Call inside the transaction, with the active scope lease held.
+        static func stage(from: Int64, through: Int64, verifiedScopeKey: String?, in context: ModelContext,
+                          scope: Task126VerifiedOwnerStoreScope) throws {
+            let manifest = Task126OwnerStoreGate.activeManifestWithLeaseHeld(context.container)
+            let current = try row(in: context, accountHash: scope.accountHash, shopID: scope.shopID)
+            guard through > from, from >= 0,
+                  try current.map({ try decode($0, in: context, scope: scope).through <= from }) ?? true else {
+                throw ShopSyncRecoveryContractError.scopeFenceMissing
+            }
+            if let manifest {
+                guard manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+                      manifest.deviceIdentityHash == scope.deviceIdentityHash,
+                      manifest.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+                      let baseline = manifest.checkpoint.maxEventID, baseline <= from else {
+                    throw ShopSyncRecoveryContractError.scopeFenceMissing
+                }
+            }
+            let receipt = Self(generationID: manifest?.generationID, from: from, through: through,
+                               verifiedScopeKey: verifiedScopeKey,
+                               shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash,
+                               storeIdentity: scope.storeIdentity)
+            let data = try JSONEncoder().encode(receipt)
+            guard data.count <= 2_048, let payload = String(data: data, encoding: .utf8) else {
+                throw ShopSyncRecoveryContractError.scopeFenceMissing
+            }
+            let now = Date()
+            let hash = ShopSyncRecoveryCanonical.sha256(payload)
+            if let current {
+                current.metadataPayloadJSON = payload
+                current.entityIDsShape = hash
+                current.updatedAt = now
+            } else {
+                let id = recordID(accountHash: scope.accountHash, shopID: scope.shopID)
+                context.insert(SyncEventOutboxEntry(id: id,
+                    ownerUserID: scope.ownerUserID.uuidString.lowercased(),
+                    storeId: scope.storeIdentity.storeId, localStoreId: scope.storeIdentity.localStoreId,
+                    syncProtocolVersion: scope.storeIdentity.syncProtocolVersion,
+                    schemaVersion: scope.storeIdentity.schemaVersion, storeEpoch: scope.storeIdentity.storeEpoch,
+                    clientEventID: id, domain: format, eventType: format, changedCount: 0,
+                    entityIDsShape: hash, metadataShape: format, metadataPayloadJSON: payload,
+                    status: .localOnly, nextRetryAt: now, createdAt: now, updatedAt: now))
+            }
+        }
+    }
+
     private struct RecoveryCheckpointRecord: Codable, Equatable {
         static let schemaVersion = "sync-watermark-generation-v1"
 

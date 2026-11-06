@@ -1486,6 +1486,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 "historyApplyMs=\(summary.historyApplyMs) totalElapsedMs=\(summary.totalElapsedMs) " +
                 "requiresFullRecovery=\(summary.requiresFullRecovery) fullPull=false"
             )
+            if summary.checkpointPublicationPending {
+                recordTask114RuntimeDiagnostic("checkpoint_publication_pending", forKey: "task114.runtime.incremental.lastError")
+                semiAutomaticState = .recoverableError
+                presentationKind = .partialSync
+                lastRecoverableForegroundErrorAt = Date()
+                return true
+            }
             if summary.requiresFullRecovery {
                 semiAutomaticState = .staleOrConflict
                 presentationKind = .partialSync

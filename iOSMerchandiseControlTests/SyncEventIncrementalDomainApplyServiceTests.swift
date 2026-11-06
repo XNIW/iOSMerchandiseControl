@@ -1119,7 +1119,7 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
 
         XCTAssertEqual(summary.requiresFullRecoveryReason, "sync_event_missing_remote")
         XCTAssertEqual(summary.watermarkAfter, 0)
-        XCTAssertEqual(remote.catalogFetchCallCount, 2)
+        XCTAssertEqual(remote.catalogFetchCallCount, 1)
         let applyStatus = try XCTUnwrap(SyncEventApplyStatusStore(defaults: defaults).record(ownerUserID: owner, shopID: Self.automaticShopID, eventID: 106))
         XCTAssertEqual(applyStatus.status, .blocked)
         XCTAssertEqual(applyStatus.reason, .missingRemote)
@@ -2249,6 +2249,54 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         )?.status, .blocked)
     }
 
+    func testApplyStatusFixtureRunIsolationPreservesOwnEventAcrossReopen() throws {
+        let owner = UUID()
+        let shop = Self.automaticShopID
+        let suiteName = "SyncEventApplyStatusFixtureRun-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let ordinary = SyncEventApplyStatusStore(defaults: defaults)
+        let firstRunID = UUID()
+        let first = SyncEventApplyStatusStore(defaults: defaults, fixtureRunID: firstRunID)
+        let second = SyncEventApplyStatusStore(defaults: defaults, fixtureRunID: UUID())
+        let ordinaryKey = ordinary.storageKeyForTesting(ownerUserID: owner, shopID: shop)
+        let accountHash = AccountBindingStore.accountHash(for: owner)
+        let shopHash = AccountBindingStore.redactedAccountHash(for: shop.uuidString)
+        XCTAssertEqual(ordinaryKey, "sync.events.applyStatus.v2.\(accountHash).shop.\(shopHash)")
+
+        func record(_ id: Int64, in store: SyncEventApplyStatusStore, now: Int) throws {
+            let event = try syncEventRow(id: id, ownerUserID: owner, domain: "catalog", changedCount: 1,
+                shopID: shop, entityIDsJSON: "null")
+            XCTAssertTrue(store.record(event: event, ownerUserID: owner, scopeShopID: shop,
+                ids: SyncEventEntityIDSet(), status: id == 42 ? .skipped : .applied,
+                reason: id == 42 ? .selfOrigin : .applied, nowMs: now))
+        }
+
+        try record(42, in: ordinary, now: 1)
+        let ordinaryBytes = try XCTUnwrap(defaults.data(forKey: ordinaryKey))
+        for id in [42, 43, 44] as [Int64] { try record(id, in: first, now: 2) }
+        XCTAssertTrue(second.records(ownerUserID: owner, shopID: shop).isEmpty)
+        try record(42, in: second, now: 3)
+        let own = try XCTUnwrap(second.record(ownerUserID: owner, shopID: shop, eventID: 42))
+        XCTAssertEqual(own.status, .skipped)
+        XCTAssertEqual(own.reason, .selfOrigin)
+        XCTAssertEqual(own.attemptCount, 1)
+        XCTAssertEqual(second.records(ownerUserID: owner, shopID: shop).map(\.eventID), [42])
+
+        try record(43, in: second, now: 4)
+        try record(44, in: second, now: 5)
+        XCTAssertEqual(second.record(ownerUserID: owner, shopID: shop, eventID: 42), own)
+        XCTAssertEqual(second.records(ownerUserID: owner, shopID: shop).map(\.attemptCount), [1, 1, 1])
+
+        let reopenedDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        let reopened = SyncEventApplyStatusStore(defaults: reopenedDefaults, fixtureRunID: firstRunID)
+        XCTAssertEqual(reopened.records(ownerUserID: owner, shopID: shop),
+            first.records(ownerUserID: owner, shopID: shop))
+        XCTAssertEqual(reopened.records(ownerUserID: owner, shopID: shop).map(\.lastAttemptAtMs), [2, 2, 2])
+        XCTAssertEqual(reopenedDefaults.data(forKey: ordinaryKey), ordinaryBytes)
+    }
+
     func testApplyStatusCorruptOrOversizedPayloadFailsBounded() throws {
         let owner = UUID(uuidString: "33333333-3333-4333-8333-333333333345")!
         let suiteName = "SyncEventApplyStatusCorrupt-\(UUID().uuidString)"
@@ -2774,7 +2822,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-rollback-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-rollback", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let container = try SyncStoreSchema.makeFileBackedContainer(at: storeURL)
         do {
@@ -2813,7 +2862,10 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let remoteProduct = RemoteInventoryProductRow(id: productID, ownerUserID: owner, shopID: Self.automaticShopID, barcode: "ROLLBACK-UPDATE", itemNumber: nil, productName: "After", secondProductName: nil, purchasePrice: nil, retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil, updatedAt: "2026-07-21T12:00:00Z", deletedAt: nil)
         let remotePrice = RemoteInventoryProductPriceRow(id: incomingPriceID, ownerUserID: owner, shopID: Self.automaticShopID, productID: productID, type: "RETAIL", price: 2, effectiveAt: "2026-07-21T12:00:00Z", source: "AFTER", note: nil, createdAt: "2026-07-21T12:00:00Z", updatedAt: "2026-07-21T12:00:00Z")
         let remoteHistory = remoteHistoryRow(remoteID: historyID, owner: owner, title: "Before history", deletedAt: "2026-07-21T12:01:00Z")
-        let remote = SyncEventIncrementalDomainApplyRemoteFake(events: events, products: [remoteProduct], productPrices: [remotePrice], historySessions: [remoteHistory])
+        let remote = SyncEventIncrementalDomainApplyRemoteFake(
+            events: events, products: [remoteProduct], productPrices: [remotePrice], historySessions: [remoteHistory],
+            reconciliationCounts: .init(products: 1, suppliers: 0, categories: 0, productPrices: 2, historySessions: 0)
+        )
         do {
             _ = try await SyncEventIncrementalDomainApplyService(
                 eventFetcher: remote,
@@ -2847,6 +2899,73 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         XCTAssertNil(history.first?.remoteDeletedAt)
         XCTAssertEqual(history.first?.title, "Before history")
         XCTAssertEqual(WatermarkStore(defaults: defaults).watermark(for: WatermarkStore.Scope(ownerUserID: owner, storeIdentity: LocalStoreIdentity(rawValue: Self.automaticShopID.uuidString.lowercased()))), 0)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        XCTAssertNil(try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            try WatermarkStore.MaterialCheckpoint.read(in: read, scope: scope)
+        })
+
+        // The other boundary is a durable local commit followed by a refused V6 fence.
+        // Keep the same file-backed batch and reopen again for the data readback.
+        let refusingFence = V6FenceIncrementalRemoteFake(events: events, failsFencePersistence: true)
+        let postCommit = try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: refusingFence, remote: remote, defaults: defaults
+        ).applyNextEvents(ownerUserID: owner, modelContainer: reopened, isAuthenticated: true)
+        XCTAssertNil(postCommit.requiresFullRecoveryReason)
+        XCTAssertTrue(postCommit.checkpointPublicationPending)
+        XCTAssertEqual(postCommit.watermarkBefore, 0)
+        XCTAssertEqual(postCommit.watermarkAfter, 502)
+        XCTAssertTrue(refusingFence.fenceAdvances().isEmpty)
+        let durable = ModelContext(try SyncStoreSchema.makeFileBackedContainer(at: storeURL))
+        XCTAssertEqual(try durable.fetch(FetchDescriptor<Product>()).map(\.productName), ["After"])
+        let committedPrices = try durable.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(committedPrices.count, 2)
+        XCTAssertEqual(committedPrices.first(where: { $0.remoteID == incomingPriceID })?.price, 2)
+        let committedHistory = try durable.fetch(FetchDescriptor<HistoryEntry>())
+        XCTAssertEqual(committedHistory.count, 1)
+        XCTAssertNotNil(committedHistory.first?.remoteDeletedAt)
+        let watermarkScope = WatermarkStore.Scope(ownerUserID: owner,
+            storeIdentity: LocalStoreIdentity(rawValue: Self.automaticShopID.uuidString.lowercased()))
+        XCTAssertEqual(WatermarkStore(defaults: defaults).watermark(for: watermarkScope), 0)
+        let checkpoint = try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            try WatermarkStore.MaterialCheckpoint.read(in: durable, scope: scope)
+        }
+        XCTAssertEqual(checkpoint?.from, 0)
+        XCTAssertEqual(checkpoint?.through, 502)
+
+        let retryFence = V6FenceIncrementalRemoteFake(events: events)
+        let resumed = try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: retryFence, remote: remote, defaults: defaults,
+            beforeAtomicMutationForTesting: { throw AtomicProbeError.missingFixture }
+        ).applyNextEvents(ownerUserID: owner, modelContainer: durable.container, isAuthenticated: true)
+        XCTAssertNil(resumed.requiresFullRecoveryReason)
+        XCTAssertEqual(resumed.watermarkBefore, 502)
+        XCTAssertEqual(resumed.watermarkAfter, 502)
+        XCTAssertEqual(resumed.eventsFetched, 0)
+        XCTAssertEqual(retryFence.fenceAdvances(), [.init(from: 0, through: 502)])
+        XCTAssertEqual(WatermarkStore(defaults: defaults).watermark(for: watermarkScope), 502)
+        XCTAssertEqual(try durable.fetchCount(FetchDescriptor<ProductPrice>()), 2)
+
+        let update = try syncEventRow(id: 503, ownerUserID: owner, domain: "prices", changedCount: 1,
+            entityIDsJSON: "{\"price_ids\":[\"\(incomingPriceID.uuidString)\"],\"product_ids\":[\"\(productID.uuidString)\"]}")
+        let updatedPrice = RemoteInventoryProductPriceRow(
+            id: incomingPriceID, ownerUserID: owner, shopID: Self.automaticShopID, productID: productID,
+            type: "RETAIL", price: 3, effectiveAt: remotePrice.effectiveAt, source: "AFTER", note: nil,
+            createdAt: remotePrice.createdAt, updatedAt: "2026-07-21T12:01:00Z")
+        let updateRemote = SyncEventIncrementalDomainApplyRemoteFake(
+            events: [update], products: [remoteProduct], productPrices: [updatedPrice])
+        let updated = try await SyncEventIncrementalDomainApplyService(
+            eventFetcher: V6FenceIncrementalRemoteFake(events: [update], failsFencePersistence: true),
+            remote: updateRemote, defaults: defaults
+        ).applyNextEvents(ownerUserID: owner, modelContainer: durable.container, isAuthenticated: true)
+        XCTAssertTrue(updated.checkpointPublicationPending)
+        XCTAssertEqual(updated.watermarkAfter, 503)
+        XCTAssertEqual(updated.productPricesInserted, 0)
+        let updatedReadback = ModelContext(try SyncStoreSchema.makeFileBackedContainer(at: storeURL))
+        XCTAssertEqual(try updatedReadback.fetch(FetchDescriptor<ProductPrice>())
+            .first(where: { $0.remoteID == incomingPriceID })?.price, 3)
+        XCTAssertEqual(try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            try WatermarkStore.MaterialCheckpoint.read(in: updatedReadback, scope: scope)?.through
+        }, 503)
     }
 
     @MainActor
@@ -2862,7 +2981,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-lease-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-lease", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let container = try SyncStoreSchema.makeFileBackedContainer(at: storeURL)
         let events = [
@@ -2934,6 +3054,11 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         XCTAssertEqual(try read.fetchCount(FetchDescriptor<ProductPrice>()), 1)
         XCTAssertEqual(try read.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
         XCTAssertEqual(WatermarkStore(defaults: defaults).watermark(for: WatermarkStore.Scope(ownerUserID: owner, storeIdentity: LocalStoreIdentity(rawValue: Self.automaticShopID.uuidString.lowercased()))), 0)
+        let currentScope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner, defaults: defaults)
+        let committedCheckpoint = try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(currentScope, defaults: defaults) {
+            try WatermarkStore.MaterialCheckpoint.read(in: read, scope: currentScope)
+        }
+        XCTAssertEqual(committedCheckpoint?.through, 512)
         let statuses = SyncEventApplyStatusStore(defaults: defaults)
         XCTAssertNil(statuses.record(ownerUserID: owner, shopID: Self.automaticShopID, eventID: 510))
         XCTAssertNil(statuses.record(ownerUserID: owner, shopID: Self.automaticShopID, eventID: 511))
@@ -2951,6 +3076,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-file-local-writer-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-writer", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let storeURL = directory.appendingPathComponent("active.store")
         let writerError = SyncEventThreadSafeErrorBox()
         let afterCatalog = expectation(description: "incremental catalog mutation reached")
@@ -3125,7 +3252,6 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
             )?.status,
             .applied
         )
-        try FileManager.default.removeItem(at: directory)
     }
 
     @MainActor
@@ -3211,7 +3337,8 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("task139-relation-rollback-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let lifetime = try Task145AtomicOwnedRootLifetime.registerIfAdmitted(directory, family: "incremental-relation", testName: self.name)
+        defer { Task145AtomicOwnedRootLifetime.finishOrRemove(directory, lifetime: lifetime) }
         let container = try SyncStoreSchema.makeFileBackedContainer(
             at: directory.appendingPathComponent("active.store")
         )
@@ -3628,7 +3755,7 @@ final class SyncEventIncrementalDomainApplyServiceTests: XCTestCase {
         XCTAssertEqual(summary.requiresFullRecoveryReason, "sync_event_total_resource_budget_exceeded")
         XCTAssertEqual(summary.watermarkAfter, 0)
         XCTAssertEqual(try ModelContext(container).fetchCount(FetchDescriptor<Product>()), 0)
-        XCTAssertEqual(remote.catalogFetchCallCount, 2)
+        XCTAssertEqual(remote.catalogFetchCallCount, 1)
     }
 
     @MainActor
@@ -4670,6 +4797,7 @@ private final class SyncEventIncrementalDomainApplyRemoteFake: SyncAutomaticIncr
     private let returnsOverfullEventPage: Bool
     private let eventFetchError: ShopSyncRecoveryContractError?
     private let eventFetchErrorAfterID: Int64?
+    private let reconciliationCounts: SyncInventoryCountSnapshot
     private(set) var catalogFetchCallCount = 0
     private(set) var productPriceFetchCallCount = 0
     private(set) var historyFetchCallCount = 0
@@ -4688,7 +4816,8 @@ private final class SyncEventIncrementalDomainApplyRemoteFake: SyncAutomaticIncr
         historyFetchError: ShopSyncRecoveryContractError? = nil,
         returnsOverfullEventPage: Bool = false,
         eventFetchError: ShopSyncRecoveryContractError? = nil,
-        eventFetchErrorAfterID: Int64? = nil
+        eventFetchErrorAfterID: Int64? = nil,
+        reconciliationCounts: SyncInventoryCountSnapshot = .zero
     ) {
         self.events = events
         self.suppliers = suppliers
@@ -4702,6 +4831,7 @@ private final class SyncEventIncrementalDomainApplyRemoteFake: SyncAutomaticIncr
         self.returnsOverfullEventPage = returnsOverfullEventPage
         self.eventFetchError = eventFetchError
         self.eventFetchErrorAfterID = eventFetchErrorAfterID
+        self.reconciliationCounts = reconciliationCounts
     }
 
     func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
@@ -4751,7 +4881,7 @@ private final class SyncEventIncrementalDomainApplyRemoteFake: SyncAutomaticIncr
 
     func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
         reconciliationCallCount += 1
-        return .zero
+        return reconciliationCounts
     }
 
     func upsertSharedSheetSessions(

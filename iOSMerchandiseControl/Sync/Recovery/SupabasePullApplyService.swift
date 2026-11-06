@@ -702,9 +702,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
 
         do {
-            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                try context.save()
-            }
+            try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
         } catch is CancellationError {
             context.rollback()
             throw CancellationError()
@@ -866,7 +864,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
     private func validateNoActiveLocalPendingChanges(context: ModelContext) throws {
         let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
-        guard !changes.contains(where: { !$0.status.isTerminal }) else {
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        guard !changes.contains(where: { !$0.status.isTerminal && !resolved.contains($0.changeID) }) else {
             throw SupabasePullApplyError.invalidLocalData
         }
     }
@@ -885,7 +884,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 change.ownerUserID == owner && change.entityKindRaw == productKind
             }
         )
-        let activeChanges = try context.fetch(descriptor).filter { !$0.status.isTerminal }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        let activeChanges = try context.fetch(descriptor).filter { !$0.status.isTerminal && !resolved.contains($0.changeID) }
         return SupabasePullApplyPendingProductChanges(
             logicalKeys: Set(activeChanges.map(\.logicalKey)),
             remoteIDs: Set(activeChanges.compactMap(\.entityRemoteID))
@@ -972,9 +972,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 onProgress: onProgress
             )
             do {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                    try context.save()
-                }
+                try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
                 mutationsSinceSave = 0
             } catch is CancellationError {
                 context.rollback()
@@ -1790,9 +1788,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         if detachedRelationships {
             do {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                    try context.save()
-                }
+                try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
             } catch is CancellationError {
                 context.rollback()
                 throw CancellationError()

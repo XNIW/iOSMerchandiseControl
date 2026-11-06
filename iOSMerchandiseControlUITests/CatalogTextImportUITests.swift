@@ -13,7 +13,8 @@ final class CatalogTextImportUITests: XCTestCase {
         ]
         app.launchEnvironment = [
             "TASK140_UI_TEST": "1",
-            "TASK131_INITIAL_TAB": "database"
+            "TASK131_INITIAL_TAB": "database",
+            "TASK144_LOCAL_AVAILABILITY_FIXTURE": UUID().uuidString.lowercased()
         ]
     }
 
