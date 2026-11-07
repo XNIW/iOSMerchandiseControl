@@ -2475,6 +2475,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 continue
             }
             let targetIdentifier = field.identifier
+            let targetPlaceholder = historyTitle && targetIdentifier.isEmpty ? field.placeholderValue : nil
             let form = app.collectionViews.containing(.textField, identifier: targetIdentifier).firstMatch
             let formPresent = form.exists
             let root = try app.snapshot()
@@ -2486,7 +2487,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 visited += 1
                 guard visited <= 1_024 else { break }
                 if node.elementType == .textField
-                    && (historyTitle ? node.label == "Display name (optional)" : node.identifier == targetIdentifier) {
+                    && (historyTitle && targetIdentifier.isEmpty
+                        ? targetPlaceholder?.isEmpty == false && node.placeholderValue == targetPlaceholder
+                        : node.identifier == targetIdentifier) {
                     targets.append((node, ancestors))
                 }
                 if node.elementType == .button && node.identifier == "task144.controlled.editor.release" {
