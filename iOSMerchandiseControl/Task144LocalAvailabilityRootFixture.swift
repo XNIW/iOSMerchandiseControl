@@ -2892,7 +2892,15 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     /// Observational only: no runtime trigger, scope grant or queue action.
     private func refreshAutomaticObservation() {
         let prefix = "task144.controlled.auto."
+        let recoveryReasonCategory: String
+        switch UserDefaults.standard.object(forKey: "sync.runtime.automatic.recovery.requestedReason") {
+        case nil: recoveryReasonCategory = "absent"
+        case let reason as String where reason == "ordinary_continuation_local_work_pending":
+            recoveryReasonCategory = "ordinary_continuation_local_work_pending"
+        default: recoveryReasonCategory = "other"
+        }
         var diagnostic = [lastAutomaticResult, "\(prefix)source-current.\(lastAutomaticPresentationID == controller.presentationID)",
+            "\(prefix)recovery-request-reason.\(recoveryReasonCategory)",
             "\(prefix)namespace.\(namespace.uuidString.lowercased())",
             "\(prefix)invocation.\(lastAutomaticInvocationID?.uuidString.lowercased() ?? "none")",
             "\(prefix)callback-uptime.\(lastAutomaticCallbackUptime ?? 0)",

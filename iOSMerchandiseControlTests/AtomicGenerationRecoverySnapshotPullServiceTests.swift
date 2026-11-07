@@ -9767,7 +9767,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42)
             XCTAssertEqual(proof.fixture.controller.activeManifest?.generationID, generation)
             XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
-            XCTAssertNil(proof.fixture.defaults.object(forKey: "sync.runtime.recovery.requestedReason"))
+            XCTAssertNil(proof.fixture.defaults.object(forKey: "sync.runtime.automatic.recovery.requestedReason"))
             let read = ModelContext(container)
             let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
             XCTAssertEqual(changes.count, 2)
@@ -9832,7 +9832,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertNil(result.verifiedFinalization)
             XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
             XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
-            XCTAssertNil(fixture.defaults.object(forKey: "sync.runtime.recovery.requestedReason"))
+            XCTAssertNil(fixture.defaults.object(forKey: "sync.runtime.automatic.recovery.requestedReason"))
             XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
             XCTAssertEqual(proof.remote.catalogPushCallCount, 1, "The typed rejected attempt is not resent")
             XCTAssertTrue(proof.remote.recordRequests.isEmpty)
@@ -9888,6 +9888,150 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             XCTAssertEqual(proof.remote.catalogPushCallCount, 1, mutation)
             XCTAssertEqual(proof.remote.recordRequests.count, 1, mutation)
             XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal, mutation)
+        }
+    }
+
+    func testPostPushDrainRetainsNewerSaveUntilItsOwnACKWithoutRecoveryOrDuplicateWrites() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let fixture = proof.fixture
+        let container = fixture.controller.modelContainer
+        let generation = fixture.controller.activeManifest?.generationID
+        var savedB: LocalPendingChangeCASToken?
+        proof.remote.beforeCatalogResponse = {
+            guard savedB == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
+            savedB = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+                ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                let attemptedA = try XCTUnwrap(LocalPendingBusinessAttemptStore.entry(changeID: setup.changeID, context: context))
+                XCTAssertTrue(LocalPendingBusinessAttemptStore.isSealed(attemptedA))
+                let product = try CatalogConflictResolutionService.product(remoteID: proof.productID, context: context)
+                let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                product.stockQuantity = 2
+                let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                    ownerUserID: fixture.ownerUserID, storeIdentity: proof.scope.storeIdentity)
+                    .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                        changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+                try context.save()
+                return LocalPendingChangeCASToken(change)
+            }
+        }
+        let action = SyncAction.sequence([.lightReconcile, .pushPending, .drainEvents])
+        let first = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: action, source: .localMutation, ownerUserID: fixture.ownerUserID)
+        }
+        proof.remote.beforeCatalogResponse = nil
+        let tokenB = try XCTUnwrap(savedB)
+        XCTAssertNotEqual(tokenB.changeID, setup.changeID)
+        XCTAssertEqual(first.status, .success)
+        XCTAssertTrue(first.didWork)
+        XCTAssertFalse(first.verifiedConvergence)
+        XCTAssertNil(first.continuationReceipt)
+        XCTAssertNil(first.verifiedFinalization)
+        let summary = try XCTUnwrap(setup.summaries.last)
+        XCTAssertEqual(summary.requiresFullRecoveryReason, "ordinary_continuation_local_work_pending")
+        XCTAssertEqual(summary.eventsFetched, 1)
+        let deferral = try XCTUnwrap(summary.localWorkDeferral)
+        XCTAssertTrue(deferral.isBound(to: fixture.defaults))
+        XCTAssertTrue(deferral.matchesRejectedCatalogWork(summary))
+        try deferral.validateForPush()
+        let read = ModelContext(container)
+        let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(changes.count, 2)
+        XCTAssertEqual(changes.first { $0.changeID == setup.changeID }?.status, .acknowledged)
+        let pendingB = try XCTUnwrap(changes.first { $0.changeID == tokenB.changeID })
+        XCTAssertEqual(pendingB.status, .pending)
+        XCTAssertEqual(pendingB.idempotencyKey, tokenB.idempotencyKey)
+        XCTAssertEqual(pendingB.intendedFingerprintHash, tokenB.intendedFingerprintHash)
+        XCTAssertEqual(pendingB.baseRemoteUpdatedAt, SupabaseRemoteDateParser.parse("2026-07-21T12:01:00.000000Z"))
+        let product = try CatalogConflictResolutionService.product(remoteID: proof.productID, context: read)
+        XCTAssertEqual(product.stockQuantity, 2)
+        let receiptB = LocalProductSaveReceipt(product: product,
+            manifest: try XCTUnwrap(fixture.controller.activeManifest), intents: [tokenB])
+        XCTAssertFalse(receiptB.isCloudConfirmed(by: [pendingB]), "A's ACK cannot confirm the newer Save B")
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), 42)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertNil(fixture.defaults.object(forKey: "sync.runtime.automatic.recovery.requestedReason"))
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+        XCTAssertEqual(proof.remote.recordRequests.count, 1)
+        proof.stateStore.recordRunResult(first)
+        XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+
+        proof.remote.expectedUpdateStockQuantity = 2
+        proof.remote.catalogResponseUpdatedAt = "2026-07-21T12:02:00.000000Z"
+        proof.remote.recordedEventID = 43
+        proof.remote.recordedEventCreatedAt = "2026-07-21T12:02:00Z"
+        let second = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: action, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(second.status, .success)
+        let acknowledged = try ModelContext(container).fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(acknowledged.count, 2)
+        XCTAssertTrue(acknowledged.allSatisfy { $0.status == .acknowledged })
+        XCTAssertTrue(receiptB.isCloudConfirmed(by: acknowledged.filter { $0.changeID == tokenB.changeID }))
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), 43)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        XCTAssertNil(fixture.defaults.object(forKey: "sync.runtime.automatic.recovery.requestedReason"))
+        let third = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+            await setup.engine.run(action: action, source: .foregroundPoll, ownerUserID: fixture.ownerUserID)
+        }
+        XCTAssertEqual(third.status, .noWork)
+        XCTAssertEqual(proof.remote.catalogPushCallCount, 2, "A and B each enter the real writer once")
+        XCTAssertEqual(proof.remote.recordRequests.count, 2)
+        XCTAssertEqual(Set(proof.remote.recordRequests.map(\.clientEventID)).count, 2)
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), 43)
+        let reopened = try reopenFixture(fixture)
+        let durable = try ModelContext(reopened.controller.modelContainer).fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(try ordinaryStock(fixture: reopened, productID: proof.productID), 2)
+        XCTAssertEqual(durable.count, 2)
+        XCTAssertTrue(durable.allSatisfy { $0.status == .acknowledged })
+        XCTAssertTrue(receiptB.isCloudConfirmed(by: durable.filter { $0.changeID == tokenB.changeID }))
+    }
+
+    func testPostPushNewerSaveCannotDeferRecoveryForChangedReasonOrMissingBoundCapability() async throws {
+        for mutation in ["reason", "cursor", "missingCapability"] {
+            let setup = try await makePendingAutomaticSequenceFixture(transform: { original in
+                guard original.eventsFetched == 1 else { return original }
+                var summary = original
+                if mutation == "reason" { summary.requiresFullRecoveryReason = "sync_event_missing_entity_ids" }
+                if mutation == "cursor" { summary.watermarkAfter += 1 }
+                if mutation == "missingCapability" { summary.localWorkDeferral = nil }
+                return summary
+            })
+            let proof = setup.proof
+            let fixture = proof.fixture
+            var savedB: LocalPendingChangeCASToken?
+            proof.remote.beforeCatalogResponse = {
+                guard savedB == nil else { throw SyncStoreGenerationError.activationReadBackFailed }
+                savedB = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: fixture.controller.modelContainer,
+                    ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+                    let attemptedA = try XCTUnwrap(LocalPendingBusinessAttemptStore.entry(changeID: setup.changeID, context: context))
+                    XCTAssertTrue(LocalPendingBusinessAttemptStore.isSealed(attemptedA))
+                    let product = try CatalogConflictResolutionService.product(remoteID: proof.productID, context: context)
+                    let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                    product.stockQuantity = 2
+                    let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                        ownerUserID: fixture.ownerUserID, storeIdentity: proof.scope.storeIdentity)
+                        .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                            changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+                    try context.save()
+                    return LocalPendingChangeCASToken(change)
+                }
+            }
+            let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+                await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                    source: .localMutation, ownerUserID: fixture.ownerUserID)
+            }
+            XCTAssertNotNil(savedB, mutation)
+            XCTAssertEqual(result.status, .recoveryRequired, mutation)
+            XCTAssertNil(result.continuationReceipt, mutation)
+            XCTAssertNil(result.verifiedFinalization, mutation)
+            XCTAssertFalse(result.verifiedConvergence, mutation)
+            XCTAssertNotNil(fixture.defaults.object(forKey: "sync.runtime.automatic.recovery.requestedReason"), mutation)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1, mutation)
+            XCTAssertEqual(proof.remote.recordRequests.count, 1, mutation)
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 42, mutation)
         }
     }
 
@@ -14433,9 +14577,13 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
     var reconciliationCountsOverride: SyncInventoryCountSnapshot?
     var eventToPublishAfterCounts: RemoteSyncEventRow?
     private(set) var catalogPushCallCount = 0
-    private var expectedUpdateStockQuantity: Double = 1
+    var expectedUpdateStockQuantity: Double = 1
     var catalogFailureAfterCommit: AutomaticSyncFailure?
     var catalogRejectionBeforeCommit: String?
+    var beforeCatalogResponse: (() throws -> Void)?
+    var catalogResponseUpdatedAt = "2026-07-21T12:01:00.000000Z"
+    var recordedEventID: Int64 = 42
+    var recordedEventCreatedAt = "2026-07-21T12:01:00Z"
     private(set) var recordRequests: [SyncEventRecordRequest] = []
     private(set) var acknowledgedSelfEvent: RemoteSyncEventRow?
 
@@ -14483,8 +14631,9 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
             productName: payload.productName ?? product.productName,
             secondProductName: product.secondProductName, purchasePrice: product.purchasePrice,
             retailPrice: product.retailPrice, supplierID: product.supplierID, categoryID: product.categoryID,
-            stockQuantity: payload.stockQuantity, updatedAt: "2026-07-21T12:01:00.000000Z", deletedAt: nil)
+            stockQuantity: payload.stockQuantity, updatedAt: catalogResponseUpdatedAt, deletedAt: nil)
         self.product = row
+        try beforeCatalogResponse?()
         if let catalogFailureAfterCommit { throw catalogFailureAfterCommit }
         return row
     }
@@ -14498,13 +14647,13 @@ private final class RI08OrdinaryIncrementalRemote: SyncAutomaticIncrementalRemot
         }
         recordRequests.append(request)
         let payload: [String: Any] = [
-            "id": "42", "owner_user_id": ownerUserID.uuidString, "shop_id": shopID.uuidString,
+            "id": String(recordedEventID), "owner_user_id": ownerUserID.uuidString, "shop_id": shopID.uuidString,
             "domain": request.domain, "event_type": request.eventType,
             "source": request.source ?? "ios", "source_device_key": ShopSyncRecoveryCanonical.sha256(sourceDeviceID),
             "client_event_key": ShopSyncRecoveryCanonical.sha256(request.clientEventID), "changed_count": request.changedCount,
             "entity_ids": try JSONSerialization.jsonObject(with: JSONEncoder().encode(request.entityIDs)),
             "metadata": try JSONSerialization.jsonObject(with: JSONEncoder().encode(request.metadata)),
-            "requires_full_recovery": false, "created_at": "2026-07-21T12:01:00Z"
+            "requires_full_recovery": false, "created_at": recordedEventCreatedAt
         ]
         let row = try JSONDecoder().decode(RemoteSyncEventRow.self, from: JSONSerialization.data(withJSONObject: payload))
         acknowledgedSelfEvent = row

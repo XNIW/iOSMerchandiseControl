@@ -160,6 +160,7 @@ actor AutomaticSyncEngine {
                 let remaining = Array(steps.dropFirst(stepIndex + 1))
                 let mayDeferUntilPushAndFreshDrain = compatibleDrains
                     && (remaining == [.pushPending, .drainEvents] || remaining == [.pushPending, .lightReconcile])
+                let followsCompletedPush = stepIndex > 0 && steps[stepIndex - 1] == .pushPending
                 switch step {
                 case .blocked(let reason):
                     recordDiagnostic("lastOutcome", "blocked_\(reason)")
@@ -187,6 +188,7 @@ actor AutomaticSyncEngine {
                         forceLightReconcile: false,
                         allowsExplicitRecovery: false,
                         allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain,
+                        allowsPostPushLocalWorkDeferral: followsCompletedPush,
                         hasRejectedCatalogChanges: hasRejectedCatalogChanges
                     )
                     didRun = drain.didWork || didRun
@@ -212,6 +214,7 @@ actor AutomaticSyncEngine {
                         forceLightReconcile: true,
                         allowsExplicitRecovery: false,
                         allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain,
+                        allowsPostPushLocalWorkDeferral: followsCompletedPush,
                         hasRejectedCatalogChanges: hasRejectedCatalogChanges
                     )
                     didRun = drain.didWork || didRun
@@ -441,6 +444,7 @@ actor AutomaticSyncEngine {
         forceLightReconcile: Bool,
         allowsExplicitRecovery: Bool,
         allowsLocalWorkDeferral: Bool = false,
+        allowsPostPushLocalWorkDeferral: Bool = false,
         hasRejectedCatalogChanges: Bool = false
     ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?, verifiedRecoveryConvergence: Bool, localWorkDeferral: SyncIncrementalLocalWorkDeferral?, verifiedFinalization: SyncStoreRecoveryFinalization?) {
         guard let incrementalPullProvider else {
@@ -474,10 +478,12 @@ actor AutomaticSyncEngine {
         if summary.requiresFullRecovery {
             if let deferral = summary.localWorkDeferral, deferral.isBound(to: defaults),
                (allowsLocalWorkDeferral && deferral.matches(summary)
-                || hasRejectedCatalogChanges && deferral.matchesRejectedCatalogWork(summary)) {
+                || (allowsPostPushLocalWorkDeferral || hasRejectedCatalogChanges)
+                    && deferral.matchesRejectedCatalogWork(summary)) {
                 try await MainActor.run { try deferral.validateForPush() }
-                // A rejected local intent cannot turn this completed drain into
-                // recovery. Keep the caller's stable payload failure and no grant.
+                // A newer local Save can await its successor push after this
+                // completed drain. Rejected work retains the caller's failure;
+                // neither path grants continuation, convergence or readiness.
                 return (false, false, nil, false, allowsLocalWorkDeferral ? deferral : nil, nil)
             }
             let reason = summary.requiresFullRecoveryReason
