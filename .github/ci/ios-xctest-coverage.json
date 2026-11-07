@@ -45,7 +45,9 @@
     "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation",
     "iOSMerchandiseControlTests/Task105RealOpsClosureTests/testPhysicalCameraBarcodeCaptureCapabilityWhenAvailable",
     "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testR23LargeUIColdWarmBaselineAndHeldRecovery",
-    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testTask146OwnedTESTPOSOverviewWhenEnabled"
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testTask146OwnedTESTPOSOverviewWhenEnabled",
+    "iOSMerchandiseControlUITests/PilotNameObserverTests/testObserveOnePreparedNameUpdate",
+    "iOSMerchandiseControlUITests/PilotNameObserverTests/testObservePreparedB6VisibleDeltaWhenEnabled"
   ],
   "shards": [
     {

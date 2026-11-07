@@ -51,6 +51,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(freshness.waitForExistence(timeout: 5))
         XCTAssertGreaterThan(freshness.label.count, "Updated at  · ".count + zone.count)
 
+        if let mode = environment["TEST_RUNNER_TASK146_B4_IOS_POS_MODE"] {
+            guard mode == "nonempty-two-stage" else { return XCTFail("Unknown explicitly selected POS mode.") }
+            try runOwnedTESTPOSNonemptyTwoStage(environment: environment, target: target,
+                                               date: date, zone: zone, overview: overview)
+            return
+        }
+
         let day = overview.staticTexts.matching(NSPredicate(
             format: "label BEGINSWITH %@ AND label CONTAINS %@", date + ", ", "Transactions: 0")).firstMatch
         XCTAssertTrue(day.waitForExistence(timeout: 5))
@@ -82,6 +89,136 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         screenshot.name = "TASK146 owned TEST POS Overview empty CLP fixture"
         screenshot.lifetime = .keepAlways
         add(screenshot)
+    }
+
+
+    private func runOwnedTESTPOSNonemptyTwoStage(environment: [String: String], target: UUID,
+                                                date: String, zone: String, overview: XCUIElement) throws {
+        let fixtureRun = "bf848326a86a"
+        guard environment["TEST_RUNNER_TASK146_B4_IOS_POS_RUN"] == fixtureRun,
+              target.uuidString == "3B25E4F5-DCAB-4325-B50F-0951D21DAA9F",
+              zone == "America/Santiago",
+              let executionID = environment["TEST_RUNNER_TASK146_B4_IOS_POS_EXECUTION_ID"].flatMap(UUID.init(uuidString:)) else {
+            return XCTFail("Exact owned synthetic POS cohort and fresh execution UUID required.")
+        }
+        let execution = executionID.uuidString.lowercased()
+        let files = FileManager.default
+        let caches = try XCTUnwrap(files.urls(for: .cachesDirectory, in: .userDomainMask).first)
+        let checkpoint = caches.appendingPathComponent("TASK146-POS-" + fixtureRun, isDirectory: true)
+            .appendingPathComponent(execution, isDirectory: true)
+        XCTAssertFalse(files.fileExists(atPath: checkpoint.path), "A POS execution directory must never be reused.")
+        try files.createDirectory(at: checkpoint, withIntermediateDirectories: true)
+        let stage2URL = checkpoint.appendingPathComponent("stage2.ready")
+        let firstSale = "t146-pos-" + fixtureRun + "-s1"
+        let secondSale = "t146-pos-" + fixtureRun + "-s2"
+        let product = "TASK146 synthetic POS item " + fixtureRun
+        let barcode = "T146POS-BF848326A86A-1"
+        let money = NumberFormatter()
+        money.locale = Locale(identifier: "en"); money.numberStyle = .currency; money.currencyCode = "CLP"
+        money.minimumFractionDigits = 0; money.maximumFractionDigits = 0
+        func amount(_ value: Int) throws -> String { try XCTUnwrap(money.string(from: NSNumber(value: value))) }
+        func capture(_ stage: String) {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "TASK146 POS " + fixtureRun + " " + stage + " AX"
+            hierarchy.lifetime = .keepAlways; add(hierarchy)
+            let image = XCTAttachment(screenshot: app.screenshot())
+            image.name = "TASK146 POS " + fixtureRun + " " + stage
+            image.lifetime = .keepAlways; add(image)
+        }
+        func assertSummary(_ total: Int, transactions: Int) throws {
+            let day = overview.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@",
+                date + ", ", "Transactions: \(transactions)")).firstMatch
+            XCTAssertTrue(day.waitForExistence(timeout: 20), "The actual summary must include the expected current transaction count.")
+            let fields = day.label.components(separatedBy: ", ")
+            for name in ["Gross sales", "Discounts", "Refunds", "Net revenue"] { XCTAssertTrue(fields.contains(name)) }
+            XCTAssertEqual(fields.filter { $0 == (try? amount(total)) }.count, 2)
+            XCTAssertEqual(fields.filter { $0 == (try? amount(0)) }.count, 2)
+            XCTAssertTrue(fields.contains("Transactions: \(transactions)"))
+            XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "pos.notice.")).count, 0)
+        }
+        func saleButton(_ number: String) -> XCUIElement {
+            overview.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                                                  "pos.sale.", number)).firstMatch
+        }
+        func openSale(_ number: String, total: Int) throws {
+            let row = saleButton(number)
+            for _ in 0..<2 where !row.exists || !row.isHittable { overview.swipeUp() }
+            XCTAssertTrue(row.waitForExistence(timeout: 5)); XCTAssertTrue(row.isHittable)
+            XCTAssertTrue(row.label.contains(number)); XCTAssertTrue(row.label.contains(try amount(total)))
+            XCTAssertTrue(row.label.contains("Sale · Accepted"))
+            row.tap()
+        }
+        func assertDetail(_ number: String, total: Int, quantity: String) throws {
+            let detail = app.collectionViews["pos.detail"]
+            XCTAssertTrue(detail.waitForExistence(timeout: 20))
+            let line = detail.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", product, barcode)).firstMatch
+            for _ in 0..<2 where !line.exists { detail.swipeUp() }
+            XCTAssertTrue(line.waitForExistence(timeout: 5), "Actual sale line snapshots must be presented.")
+            let tokens = line.label.components(separatedBy: ", ")
+            for token in [product, barcode, "Quantity", quantity, "Unit amount", try amount(1000), "Line amount", try amount(total)] {
+                XCTAssertTrue(tokens.contains(token), "Missing exact sale line snapshot token: " + token)
+            }
+            let sale = detail.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", number)).firstMatch
+            for _ in 0..<2 where !sale.exists { detail.swipeDown() }
+            XCTAssertTrue(sale.waitForExistence(timeout: 5)); XCTAssertTrue(sale.label.contains(try amount(total)))
+            XCTAssertTrue(sale.label.contains("Sale · Accepted"))
+            let fresh = detail.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ AND label ENDSWITH %@",
+                                                               "Updated at ", " · " + zone)).firstMatch
+            for _ in 0..<2 where !fresh.exists { detail.swipeUp() }
+            XCTAssertTrue(fresh.waitForExistence(timeout: 5))
+            XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "pos.notice.")).count, 0)
+        }
+        try assertSummary(1500, transactions: 1)
+        try openSale(firstSale, total: 1500)
+        try assertDetail(firstSale, total: 1500, quantity: "1.5")
+        capture("stage1 overview 1500 count1 and detail qty1.5 passed")
+        let ready: [String: Any] = ["schema": 1, "run": fixtureRun, "executionID": execution,
+            "stage": 1, "businessDate": date, "timeZone": zone, "targetUDID": target.uuidString,
+            "saleNumber": firstSale, "amountCLP": 1500, "quantity": "1.5", "count": 1,
+            "runnerPID": ProcessInfo.processInfo.processIdentifier,
+            "observedUptime": ProcessInfo.processInfo.systemUptime, "checkpointDirectory": checkpoint.path]
+        let readyBytes = try JSONSerialization.data(withJSONObject: ready, options: [.sortedKeys])
+        try readyBytes.write(to: checkpoint.appendingPathComponent("stage1.ready"), options: .atomic)
+        let stage1 = XCTAttachment(data: readyBytes, uniformTypeIdentifier: "public.json")
+        stage1.name = "TASK146 POS stage1 verified ordinary UI checkpoint"; stage1.lifetime = .keepAlways; add(stage1)
+        print("TASK146_POS_STAGE1_READY " + checkpoint.path)
+        // ROOT submits only the already approved second canonical HTTP sale, then
+        // writes the exact run-bound acknowledgement in this runner-owned cache.
+        func acceptedStage2() -> Bool {
+            guard let values = try? stage2URL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]),
+                  values.isRegularFile == true, values.isSymbolicLink != true, (values.fileSize ?? 2049) <= 2048,
+                  let bytes = try? Data(contentsOf: stage2URL),
+                  let receipt = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any] else { return false }
+            return (receipt["schema"] as? Int) == 1 && (receipt["run"] as? String) == fixtureRun
+                && (receipt["executionID"] as? String) == execution && (receipt["stage"] as? Int) == 2
+                && (receipt["businessDate"] as? String) == date && (receipt["timeZone"] as? String) == zone
+                && (receipt["saleNumber"] as? String) == secondSale && (receipt["amountCLP"] as? Int) == 500
+                && (receipt["expectedTotalCLP"] as? Int) == 2000 && (receipt["expectedCount"] as? Int) == 2
+        }
+        let stage2 = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in acceptedStage2() }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [stage2], timeout: 120), .completed,
+                       "No exact ROOT stage2 acknowledgement arrived within 120 seconds; refresh NOT_TRAVERSED.")
+        XCTAssertTrue(acceptedStage2())
+        let refresh = app.buttons["Refresh"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 5)); XCTAssertTrue(refresh.isHittable); refresh.tap()
+        try assertDetail(firstSale, total: 1500, quantity: "1.5")
+        capture("stage2 actual Detail Refresh")
+        let back = app.buttons["Back"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5)); XCTAssertTrue(back.isHittable); back.tap()
+        XCTAssertTrue(overview.waitForExistence(timeout: 20))
+        for _ in 0..<2 { overview.swipeDown() }
+        try assertSummary(2000, transactions: 2)
+        try openSale(secondSale, total: 500)
+        try assertDetail(secondSale, total: 500, quantity: "0.5")
+        capture("stage2 overview 2000 count2 and new sale500 detail qty0.5 passed")
+        let final: [String: Any] = ["schema": 1, "run": fixtureRun, "executionID": execution,
+            "stage": 2, "businessDate": date, "timeZone": zone, "count": 2, "totalCLP": 2000,
+            "firstSale": firstSale, "secondSale": secondSale,
+            "runnerPID": ProcessInfo.processInfo.processIdentifier, "observedUptime": ProcessInfo.processInfo.systemUptime]
+        let finalBytes = try JSONSerialization.data(withJSONObject: final, options: [.sortedKeys])
+        try finalBytes.write(to: checkpoint.appendingPathComponent("stage2.verified"), options: .atomic)
+        let finished = XCTAttachment(data: finalBytes, uniformTypeIdentifier: "public.json")
+        finished.name = "TASK146 POS two-stage ordinary UI verified"; finished.lifetime = .keepAlways; add(finished)
     }
 
     func testActualStoreLoadFailureKeepsFourTabsAndSafeOptionsWithoutBusinessConsumers() throws {
@@ -2561,7 +2698,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try require(forms.element(boundBy: 0).waitForExistence(timeout: 5) && forms.count == 1,
             "T11 requires the unique Options Form")
         let form = forms.element(boundBy: 0)
-        func reveal(_ rows: XCUIElementQuery, stage: String, upward: Bool) throws -> XCUIElement {
+        func reveal(_ rows: XCUIElementQuery, stage: String, upward: Bool,
+                    stableFirstRow: XCUIElement? = nil, liveLabel: String? = nil) throws -> XCUIElement {
             for drag in 0...4 {
                 let frame = form.frame.intersection(app.windows.firstMatch.frame)
                 let top = max(frame.minY, app.navigationBars["Options"].frame.maxY)
@@ -2573,15 +2711,25 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     stage + " bounded query and visible Form")
                 var scrollUp = upward
                 if count == 1 {
-                    let row = rows.element(boundBy: 0)
+                    // A normal poll can replace the attention label after count.
+                    // Keep its exact role-count gate, but resolve the persistent
+                    // first summary row and re-read its current public label.
+                    let row = stableFirstRow ?? rows.element(boundBy: 0)
+                    if let liveLabel, !row.label.contains(liveLabel) { continue }
                     let rowFrame = row.frame
                     let hittable = row.isHittable
                     observations.append("label=\(row.label);value=\(String(describing: row.value));frame=\(rowFrame);hittable=\(hittable)")
-                    if rowFrame.width > 0 && rowFrame.height > 0 && viewport.contains(rowFrame) && hittable { return row }
+                    if rowFrame.width > 0 && rowFrame.height > 0 && viewport.contains(rowFrame) && hittable {
+                        if let liveLabel, !row.label.contains(liveLabel) { continue }
+                        return row
+                    }
                     if rowFrame.height > 0 && rowFrame.maxY <= viewport.minY { scrollUp = false }
                     if rowFrame.height > 0 && rowFrame.minY >= viewport.maxY { scrollUp = true }
                 }
                 try require(count <= 1, stage + " must identify one public row")
+                // Missing transient status is not a scroll-position defect. The
+                // same bounded observations wait for the real terminal label.
+                if stableFirstRow != nil && count == 0 { continue }
                 guard drag < 4 else { break }
                 let offset = viewport.height * (scrollUp ? 0.29 : -0.29)
                 let origin = form.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
@@ -2603,7 +2751,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if failedUI {
             let attention = form.staticTexts.matching(NSPredicate(
                 format: "identifier == %@ AND label CONTAINS %@", "options.sync-business-summary", "Automatic sync needs attention"))
-            _ = try reveal(attention, stage: "T11 contextual automatic sync error", upward: false)
+            _ = try reveal(attention, stage: "T11 contextual automatic sync error", upward: false,
+                stableFirstRow: form.staticTexts.matching(identifier: "options.sync-business-summary").element(boundBy: 0),
+                liveLabel: "Automatic sync needs attention")
         }
         let publicState = XCTAttachment(screenshot: app.screenshot())
         publicState.name = "Task145 T11 actual Options diagnosis " + scenario; publicState.lifetime = .keepAlways; add(publicState)
@@ -3493,7 +3643,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     hittabilityQueryCount += 1
                     latestHitStartedUptime = hitStartedUptime
                     latestHitFinishedUptime = nil
-                    hittable = field.isHittable
+                    // Both coherent snapshots already require one exact target.
+                    // Bind that exact predicate by index, avoiding the broad
+                    // label-or-identifier unique-match resolver for the hit query.
+                    let exactFields: XCUIElementQuery
+                    switch readinessTarget {
+                    case .identifier(let identifier):
+                        exactFields = self.app.textFields.matching(NSPredicate(format: "identifier == %@", identifier))
+                    case .label(let label):
+                        exactFields = self.app.textFields.matching(NSPredicate(format: "label == %@", label))
+                    }
+                    hittable = exactFields.element(boundBy: 0).isHittable
                 } else {
                     hittable = nil
                 }
