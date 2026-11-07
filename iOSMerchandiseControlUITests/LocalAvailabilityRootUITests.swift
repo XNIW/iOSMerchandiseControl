@@ -146,7 +146,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             "options.safe.diagnostics", "Code, sync_store_generation_load_failed"))
         require(failureCode.element.waitForExistence(timeout: 5) && failureCode.count == 1)
         require(app.staticTexts["Cloud account connected"].waitForExistence(timeout: 5))
-        require(app.staticTexts["Theme"].exists)
+        for _ in 0..<3 where !app.staticTexts["Theme"].isHittable { app.swipeUp() }
+        require(app.staticTexts["Theme"].isHittable)
         for _ in 0..<3 where !app.staticTexts["Language"].isHittable { app.swipeUp() }
         require(app.staticTexts["Language"].isHittable)
         let observe = app.descendants(matching: .any).matching(identifier: "task145.safe-store-failure.observe").firstMatch
@@ -634,7 +635,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 // TASK145_T14_INSERT_END native-long-use-witness
 
-    func testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld() {
+    func testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld() throws {
         func launch(_ phase: String) {
             app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = phase
             app.launch()
@@ -681,9 +682,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = "cache"
         app.launchEnvironment["TASK131_INITIAL_TAB"] = "database"
         let cacheLaunchStarted = ProcessInfo.processInfo.systemUptime
+        app.launchEnvironment["TASK146_B2_LAUNCH_REQUEST_UPTIME"] = String(cacheLaunchStarted)
         app.launch()
         let catalogRowAppeared = catalogRow.waitForExistence(timeout: 5)
-        let catalogElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
+        let automationElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
+        let render = app.descendants(matching: .any).matching(identifier: "task146.b2.catalog-render").firstMatch
+        XCTAssertTrue(render.waitForExistence(timeout: 5))
+        let renderData = try XCTUnwrap((render.value as? String)?.data(using: .utf8))
+        let observation = try XCTUnwrap(JSONSerialization.jsonObject(with: renderData) as? [String: Any])
+        XCTAssertEqual(observation["namespace"] as? String, runID)
+        XCTAssertEqual(try XCTUnwrap(observation["requestUptime"] as? Double), cacheLaunchStarted, accuracy: 0.000001)
+        let renderedAt = try XCTUnwrap(observation["renderUptime"] as? Double)
+        XCTAssertGreaterThanOrEqual(renderedAt, cacheLaunchStarted)
+        let catalogElapsed = renderedAt - cacheLaunchStarted
         let memoObservation = app.staticTexts.matching(NSPredicate(
             format: "label IN %@", ["task146.b2.memo.hit", "task146.b2.memo.miss"])).firstMatch
         let memoObserved = memoObservation.waitForExistence(timeout: 10)
@@ -697,7 +708,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             timingStatus = "NOT_QUALIFIED_NO_VALID_CACHE_HIT"
         }
         let attachment = XCTAttachment(string: "\(memoResult) memoPresent=\(memoPresent) "
-            + "catalogRowAppeared=\(catalogRowAppeared) launchToCatalogSeconds=\(catalogElapsed) within5Seconds=\(timingStatus)")
+            + "catalogRowAppeared=\(catalogRowAppeared) launchToRenderedCatalogSeconds=\(catalogElapsed) "
+            + "automationObservationSeconds=\(automationElapsed) within5Seconds=\(timingStatus) "
+            + String(decoding: renderData, as: UTF8.self))
         attachment.name = "B2 physical memo on same scoped store reopen"
         attachment.lifetime = .keepAlways
         add(attachment)

@@ -3868,6 +3868,18 @@ struct DatabaseView: View {
                         .task145PerformanceRender("dataRender", qualifies: product.barcode == "T20-000001", validate: {
                             Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
                         })
+                        #if DEBUG
+                        .background {
+                            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache",
+                               product.barcode == "LOCAL-ROOT" {
+                                Task145PerformanceRenderBoundary(event: "task146.cached-catalog", qualifies: true,
+                                    validate: {
+                                        isCurrentModelGeneration && Task126OwnerStoreGate.permitsSameScopeLocalRead(
+                                            .catalog, modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
+                                    }, onRendered: { Task144RootObservation.recordCachedCatalogRender() })
+                            }
+                        }
+                        #endif
                         .task145PerformanceRender("searchBroadRender", qualifies: barcodeFilter == "T20-000" && product.barcode == "T20-000001",
                             facts: product.productName ?? "")
                         .task145PerformanceRender("searchRender", qualifies: barcodeFilter == "T20-020000" && product.barcode == "T20-020000",

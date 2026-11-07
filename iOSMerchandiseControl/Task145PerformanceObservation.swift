@@ -117,16 +117,19 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
     let qualifies: Bool
     var facts: String = ""
     var validate: @MainActor () -> Bool = { true }
+    var onRendered: (@MainActor () -> Void)?
     func makeUIView(context: Context) -> Boundary {
         let view = Boundary(); view.isUserInteractionEnabled = false; return view
     }
     func updateUIView(_ view: Boundary, context: Context) {
         view.event = event; view.facts = facts; view.qualifies = qualifies; view.validate = validate
+        view.onRendered = onRendered
         view.setNeedsLayout()
     }
     final class Boundary: UIView {
         var event = ""; var facts = ""; var qualifies = false
         var validate: @MainActor () -> Bool = { true }
+        var onRendered: (@MainActor () -> Void)?
         private var link: CADisplayLink?
         private var token: String?
         private var visibilityDeadlineNS: UInt64?
@@ -140,7 +143,8 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
         override func layoutSubviews() {
             super.layoutSubviews()
-            guard Task145PerformanceConfiguration.measures, qualifies, window != nil,
+            guard Task145PerformanceConfiguration.measures || onRendered != nil else { return }
+            guard qualifies, window != nil,
                   !bounds.isEmpty,
                   token != Task144RootObservation.performanceSampleID() + ":" + event + ":" + facts,
                   link == nil else { return }
@@ -181,7 +185,8 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
             }
             link?.invalidate(); link = nil
             token = Task144RootObservation.performanceSampleID() + ":" + event + ":" + facts
-            Task144RootObservation.performanceMark(event, facts: facts)
+            if let onRendered { onRendered() }
+            else { Task144RootObservation.performanceMark(event, facts: facts) }
         }
         override func didMoveToWindow() {
             super.didMoveToWindow()
@@ -239,16 +244,24 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
 /// Read-only AX export of bounded RAM, after each UI milestone. AX never supplies
 /// timestamps and never publishes/invalidate views. Enables stop at first max FAIL.
 struct Task145PerformanceReadback: UIViewRepresentable {
-    func makeUIView(context: Context) -> Readback { Readback() }
+    var identifier = "task145.perf.live-sample"
+    var readValue: @MainActor () -> String = { Task144RootObservation.performanceSnapshot() }
+    func makeUIView(context: Context) -> Readback {
+        let view = Readback()
+        view.accessibilityIdentifier = identifier
+        view.readValue = readValue
+        return view
+    }
     func updateUIView(_ view: Readback, context: Context) { }
     final class Readback: UIView {
+        var readValue: @MainActor () -> String = { "{}" }
         override init(frame: CGRect) {
             super.init(frame: frame); isAccessibilityElement = true
             accessibilityIdentifier = "task145.perf.live-sample"; isUserInteractionEnabled = false
         }
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
         override var accessibilityValue: String? {
-            get { Task144RootObservation.performanceSnapshot() }
+            get { readValue() }
             set { }
         }
     }

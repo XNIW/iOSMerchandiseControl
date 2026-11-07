@@ -58,6 +58,28 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private var events: [String] = []
     private var lastByKind: [String: String] = [:]
     private var dropped = 0
+    private var cachedCatalogRenderedAt: TimeInterval?
+
+    static func recordCachedCatalogRender() {
+        guard ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" else { return }
+        shared.lock.lock(); defer { shared.lock.unlock() }
+        if shared.cachedCatalogRenderedAt == nil {
+            shared.cachedCatalogRenderedAt = ProcessInfo.processInfo.systemUptime
+        }
+    }
+
+    static func cachedCatalogRenderSnapshot() -> String {
+        shared.lock.lock(); defer { shared.lock.unlock() }
+        let environment = ProcessInfo.processInfo.environment
+        guard let rendered = shared.cachedCatalogRenderedAt,
+              let start = environment["TASK146_B2_LAUNCH_REQUEST_UPTIME"].flatMap(Double.init),
+              rendered >= start, start > 0,
+              let namespace = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"] else { return "{}" }
+        let value: [String: Any] = ["requestUptime": start, "renderUptime": rendered,
+            "namespace": namespace, "pid": ProcessInfo.processInfo.processIdentifier]
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
+        return String(decoding: data, as: UTF8.self)
+    }
 
     // TASK145_PERF: one closed sample in this existing observation owner.
     private var performance: Task145PerformanceSample?
@@ -5534,6 +5556,11 @@ private struct Task144ControlledRootControls: View {
                 Text(fixture.performanceExport).lineLimit(1).font(.system(size: 1))
                     .accessibilityIdentifier("task145.perf.sample-json").accessibilityValue(fixture.performanceExport)
                 if fixture.performanceWarmReady { Text("task145.perf.warm-ready").accessibilityIdentifier("task145.perf.warm-ready") }
+            }
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
+                    readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
+                    .frame(width: 1, height: 1).allowsHitTesting(false)
             }
             ForEach(fixture.facts.sorted(), id: \.self) { fact in
                 Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)

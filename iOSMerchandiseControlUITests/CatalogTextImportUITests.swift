@@ -208,8 +208,11 @@ final class CatalogTextImportUITests: XCTestCase {
 
     private func scrollUntilHittable(_ element: XCUIElement, swipeDown: Bool = false) {
         var attempts = 0
-        while !element.isHittable, attempts < 6 {
-            if swipeDown {
+        while attempts < 6 {
+            let coveredByNavigation = element.exists && app.navigationBars.firstMatch.exists
+                && element.frame.midY <= app.navigationBars.firstMatch.frame.maxY + 20
+            if element.isHittable && !coveredByNavigation { break }
+            if swipeDown || coveredByNavigation {
                 app.swipeDown()
             } else {
                 app.swipeUp()
