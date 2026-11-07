@@ -4452,7 +4452,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                       budget.failure == AutomaticSyncFailure.classify(URLError(.dnsLookupFailed)), !stateStore.state.phase.isAutomaticWorkActive,
                       control.state.entries.count == 3, control.state.completions.count == 3,
                       control.state.results.count == 3 else { throw SyncStoreGenerationError.activationReadBackFailed }
-                facts.insert("task145.retry.cooldown-after-three")
+                if !facts.contains("task145.retry.cooldown-after-three") {
+                    facts.insert("task145.retry.cooldown-after-three")
+                }
             }
             if product.productName == Task145RetryControl.savedName, let change = changes.first {
                 if change.status == .pending {

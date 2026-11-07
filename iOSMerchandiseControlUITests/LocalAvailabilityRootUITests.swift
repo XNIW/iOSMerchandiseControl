@@ -1154,7 +1154,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         r4Reveal(attention); attention.tap()
         let pending = try XCTUnwrap(rejected["originalPending"] as? [String: Any])
         XCTAssertEqual(pending["entityRemoteIDRaw"] as? String, "14400000-0000-4000-8000-000000000003")
-        let records = app.buttons.matching(identifier: "task145.catalog.attention")
+        let savedRemoteIDText = try XCTUnwrap(pending["entityRemoteIDRaw"] as? String)
+        let savedRemoteID = try XCTUnwrap(UUID(uuidString: savedRemoteIDText))
+        let records = app.buttons.matching(identifier:
+            "task145.catalog.attention.\(savedRemoteID.uuidString.lowercased())")
             .matching(NSPredicate(format: "label == %@", "R23 saved catalog A"))
         let record = records.element
         r4Reveal(record)
@@ -2869,14 +2872,24 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
         }
         let forms = app.collectionViews
-        try require(forms.element(boundBy: 0).waitForExistence(timeout: 5) && forms.count == 1,
-            "T11 requires the unique Options Form")
+        let optionsNavigation = app.navigationBars.matching(NSPredicate(format: "identifier == %@", "Options"))
+        let optionsSelected = app.tabBars.buttons.matching(NSPredicate(
+            format: "label == %@ AND isSelected == true", "Options"))
+        // The existing Form admission owns one five-second window. A Form
+        // from the previously selected Database cannot admit Options geometry.
+        let admissionDeadline = ProcessInfo.processInfo.systemUptime + 5
+        let optionsAdmission = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            optionsSelected.count == 1 && optionsNavigation.count == 1 && forms.count == 1
+        }, object: nil)
+        try require(XCTWaiter.wait(for: [optionsAdmission], timeout: 5) == .completed
+            && ProcessInfo.processInfo.systemUptime <= admissionDeadline,
+            "T11 requires selected Options with its unique navigation bar and Form")
         let form = forms.element(boundBy: 0)
         func reveal(_ rows: XCUIElementQuery, stage: String, upward: Bool,
                     stableFirstRow: XCUIElement? = nil, liveLabel: String? = nil) throws -> XCUIElement {
             for drag in 0...4 {
                 let frame = form.frame.intersection(app.windows.firstMatch.frame)
-                let top = max(frame.minY, app.navigationBars["Options"].frame.maxY)
+                let top = max(frame.minY, optionsNavigation.element(boundBy: 0).frame.maxY)
                 let bottom = min(frame.maxY, app.tabBars.firstMatch.frame.minY)
                 let viewport = CGRect(x: frame.minX, y: top, width: frame.width, height: max(0, bottom - top))
                 let count = rows.count
