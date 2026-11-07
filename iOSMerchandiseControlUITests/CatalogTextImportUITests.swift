@@ -225,7 +225,12 @@ final class CatalogTextImportUITests: XCTestCase {
                 if band.exists { upper = max(upper, band.frame.maxY + 12) }
                 var lower = viewport.maxY - 12
                 let keyboard = app.keyboards.firstMatch
-                if keyboard.exists { lower = min(lower, keyboard.frame.minY - 12) }
+                if keyboard.exists {
+                    // AX keyboard.frame omits the rounded native keyboard edge.
+                    // Reuse the existing Name helper's accessory-safe Form margin.
+                    let accessoryReserve = max(44, applicationFrame.height * 0.08)
+                    lower = min(lower, keyboard.frame.minY - accessoryReserve - 12)
+                }
                 let assistant = app.otherElements["SystemInputAssistantView"]
                 if assistant.exists {
                     let covered = assistant.frame.intersection(viewport)
