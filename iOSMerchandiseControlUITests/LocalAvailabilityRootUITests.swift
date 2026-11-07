@@ -3686,61 +3686,83 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func positionNameInEditorViewport(_ field: XCUIElement) {
         let form = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
-        // One fresh public tree supplies coherent geometry. Live existence and
-        // hit-point checks below and in text readiness keep their original gates.
-        guard let root = try? app.snapshot() else {
-            XCTFail("The native editor geometry snapshot must be available")
-            return
-        }
-        var pending: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = [(root, [])]
-        var targets: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = []
-        var toolbars: [CGRect] = []
-        var controlsFrames: [CGRect] = []
-        var keyboardFrames: [CGRect] = []
-        var visited = 0
-        while let (node, ancestors) = pending.popLast() {
-            visited += 1
-            guard visited <= 1_024 else { break }
-            if node.elementType == .textField && node.identifier == "task144.product.name" {
-                targets.append((node, ancestors))
-            }
-            if node.elementType == .navigationBar && node.identifier == "Edit product" { toolbars.append(node.frame) }
-            if node.elementType == .button && node.identifier == "task144.controlled.editor.release" { controlsFrames.append(node.frame) }
-            if node.elementType == .keyboard { keyboardFrames.append(node.frame) }
-            pending.append(contentsOf: node.children.map { ($0, ancestors + [node]) })
-        }
-        guard visited <= 1_024, targets.count == 1, toolbars.count == 1,
-              controlsFrames.count <= 1, keyboardFrames.count <= 1,
-              let target = targets.first,
-              let nativeForm = target.1.last(where: { $0.elementType == .collectionView }) else {
-            let evidence = XCTAttachment(string: "visited=\(visited); Name=\(targets.count); toolbar=\(toolbars.count); controls=\(controlsFrames.count); keyboard=\(keyboardFrames.count)")
-            evidence.name = "Task144 Name geometry FIRST-FAIL"; evidence.lifetime = .keepAlways; add(evidence)
-            XCTFail("Require one current native Name field, enclosing Form and editor toolbar")
-            return
-        }
-        let viewport = root.frame
-        let formFrame = nativeForm.frame
-        let visibleForm = formFrame.intersection(viewport)
-        let toolbar = toolbars[0]
-        let controls = controlsFrames.first ?? .zero
         let padding: CGFloat = 16
-        let upper = max(visibleForm.minY, max(toolbar.maxY, controls.maxY)) + padding
-        // Reserve the lower half before focus; AX keyboard.frame can omit its accessory strip.
-        var lower = min(visibleForm.maxY - padding, viewport.midY)
-        var scrollBottom = visibleForm.maxY
-        var measuredKeyboardFrame: CGRect?
-        if let keyboardFrame = keyboardFrames.first {
-            let accessoryReserve = max(44, viewport.height * 0.08)
-            measuredKeyboardFrame = keyboardFrame
-            let keyboardTop = keyboardFrame.minY - accessoryReserve
-            lower = min(lower, keyboardTop - padding)
-            scrollBottom = min(scrollBottom, keyboardTop)
+        func observeNameViewport() -> (viewport: CGRect, formFrame: CGRect, visibleForm: CGRect,
+                                      toolbar: CGRect, controls: CGRect, upper: CGFloat, lower: CGFloat,
+                                      scrollBottom: CGFloat, keyboard: CGRect?, field: CGRect, row: CGRect?)? {
+            // One fresh public tree supplies coherent geometry. Live existence and
+            // hit-point checks below and in text readiness keep their original gates.
+            guard let root = try? app.snapshot() else {
+                XCTFail("The native editor geometry snapshot must be available")
+                return nil
+            }
+            var pending: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = [(root, [])]
+            var targets: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = []
+            var toolbars: [CGRect] = []
+            var controlsFrames: [CGRect] = []
+            var keyboardFrames: [CGRect] = []
+            var visited = 0
+            while let (node, ancestors) = pending.popLast() {
+                visited += 1
+                guard visited <= 1_024 else { break }
+                if node.elementType == .textField && node.identifier == "task144.product.name" {
+                    targets.append((node, ancestors))
+                }
+                if node.elementType == .navigationBar && node.identifier == "Edit product" { toolbars.append(node.frame) }
+                if node.elementType == .button && node.identifier == "task144.controlled.editor.release" { controlsFrames.append(node.frame) }
+                if node.elementType == .keyboard { keyboardFrames.append(node.frame) }
+                pending.append(contentsOf: node.children.map { ($0, ancestors + [node]) })
+            }
+            guard visited <= 1_024, targets.count == 1, toolbars.count == 1,
+                  controlsFrames.count <= 1, keyboardFrames.count <= 1,
+                  let target = targets.first,
+                  let nativeForm = target.1.last(where: { $0.elementType == .collectionView }) else {
+                let evidence = XCTAttachment(string: "visited=\(visited); Name=\(targets.count); toolbar=\(toolbars.count); controls=\(controlsFrames.count); keyboard=\(keyboardFrames.count)")
+                evidence.name = "Task144 Name geometry FIRST-FAIL"; evidence.lifetime = .keepAlways; add(evidence)
+                XCTFail("Require one current native Name field, enclosing Form and editor toolbar")
+                return nil
+            }
+            let viewport = root.frame
+            let formFrame = nativeForm.frame
+            let visibleForm = formFrame.intersection(viewport)
+            let toolbar = toolbars[0]
+            let controls = controlsFrames.first ?? .zero
+            let upper = max(visibleForm.minY, max(toolbar.maxY, controls.maxY)) + padding
+            // Reserve the lower half before focus; AX keyboard.frame can omit its accessory strip.
+            var lower = min(visibleForm.maxY - padding, viewport.midY)
+            var scrollBottom = visibleForm.maxY
+            var measuredKeyboardFrame: CGRect?
+            if let keyboardFrame = keyboardFrames.first {
+                let accessoryReserve = max(44, viewport.height * 0.08)
+                measuredKeyboardFrame = keyboardFrame
+                let keyboardTop = keyboardFrame.minY - accessoryReserve
+                lower = min(lower, keyboardTop - padding)
+                scrollBottom = min(scrollBottom, keyboardTop)
+            }
+            let before = target.0.frame
+            guard visibleForm.width > padding, before.height > 0, lower - upper > before.height else {
+                XCTFail("No usable Name band: form=\(visibleForm); upper=\(upper); lower=\(lower); field=\(before)")
+                return nil
+            }
+            return (viewport, formFrame, visibleForm, toolbar, controls, upper, lower,
+                    scrollBottom, measuredKeyboardFrame, before,
+                    target.1.last(where: { $0.elementType == .cell })?.frame)
         }
-        let before = target.0.frame
-        guard visibleForm.width > padding, before.height > 0, lower - upper > before.height else {
-            XCTFail("No usable Name band: form=\(visibleForm); upper=\(upper); lower=\(lower); field=\(before)")
-            return
-        }
+        guard let initial = observeNameViewport() else { return }
+        let viewport = initial.viewport
+        let formFrame = initial.formFrame
+        let visibleForm = initial.visibleForm
+        let toolbar = initial.toolbar
+        let controls = initial.controls
+        let upper = initial.upper
+        let lower = initial.lower
+        let scrollBottom = initial.scrollBottom
+        let measuredKeyboardFrame = initial.keyboard
+        let before = initial.field
+        var finalUpper = upper
+        var finalLower = lower
+        var finalVisibleForm = visibleForm
+        var postPanGeometry: String?
         let inside = before.minY >= upper && before.maxY <= lower
         var positioned = before
         var requestedTravel: CGFloat = 0
@@ -3754,19 +3776,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         var panStripRight: CGFloat?
         var panExecuted = false
         func captureGeometry() {
-            let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel); rowExists=\(String(describing: rowExists)); row=\(String(describing: measuredRowFrame)); start=\(String(describing: panStart)); end=\(String(describing: panEnd)); panExecuted=\(panExecuted); keyboard=\(String(describing: measuredKeyboardFrame)); scrollBottom=\(scrollBottom); panTop=\(String(describing: panTop)); panBottom=\(String(describing: panBottom)); panStripLeft=\(String(describing: panStripLeft)); panStripRight=\(String(describing: panStripRight))")
+            let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel); rowExists=\(String(describing: rowExists)); row=\(String(describing: measuredRowFrame)); start=\(String(describing: panStart)); end=\(String(describing: panEnd)); panExecuted=\(panExecuted); keyboard=\(String(describing: measuredKeyboardFrame)); scrollBottom=\(scrollBottom); panTop=\(String(describing: panTop)); panBottom=\(String(describing: panBottom)); panStripLeft=\(String(describing: panStripLeft)); panStripRight=\(String(describing: panStripRight)); postPan=\(String(describing: postPanGeometry))")
             geometry.name = "Task144 actual Name viewport before the sole focus tap"
             geometry.lifetime = .keepAlways
             add(geometry)
         }
         if !inside {
-            // Content moved less than the finger in the failing main run.
-            // Aim at the inner edge, allowing the remaining band height for that
-            // difference without an empirical multiplier or a second pan.
-            let margin = min(padding, (lower - upper - before.height) / 2)
-            let targetMidY = before.minY < upper
-                ? lower - margin - before.height / 2
-                : upper + margin + before.height / 2
+            // Center the complete field to leave equal geometric margin for
+            // either direction of native scroll/layout adjustment. One pan only.
+            let targetMidY = (upper + lower) / 2
             let displacement = before.midY - targetMidY
             let top = upper + padding
             let bottom = scrollBottom - max(32, viewport.height * 0.06)
@@ -3784,12 +3802,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 XCTFail("The actual Name row must exist before the sole scroll gesture")
                 return
             }
-            guard let nativeRow = target.1.last(where: { $0.elementType == .cell }) else {
+            guard let rowFrame = initial.row else {
                 captureGeometry()
                 XCTFail("The actual Name row must be in the current Form snapshot before the sole scroll gesture")
                 return
             }
-            let rowFrame = nativeRow.frame
             measuredRowFrame = rowFrame
             let stripLeft = max(visibleForm.minX, rowFrame.minX)
             let stripRight = min(rowFrame.maxX, before.minX)
@@ -3819,10 +3836,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             panExecuted = true
             start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: endY - startY)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)
-            positioned = field.frame
+            // Scrolling may change the toolbar/control layout. One fresh tree
+            // must qualify the field against its current band, not the pre-pan one.
+            guard let current = observeNameViewport() else { return }
+            positioned = current.field
+            finalUpper = current.upper
+            finalLower = current.lower
+            finalVisibleForm = current.visibleForm
+            postPanGeometry = "form=\(current.visibleForm); toolbar=\(current.toolbar); controls=\(current.controls); band=\(current.upper)...\(current.lower); keyboard=\(String(describing: current.keyboard))"
         }
         captureGeometry()
-        XCTAssertTrue(positioned.minY >= upper && positioned.maxY <= lower,
+        XCTAssertTrue(finalVisibleForm.contains(positioned)
+            && positioned.minY >= finalUpper && positioned.maxY <= finalLower,
                       "One controlled movement must put the complete Name field inside the usable band")
     }
 
