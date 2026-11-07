@@ -99,13 +99,34 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
             if attention.exists && attention.isHittable { attentionWasReachable = true }
             if attentionWasReachable && diagnostics.isHittable { break }
             guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
-            let viewport = returned.nativeViewport
-            let top = max(viewport.minY, try XCTUnwrap(returned.navigationBar).maxY) + 24
-            let bottom = returned.tabBar.minY - 24
+            let snapshot = try app.snapshot()
+            let current = try XCTUnwrap(geometry(from: snapshot, tab: "Options", showsBanner: false).geometry,
+                "Require current same-window Options bounds before a native seek")
+            let viewport = current.nativeViewport.intersection(snapshot.frame)
+            let top = max(viewport.minY, try XCTUnwrap(current.navigationBar).maxY) + 24
+            let bottom = min(viewport.maxY, current.tabBar.minY) - 24
             try requirePresentation(bottom > top + 40, "usable-Options-drag-viewport")
+            let target = attentionWasReachable ? diagnostics : attention
+            // The cloud card is the first section. A missing title seeks back
+            // toward it; after actually seeing it, seek down for Diagnostics.
+            var fingerDown = !attentionWasReachable
+            if target.exists {
+                let targetFrame = target.frame
+                if targetFrame.width > 0 && targetFrame.height > 0
+                    && [targetFrame.minX, targetFrame.minY, targetFrame.width, targetFrame.height].allSatisfy({ $0.isFinite }) {
+                    if targetFrame.minY < top { fingerDown = true }
+                    else if targetFrame.maxY > bottom { fingerDown = false }
+                }
+            }
+            guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+            let halfTravel = min(CGFloat(160), bottom - top - 2) / 2
+            let center = (top + bottom) / 2
+            let offset = fingerDown ? -halfTravel : halfTravel
             let origin = app.coordinate(withNormalizedOffset: .zero)
-            let start = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: bottom - app.frame.minY))
-            let end = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: top - app.frame.minY))
+            let start = origin.withOffset(CGVector(dx: viewport.midX - snapshot.frame.minX,
+                dy: center + offset - snapshot.frame.minY))
+            let end = origin.withOffset(CGVector(dx: viewport.midX - snapshot.frame.minX,
+                dy: center - offset - snapshot.frame.minY))
             start.press(forDuration: 0, thenDragTo: end, withVelocity: .fast, thenHoldForDuration: 0)
         }
         try requirePresentation(attentionWasReachable && diagnostics.isHittable,
