@@ -106,7 +106,7 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
             let origin = app.coordinate(withNormalizedOffset: .zero)
             let start = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: bottom - app.frame.minY))
             let end = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: top - app.frame.minY))
-            start.press(forDuration: 0, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0)
+            start.press(forDuration: 0, thenDragTo: end, withVelocity: .fast, thenHoldForDuration: 0)
         }
         try requirePresentation(attentionWasReachable && diagnostics.isHittable,
             "scoped-error-and-diagnostics-reachable-in-Options")

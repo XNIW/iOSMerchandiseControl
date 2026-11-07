@@ -2628,11 +2628,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         let current = field.value as? String ?? ""
         if !current.isEmpty && current != field.placeholderValue {
-            field.press(forDuration: 1.1)
-            let selectAll = app.descendants(matching: .any).matching(NSPredicate(
-                format: "label == %@ AND (elementType == %d OR elementType == %d)",
-                "Select All", XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue)).firstMatch
-            XCTAssertTrue(selectAll.waitForExistence(timeout: 5)); selectAll.tap()
+            let clear = app.buttons["Clear search"]
+            XCTAssertTrue(clear.waitForExistence(timeout: 5) && clear.isHittable)
+            clear.tap()
+            let cleared = field.value as? String ?? ""
+            XCTAssertTrue(cleared.isEmpty || cleared == field.placeholderValue)
+            field.tap()
         }
         field.typeText(value); XCTAssertEqual(field.value as? String, value)
         field.typeText("\n")
@@ -3925,7 +3926,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         summaryAX.name = "TASK145 C3 admitted A actual counts, baseline date, pending and diagnostics surface"
         summaryAX.lifetime = .keepAlways; add(summaryAX)
         let beforeSelection = try scopeObserveAndRead("C3 A summary loaded before normal picker selection")
-        let ingressBefore = try scopeEntries(beforeSelection, kind: "raw-ingress")
         try scopeChooseShop(current: Self.scopeShopA, target: Self.scopeShopB,
             stage: "C3-normal-picker-B", downstream: ["administrative-privacy", "explicit-return-A"])
         try scopeRequire(app.staticTexts["task145.scope.b-selected"].waitForExistence(timeout: 10),
@@ -3948,9 +3948,36 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let blockedBody = try scopeLastValues(blocked, kind: "native-ui-checkpoint")
         let original = try scopeFacts(initial)
         let ingressAfter = try scopeEntries(blocked, kind: "raw-ingress")
-        let ingressBeforeBytes = try JSONSerialization.data(withJSONObject: ingressBefore, options: [.sortedKeys])
-        let ingressAfterBytes = try JSONSerialization.data(withJSONObject: ingressAfter, options: [.sortedKeys])
-        try scopeRequire(ingressAfter.count == ingressBefore.count && ingressAfterBytes == ingressBeforeBytes,
+        let entriesBefore = try XCTUnwrap(beforeSelection["entries"] as? [[String: Any]])
+        let entriesAfter = try XCTUnwrap(blocked["entries"] as? [[String: Any]])
+        let selectedBEntries = try scopeEntries(blocked, kind: "b-selected-readback")
+        try scopeRequire(selectedBEntries.count == 1,
+            stage: "C3-unique-selected-B-boundary", downstream: ["explicit-return-A"])
+        let selectedB = try XCTUnwrap(selectedBEntries.first)
+        let selectedOrdinal = try XCTUnwrap(selectedB["ordinal"] as? Int)
+        let selectedUptime = try XCTUnwrap(selectedB["uptime"] as? Double)
+        let selectedBody = try XCTUnwrap(selectedB["values"] as? [String: String])
+        let blockedCheckpoint = try XCTUnwrap(try scopeEntries(blocked, kind: "native-ui-checkpoint").last)
+        let scopeA = try XCTUnwrap(initial["shopA"] as? String).lowercased()
+        let scopeB = try XCTUnwrap(initial["shopB"] as? String).lowercased()
+        try scopeRequire((blocked["shopA"] as? String)?.lowercased() == scopeA
+            && (blocked["shopB"] as? String)?.lowercased() == scopeB
+            && selectedBody["selected-shop"] == scopeB && selectedBody["context-shop"] == scopeB
+            && selectedBody["manifest-shop"] == scopeA && selectedBody["local-access"] == "false"
+            && selectedOrdinal > entriesBefore.count
+            && selectedOrdinal < (blockedCheckpoint["ordinal"] as? Int ?? 0)
+            && selectedUptime < (blockedCheckpoint["uptime"] as? Double ?? 0),
+            stage: "C3-attested-blocked-B-window", downstream: ["explicit-return-A"])
+        let prefixBefore = try JSONSerialization.data(withJSONObject: entriesBefore, options: [.sortedKeys])
+        let prefixAfter = try JSONSerialization.data(withJSONObject: Array(entriesAfter.prefix(entriesBefore.count)), options: [.sortedKeys])
+        // Inventory can reconcile A while the native picker is reached. Once B
+        // is attested, every business ingress must remain absent, for either shop.
+        let noBlockedIngress = ingressAfter.allSatisfy { entry in
+            guard let ordinal = entry["ordinal"] as? Int, let uptime = entry["uptime"] as? Double,
+                  let values = entry["values"] as? [String: String] else { return false }
+            return ordinal < selectedOrdinal && uptime < selectedUptime && values["shop"] == scopeA
+        }
+        try scopeRequire(prefixAfter == prefixBefore && noBlockedIngress,
             stage: "C3-no-new-observed-business-ingress-from-blocked-surface", downstream: ["explicit-return-A"])
         try scopeRequire(blockedBody["manifest-sha256"] == original["initial-manifest-sha256"]
             && blockedBody["binding-sha256"] == original["initial-binding-sha256"]
