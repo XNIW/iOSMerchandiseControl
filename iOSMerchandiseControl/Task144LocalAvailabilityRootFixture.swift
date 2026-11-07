@@ -4943,7 +4943,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   control.state.catalogEnvelopes.isEmpty else { return false }
         }
         let events = outbox.filter { $0.domain != "local_business_attempt" && $0.status == .sent }
-        let expectedEvents = priceMode ? 3 : 1
+        // History A and B have distinct sealed idempotency keys. Each accepted
+        // revision announces its own commit, and a retry reuses that event.
+        let expectedEvents = priceMode ? 3 : 2
         guard events.count == expectedEvents, control.state.events.count == expectedEvents,
               control.state.eventAttempts.count == expectedEvents, control.state.eventRPCCount == expectedEvents,
               Set(events.map(\.clientEventID)) == Set(control.state.eventAttempts.map(\.clientEventID)),
