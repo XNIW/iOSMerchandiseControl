@@ -974,7 +974,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launchEnvironment["TASK145_SAVE_BEFORE_ACTIVATION_UI"] = "name-price"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
-        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
+        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)))
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5)); positionNameInEditorViewport(name)
         replaceText(in: name, with: "R23 saved before recovery activation")
@@ -1980,7 +1981,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(try seq6Entries(ledger, "marker").count, 0)
         XCTAssertLessThanOrEqual(try seq6Entries(ledger, "checkpoint").count, 4)
         XCTAssertTrue(app.staticTexts["Safe local baseline"].waitForExistence(timeout: 5))
-        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
+        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)))
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         XCTAssertEqual(name.value as? String, "Safe local baseline")
@@ -2071,7 +2073,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(third["attemptsInWindow"] as? Int, 3)
         XCTAssertEqual(third["windowIndex"] as? Int, 1)
         XCTAssertTrue(completions.allSatisfy { ($0["busy"] as? Bool) == false })
-        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
+        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)))
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         positionNameInEditorViewport(name)
@@ -2216,7 +2219,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launchEnvironment["TASK145_SAVE_B_UI"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
-        let row = app.staticTexts["Safe local baseline"]
+        let row = app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)
         XCTAssertTrue(tapStableInitialReplayProduct(row))
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
@@ -2308,7 +2312,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             app.buttons["task144.controlled.release"].press(forDuration: 1.2)
             try awaitRestartFact("availability-restored", timeout: 5)
         }
-        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
+        XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)))
         let name = app.textFields["task144.product.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         positionNameInEditorViewport(name)
@@ -2438,7 +2443,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func saveDomainValue(_ domain: String, second: Bool) throws {
         if domain == "prices" {
             app.tabBars.buttons["Database"].tap()
-            XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
+            XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)))
             let field = app.textFields["task141.product.retail-price"]
             try replaceDomainField(field, with: second ? "13" : "12", historyTitle: false)
         } else {
@@ -2869,8 +2875,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         let publicState = XCTAttachment(screenshot: app.screenshot())
         publicState.name = "Task145 T11 actual Options diagnosis " + scenario; publicState.lifetime = .keepAlways; add(publicState)
-        app.tabBars.buttons["History"].tap(); XCTAssertTrue(app.tabBars.buttons["History"].isSelected)
-        app.tabBars.buttons["Database"].tap(); XCTAssertTrue(app.tabBars.buttons["Database"].isSelected)
+        for title in ["History", "Database"] {
+            let tab = app.tabBars.buttons[title]
+            tab.tap()
+            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
+            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed)
+        }
         let search = app.textFields.matching(NSPredicate(format: "identifier == %@ AND label == %@",
             "task140.database.root", "Search by barcode, name, or code")).firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5))
@@ -2897,7 +2907,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             XCTAssertTrue(cleared.isEmpty || cleared == field.placeholderValue)
             field.tap()
         }
-        field.typeText(value); XCTAssertEqual(field.value as? String, value)
+        field.typeText(value)
+        let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", value), object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 5), .completed)
+        XCTAssertEqual(field.value as? String, value)
         // Activate the actual native Search action exposed by this keyboard;
         // a newline sent as field text need not submit or resign focus.
         let submit = app.keyboards.firstMatch.buttons.matching(NSPredicate(format: "identifier == %@", "Search"))
@@ -2961,7 +2974,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_INDEPENDENT_PENDING"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
-        let row = app.staticTexts["Safe local baseline"]
+        let row = app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "Safe local baseline")).element(boundBy: 0)
         let rowAppeared = tapStableInitialReplayProduct(row)
         if !rowAppeared {
             let result = XCTAttachment(string: "rowAppeared=\(rowAppeared); timeoutSeconds=5")
