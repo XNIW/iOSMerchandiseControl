@@ -5140,13 +5140,15 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard relevant.count == 2, Set(control.state.committedChangeIDs) == Set(relevant.map(\.changeID)),
               Set(control.state.returnedChangeIDs) == Set(relevant.map(\.changeID)) else { return false }
         if priceMode {
+            let savedBIDs = Set(control.state.savedB.map(\.changeID))
+            let savedBChanges = changes.filter { savedBIDs.contains($0.changeID) }
             guard prices.count == 2, control.state.prices.count == 2, product.retailPrice == 13, control.state.product.retailPrice == 13,
                   control.state.catalogRPCCount == 2, control.state.priceRPCCount == 2, control.state.historyRPCCount == 0,
                   Set(prices.compactMap(\.remoteID)) == Set(control.state.prices.map(\.id)),
                   control.state.requests.count == 2, control.state.requests[0].payloads.count == 1,
                   control.state.requests[1].payloads.contains(control.state.requests[0].payloads[0]),
                   control.state.catalogEnvelopes.count == 2,
-                  LocalProductSaveReceipt(product: product, manifest: manifest, intents: control.state.savedB).isCloudConfirmed(by: changes) else { return false }
+                  LocalProductSaveReceipt(product: product, manifest: manifest, intents: control.state.savedB).isCloudConfirmed(by: savedBChanges) else { return false }
             for price in prices {
                 guard let remote = control.state.prices.first(where: { $0.id == price.remoteID }),
                       price.price == remote.price, remote.productID == product.remoteID,
