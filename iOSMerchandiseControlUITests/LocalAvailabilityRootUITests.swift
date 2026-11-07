@@ -5141,7 +5141,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // from the current exact-label row rather than the pre-tap element.
                 let selected = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", titles[index]))
                     .element(boundBy: 0)
-                try t18Require(selected.isSelected, route + "-tab-not-selected")
+                let selectedPublication = XCTNSPredicateExpectation(
+                    predicate: NSPredicate(format: "isSelected == true"), object: selected)
+                try t18Require(XCTWaiter.wait(for: [selectedPublication], timeout: 5) == .completed,
+                    route + "-tab-not-selected")
                 try t18Require(app.alerts.count == 0, route + "-unexpected-modal")
                 if route == "options" {
                     if state == "action" { try t18ExerciseReview(language) }
@@ -5379,11 +5382,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
          "zh": ["库存", "历史", "数据库", "选项"]][language]!
     }
     private func t18Seek(_ element: XCUIElement, stage: String) throws {
+        let fullyVisible = {
+            guard element.exists, element.isHittable else { return false }
+            let frame = element.frame, window = self.app.frame
+            let top = max(window.minY, self.app.navigationBars.firstMatch.frame.maxY)
+            let bottom = min(window.maxY, self.app.tabBars.firstMatch.frame.minY)
+            return frame.width > 0 && frame.height > 0 && window.contains(frame)
+                && frame.minY >= top && frame.maxY <= bottom
+        }
         for _ in 0..<8 {
-            if element.exists && element.isHittable { return }
+            if fullyVisible() { return }
             app.swipeUp()
         }
-        try t18Require(element.exists && element.isHittable, stage)
+        try t18Require(fullyVisible(), stage)
     }
     private func t18ReachAccount(_ language: String) throws {
         let heading = ["en": "Cloud account connected", "it": "Account cloud collegato",
