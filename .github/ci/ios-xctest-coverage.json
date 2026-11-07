@@ -2462,5 +2462,29 @@
     "allowedOptInSkipsUnchanged": 40,
     "compiledFullEnumerationRequired": true,
     "noDisabledSkipOrShardReduction": true
+  },
+  "userDeferredTests": {
+    "status": "DEFERRED_USER",
+    "override": "TASK146_USER_OVERRIDE_20261107",
+    "reason": "Questo lascialo per un altro momento, al momento non dispositivi fisici disponibili",
+    "scope": "CI_ONLY_REAL_IOS_OS_OFFLINE_T18",
+    "selectors": [
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_en_max_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_en_max_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_en_normal_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_en_normal_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_es_max_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_es_max_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_es_normal_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_es_normal_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_it_max_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_it_max_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_it_normal_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_it_normal_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_max_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_max_light_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_normal_dark_offline",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_normal_light_offline"
+    ]
   }
 }

@@ -13,6 +13,20 @@ import time
 
 MANIFEST = Path(__file__).with_name('ios-xctest-coverage.json')
 ID = re.compile(r'iOSMerchandiseControl(?:UI)?Tests/[^/\s]+/test[^/\s]+')
+# This finite16-selector exception records the user's2026-11-07 deferral.
+# It changes CI dispatch only; source methods and complete discovery stay enabled.
+T18_OS_OFFLINE = {
+    f'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_{language}_{size}_{theme}_offline':
+        f'ui-t18-{language}'
+    for language in ('it', 'en', 'es', 'zh')
+    for size in ('normal', 'max') for theme in ('light', 'dark')
+}
+USER_DEFERRAL = {
+    'status': 'DEFERRED_USER', 'override': 'TASK146_USER_OVERRIDE_20261107',
+    'reason': 'Questo lascialo per un altro momento, al momento non dispositivi fisici disponibili',
+    'scope': 'CI_ONLY_REAL_IOS_OS_OFFLINE_T18',
+}
+QUALIFIED_STATUSES = {'PASS', 'COMPLETE_WITH_OPT_IN_SKIPS', 'COMPLETE_WITH_USER_DEFERRALS'}
 
 
 def write(path, value):
@@ -26,7 +40,33 @@ def load_manifest():
     assert ids and len(ids) == len(set(ids))
     assert all(ID.fullmatch(case) for case in ids)
     assert set(manifest['allowedOptInSkips']).issubset(ids)
+    if 'userDeferredTests' in manifest:
+        policy = manifest['userDeferredTests']
+        assert policy == dict(USER_DEFERRAL, selectors=sorted(T18_OS_OFFLINE)), 'invalid user deferral scope/reason/selectors'
+        assert not set(T18_OS_OFFLINE) & set(manifest['allowedOptInSkips']), 'deferral is not an opt-in skip'
+        for selector, shard_id in T18_OS_OFFLINE.items():
+            owner = next(row for row in manifest['shards'] if selector in row['expected'])
+            assert owner['id'] == shard_id and selector in owner['onlyTesting'], 'wrong deferred selector shard'
     return manifest
+
+
+def shard_selection(manifest, shard):
+    policy = manifest.get('userDeferredTests')
+    deferred = sorted(set(shard['expected']) & set(policy['selectors'])) if policy else []
+    if deferred:
+        assert set(shard['onlyTesting']) == set(shard['expected']), 'deferred shard requires exact selectors'
+    return {
+        'activeExpected': [case for case in shard['expected'] if case not in deferred],
+        'deferredIds': deferred,
+        'selectedOnlyTesting': [case for case in shard['onlyTesting'] if case not in deferred],
+        'userDeferral': USER_DEFERRAL if deferred else None,
+    }
+
+
+def qualified_status(counts):
+    if counts.get('DEFERRED_USER'):
+        return 'COMPLETE_WITH_USER_DEFERRALS'
+    return 'COMPLETE_WITH_OPT_IN_SKIPS' if counts.get('Skipped') else 'PASS'
 
 
 def current_provenance():
@@ -75,10 +115,13 @@ def bounded(argv, log, deadline):
 def run(shard_id):
     manifest = load_manifest()
     shard = next(row for row in manifest['shards'] if row['id'] == shard_id)
+    selection = shard_selection(manifest, shard)
     output = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-shard'
     output.mkdir(exist_ok=False)
     record = dict(current_provenance(), shard=shard_id, status='NOT_RUN',
-                  expected=shard['expected'], cases={case: 'NOT_RUN' for case in shard['expected']})
+                  expected=shard['expected'], **selection,
+                  cases={case: 'DEFERRED_USER' if case in selection['deferredIds'] else 'NOT_RUN'
+                         for case in shard['expected']})
     write(output / 'run.json', record)
     base = ['xcodebuild', '-project', 'iOSMerchandiseControl.xcodeproj',
             '-scheme', 'iOSMerchandiseControl', '-configuration', 'Debug',
@@ -104,7 +147,7 @@ def run(shard_id):
         assert discovered == expected_all, 'runtime discovery differs from full coverage manifest'
         argv = base + ['-resultBundlePath', str(Path(os.environ['RUNNER_TEMP']) /
                                                'ios-merchandise-control-tests.xcresult')]
-        argv += ['-only-testing:' + selector for selector in shard['onlyTesting']]
+        argv += ['-only-testing:' + selector for selector in selection['selectedOnlyTesting']]
         record['testArgv'] = argv
         record['status'] = 'RUNNING'
         write(output / 'run.json', record)
@@ -142,14 +185,22 @@ def test_cases(value):
 
 def qualify(shard_id):
     manifest = load_manifest()
-    expected = next(row['expected'] for row in manifest['shards'] if row['id'] == shard_id)
+    shard = next(row for row in manifest['shards'] if row['id'] == shard_id)
+    expected = shard['expected']
+    selection = shard_selection(manifest, shard)
+    active = selection['activeExpected']
     output = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-shard'
-    report = dict(current_provenance(), shard=shard_id, status='FAIL',
-                  cases={case: 'NOT_RUN' for case in expected}, errors=[])
+    report = dict(current_provenance(), shard=shard_id, status='FAIL', **selection,
+                  expectedTotal=len(expected), observedTotal=0, deferredTotal=len(selection['deferredIds']),
+                  cases={case: 'DEFERRED_USER' if case in selection['deferredIds'] else 'NOT_RUN'
+                         for case in expected}, errors=[])
     try:
         run_record = json.loads((output / 'run.json').read_text())
         assert {key: run_record[key] for key in current_provenance()} == current_provenance()
         assert run_record['shard'] == shard_id and run_record['expected'] == expected
+        assert all(run_record[key] == value for key, value in selection.items()), 'wrong user deferral record'
+        assert [arg.removeprefix('-only-testing:') for arg in run_record['testArgv']
+                if arg.startswith('-only-testing:')] == selection['selectedOnlyTesting'], 'wrong active CI selection'
         discovery_count = sum(len(row['expected']) for row in manifest['shards'])
         assert run_record['discovery'] == {'missing': [], 'unexpected': [], 'count': discovery_count}
         exported = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-failure-summary'
@@ -159,31 +210,35 @@ def qualify(shard_id):
             assert entry['complete'] is True, 'incomplete bounded result export'
         summary = json.loads((exported / 'summary.json').read_text())
         observed = test_cases(json.loads((exported / 'tests.json').read_text()))
-        report['unexpected'] = sorted(set(observed) - set(expected))
-        for selector in set(expected) & set(observed):
+        report['unexpected'] = sorted(set(observed) - set(active))
+        report['missing'] = sorted(set(active) - set(observed))
+        report['observedTotal'] = len(observed)
+        for selector in set(active) & set(observed):
             report['cases'][selector] = observed[selector]
         counts = collections.Counter(observed.values())
+        report['observedCounts'] = dict(counts)
         report['counts'] = dict(collections.Counter(report['cases'].values()))
         report['xcodeExit'] = run_record.get('xcodeExit')
         report['unexpectedSkips'] = sorted(case for case, result in observed.items()
                                            if result == 'Skipped' and case not in manifest['allowedOptInSkips'])
-        assert not report['unexpected'] and set(observed) == set(expected), 'missing/unexpected result cases'
-        assert summary['totalTestCount'] == len(expected)
+        assert not report['unexpected'] and not report['missing'], 'missing/unexpected active result cases'
+        assert summary['totalTestCount'] == len(active)
         assert summary['passedTests'] == counts['Passed'] and summary['failedTests'] == counts['Failed']
         assert summary['skippedTests'] == counts['Skipped']
         assert set(counts).issubset({'Passed', 'Failed', 'Skipped'}), 'unterminated result case'
         assert not report['unexpectedSkips'], 'unapproved skip'
         assert run_record.get('xcodeExit') == 0 and counts['Failed'] == 0
-        report['status'] = 'COMPLETE_WITH_OPT_IN_SKIPS' if counts['Skipped'] else 'PASS'
+        report['status'] = qualified_status(report['counts'])
     except (AssertionError, KeyError, ValueError, OSError, StopIteration) as error:
         report['errors'].append(type(error).__name__ + ': ' + str(error))
     write(output / 'coverage.json', report)
-    return 0 if report['status'] in {'PASS', 'COMPLETE_WITH_OPT_IN_SKIPS'} else 1
+    return 0 if report['status'] in QUALIFIED_STATUSES else 1
 
 
 def aggregate(directory):
     manifest = load_manifest()
     expected_shards = {row['id']: set(row['expected']) for row in manifest['shards']}
+    selections = {row['id']: shard_selection(manifest, row) for row in manifest['shards']}
     reports = {}
     errors = []
     for path in Path(directory).glob('*/ios-xctest-shard/coverage.json'):
@@ -202,18 +257,44 @@ def aggregate(directory):
         if report.get('manifestSHA256') != hashlib.sha256(MANIFEST.read_bytes()).hexdigest():
             errors.append(shard + ': wrong manifest')
         cases = report.get('cases', {})
-        if set(cases) != expected or report.get('status') not in {'PASS', 'COMPLETE_WITH_OPT_IN_SKIPS'}:
+        selection = selections[shard]
+        if set(cases) != expected or report.get('status') not in QUALIFIED_STATUSES:
             errors.append(shard + ': FAIL/NOT_RUN/incomplete')
+        if any(report.get(key) != value for key, value in selection.items()):
+            errors.append(shard + ': wrong user deferral scope/reason/selection')
+        deferred = set(selection['deferredIds'])
+        if {case for case, result in cases.items() if result == 'DEFERRED_USER'} != deferred:
+            errors.append(shard + ': wrong deferred case identities')
+        if any(result == 'Skipped' and case not in manifest['allowedOptInSkips'] for case, result in cases.items()):
+            errors.append(shard + ': unapproved skip')
+        case_counts = collections.Counter(cases.values())
+        observed_counts = collections.Counter(cases.get(case, 'NOT_RUN') for case in selection['activeExpected'])
+        if report.get('counts') != dict(case_counts) or report.get('observedCounts') != dict(observed_counts):
+            errors.append(shard + ': inconsistent result counts')
+        if (report.get('expectedTotal') != len(expected)
+                or report.get('observedTotal') != len(selection['activeExpected'])
+                or report.get('deferredTotal') != len(deferred)):
+            errors.append(shard + ': inconsistent observed/deferred totals')
+        if report.get('status') != qualified_status(case_counts):
+            errors.append(shard + ': status does not preserve deferral/skip result')
+        if report.get('errors') != []:
+            errors.append(shard + ': qualification errors')
         all_cases.update({case: cases.get(case, 'NOT_RUN') for case in expected})
     counts = dict(collections.Counter(all_cases.values()))
     if os.environ['MATRIX_RESULT'] != 'success':
         errors.append('matrix job result: ' + os.environ['MATRIX_RESULT'])
-    if set(counts) - {'Passed', 'Skipped'}:
+    if set(counts) - {'Passed', 'Skipped', 'DEFERRED_USER'}:
         errors.append('FAIL/NOT_RUN/unknown case result')
-    status = 'FAIL' if errors else ('COMPLETE_WITH_OPT_IN_SKIPS' if counts.get('Skipped') else 'PASS')
+    status = 'FAIL' if errors else qualified_status(counts)
     result = {'status': status, 'head': os.environ['EXPECTED_HEAD'], 'counts': counts,
               'errors': errors, 'cases': all_cases,
-              'acceptanceLimit': 'Opt-in skips remain Skipped; CI is not authenticated/native B6 acceptance.'}
+              'expectedTotal': len(all_cases),
+              'observedTotal': sum(value != 'DEFERRED_USER' and value != 'NOT_RUN' for value in all_cases.values()),
+              'deferredTotal': counts.get('DEFERRED_USER', 0),
+              'deferredIds': sorted(case for case, value in all_cases.items() if value == 'DEFERRED_USER'),
+              'userDeferral': manifest.get('userDeferredTests'),
+              'acceptanceLimit': 'Opt-in skips remain Skipped; DEFERRED_USER cases are not run or Passed. '
+                                 'CI does not qualify deferred real iOS OS-offline or authenticated/native B6 acceptance.'}
     write(Path(directory) / 'aggregate.json', result)
     print(json.dumps({key: value for key, value in result.items() if key != 'cases'}))
     return 1 if errors else 0
