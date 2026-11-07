@@ -2353,7 +2353,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             app.tabBars.buttons["Database"].tap()
             XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts["Safe local baseline"]))
             let field = app.textFields["task141.product.retail-price"]
-            XCTAssertTrue(field.waitForExistence(timeout: 5))
             try replaceDomainField(field, with: second ? "13" : "12", historyTitle: false)
         } else {
             app.tabBars.buttons["History"].tap()
@@ -2371,10 +2370,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func replaceDomainField(_ field: XCUIElement, with value: String, historyTitle: Bool) throws {
-        let form = app.collectionViews.containing(.textField, identifier: field.identifier).firstMatch
-        // Bounded real gestures place the actual target above the keyboard.
+        // The same four gestures also materialize a virtualized price row before
+        // its existing five-second existence gate. No extra scroll loop is added.
         // No Name-only observation is reused for a price or history field.
         for _ in 0..<4 {
+            if !field.exists {
+                guard !historyTitle else { break }
+                let editor = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
+                guard app.navigationBars["Edit product"].exists, editor.exists else { break }
+                editor.swipeUp()
+                continue
+            }
+            let form = app.collectionViews.containing(.textField, identifier: field.identifier).firstMatch
             let frame = field.frame
             let surface: XCUIElement = form.exists ? form : app
             let viewport = surface.frame.intersection(app.frame)
@@ -2392,6 +2399,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: finishY - startY)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)
         }
+        if !historyTitle { XCTAssertTrue(field.waitForExistence(timeout: 5)) }
         guard field.isHittable else { throw NSError(domain: "Task145DomainUI", code: 1) }
         field.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
@@ -4897,7 +4905,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let tab = app.tabBars.buttons[titles[index]]
                 try t18Require(tab.waitForExistence(timeout: 5) && tab.isHittable, route + "-tab-not-reachable")
                 tab.tap()
-                try t18Require(tab.isSelected, route + "-tab-not-selected")
+                // Keyboard dismissal may rebuild the bar. Read the selected state
+                // from the current exact-label row rather than the pre-tap element.
+                let selected = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", titles[index]))
+                    .element(boundBy: 0)
+                try t18Require(selected.isSelected, route + "-tab-not-selected")
                 try t18Require(app.alerts.count == 0, route + "-unexpected-modal")
                 if route == "options" {
                     if state == "action" { try t18ExerciseReview(language) }
@@ -4997,11 +5009,36 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func t18Snapshot(state: String, language: String, category: UIContentSizeCategory, theme: String) throws -> [String: Any] {
+        let readDeadline = ProcessInfo.processInfo.systemUptime + 5
         let node = app.descendants(matching: .any).matching(identifier: "task144.controlled.native-name-observation").firstMatch
         try t18Require(node.waitForExistence(timeout: 5), "passive-observer-missing")
-        guard let raw = node.value as? String, let bytes = raw.data(using: .utf8), bytes.count <= 8192,
-              let value = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+        guard let raw = node.value as? String, var bytes = raw.data(using: .utf8), bytes.count <= 8192,
+              var value = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
             throw T18Stop(stage: "passive-observer-invalid-JSON")
+        }
+        func isHealthyIdle(_ current: [String: Any]) -> Bool {
+            current["healthyTerminal"] as? Bool == true && current["phase"] as? String == "idle"
+                && current["automaticWorkActive"] as? Bool == false && current["journalPresent"] as? Bool == false
+        }
+        if state == "idle" && !isHealthyIdle(value) {
+            // The producer marker is durable/latched; a normal subsequent poll
+            // may already be active. Admit only an actual current idle read in
+            // the existing five-second observer budget, without pausing work.
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                guard ProcessInfo.processInfo.systemUptime < readDeadline,
+                      let nextRaw = node.value as? String, let nextBytes = nextRaw.data(using: .utf8), nextBytes.count <= 8192,
+                      let next = (try? JSONSerialization.jsonObject(with: nextBytes)) as? [String: Any] else { return false }
+                bytes = nextBytes; value = next
+                return isHealthyIdle(next) && ProcessInfo.processInfo.systemUptime <= readDeadline
+            }, object: nil)
+            let remaining = readDeadline - ProcessInfo.processInfo.systemUptime
+            let current = remaining > 0 && XCTWaiter.wait(for: [ready], timeout: remaining) == .completed
+                && ProcessInfo.processInfo.systemUptime <= readDeadline
+            if !current {
+                let last = XCTAttachment(data: bytes, uniformTypeIdentifier: "public.json")
+                last.name = "T18 idle LAST_READ before healthy-idle-not-current"; last.lifetime = .keepAlways; add(last)
+                throw T18Stop(stage: "healthy-idle-not-current")
+            }
         }
         try t18Require(value["status"] as? String == "CURRENT_READ_ONLY"
             && (value["runID"] as? String)?.lowercased() == runID.lowercased()
@@ -5014,9 +5051,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             "actual-font-theme-language-mismatch")
         switch state {
         case "idle":
-            try t18Require(value["healthyTerminal"] as? Bool == true && value["phase"] as? String == "idle"
-                && value["automaticWorkActive"] as? Bool == false && value["journalPresent"] as? Bool == false,
-                "healthy-idle-not-current")
+            try t18Require(isHealthyIdle(value), "healthy-idle-not-current")
         case "offline":
             guard let observed = value["osPathObservedUptime"] as? Double,
                   let uptime = value["uptime"] as? Double,
