@@ -422,6 +422,17 @@ jobs:
           compression-level: 0
           include-hidden-files: false
 
+      - name: Build Release
+        if: ${{ matrix.shard == 'unit-target' }}
+        timeout-minutes: 15
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Release
+          -destination "generic/platform=iOS Simulator"
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
+          CODE_SIGNING_ALLOWED=NO build
+
       - name: Analyze
         if: ${{ matrix.shard == 'unit-target' || matrix.shard == 'campaign-a' }}
         run: >-
