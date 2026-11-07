@@ -6495,6 +6495,53 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             name: "Committed with pending intent")
     }
 
+    func testAuthenticatedPhysicalProofAdmitsOnlyReadsWhileShopDiscoveryIsPending() async throws {
+        let fixture = try makeFixture()
+        let product = localAvailabilityProduct(fixture: fixture)
+        let checkpoint = try makeCatalogPriceCheckpoint(fixture: fixture, maxEventID: 41,
+            seed: "physical-proof-pending-shop", products: [product], prices: [])
+        let recovered = try await makeService(fixture: fixture, transport: AtomicRecoveryTestTransport(
+            ownerUserID: fixture.ownerUserID, checkpoints: [checkpoint, checkpoint], productRows: [product]))
+            .recoverFromRemoteSnapshot(ownerUserID: fixture.ownerUserID)
+        XCTAssertTrue(recovered.completedRecoveryJournal)
+        let repository = try physicalProofRepository(fixture)
+        if FileManager.default.fileExists(atPath: repository.physicalBodyProofURL.path) {
+            try FileManager.default.removeItem(at: repository.physicalBodyProofURL)
+        }
+        let clean = try reopenFixture(fixture)
+        let sealed = await clean.controller.awaitLocalBodyQualification()
+        XCTAssertTrue(sealed)
+        XCTAssertEqual(clean.controller.localBodyPhysicalSealCountForTesting, 1)
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: clean.ownerUserID,
+            defaults: clean.defaults)
+        let selected = SelectedShopStore(defaults: clean.defaults)
+        selected.markResolutionUnresolved(accountHash: scope.accountHash)
+        let reopened = try reopenFixture(clean)
+        let controller = reopened.controller
+        controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
+        let full = await controller.awaitLocalBodyQualification()
+        XCTAssertFalse(full)
+        XCTAssertGreaterThan(controller.localBodyPhysicalReuseCountForTesting, 0)
+        XCTAssertEqual(controller.localBodyFullReadbackCountForTesting, 0)
+        let container = controller.modelContainer
+        for domain in [Task126LocalReadDomain.catalog, .sessions, .priceHistory] {
+            XCTAssertTrue(Task126OwnerStoreGate.permitsSameScopeLocalRead(domain, modelContainer: container,
+                ownerUserID: reopened.ownerUserID, defaults: reopened.defaults))
+        }
+        let read = ModelContext(container)
+        XCTAssertEqual(try read.fetch(FetchDescriptor<Product>()).map(\.remoteID), [product.id])
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: container,
+            ownerUserID: reopened.ownerUserID, defaults: reopened.defaults))
+        XCTAssertThrowsError(try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: reopened.ownerUserID,
+            defaults: reopened.defaults))
+        XCTAssertTrue(selected.recordDeviceAuthorization(.init(status: "revoked", code: "TEST_DEVICE_REVOKED",
+            canWrite: false, serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "none",
+            checkedAt: Date()), ownerUserID: reopened.ownerUserID, shopID: reopened.shopID,
+            deviceIdentityHash: scope.deviceIdentityHash))
+        XCTAssertFalse(Task126OwnerStoreGate.permitsSameScopeLocalRead(.catalog, modelContainer: container,
+            ownerUserID: reopened.ownerUserID, defaults: reopened.defaults))
+    }
+
     func testAuthenticatedPhysicalProofMissesNeverBypassTheRealValidatorOrCurrentAuthority() async throws {
         let fixture = try makeFixture()
         let product = localAvailabilityProduct(fixture: fixture)

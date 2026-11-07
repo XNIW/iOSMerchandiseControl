@@ -2148,8 +2148,10 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     // lock, so an old async writer gains no renewed authority.
                     authorityClosureEntered = false
                     authorityClosurePassed = false
+                    var cachedReadsPublished = false
                     published = LocalCatalogPhysicalProofStore.withLatestBinding(readback.reuseToken) {
-                        Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence, didAcceptProof: {
+                        var canPublishCachedReads = false
+                        let acceptedBody = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence, didAcceptProof: {
                             if let snapshot = readback.reusableSnapshot {
                                 sealedPhysicalProof = repository.sealPhysicalBodyProof(snapshot, for: captured, fence: fence)
                                 #if DEBUG
@@ -2186,7 +2188,6 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                               observeAuthority(currentJournal?.deviceIdentityHash == expectedJournal?.deviceIdentityHash, "journal-device-changed"),
                               observeAuthority(expectedBinding?.accountHash == manifest.accountHash, "captured-binding-account-mismatch"),
                               observeAuthority(expectedBinding?.storeIdentity == manifest.storeIdentity, "captured-binding-store-mismatch"),
-                              observeAuthority(selectedStore.isResolutionReady(accountHash: manifest.accountHash), "resolution-unready"),
                               let currentShop = observeOptional(selectedStore.selectedShop(accountHash: manifest.accountHash), "selected-shop-absent"),
                               observeAuthority(ownerUserID != nil || currentShop == expectedShop, "ownerless-selection-changed"),
                               observeAuthority(currentShop.shopID == expectedShop?.shopID, "selected-shop-changed"),
@@ -2209,9 +2210,26 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                                   observeAuthority(journal.replacement.storeIdentity == manifest.storeIdentity, "journal-store-mismatch"),
                                   observeAuthority(journal.deviceIdentityHash == manifest.deviceIdentityHash, "journal-device-manifest-mismatch") else { return false }
                         }
+                        guard observeAuthority(selectedStore.isResolutionReady(accountHash: manifest.accountHash), "resolution-unready") else {
+                            canPublishCachedReads = readback.reuseToken != nil && ownerUserID != nil
+                            return false
+                        }
                         authorityClosurePassed = true
                         return true
                     }
+                        // The exact local archive can serve reads during shop
+                        // discovery. The full proof and writers still require
+                        // a resolved shop. Recheck the current lease and fence.
+                        if canPublishCachedReads {
+                            for domain in [Task126LocalReadDomain.catalog, .sessions, .priceHistory] {
+                                if Task126OwnerStoreGate.acceptLocalReadProof(container: container, domain: domain,
+                                        ownerUserID: ownerUserID, defaults: self.defaults,
+                                        admissionGeneration: readAdmissionGeneration, fence: fence) {
+                                    cachedReadsPublished = true
+                                }
+                            }
+                        }
+                        return acceptedBody
                     }
                     if published { return true }
                     if readback.reuseToken != nil && !authorityClosureEntered && firstPublicationFailure == "none" {
@@ -2220,6 +2238,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     noteFailure("publication", authorityClosurePassed
                         ? "registered-container-or-current-physical-fence"
                         : firstPublicationFailure)
+                    if cachedReadsPublished { return false }
                 } catch {
                     let failure = error as? LocalBodyQualificationReadbackFailure
                     let underlying = failure?.underlying ?? error
