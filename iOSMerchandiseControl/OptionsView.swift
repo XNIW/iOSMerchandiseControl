@@ -228,6 +228,16 @@ struct OptionsView: View {
 
     var body: some View {
         Form {
+            Section {
+                cloudAccountAndSyncPublicCard
+            } header: {
+                SectionHeader(title: L("options.cloud.section.header"), systemImage: "icloud")
+            } footer: {
+                Text(L("options.cloud.section.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             // --- Sezione TEMA ---
             Section {
                 ForEach(themeOptions) { option in
@@ -262,16 +272,6 @@ struct OptionsView: View {
                 SectionHeader(title: L("options.language.header"), systemImage: "globe")
             } footer: {
                 Text(L("options.language.footer"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                cloudAccountAndSyncPublicCard
-            } header: {
-                SectionHeader(title: L("options.cloud.section.header"), systemImage: "icloud")
-            } footer: {
-                Text(L("options.cloud.section.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
