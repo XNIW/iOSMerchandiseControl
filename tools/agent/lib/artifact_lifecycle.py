@@ -7,9 +7,11 @@ import fcntl
 import hashlib
 import json
 import os
+import plistlib
 from pathlib import Path
 import re
 import signal
+import sqlite3
 import stat
 import subprocess
 import sys
@@ -984,13 +986,13 @@ class Registry:
                         raise Hold("recorded inputs/toolchain no longer demonstrably available")
                     if not self.quiescent(run):
                         raise Hold("execution descendants/group not proven quiescent")
-                    size = sum(s.st_blocks * 512 for _, s in tree(path))
+                    size = sum(s.st_blocks * 512 for _, s in tree(path, self))
                     opened = subprocess.run(["/usr/sbin/lsof", "-nP", "+D", str(path), "-Fpn"],
                                             capture_output=True, text=True)
                     if opened.returncode != 1 or opened.stdout.strip() or opened.stderr.strip():
                         raise Hold("open handles or incomplete handle check")
                     if apply:
-                        allocated = remove_tree(path)
+                        allocated = remove_tree(path, self)
                         output.update(removed=now(), allocated_removed=allocated)
                         self.save(run)
                         self.event("output_removed", run=run["token"], path=str(path), bytes=allocated)
@@ -1011,9 +1013,84 @@ class Registry:
         return result
 
 
-def tree(root):
+
+_XCRESULT_TABLES = frozenset("""Actions Activities Arguments Attachments BuildIssues DeveloperTools
+Devices DocumentLocations ExpectedFailures Expressions Invocations IssueTrackingMetadata Parameters
+PerformanceMetrics Platforms RepetitionPolicies RunDestinations SDKs SkipNotices SourceCodeContexts
+SourceCodeFrames SourceCodeLocations SourceCodeSymbolInfos TestCaseResultsByDestinationAndConfiguration
+TestCaseRuns TestCases TestDocumentations TestErrors TestIssues TestPlanConfigurations TestPlanRuns
+TestPlans TestSuiteRuns TestSuites TestTags TestValues TestableRuns Testables UserInfoKeyValues UserInfos""".split())
+
+
+def _metadata_tables(path):
+    path = no_links(path)
+    s = path.stat()
+    if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1:
+        raise Hold("generated metadata database ownership/type changed")
+    with path.open("rb") as source:
+        if source.read(16) != b"SQLite format 3\0":
+            raise Hold("generated metadata database signature changed")
+    # Immutable/read-only avoids creating journals or replaying/changing originals.
+    connection = sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True)
+    try:
+        return {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    finally:
+        connection.close()
+
+
+def _generated_metadata_databases(root, registry):
+    if not isinstance(registry, Registry):
+        return set()
+    product = root.parent.parent if root.name == "Intermediates.noindex" and root.parent.name == "Build" else None
+    managed = product or root
+    kind = "products" if product else "integral-result"
+    parent = registry.root / ("products" if product else "results")
+    suffix = "" if product else r"\.xcresult"
+    if managed.parent != parent or not re.fullmatch(r"[0-9a-f]{20}-[0-9a-f]{32}" + suffix, managed.name):
+        return set()
+    if not any(output.get("kind") == kind and output.get("managed", True) and not output.get("removed")
+               and no_links(output["path"]) == managed
+               for run in registry.all_runs() for output in run["outputs"]):
+        return set()
+    try:
+        if product:
+            database = root / "XCBuildData/build.db"
+            if not database.exists():
+                return set()
+            if _metadata_tables(database) != {"info", "key_names", "rule_results"}:
+                raise Hold("XCBuildData metadata schema changed")
+            return {database, database.with_name("build.db-wal"), database.with_name("build.db-shm")}
+        database = root / "database.sqlite3"
+        if not database.exists():
+            return set()
+        info = no_links(root / "Info.plist")
+        s = info.stat()
+        if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1 or s.st_size > 65536:
+            raise Hold("xcresult metadata Info.plist is not a bounded owned file")
+        value = plistlib.loads(info.read_bytes())
+        root_hash = value.get("rootId", {}).get("hash", "")
+        if (value.get("version") != {"major": 3, "minor": 60}
+                or value.get("storage") != {"backend": "fileBacked2", "compression": "standard"}
+                or value.get("directoryImportMode") != "concurrent" or value.get("externalLocations") != []
+                or not isinstance(value.get("dateCreated"), dt.datetime)
+                or not isinstance(root_hash, str) or not re.fullmatch(r"0~[A-Za-z0-9_-]{86}==", root_hash)):
+            raise Hold("xcresult metadata format changed")
+        data = no_links(root / "Data")
+        reference = no_links(data / ("data." + root_hash))
+        rs = reference.stat()
+        if (not data.is_dir() or data.stat().st_uid != os.getuid()
+                or not stat.S_ISREG(rs.st_mode) or rs.st_uid != os.getuid() or rs.st_nlink != 1
+                or _metadata_tables(database) != _XCRESULT_TABLES):
+            raise Hold("xcresult metadata root reference or schema changed")
+        return {database}
+    except (OSError, ValueError, TypeError, AttributeError, plistlib.InvalidFileException, sqlite3.Error) as exc:
+        raise Hold("generated metadata proof unavailable: " + str(exc)) from exc
+
+
+def tree(root, registry=None):
     root = no_links(root)
     device = root.stat().st_dev
+    metadata_databases = _generated_metadata_databases(root, registry)
     entries = []
     for parent, dirs, files in os.walk(root, followlinks=False):
         for name in dirs + files:
@@ -1024,7 +1101,7 @@ def tree(root):
             if not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)) or s.st_nlink != 1 and stat.S_ISREG(s.st_mode):
                 raise Hold("nonregular or hardlinked output")
             if stat.S_ISREG(s.st_mode):
-                generated_db = p.relative_to(root).as_posix() in (
+                generated_db = p in metadata_databases or p.relative_to(root).as_posix() in (
                     "Build/Intermediates.noindex/XCBuildData/build.db",
                     "Build/Intermediates.noindex/XCBuildData/build.db-wal",
                     "Build/Intermediates.noindex/XCBuildData/build.db-shm")
@@ -1039,8 +1116,8 @@ def tree(root):
     return entries
 
 
-def remove_tree(root):
-    entries = tree(root)
+def remove_tree(root, registry=None):
+    entries = tree(root, registry)
     manifest = root.parent.parent / ("remove-" + uuid.uuid4().hex + ".jsonl")
     with manifest.open("x") as out:
         for p, s in entries:

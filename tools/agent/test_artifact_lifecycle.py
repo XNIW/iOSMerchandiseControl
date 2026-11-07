@@ -4,8 +4,10 @@ import argparse
 import importlib.util
 import json
 import os
+import plistlib
 from pathlib import Path
 import signal
+import sqlite3
 import shutil
 import subprocess
 import sys
@@ -114,6 +116,103 @@ class LifecycleTests(unittest.TestCase):
         protected = self.output(active)
         (protected / "app.sqlite").write_bytes(b"SQLite format 3\0data")
         self.assertRaises(m.Hold, m.tree, protected)
+
+
+    def generated_metadata(self, root, product=False):
+        database = root / ("XCBuildData/build.db" if product else "database.sqlite3")
+        database.parent.mkdir(parents=True, exist_ok=True)
+        if database.exists():
+            database.unlink()  # Only this test's tiny generated placeholder.
+        names = {"info", "key_names", "rule_results"} if product else set("""Actions Activities
+Arguments Attachments BuildIssues DeveloperTools Devices DocumentLocations ExpectedFailures Expressions
+Invocations IssueTrackingMetadata Parameters PerformanceMetrics Platforms RepetitionPolicies RunDestinations
+SDKs SkipNotices SourceCodeContexts SourceCodeFrames SourceCodeLocations SourceCodeSymbolInfos
+TestCaseResultsByDestinationAndConfiguration TestCaseRuns TestCases TestDocumentations TestErrors TestIssues
+TestPlanConfigurations TestPlanRuns TestPlans TestSuiteRuns TestSuites TestTags TestValues TestableRuns
+Testables UserInfoKeyValues UserInfos""".split())
+        connection = sqlite3.connect(database)
+        try:
+            for name in names:
+                connection.execute('CREATE TABLE "' + name + '" (fixture TEXT)')
+            connection.commit()
+        finally:
+            connection.close()
+        if not product:
+            root_hash = "0~" + "A" * 86 + "=="
+            data = root / "Data"; data.mkdir(exist_ok=True)
+            (data / ("data." + root_hash)).write_bytes(b"generated result root fixture")
+            (root / "Info.plist").write_bytes(plistlib.dumps({
+                "dateCreated": m.dt.datetime(2026, 11, 7), "directoryImportMode": "concurrent",
+                "externalLocations": [], "rootId": {"hash": root_hash},
+                "storage": {"backend": "fileBacked2", "compression": "standard"},
+                "version": {"major": 3, "minor": 60}}))
+        return database
+
+    def test_registered_xcresult_metadata_cleanup_keeps_last_two_and_no_original_db_write(self):
+        outputs = []
+        for _ in range(3):
+            token = self.begin(); root = self.output(token); self.generated_metadata(root)
+            outputs.append(root); self.finish(token)
+        original = (outputs[0] / "database.sqlite3").read_bytes()
+        self.assertRaises(m.Hold, m.tree, outputs[0])
+        self.assertEqual((outputs[0] / "database.sqlite3").read_bytes(), original)
+        self.assertEqual(self.clean(True)["removed_outputs"], [str(outputs[0])])
+        self.assertTrue(all(p.exists() for p in outputs[1:]))
+        self.assertFalse(any(p.exists() for p in [outputs[1] / "database.sqlite3-wal", outputs[1] / "database.sqlite3-shm"]))
+
+    def test_xcresult_metadata_requires_registered_kind_format_and_schema(self):
+        for failure in ("unregistered", "wrong-kind", "wrong-info", "app-schema", "extra-app-db", "missing-root-reference"):
+            with self.subTest(failure=failure):
+                token = self.begin(); root = self.output(token); database = self.generated_metadata(root)
+                if failure == "unregistered":
+                    self.reg.read(token)
+                    run = self.reg.read(token); run["outputs"] = []; self.reg.save(run)
+                elif failure == "wrong-kind":
+                    run = self.reg.read(token); run["outputs"][0]["kind"] = "integral-directory"; self.reg.save(run)
+                elif failure == "wrong-info":
+                    value = plistlib.loads((root / "Info.plist").read_bytes()); value["version"]["minor"] = 61
+                    (root / "Info.plist").write_bytes(plistlib.dumps(value))
+                elif failure == "app-schema":
+                    connection = sqlite3.connect(database); connection.execute("CREATE TABLE Products (id TEXT)"); connection.close()
+                elif failure == "extra-app-db":
+                    (root / "Data/app.sqlite").write_bytes(b"SQLite format 3\0persistent app data")
+                else:
+                    next((root / "Data").iterdir()).unlink()
+                self.assertRaises(m.Hold, m.tree, root, self.reg)
+                self.assertTrue(database.exists())
+
+    def test_registered_intermediate_component_allows_only_build_metadata(self):
+        token = self.begin(); root = self.output(token, "products")
+        component = root / "Build/Intermediates.noindex"; self.generated_metadata(component, product=True)
+        self.assertRaises(m.Hold, m.tree, component)
+        with self.reg.exclusive():
+            m.remove_tree(component, self.reg)
+        self.assertFalse(component.exists()); self.assertTrue((root / "Build/Products/app.bin").exists())
+        for failure in ("unregistered", "app-schema", "extra-app-db"):
+            with self.subTest(failure=failure):
+                token = self.begin(); root = self.output(token, "products")
+                component = root / "Build/Intermediates.noindex"; database = self.generated_metadata(component, product=True)
+                if failure == "unregistered":
+                    run = self.reg.read(token); run["outputs"] = []; self.reg.save(run)
+                elif failure == "app-schema":
+                    connection = sqlite3.connect(database); connection.execute("CREATE TABLE Products (id TEXT)"); connection.close()
+                else:
+                    (component / "app.sqlite").write_bytes(b"SQLite format 3\0persistent app data")
+                self.assertRaises(m.Hold, m.remove_tree, component, self.reg)
+                self.assertTrue(database.exists()); self.assertTrue((root / "Build/Products/app.bin").exists())
+
+    def test_xcresult_database_signature_sidecars_and_opaque_app_payload_stay_protected(self):
+        for failure in ("signature", "sidecar", "opaque-sqlite"):
+            with self.subTest(failure=failure):
+                token = self.begin(); root = self.output(token); database = self.generated_metadata(root)
+                if failure == "signature":
+                    database.write_bytes(b"not an SQLite metadata database")
+                elif failure == "sidecar":
+                    (root / "database.sqlite3-wal").write_bytes(b"still unqualified sidecar")
+                else:
+                    (root / "Data/opaque.bin").write_bytes(b"SQLite format 3\0persistent app data")
+                self.assertRaises(m.Hold, m.remove_tree, root, self.reg)
+                self.assertTrue(database.exists())
 
     def test_reused_products_remain_until_the_registered_consumer_finishes(self):
         first = self.begin()
