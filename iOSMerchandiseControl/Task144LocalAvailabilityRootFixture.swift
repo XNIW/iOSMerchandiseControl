@@ -5931,7 +5931,10 @@ private final class Task144NativeNameReadbackView: UIView {
         var ancestors: [UIView] = []
         var ancestor = field.superview
         var reachedWindow = false
-        while let view = ancestor, ancestors.count < 16 {
+        // The exact field was found in this fully traversed window tree above.
+        // Bound its ancestor chain by that same qualified node count, rather
+        // than assuming a fixed number of OS-specific hosting wrappers.
+        while let view = ancestor, ancestors.count < visited {
             ancestors.append(view)
             if view === window { reachedWindow = true; break }
             ancestor = view.superview

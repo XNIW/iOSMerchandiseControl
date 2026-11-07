@@ -5130,10 +5130,16 @@ extension LocalAvailabilityRootUITests {
                 let state = try t19Wait(deadline: min(deadline, ProcessInfo.processInfo.systemUptime + (mode == "cycles" ? 45 : 80))) {
                     ($0["completed"] as? Int ?? 0) >= number
                 }
-                XCTAssertEqual(state["completed"] as? Int, number, "Each UI witness binds exactly one actual normal poll, no skipped observation")
+                let completedBeforeTabs = try XCTUnwrap(state["completed"] as? Int)
+                // Normal polls continue while XCTest traverses tabs. Witness
+                // every immutable indexed row in order, without skipping a poll
+                // merely because a later one has already completed.
+                XCTAssertGreaterThanOrEqual(completedBeforeTabs, number)
+                XCTAssertLessThanOrEqual(completedBeforeTabs, cycles)
                 let rows = try XCTUnwrap(state["cycles"] as? [[String: Any]])
                 XCTAssertEqual(rows.count, cycles)
                 let row = rows[number - 1]
+                XCTAssertEqual(row["cycle"] as? Int, number)
                 XCTAssertEqual(row["status"] as? String, "PASS")
                 XCTAssertEqual(row["source"] as? String, "foregroundPoll")
                 let observation = try XCTUnwrap(row["observation"] as? [String: Any])
@@ -5158,13 +5164,21 @@ extension LocalAvailabilityRootUITests {
                 let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.lifetime = .keepAlways
                 screenshot.name = "T19 cycle \(number) Options real date and status"; add(screenshot)
                 let afterTabs = try t19State()
-                XCTAssertEqual(afterTabs["completed"] as? Int, number)
+                let completedAfterTabs = try XCTUnwrap(afterTabs["completed"] as? Int)
+                XCTAssertGreaterThanOrEqual(completedAfterTabs, completedBeforeTabs)
+                XCTAssertLessThanOrEqual(completedAfterTabs, cycles)
                 XCTAssertEqual(afterTabs["verifiedText"] as? String, expectedVerified)
                 let unchangedRows = try XCTUnwrap(afterTabs["cycles"] as? [[String: Any]])
+                XCTAssertEqual(unchangedRows.count, rows.count)
+                XCTAssertEqual(try JSONSerialization.data(withJSONObject: Array(unchangedRows.prefix(completedBeforeTabs)), options: [.sortedKeys]),
+                    try JSONSerialization.data(withJSONObject: Array(rows.prefix(completedBeforeTabs)), options: [.sortedKeys]),
+                    "All previously completed producer rows must remain byte-identical while normal polls append")
                 XCTAssertEqual(try JSONSerialization.data(withJSONObject: unchangedRows[number - 1], options: [.sortedKeys]),
                     try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]))
                 uiRows.append(["cycle": number, "status": "PASS", "pid": pid, "frame": frame,
-                    "invocation": invocation, "tabs": ["Database", "History", "Inventory", "Options"], "verifiedText": expectedVerified])
+                    "invocation": invocation, "tabs": ["Database", "History", "Inventory", "Options"], "verifiedText": expectedVerified,
+                    "producerCompletedBeforeTabs": completedBeforeTabs, "producerCompletedAfterTabs": completedAfterTabs,
+                    "observedAppPID": try XCTUnwrap(afterTabs["pid"] as? Int)])
                 if cycles == 30 && [10, 20].contains(number) {
                     stage = "quiet-reopen-\(number)"
                     app.terminate(); XCTAssertEqual(app.state, .notRunning); app.launch()
@@ -5173,7 +5187,14 @@ extension LocalAvailabilityRootUITests {
                     }
                     let newPID = try XCTUnwrap(reopened["pid"] as? Int)
                     XCTAssertNotEqual(newPID, previousPID); previousPID = newPID
-                    XCTAssertEqual(reopened["completed"] as? Int, number, "Bootstrap is preserved, never counted among thirty polls")
+                    let completedAfterReopen = try XCTUnwrap(reopened["completed"] as? Int)
+                    XCTAssertGreaterThanOrEqual(completedAfterReopen, completedAfterTabs)
+                    XCTAssertLessThanOrEqual(completedAfterReopen, cycles)
+                    let reopenedRows = try XCTUnwrap(reopened["cycles"] as? [[String: Any]])
+                    XCTAssertEqual(reopenedRows.count, unchangedRows.count)
+                    XCTAssertEqual(try JSONSerialization.data(withJSONObject: Array(reopenedRows.prefix(completedAfterTabs)), options: [.sortedKeys]),
+                        try JSONSerialization.data(withJSONObject: Array(unchangedRows.prefix(completedAfterTabs)), options: [.sortedKeys]),
+                        "Reopen preserves every completed poll; the fixture appends foregroundPoll, never bootstrap")
                     XCTAssertEqual(reopened["verifiedText"] as? String, expectedVerified)
                 }
             }
@@ -5181,6 +5202,9 @@ extension LocalAvailabilityRootUITests {
             let final = try t19State()
             XCTAssertEqual(final["status"] as? String, "COMPLETE")
             XCTAssertEqual(final["completed"] as? Int, cycles)
+            XCTAssertEqual(uiRows.compactMap { $0["cycle"] as? Int }, Array(1...cycles),
+                "Every actual poll retains its own ordered native UI witness")
+            XCTAssertEqual(previousInvocations.count, cycles)
             if mode == "repeated-material" { XCTAssertEqual((final["variant"] as? [String: Any])?["status"] as? String, "PASS") }
             let evidence = XCTAttachment(data: try JSONSerialization.data(withJSONObject: final, options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
             evidence.name = "T19 complete passive ledger index"; evidence.lifetime = .keepAlways; add(evidence)
