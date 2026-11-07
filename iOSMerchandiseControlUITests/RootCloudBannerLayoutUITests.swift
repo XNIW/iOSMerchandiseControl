@@ -377,9 +377,11 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
               viewports.count == 1,
               // The synthetic controls occupy their own VStack band above the
               // app. Only that attested band is excluded from the quiet root.
-              (showsBanner ? viewports[0] != root.frame : viewports[0] == CGRect(
-                x: root.frame.minX, y: fixtureBands[0].maxY,
-                width: root.frame.width, height: root.frame.maxY - fixtureBands[0].maxY)),
+              (showsBanner ? viewports[0] != root.frame :
+                abs(viewports[0].minX - root.frame.minX) <= pointPrecision
+                && abs(viewports[0].minY - fixtureBands[0].maxY) <= pointPrecision
+                && abs(viewports[0].width - root.frame.width) <= pointPrecision
+                && abs(viewports[0].height - (root.frame.maxY - fixtureBands[0].maxY)) <= pointPrecision),
               banners.count == (showsBanner ? 1 : 0), selectedTabs == 1, held, !released,
               (isInventory || navigation[0].height > 0), controls[0].height > 0, tabBars[0].height > 0,
               !isInventory || (inventoryAnchors.count == 1 && inventoryAnchors[0].scroll.height > 0

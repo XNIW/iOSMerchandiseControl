@@ -3756,6 +3756,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 }
                 let review = app.buttons["Review"].firstMatch
                 let replace = app.alerts.buttons["Replace with cloud data"]
+                let forms = app.collectionViews
+                try scopeRequire(try checked({ forms.count == 1 }),
+                    stage: stage + "-unique-Options-Form", downstream: downstream)
+                let form = forms.element(boundBy: 0)
                 while ProcessInfo.processInfo.systemUptime < decisionDeadline {
                     if try checked({ keep.exists }) {
                         let keepHittable = try checked({ keep.isHittable })
@@ -3777,8 +3781,33 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             }
                         }
                         if drags < 5 {
+                            let formFrame = try checked({ form.frame })
+                            let navigation = try checked({ app.navigationBars["Options"].frame })
+                            let tabBar = try checked({ app.tabBars.firstMatch.frame })
+                            let viewport = formFrame.intersection(CGRect(x: formFrame.minX,
+                                y: navigation.maxY, width: formFrame.width,
+                                height: max(0, tabBar.minY - navigation.maxY)))
+                            try scopeRequire(viewport.width > 0 && viewport.height > 0,
+                                stage: stage + "-visible-Options-Form", downstream: downstream)
+                            let upward: Bool
+                            if reviewExists {
+                                let frame = try checked({ review.frame })
+                                try scopeRequire(frame.width > 0 && frame.height > 0,
+                                    stage: stage + "-Review-frame", downstream: downstream)
+                                upward = frame.midY > viewport.midY
+                            } else {
+                                let offsets = try checked({ c3OptionsScrollValues(form) })
+                                try scopeRequire(!offsets.isEmpty && Set(offsets).count == 1
+                                    && offsets[0].range(of: "^(100|[0-9]{1,2})%$", options: .regularExpression) != nil,
+                                    stage: stage + "-observed-Form-offset", downstream: downstream)
+                                // Review belongs to the first Cloud section.
+                                // When a retained offset hides it, seek the top
+                                // before scrolling toward lower content.
+                                upward = offsets[0] == "0%"
+                            }
                             drags += 1
-                            try checked({ app.swipeUp() })
+                            try checked({ c3OptionsDrag(form, viewport: viewport,
+                                formOrigin: formFrame.origin, upward: upward) })
                         }
                     }
                 }
