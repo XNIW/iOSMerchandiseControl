@@ -393,11 +393,12 @@ mc_artifact_begin() {
   MC_ARTIFACT_BASE="${MC_EVIDENCE_ABS}/agent-runs/managed-artifacts"
   local repo="$MC_IOS_REPO"
   case "$MC_COMMAND" in android*|physical\ android*) repo="$MC_ANDROID_REPO" ;; esac
-  local protections=()
-  [[ -n "${MC_ARTIFACT_PIN_REASON:-}" ]] && protections+=(--pin "$MC_ARTIFACT_PIN_REASON")
-  [[ "${MC_ARTIFACT_RETRY_PENDING:-0}" == "1" ]] && protections+=(--retry-pending)
-  [[ "${MC_ARTIFACT_FINAL_EVIDENCE:-0}" == "1" ]] && protections+=(--final-evidence)
-  MC_ARTIFACT_RUN="$(mc_artifact_call begin --run-id "$MC_RUN_ID" --owner "$$" --repo "$repo" --command "$MC_COMMAND" --dependency-root "${MC_IOS_SOURCE_PACKAGES_DIR:-$MC_ARTIFACT_BASE/shared-packages}" "${protections[@]}")" || {
+  local begin_args=(begin --run-id "$MC_RUN_ID" --owner "$$" --repo "$repo"
+    --command "$MC_COMMAND" --dependency-root "${MC_IOS_SOURCE_PACKAGES_DIR:-$MC_ARTIFACT_BASE/shared-packages}")
+  [[ -n "${MC_ARTIFACT_PIN_REASON:-}" ]] && begin_args+=(--pin "$MC_ARTIFACT_PIN_REASON")
+  [[ "${MC_ARTIFACT_RETRY_PENDING:-0}" == "1" ]] && begin_args+=(--retry-pending)
+  [[ "${MC_ARTIFACT_FINAL_EVIDENCE:-0}" == "1" ]] && begin_args+=(--final-evidence)
+  MC_ARTIFACT_RUN="$(mc_artifact_call "${begin_args[@]}")" || {
     MC_ARTIFACT_RUN=""
     MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}artifact_registry_unavailable"
     return 1

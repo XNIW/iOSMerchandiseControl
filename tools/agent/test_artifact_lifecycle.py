@@ -476,6 +476,55 @@ Testables UserInfoKeyValues UserInfos""".split())
         self.assertTrue(required.issubset(set(diff)))
         self.source.start()
 
+    def test_bash32_artifact_begin_preserves_mandatory_and_optional_arguments(self):
+        common = HELPER.parent / "common.sh"
+        optional_keys = ("MC_ARTIFACT_PIN_REASON", "MC_ARTIFACT_RETRY_PENDING",
+                         "MC_ARTIFACT_FINAL_EVIDENCE", "MC_IOS_SOURCE_PACKAGES_DIR")
+        for protected in (False, True):
+            with self.subTest(protected=protected):
+                capture = self.base / ("protected.args" if protected else "unflagged.args")
+                command = "android local-tests" if protected else "scan sensitive"
+                env = os.environ.copy()
+                for key in optional_keys:
+                    env.pop(key, None)
+                env.update(MC_TEST_COMMON=str(common), MC_TEST_CAPTURE=str(capture),
+                           MC_IOS_REPO=str(self.base / "ios source"),
+                           MC_ANDROID_REPO=str(self.base / "android source"),
+                           MC_EVIDENCE_ABS=str(self.base / "evidence path"),
+                           MC_RUN_ID="fixture-run", MC_COMMAND=command)
+                dependency = self.base / "evidence path/agent-runs/managed-artifacts/shared-packages"
+                if protected:
+                    dependency = self.base / "pinned packages"
+                    env.update(MC_ARTIFACT_PIN_REASON="native consumers pending",
+                               MC_ARTIFACT_RETRY_PENDING="1", MC_ARTIFACT_FINAL_EVIDENCE="1",
+                               MC_IOS_SOURCE_PACKAGES_DIR=str(dependency))
+                script = r'''source "$MC_TEST_COMMON"
+mc_artifact_call() {
+  printf '%s\0' "$@" > "$MC_TEST_CAPTURE"
+  printf '%s\n' fixture-token
+}
+mc_artifact_begin || exit "$?"
+test "$MC_ARTIFACT_RUN" = fixture-token || exit 91
+test -z "${MC_WARNINGS:-}" || exit 92
+trap - EXIT INT TERM
+'''
+                result = subprocess.run(["/bin/bash", "-uo", "pipefail", "-c", script],
+                                        env=env, capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stderr, "")
+                actual = capture.read_bytes().split(b"\0")
+                self.assertEqual(actual.pop(), b"")
+                actual = [value.decode() for value in actual]
+                self.assertTrue(actual[4].isdigit())
+                repo = self.base / ("android source" if protected else "ios source")
+                expected = ["begin", "--run-id", "fixture-run", "--owner", actual[4],
+                            "--repo", str(repo), "--command", command,
+                            "--dependency-root", str(dependency)]
+                if protected:
+                    expected += ["--pin", "native consumers pending", "--retry-pending", "--final-evidence"]
+                self.assertEqual(actual, expected)
+                self.assertNotIn("", actual)
+
     def test_cleanup_error_under_errexit_preserves_command_status(self):
         script = f'''source {str(HELPER.parent / 'common.sh')!r}
 MC_ARTIFACT_RUN=fixture
