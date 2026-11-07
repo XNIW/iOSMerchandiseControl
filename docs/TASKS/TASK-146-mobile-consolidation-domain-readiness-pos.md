@@ -21,6 +21,15 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — cinque regressioni native superate e R4 corretto — 2026-11-07T21:50Z
+
+- **✅ BUILD/STATIC ESEGUITI, PASS.** c5f98f24e8e440cbd0caca8d54ab1357f3ae88a6 Debug compila con sei diagnostiche identiche a09f. Review composta da4b→c5f con zero P0/P1/P2 nel perimetro. Il nuovo helper usa un solo pan verso il centro della banda e una snapshot coerente successiva. App e fixture identiche a09f. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-final-c5f-composition.ROOT_DELEGATED/REVIEW.ROOT_DELEGATED.json).
+- **✅ SIM ESEGUITO, 5 PASS / 1 FAIL.** C3 ritorno esplicito94,480s, callback negozio precedente21,345s, prezzi/restart/ACK perso53,987s, Supplier/Category48,875s e secondo Nome/reopen/ACK proprio60,902s PASS. Zero skip e runtime warning. La causa storica della troncatura Supplier da4b resta UNKNOWN. R4 fallisce30,460s prima dei gesti perché il guard richiedeva una sola finestra globale. Il conteggio effettivo e il tipo della finestra aggiuntiva sono UNKNOWN. [Risultato nativo](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-six-current-ui._28npon2/summary.ROOT.json).
+- **Correzione R4 ESEGUITA, verifica nativa NOT_RUN.** La query seleziona le finestre che contengono la navbar Options e continua a richiederne esattamente una. Soglia15s, limite5 gesti, piena visibilità, ID esatto del record e tutti gli oracoli business restano identici. Parse Swift e apply preimage PASS. T14 completo resta da verificare sul candidato corrente.
+- **Postflight ESEGUITO e budget rivisto.** Build con crescita osservata706637824B entro previsione1,1GB. Batch nativo con variazione del volume1463836672B oltre previsione600MB. Il minimo30GB è rimasto rispettato, la riserva operativa30,3GB è stata superata al ribasso di circa13MB al terminale. Raw nativo109608960B allocati, contributo fisico esclusivo e quota delle attività concorrenti UNKNOWN. Tutti processi posseduti terminati e lease rilasciata. Nessun nuovo SDK voluminoso ammesso nel budget corrente. Le verifiche successive proseguono in CI ospitata. Products correnti, compilatore caldo, primi FAIL e simboli pertinenti preservati.
+
+**Handoff operativo — ACTIVE / EXECUTION.** ROOT pubblica il singolo fix R4 e attende qualifica CI effettiva, poi integra iOS. Offline OS iOS DEFERRED_USER, campagne estese DIFFERITE. Android/Admin già integrate. Nessun REVIEW o DONE anticipato.
+
 ### Execution — CI conclusa e candidato UIKit successivo — 2026-11-07T21:35Z
 
 - **✅ CI ESEGUITA, FAIL.** Run42405524562 su da4bb501 conclusa. Discovery2101,2035 PASS,7 FAIL,43 skip opt-in e16 DEFERRED_USER. Unit1916 PASS/39skip, Release, Analyze e sensitive PASS. Tutte le64 prove T18 attive PASS nelle quattro lingue. T19 completa trenta cicli e due riavvii PASS. Restano sette failure UI esplicite, senza attribuzione dei PASS al successore. [CI da4b](https://github.com/XNIW/iOSMerchandiseControl/actions/runs/42405524562).

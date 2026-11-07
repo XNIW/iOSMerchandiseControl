@@ -1258,7 +1258,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let optionsNavigation = app.navigationBars["Options"]
         if app.navigationBars.count == 1 && optionsNavigation.exists && app.tabBars.buttons["Options"].isSelected {
             let forms = app.collectionViews
-            let windows = app.windows
+            let windows = app.windows.containing(.navigationBar, identifier: "Options")
             let tabBar = app.tabBars.firstMatch
             for drag in 0...5 {
                 guard ProcessInfo.processInfo.systemUptime < deadline,
