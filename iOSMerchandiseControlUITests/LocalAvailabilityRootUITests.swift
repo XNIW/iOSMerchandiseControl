@@ -530,6 +530,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             && t14Number(before["selectionEnd"], "before-selection-end") == Double(draft.utf16.count),
             "native-meaningful-selected-range-before-cutover")
         let oldGeneration = try XCTUnwrap(before["activeManifestGeneration"] as? String)
+        let beforeReleaseAppUptime = try t14Number(before["uptime"], "before-release-app-clock")
         t14Capture("600s meaningful selection, focused unsaved draft, measured scroll before release", screenshot: true)
         try t14Require(app.staticTexts["task144.controlled.held"].exists, "release-only-after-long-use")
         let release = app.buttons["task144.controlled.editor.release"]
@@ -552,10 +553,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         t14Capture("preserved selection/focus/scroll and actual input after cutover", screenshot: true)
         let beforeCancel = try t14Observe("last-editor-readback-before-real-Cancel")
         try t14Editor(beforeCancel, expected: continued, stage: "before-Cancel")
-        try t14Require(t14ReadbackBool(beforeCancel, "pendingSaveA") == true
-            && t14ReadbackBool(beforeCancel, "terminalSaveA") == false, "fresh-Save-A-still-pending-before-editor-close")
-        try t14Require(!app.staticTexts["task144.controlled.activated-and-drained"].exists,
-            "terminal-not-already-observed-before-editor-close")
+        let pendingBeforeClose = try XCTUnwrap(t14ReadbackBool(beforeCancel, "pendingSaveA"))
+        let acknowledgedBeforeClose = try XCTUnwrap(t14ReadbackBool(beforeCancel, "terminalSaveA"))
+        try t14Require(pendingBeforeClose != acknowledgedBeforeClose,
+            "fresh-Save-A-is-exactly-pending-or-own-ACK-before-editor-close")
+        if acknowledgedBeforeClose {
+            // TASK-146 permits automatic work while a value draft is open.
+            // An early ACK still needs the current physical store and counts.
+            try t14RequireTerminalProof(beforeCancel, after: beforeReleaseAppUptime)
+        } else {
+            let runtime = try XCTUnwrap(beforeCancel["runtime"] as? [String: Any])
+            try t14Require(runtime["terminalPublished"] as? Bool == false,
+                "pending-Save-A-has-no-published-terminal-before-editor-close")
+        }
         let lastInputStarted = ProcessInfo.processInfo.systemUptime
         app.buttons["Cancel"].tap()
         let quietStarted = ProcessInfo.processInfo.systemUptime
@@ -571,19 +581,40 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let terminal = try t14Observe("quiet-terminal-no-input")
         try t14Require(t14ReadbackBool(terminal, "pendingSaveA") == false
             && t14ReadbackBool(terminal, "terminalSaveA") == true, "fresh-terminal-ACK-and-outbox-readback-after-quiet")
-        let runtime = try XCTUnwrap(terminal["runtime"] as? [String: Any])
+        try t14RequireTerminalProof(terminal,
+            after: pendingBeforeClose ? quietAppUptime : beforeReleaseAppUptime)
+        try t14Require(search.value as? String == "LOCAL-ROOT" && app.tabBars.buttons["Database"].isSelected
+            && app.staticTexts[savedName].exists && app.alerts.count == 0, "quiet-terminal-query-tab-saved-A-no-modal")
+        t14Capture("quiet terminal; runner-last-input-start=\(lastInputStarted); input-end/quiet-start=\(quietStarted); terminal=\(ProcessInfo.processInfo.systemUptime); app-quiet-boundary=\(quietAppUptime); pending-before-close=\(pendingBeforeClose); current own ACK and exact counters verified before and after Cancel; C1 review Cancel is separate", screenshot: true)
+        witnessCompleted = true
+    }
+
+    private func t14RequireTerminalProof(_ value: [String: Any], after boundary: Double) throws {
+        let runtime = try XCTUnwrap(value["runtime"] as? [String: Any])
+        let generation = try XCTUnwrap(value["activeManifestGeneration"] as? String)
         let callback = try XCTUnwrap(runtime["callback"] as? [String: Any])
+        let result = try XCTUnwrap(callback["result"] as? String)
+        try t14Require(t14ReadbackBool(value, "pendingSaveA") == false
+            && t14ReadbackBool(value, "terminalSaveA") == true
+            && runtime["terminalPublished"] as? Bool == true
+            && runtime["bodyProof"] as? Bool == true
+            && runtime["generation"] as? String == generation
+            && runtime["catalogAttempts"] as? Int == 1
+            && runtime["catalogEvents"] as? Int == 1,
+            "fresh-current-own-ACK-one-request-one-event-and-sent-outbox")
         try t14Require(callback["status"] as? String == "OBSERVED"
             && callback["namespace"] as? String == runID && callback["pid"] as? Int == t14AppPID
             && callback["sourceCurrent"] as? Bool == true
+            && callback["sourcePresentationID"] as? String == generation
+            && callback["currentPresentationID"] as? String == generation
+            && (result.hasSuffix(".success.none") || result.hasSuffix(".noWork.none"))
             && (callback["invocationID"] as? String).map({ !$0.isEmpty && $0 != "missing" && $0 != "none" }) == true,
-            "actual-current-runtime-callback-provenance")
-        try t14Require(try t14Number(callback["uptime"], "terminal-callback-uptime")
-            > quietAppUptime, "current-callback-after-observed-quiet-boundary-or-NOT_QUALIFIED")
-        try t14Require(search.value as? String == "LOCAL-ROOT" && app.tabBars.buttons["Database"].isSelected
-            && app.staticTexts[savedName].exists && app.alerts.count == 0, "quiet-terminal-query-tab-saved-A-no-modal")
-        t14Capture("quiet terminal; runner-last-input-start=\(lastInputStarted); input-end/quiet-start=\(quietStarted); terminal=\(ProcessInfo.processInfo.systemUptime); app-quiet-boundary=\(quietAppUptime); callback must follow this post-Cancel observation, no cross-clock subtraction; C1 review Cancel is separate", screenshot: true)
-        witnessCompleted = true
+            "actual-current-runtime-terminal-callback-provenance")
+        let callbackUptime = try t14Number(callback["uptime"], "terminal-callback-uptime")
+        let observationUptime = try t14Number(value["uptime"], "terminal-observation-uptime")
+        try t14Require(callbackUptime > boundary
+            && callbackUptime <= observationUptime,
+            "current-callback-after-required-boundary-before-fresh-readback")
     }
 
     private func t14Require(_ condition: Bool, _ stage: String) throws {
@@ -720,12 +751,24 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let keyboard = try XCTUnwrap(value["keyboardFrame"] as? [Double])
         try t14Require(keyboard.count == 4 && keyboard.allSatisfy({ $0.isFinite }) && keyboard[2] > 0 && keyboard[3] > 0,
             "real-keyboard-geometry")
-        return tuple + keyboard
+        return try t14NativePixels(tuple + keyboard, in: value)
     }
 
     private func t14ScrollPosition(_ value: [String: Any]) throws -> [Double] {
         let scroll = try XCTUnwrap(value["scroll"] as? [String: Any])
-        return [try t14Number(scroll["offsetX"], "actual-scroll-x"), try t14Number(scroll["offsetY"], "actual-scroll-y")]
+        let x = try t14Number(scroll["offsetX"], "actual-scroll-x")
+        let y = try t14Number(scroll["offsetY"], "actual-scroll-y")
+        return try t14NativePixels([x, y], in: value)
+    }
+
+    private func t14NativePixels(_ points: [Double], in value: [String: Any]) throws -> [Double] {
+        let scale = try t14Number(value["displayScale"], "native-display-scale")
+        try t14Require(scale > 0, "positive-native-display-scale")
+        // Compare the same physical pixels across new UIKit view instances.
+        // Raw point coordinates remain in the attachments for diagnosis.
+        let pixels = points.map { ($0 * scale).rounded() }
+        try t14Require(pixels.allSatisfy { $0.isFinite }, "finite-native-pixel-coordinates")
+        return [scale] + pixels
     }
 
     private func t14StableEditor(expected: String, stage: String) throws -> [String: Any] {
@@ -1212,6 +1255,46 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func r4Reveal(_ element: XCUIElement) {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
+        let optionsNavigation = app.navigationBars["Options"]
+        if app.navigationBars.count == 1 && optionsNavigation.exists && app.tabBars.buttons["Options"].isSelected {
+            let forms = app.collectionViews
+            let windows = app.windows
+            let tabBar = app.tabBars.firstMatch
+            for drag in 0...5 {
+                guard ProcessInfo.processInfo.systemUptime < deadline,
+                      forms.count == 1, windows.count == 1, tabBar.exists else { break }
+                let form = forms.element(boundBy: 0)
+                let formFrame = form.frame
+                let windowFrame = windows.element(boundBy: 0).frame
+                let navigationFrame = optionsNavigation.frame
+                let tabFrame = tabBar.frame
+                guard [formFrame, windowFrame, navigationFrame, tabFrame].allSatisfy({ frame in
+                    [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                        && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1
+                }), tabFrame.minY > navigationFrame.maxY else { break }
+                let viewport = formFrame.intersection(windowFrame).intersection(CGRect(
+                    x: windowFrame.minX, y: navigationFrame.maxY, width: windowFrame.width,
+                    height: tabFrame.minY - navigationFrame.maxY))
+                guard viewport.width > 24, viewport.height > 24,
+                      ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let exists = element.exists
+                let target = exists ? element.frame : nil
+                if let target, [target.minX, target.minY, target.maxX, target.maxY].allSatisfy({ $0.isFinite }),
+                   !target.isNull, !target.isInfinite, target.width > 0, target.height > 0,
+                   viewport.contains(target), element.isHittable,
+                   ProcessInfo.processInfo.systemUptime < deadline { return }
+                guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let upward = target.map { $0.midY > viewport.midY } ?? true
+                let distance = min(160, viewport.height - 24)
+                let startY = upward ? viewport.maxY - 12 : viewport.minY + 12
+                let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                    dx: viewport.midX - formFrame.minX, dy: startY - formFrame.minY))
+                start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
+            }
+            XCTFail("R4 control not reachable within 15 seconds and 5 drags")
+            return
+        }
         for drag in 0...5 {
             if element.exists && element.isHittable { return }
             guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
@@ -4180,28 +4263,29 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     }
                     if !reviewTapped {
                         let reviewExists = try checked({ review.exists })
+                        try scopeRequire(try checked({ app.navigationBars["Options"].exists }),
+                            stage: stage + "-actual-Options-navigation", downstream: downstream)
+                        let observation = try c3OptionsViewport(form, stage: stage + "-decision", ordinal: drags,
+                            deadline: decisionDeadline, collectContentAnchors: false, downstream: downstream)
+                        let viewport = observation.viewport
+                        var reviewFrame: CGRect?
                         if reviewExists {
-                            let reviewHittable = try checked({ review.isHittable })
-                            if reviewHittable {
+                            let frame = try checked({ review.frame })
+                            try scopeRequire([frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                                && !frame.isNull && !frame.isInfinite && frame.width > 0 && frame.height > 0,
+                                stage: stage + "-Review-frame", downstream: downstream)
+                            reviewFrame = frame
+                            // Hittability alone admitted a Review tap above the
+                            // actual Options Form. Admit its entire current frame.
+                            if viewport.contains(frame), try checked({ review.isHittable }) {
                                 reviewTapped = true
                                 try checked({ review.tap() })
                                 continue
                             }
                         }
                         if drags < 5 {
-                            let formFrame = try checked({ form.frame })
-                            let navigation = try checked({ app.navigationBars["Options"].frame })
-                            let tabBar = try checked({ app.tabBars.firstMatch.frame })
-                            let viewport = formFrame.intersection(CGRect(x: formFrame.minX,
-                                y: navigation.maxY, width: formFrame.width,
-                                height: max(0, tabBar.minY - navigation.maxY)))
-                            try scopeRequire(viewport.width > 0 && viewport.height > 0,
-                                stage: stage + "-visible-Options-Form", downstream: downstream)
                             let upward: Bool
-                            if reviewExists {
-                                let frame = try checked({ review.frame })
-                                try scopeRequire(frame.width > 0 && frame.height > 0,
-                                    stage: stage + "-Review-frame", downstream: downstream)
+                            if let frame = reviewFrame {
                                 upward = frame.midY > viewport.midY
                             } else {
                                 let offsets = try checked({ c3OptionsScrollValues(form) })
@@ -4215,7 +4299,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             }
                             drags += 1
                             try checked({ c3OptionsDrag(form, viewport: viewport,
-                                formOrigin: formFrame.origin, upward: upward) })
+                                formOrigin: observation.formOrigin, upward: upward) })
                         }
                     }
                 }

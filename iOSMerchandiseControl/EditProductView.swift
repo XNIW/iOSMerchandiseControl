@@ -668,7 +668,9 @@ struct EditProductView: View {
         guard nativeRestoration() == restored, let desired = pendingNativeRestoration,
               let field = retainedFocusedField,
               let lower = desired.selectionLowerBound, let upper = desired.selectionUpperBound else { return }
-        restoreSelection(field: field, lower: lower, upper: upper)
+        if retainedSelectionOffsets != (lower..<upper) {
+            restoreSelection(field: field, lower: lower, upper: upper)
+        }
         editorScrollOffset = restored.offset
         pendingNativeRestoration = nil
         nativeRestorationID = nil
@@ -1753,6 +1755,18 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
     static func dismantleUIView(_ view: AttachmentView, coordinator: ()) { view.invalidate() }
 
     final class AttachmentView: UIView {
+        private struct Verification: Equatable {
+            let restorationID: UUID
+            let configurationVersion: Int
+            let windowID: ObjectIdentifier
+            let fieldID: ObjectIdentifier
+            let scrollID: ObjectIdentifier
+            let fieldFrameInWindow: CGRect
+            let bounds: CGRect
+            let contentSize: CGSize
+            let adjustedInsets: UIEdgeInsets
+        }
+        private var verification: Verification?
         private var configuration: ProductEditorNativeStateBridge?
         private weak var observedScroll: UIScrollView?
         private var offsetObservation: NSKeyValueObservation?
@@ -1781,6 +1795,7 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
             stopObservations()
         }
         private func stopObservations() {
+            verification = nil
             offsetObservation?.invalidate()
             offsetObservation = nil
             observedScroll = nil
@@ -1806,13 +1821,21 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
         private func observeAttachedField() {
             guard let configuration, let window else { return }
             let observedConfigurationVersion = configurationVersion
+            var cappedRestoration: Restoration?
             if restorationAttempts >= 4, let desired = configuration.restoration(),
                observedRestorationID == desired.id {
-                guard configurationVersion == observedConfigurationVersion,
-                      configuration.restoration() == desired else { return }
-                configuration.abandoned(desired)
-                schedule()
-                return
+                cappedRestoration = desired
+            }
+            defer {
+                // The fourth write can still be confirmed on this later turn.
+                // Missing native views must also retire the same capped request.
+                if let desired = cappedRestoration,
+                   configurationVersion == observedConfigurationVersion,
+                   self.configuration?.restoration() == desired {
+                    verification = nil
+                    configuration.abandoned(desired)
+                    schedule()
+                }
             }
             guard let placeholder = configuration.placeholder,
                   !placeholder.isEmpty, let text = configuration.text else { return }
@@ -1859,9 +1882,18 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
                 if observedRestorationID != desired.id {
                     restorationAttempts = 0
                     observedRestorationID = desired.id
+                    verification = nil
+                }
+                guard configurationVersion == observedConfigurationVersion,
+                      configuration.restoration() == desired else { return }
+                if scroll.isTracking || scroll.isDragging || scroll.isDecelerating {
+                    verification = nil
+                    configuration.abandoned(desired)
+                    schedule()
+                    return
                 }
                 let nativeText = field.text ?? ""
-                guard restorationAttempts < 4, desired.offset.x.isFinite, desired.offset.y.isFinite,
+                guard desired.offset.x.isFinite, desired.offset.y.isFinite,
                       nativeText == text, desired.lowerCharacter >= 0,
                       desired.upperCharacter >= desired.lowerCharacter,
                       let lowerIndex = nativeText.index(nativeText.startIndex,
@@ -1875,23 +1907,44 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
                 guard let lower = field.position(from: field.beginningOfDocument, offset: lowerUTF16),
                       let upper = field.position(from: field.beginningOfDocument, offset: upperUTF16),
                       let range = field.textRange(from: lower, to: upper) else { return }
-                restorationAttempts += 1
-                defer {
-                    // A failed fourth attempt gets one coalesced abandonment
-                    // turn. A successful callback already clears this request.
-                    if restorationAttempts == 4, self.configuration?.restoration() == desired {
-                        schedule()
-                    }
+                let selectedRangeMatches = field.selectedTextRange.map {
+                    field.offset(from: field.beginningOfDocument, to: $0.start) == lowerUTF16
+                        && field.offset(from: field.beginningOfDocument, to: $0.end) == upperUTF16
+                } ?? false
+                let readVerification = {
+                    Verification(restorationID: desired.id, configurationVersion: observedConfigurationVersion,
+                        windowID: ObjectIdentifier(window), fieldID: ObjectIdentifier(field),
+                        scrollID: ObjectIdentifier(scroll), fieldFrameInWindow: field.convert(field.bounds, to: window),
+                        bounds: scroll.bounds, contentSize: scroll.contentSize,
+                        adjustedInsets: scroll.adjustedContentInset)
                 }
+                // UIKit may scroll asynchronously after realizing a selection.
+                // Complete only on a later coalesced observation of this layout.
+                if verification == readVerification(), scroll.contentOffset == desired.offset,
+                   selectedRangeMatches {
+                    guard configurationVersion == observedConfigurationVersion,
+                          configuration.restoration() == desired, field.isFirstResponder,
+                          (field.text ?? "").utf16.elementsEqual(nativeText.utf16) else { return }
+                    verification = nil
+                    configuration.restored(desired)
+                    return
+                }
+                guard restorationAttempts < 4 else { return }
+                restorationAttempts += 1
+                defer { schedule() }
                 // Revalidate before every native effect; no retired models.
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired,
-                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16) else { return }
-                scroll.setContentOffset(desired.offset, animated: false)
+                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16),
+                      !scroll.isTracking, !scroll.isDragging, !scroll.isDecelerating else { return }
+                if !selectedRangeMatches { field.selectedTextRange = range }
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired, field.isFirstResponder,
-                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16) else { return }
-                field.selectedTextRange = range
+                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16),
+                      !scroll.isTracking, !scroll.isDragging, !scroll.isDecelerating else { return }
+                if scroll.contentOffset != desired.offset {
+                    scroll.setContentOffset(desired.offset, animated: false)
+                }
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired,
                       (field.text ?? "").utf16.elementsEqual(nativeText.utf16),
@@ -1899,8 +1952,9 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
                       let selection = field.selectedTextRange,
                       field.offset(from: field.beginningOfDocument, to: selection.start) == lowerUTF16,
                       field.offset(from: field.beginningOfDocument, to: selection.end) == upperUTF16 else { return }
-                configuration.restored(desired)
+                verification = readVerification()
             } else {
+                verification = nil
                 configuration.capture(scroll.contentOffset)
             }
         }

@@ -252,6 +252,8 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
 
     static func record(_ kind: String, _ closedFacts: String, callsite: String = #function) {
         guard enabled || (observesScopeRevalidation && kind == "scope-revalidate-denied") else { return }
+        // Keep the input fixture's bounded buffer available for its actual edits.
+        if observesRelatedInput, !kind.hasPrefix("related-supplier-"), kind != "scope-revalidate-denied" { return }
         let buffer = shared
         buffer.lock.lock()
         let key = kind + ":" + callsite
@@ -1720,6 +1722,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         }
 // TASK145_SCOPE_SWITCH_INSERT_END C-root-startup
         guard isPreparedForRoot, !hasStarted else { return }
+        // This ordering proof starts fresh recovery only after the old
+        // heartbeat has crossed the real shop-change lease invalidation.
+        guard !provesShopCallbackOrder || callbackHeartbeatEntered else { return }
         hasStarted = true
         if restartControl != nil {
             // Sequence 2 uses the already qualified initial generation. There
@@ -1856,7 +1861,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         callbackHeartbeatEntered = true
         facts.insert("task144.controlled.previous-shop-callback-entered")
         Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-entered", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
-        await withCheckedContinuation { callbackHeartbeatContinuation = $0 }
+        await withCheckedContinuation {
+            callbackHeartbeatContinuation = $0
+            // Register suspension before enqueueing the existing producer.
+            // Its unchanged checkpoint boundary releases this old callback.
+            startIfNeeded()
+        }
         facts.insert("task144.controlled.previous-shop-callback-released")
         Task144RootObservation.record("fixture-boundary", "branch.existing-previous-callback-released", callsite: "Task144.awaitControlledShopHeartbeatForOrderingProof")
         return true
@@ -2804,7 +2814,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             "pid": pid, "namespace": namespace.uuidString.lowercased(),
             "bodyProof": Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer),
             "generation": controller.activeManifest?.generationID.uuidString.lowercased() ?? "missing",
-            "defaults": defaults, "callback": callback]
+            "defaults": defaults, "callback": callback,
+            "catalogAttempts": catalogRemote.attemptCount, "catalogEvents": catalogRemote.eventCount,
+            "terminalPublished": facts.contains("task144.controlled.activated-and-drained")]
         // Reuse existing fresh-context readbacks without publishing facts or
         // changing the terminal poll. A read error is never an empty queue.
         do { observed["pendingSaveA"] = ["status": "VALUE", "value": try durableSaveReadback()] }
@@ -3173,6 +3185,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             result.append(contentsOf: predicates.map { "\(prefix)predicate.\($0.0).\($0.1)" })
         } catch { result.append("\(prefix)predicates.read-failed") }
         return result
+    }
+
+    /// Keep repeated physical readback checks without republishing an unchanged milestone.
+    private func publishObservedFactOnce(_ fact: String) {
+        guard !facts.contains(fact) else { return }
+        facts.insert(fact)
     }
 
     private func publishAutomaticObservation(_ diagnostic: [String]) {
@@ -4057,7 +4075,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   control.state.priceRequests.isEmpty, control.state.priceIngressCount == 0,
                   control.state.catalogIngressCount == 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
             if control.state.childBefore == nil { control.state.childBefore = LocalPendingChangeCASToken(child); try control.persist() }
-            if !stateStore.state.phase.isAutomaticWorkActive { facts.insert("task145.r4.saved-rejected") }
+            if !stateStore.state.phase.isAutomaticWorkActive { publishObservedFactOnce("task145.r4.saved-rejected") }
             return false
         }
         let receiptEntry = receipt!
@@ -4073,7 +4091,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if let previous = control.state.receiptJSON {
             guard previous == json else { throw SyncStoreGenerationError.activationReadBackFailed }
         } else { control.state.receiptJSON = json; try control.persist() }
-        facts.insert("task145.r4.adopted-durable")
+        publishObservedFactOnce("task145.r4.adopted-durable")
         guard let later = control.state.laterPending else { return false }
         guard let laterRow = changes.first(where: { $0.changeID == later.changeID }),
               laterRow.idempotencyKey == later.idempotencyKey, laterRow.changedFieldsRaw == "itemnumber",
@@ -4578,7 +4596,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if control.state.secondSavedToken == nil {
             if changes.count == 1, product.productName == Task145SaveBControl.nameA,
                first.matches(a), control.aHeld {
-                facts.insert("task145.save-b.a-committed-response-held")
+                publishObservedFactOnce("task145.save-b.a-committed-response-held")
                 refreshAutomaticObservation()
                 return false
             }
@@ -4647,7 +4665,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     control.state.pendingReopenToken = LocalPendingChangeCASToken(b)
                     try control.persist()
                 }
-                facts.insert("task145.save-b.ack-a-b-pending")
+                publishObservedFactOnce("task145.save-b.ack-a-b-pending")
             }
             try Task126OwnerStoreGate.revalidateAutomaticScope(scope)
             refreshAutomaticObservation()
@@ -4783,18 +4801,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 guard saved.matches(change), control.state.requests.isEmpty, control.state.committed.isEmpty,
                       control.state.envelope == nil, control.state.product.productName == "Safe local baseline",
                       outbox.allSatisfy({ !LocalPendingBusinessAttemptStore.isSealed($0) }) else { return false }
-                facts.insert("task145.restart.pre-send-durable-zero-rpc")
+                publishObservedFactOnce("task145.restart.pre-send-durable-zero-rpc")
             } else if let bytes = control.state.envelope {
                 let envelope = try control.decoded(bytes)
                 guard envelope.pending.matches(change), control.state.requests == [bytes],
                       control.state.committed == [saved.changeID], control.state.product.productName == Task145SaveBControl.nameA,
                       (reopening || control.reopening || control.responseHeld),
                       try saveBEnvelope(id: product.remoteID!, payload: envelope.payload.call.updateProduct.payload, scope: scope) == bytes else { return false }
-                facts.insert("task145.restart.post-commit-response-held")
+                publishObservedFactOnce("task145.restart.post-commit-response-held")
             } else {
                 // Initial Save is durable; only the user restores availability.
                 guard !reopening, saved.matches(change), control.state.requests.isEmpty else { return false }
-                facts.insert("task145.restart.saved-before-admission")
+                publishObservedFactOnce("task145.restart.saved-before-admission")
             }
             if reopening { facts.insert("task145.restart.pending-reopen-qualified") }
             try Task126OwnerStoreGate.revalidateAutomaticScope(scope)
@@ -5170,7 +5188,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             if control.state.historyFeedback != nil {
                 try captureHistoryFeedback("a-local", entry: history[0], changes: changes, generation: manifest.generationID)
             }
-            facts.insert("task145.domain.a-durable-held-page")
+            publishObservedFactOnce("task145.domain.a-durable-held-page")
             refreshAutomaticObservation()
             return true
         }
@@ -5206,7 +5224,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             if b.isEmpty {
                 guard !reopening, control.state.savedB.isEmpty,
                       priceMode ? product.retailPrice == 12 : history[0].title == Task145DomainControl.titleA else { return false }
-                facts.insert("task145.domain.a-committed-response-held")
+                publishObservedFactOnce("task145.domain.a-committed-response-held")
                 refreshAutomaticObservation()
                 return true
             }
@@ -5233,7 +5251,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             if reopening {
                 guard control.state.firstPID != ProcessInfo.processInfo.processIdentifier else { return false }
                 facts.insert("task145.domain.pending-reopen-qualified")
-            } else { facts.insert("task145.domain.b-durable-a-held") }
+            } else { publishObservedFactOnce("task145.domain.b-durable-a-held") }
             try Task126OwnerStoreGate.revalidateAutomaticScope(scope)
             refreshAutomaticObservation()
             return true
@@ -5856,7 +5874,8 @@ private struct Task144ControlledRootControls: View {
         if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1" {
             // Reserve existing rows without exposing absent facts to AX.
             facts.formUnion(["task144.controlled.held", "task144.controlled.released",
-                "task144.controlled.activated", "task144.controlled.activated-and-drained"])
+                "task144.controlled.activated", "task144.controlled.activated-and-drained",
+                "task144.controlled.queue-empty-no-duplicates"])
         }
         return facts.sorted()
     }
@@ -6186,6 +6205,7 @@ private final class Task144NativeNameReadbackView: UIView {
             return encode(result)
         }
         result["windowBounds"] = windowBounds
+        result["displayScale"] = Double(window.traitCollection.displayScale)
         var pending: [UIView] = [window]
         var fields: [UITextField] = []
         var visited = 0
