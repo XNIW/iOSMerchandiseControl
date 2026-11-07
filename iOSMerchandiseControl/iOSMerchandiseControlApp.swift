@@ -107,6 +107,7 @@ struct iOSMerchandiseControlApp: App {
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
         #if DEBUG
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            controlledRoot?.prepareIfNeeded()
             NSLog("TASK146_B2_COST39 phase.app-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         if controlledRoot != nil { return }
