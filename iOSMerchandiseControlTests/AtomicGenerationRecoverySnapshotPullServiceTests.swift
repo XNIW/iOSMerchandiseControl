@@ -9833,9 +9833,18 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             if blockedSupplier {
                 let supplier = Supplier(name: String(repeating: "X", count: 161))
                 context.insert(supplier)
-                try LocalPendingChangeAccumulator(context: context, ownerUserID: proof.fixture.ownerUserID,
-                    storeIdentity: proof.scope.storeIdentity).recordSupplierChange(
-                        supplier: supplier, operation: .create, origin: .manualCatalogSave)
+                // Legacy persisted rows can predate the current text validator.
+                let identity = proof.scope.storeIdentity
+                let time = Date(timeIntervalSince1970: 1_700_000_000)
+                context.insert(LocalPendingChange(ownerUserID: proof.fixture.ownerUserID,
+                    ownerHash: proof.scope.accountHash, storeId: identity.storeId,
+                    localStoreId: identity.localStoreId, syncProtocolVersion: identity.syncProtocolVersion,
+                    schemaVersion: identity.schemaVersion, storeEpoch: identity.storeEpoch,
+                    entityKind: .supplier, operation: .create, status: .pending, origin: .manualCatalogSave,
+                    logicalKey: LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: supplier.name),
+                    changedFields: ["name"],
+                    intendedFingerprintHash: LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier),
+                    createdAt: time, updatedAt: time))
             }
             try context.save()
             return change.changeID

@@ -99,7 +99,14 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
             if attention.exists && attention.isHittable { attentionWasReachable = true }
             if attentionWasReachable && diagnostics.isHittable { break }
             guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
-            app.swipeUp()
+            let viewport = returned.nativeViewport
+            let top = max(viewport.minY, try XCTUnwrap(returned.navigationBar).maxY) + 24
+            let bottom = returned.tabBar.minY - 24
+            try requirePresentation(bottom > top + 40, "usable-Options-drag-viewport")
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let start = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: bottom - app.frame.minY))
+            let end = origin.withOffset(CGVector(dx: viewport.midX - app.frame.minX, dy: top - app.frame.minY))
+            start.press(forDuration: 0, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0)
         }
         try requirePresentation(attentionWasReachable && diagnostics.isHittable,
             "scoped-error-and-diagnostics-reachable-in-Options")

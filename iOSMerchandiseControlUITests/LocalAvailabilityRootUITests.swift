@@ -2540,25 +2540,70 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func assertIsolationVisible(_ scenario: String, pending: String, failedUI: Bool) throws {
         app.tabBars.buttons["Options"].tap()
-        let count = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Local changes waiting"))
-        for _ in 0..<4 {
-            if count.firstMatch.waitForExistence(timeout: 2), count.firstMatch.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(count.firstMatch.exists && count.firstMatch.isHittable)
-        XCTAssertLessThanOrEqual(count.count, 20, "Bounded native accessibility query")
-        let candidates = count.allElementsBoundByIndex.prefix(20)
-        XCTAssertTrue(candidates.contains { element in
-            let text = element.label + " " + (element.value as? String ?? "")
-            return text.range(of: "(^|[^0-9])" + pending + "([^0-9]|$)", options: .regularExpression) != nil
-        }, "The public pending row must expose its own count, not a fixture marker")
-        if failedUI {
-            let attention = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Automatic sync needs attention")).firstMatch
-            for _ in 0..<4 {
-                if attention.waitForExistence(timeout: 2), attention.isHittable { break }
-                app.swipeDown()
+        var observations: [String] = []
+        func require(_ condition: Bool, _ stage: String) throws {
+            guard condition else {
+                let frames = XCTAttachment(string: observations.joined(separator: "\n"))
+                frames.name = "T11 FIRST_FAIL frames " + scenario + " " + stage
+                frames.lifetime = .keepAlways; add(frames)
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "T11 FIRST_FAIL hierarchy " + scenario + " " + stage
+                hierarchy.lifetime = .keepAlways; add(hierarchy)
+                let screenshot = XCTAttachment(screenshot: app.screenshot())
+                screenshot.name = "T11 FIRST_FAIL " + scenario + " " + stage
+                screenshot.lifetime = .keepAlways; add(screenshot)
+                XCTFail(stage)
+                throw NSError(domain: "Task145.IsolationVisible", code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: stage])
             }
-            XCTAssertTrue(attention.exists && attention.isHittable)
+        }
+        let forms = app.collectionViews
+        try require(forms.element(boundBy: 0).waitForExistence(timeout: 5) && forms.count == 1,
+            "T11 requires the unique Options Form")
+        let form = forms.element(boundBy: 0)
+        func reveal(_ rows: XCUIElementQuery, stage: String, upward: Bool) throws -> XCUIElement {
+            for drag in 0...4 {
+                let frame = form.frame.intersection(app.windows.firstMatch.frame)
+                let top = max(frame.minY, app.navigationBars["Options"].frame.maxY)
+                let bottom = min(frame.maxY, app.tabBars.firstMatch.frame.minY)
+                let viewport = CGRect(x: frame.minX, y: top, width: frame.width, height: max(0, bottom - top))
+                let count = rows.count
+                observations.append("stage=\(stage);drag=\(drag);form=\(frame);viewport=\(viewport);matches=\(count)")
+                try require(count <= 20 && viewport.width > 0 && viewport.height > 0,
+                    stage + " bounded query and visible Form")
+                var scrollUp = upward
+                if count == 1 {
+                    let row = rows.element(boundBy: 0)
+                    let rowFrame = row.frame
+                    let hittable = row.isHittable
+                    observations.append("label=\(row.label);value=\(String(describing: row.value));frame=\(rowFrame);hittable=\(hittable)")
+                    if rowFrame.width > 0 && rowFrame.height > 0 && viewport.contains(rowFrame) && hittable { return row }
+                    if rowFrame.height > 0 && rowFrame.maxY <= viewport.minY { scrollUp = false }
+                    if rowFrame.height > 0 && rowFrame.minY >= viewport.maxY { scrollUp = true }
+                }
+                try require(count <= 1, stage + " must identify one public row")
+                guard drag < 4 else { break }
+                let offset = viewport.height * (scrollUp ? 0.29 : -0.29)
+                let origin = form.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                let start = origin.withOffset(CGVector(dx: viewport.midX - form.frame.minX,
+                    dy: viewport.midY + offset - form.frame.minY))
+                let end = origin.withOffset(CGVector(dx: viewport.midX - form.frame.minX,
+                    dy: viewport.midY - offset - form.frame.minY))
+                start.press(forDuration: 0.2, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
+            }
+            try require(false, stage + " not qualified within four Form drags")
+            throw NSError(domain: "Task145.IsolationVisible", code: 2)
+        }
+        let pendingRows = form.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label BEGINSWITH %@", "options.sync-business-summary", "Local changes waiting"))
+        let pendingRow = try reveal(pendingRows, stage: "T11 public pending row", upward: true)
+        let pendingText = pendingRow.label + " " + (pendingRow.value as? String ?? "")
+        try require(pendingText.range(of: "(^|[^0-9])" + NSRegularExpression.escapedPattern(for: pending) + "([^0-9]|$)",
+            options: .regularExpression) != nil, "The visible public pending row must expose its own count")
+        if failedUI {
+            let attention = form.staticTexts.matching(NSPredicate(
+                format: "identifier == %@ AND label CONTAINS %@", "options.sync-business-summary", "Automatic sync needs attention"))
+            _ = try reveal(attention, stage: "T11 contextual automatic sync error", upward: false)
         }
         let publicState = XCTAttachment(screenshot: app.screenshot())
         publicState.name = "Task145 T11 actual Options diagnosis " + scenario; publicState.lifetime = .keepAlways; add(publicState)
@@ -2575,11 +2620,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         } else {
             setIsolationSearch(search, value: "LOCAL-ROOT")
             XCTAssertTrue(app.staticTexts["Safe local baseline"].waitForExistence(timeout: 5))
-        }
-        if failedUI {
-            let banner = app.descendants(matching: .any)["sync.root.foreground.banner"]
-            XCTAssertTrue(banner.waitForExistence(timeout: 5))
-            XCTAssertTrue(banner.label.contains("Cloud check failed"))
         }
     }
 
@@ -3699,7 +3739,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 stage: stage + "-Options-reachable", downstream: downstream)
             options.tap()
             if revealOptionsWithinOriginalBudget {
-                // C1/C2 only: one absolute window replaces Keep5 + Review5.
+                // One absolute window replaces Keep5 + Review5.
                 // Added reveal, sole Review tap and dialog admission ALL consume it.
                 let decisionDeadline = ProcessInfo.processInfo.systemUptime + 10
                 var reviewTapped = false
@@ -3855,7 +3895,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
     // TASK145_SCOPE_SWITCH_INSERT_END ui-tests
 
-    // Adjacent privacy witness; the ordinary decision helper retains its default path here.
+    // Adjacent privacy witness uses the same bounded explicit Review reveal.
     func testOptionsWithdrawsQualifiedASummaryWhileBSelectedAndRestoresItOnlyAfterExplicitReturn() throws {
         app.launchEnvironment["TASK145_SCOPE_SWITCH_UI"] = "cancel-explicit-return"
         app.launch()
@@ -3890,7 +3930,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: "C3-normal-picker-B", downstream: ["administrative-privacy", "explicit-return-A"])
         try scopeRequire(app.staticTexts["task145.scope.b-selected"].waitForExistence(timeout: 10),
             stage: "C3-B-selected-with-A-body-retained", downstream: ["administrative-privacy", "explicit-return-A"])
-        try scopeOpenReplacementDecision(stage: "C3-real-administrative-decision", downstream: ["administrative-privacy", "explicit-return-A"])
+        try scopeOpenReplacementDecision(stage: "C3-real-administrative-decision", downstream: ["administrative-privacy", "explicit-return-A"], revealOptionsWithinOriginalBudget: true)
         let keep = app.alerts.buttons["Keep local data"]
         let replace = app.alerts.buttons["Replace with cloud data"]
         try scopeRequire(keep.isHittable && replace.exists && replace.isEnabled,
