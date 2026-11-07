@@ -597,6 +597,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private let namespace: UUID
 // TASK145_T19_INSERT_BEGIN property
     private var t19Control: Task145T19Control?
+    private var t19SetupSaveReceiptObserved = false
 // TASK145_T19_INSERT_END property
     private var callbackHeartbeatEntered = false
     private var callbackHeartbeatCompleted = false
@@ -3140,6 +3141,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }
 
     func performanceRecordSaveReceipt(_ receipt: LocalProductSaveReceipt) {
+        if let t19Control, !t19Control.collecting, let restartControl, !restartControl.reopening,
+           receipt.remoteID == restartControl.state.product.id, receipt.barcode == "LOCAL-ROOT",
+           !receipt.intents.isEmpty, receipt.matches(controller.activeManifest) {
+            // Value-only notification from the existing completed Save callback.
+            // Persisted restart/ACK proof is still read by the unchanged observer.
+            t19SetupSaveReceiptObserved = true
+        }
         guard Task145PerformanceConfiguration.measures else { return }
         // Value capture only; no query/I/O added to the measured Save handler.
         performanceSaveReceipt = (Task144RootObservation.performanceSampleID(), receipt)
@@ -4617,8 +4625,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             guard let self else { return }
             do {
                 for _ in 0..<1200 {
-                    _ = try restartReadback()
-                    refreshAutomaticObservation()
+                    let waitsForT19SetupSave = t19Control?.collecting == false
+                        && restartControl?.reopening == false
+                        && restartControl?.state.savedToken == nil && !t19SetupSaveReceiptObserved
+                    if !waitsForT19SetupSave {
+                        _ = try restartReadback()
+                        refreshAutomaticObservation()
+                    }
                     if facts.contains("task145.restart.own-ack") { return }
                     try await Task.sleep(for: .milliseconds(100))
                 }
