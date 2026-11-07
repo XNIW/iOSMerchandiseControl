@@ -2041,9 +2041,20 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func seq6Entries(_ ledger: [String: Any], _ kind: String) throws -> [[String: Any]] {
         try XCTUnwrap(ledger["entries"] as? [[String: Any]]).filter { $0["kind"] as? String == kind }
     }
-    private func seq6Ledger(_ stage: String) throws -> [String: Any] {
+    private func seq6Ledger(_ stage: String, diagnosticOnly: Bool = false) throws -> [String: Any] {
         let readback = app.buttons["task144.controlled.release"].value as? String ?? ""
         let prefix = "task145.seq6.ledger."
+        if diagnosticOnly {
+            // A failed optional diagnostic must not record a new assertion or
+            // replace the producer's original failure. Validate this same value first.
+            guard let part = readback.components(separatedBy: ";").first(where: { $0.hasPrefix(prefix) }),
+                  let data = Data(base64Encoded: String(part.dropFirst(prefix.count))),
+                  let value = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  value["schema"] as? Int == 1,
+                  (value["runID"] as? String)?.lowercased() == runID else {
+                throw NSError(domain: "Task145Seq6Diagnostic", code: 1)
+            }
+        }
         let part = try XCTUnwrap(readback.components(separatedBy: ";").first { $0.hasPrefix(prefix) })
         let data = try XCTUnwrap(Data(base64Encoded: String(part.dropFirst(prefix.count))))
         let value = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -5117,7 +5128,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             case "action":
                 try t18Await("task145.seq6.ready", timeout: 30)
                 app.buttons["task144.controlled.release"].press(forDuration: 1.2)
-                try t18Await("task145.seq6.safety-terminal", timeout: 30)
+                do {
+                    try t18Await("task145.seq6.safety-terminal", timeout: 30)
+                } catch {
+                    if app.state == .runningForeground {
+                        _ = try? seq6Ledger("T18 " + groupID + " FIRST_FAIL missing safety-terminal", diagnosticOnly: true)
+                    }
+                    throw error
+                }
                 try t18DismissExpectedDecision(language)
             default: throw T18Stop(stage: "unsupported-state")
             }
