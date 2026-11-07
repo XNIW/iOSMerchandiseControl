@@ -649,12 +649,9 @@ struct EditProductView: View {
               let lower = desired.selectionLowerBound, let upper = desired.selectionUpperBound,
               let x = desired.scrollOffsetX, let y = desired.scrollOffsetY,
               lower >= 0, upper >= lower, x.isFinite, y.isFinite else { return nil }
-        let text = fieldText(field)
-        guard let lowerIndex = text.index(text.startIndex, offsetBy: lower, limitedBy: text.endIndex),
-              let upperIndex = text.index(text.startIndex, offsetBy: upper, limitedBy: text.endIndex) else { return nil }
+        guard upper <= fieldText(field).count else { return nil }
         return .init(id: restorationID, presentationID: presentationID, offset: CGPoint(x: x, y: y),
-            lowerUTF16: text.utf16.distance(from: text.startIndex, to: lowerIndex),
-            upperUTF16: text.utf16.distance(from: text.startIndex, to: upperIndex))
+            lowerCharacter: lower, upperCharacter: upper)
     }
 
     private func captureNativeScrollOffset(_ offset: CGPoint) {
@@ -1733,8 +1730,8 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
         let id: UUID
         let presentationID: String
         let offset: CGPoint
-        let lowerUTF16: Int
-        let upperUTF16: Int
+        let lowerCharacter: Int
+        let upperCharacter: Int
     }
     let identifier: String?
     let placeholder: String?
@@ -1846,27 +1843,38 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
                     restorationAttempts = 0
                     observedRestorationID = desired.id
                 }
+                let nativeText = field.text ?? ""
                 guard restorationAttempts < 4, desired.offset.x.isFinite, desired.offset.y.isFinite,
-                      desired.lowerUTF16 >= 0, desired.upperUTF16 >= desired.lowerUTF16,
-                      desired.upperUTF16 <= text.utf16.count,
-                      let lower = field.position(from: field.beginningOfDocument, offset: desired.lowerUTF16),
-                      let upper = field.position(from: field.beginningOfDocument, offset: desired.upperUTF16),
+                      nativeText == text, desired.lowerCharacter >= 0,
+                      desired.upperCharacter >= desired.lowerCharacter,
+                      let lowerIndex = nativeText.index(nativeText.startIndex,
+                        offsetBy: desired.lowerCharacter, limitedBy: nativeText.endIndex),
+                      let upperIndex = nativeText.index(nativeText.startIndex,
+                        offsetBy: desired.upperCharacter, limitedBy: nativeText.endIndex) else { return }
+                // Canonically equal Swift strings may have different UTF-16 layouts.
+                // UIKit positions must use the actual field's character boundaries.
+                let lowerUTF16 = nativeText.utf16.distance(from: nativeText.startIndex, to: lowerIndex)
+                let upperUTF16 = nativeText.utf16.distance(from: nativeText.startIndex, to: upperIndex)
+                guard let lower = field.position(from: field.beginningOfDocument, offset: lowerUTF16),
+                      let upper = field.position(from: field.beginningOfDocument, offset: upperUTF16),
                       let range = field.textRange(from: lower, to: upper) else { return }
                 restorationAttempts += 1
                 // Revalidate before every native effect; no retired models.
                 guard configurationVersion == observedConfigurationVersion,
-                      configuration.restoration() == desired else { return }
+                      configuration.restoration() == desired,
+                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16) else { return }
                 scroll.setContentOffset(desired.offset, animated: false)
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired, field.isFirstResponder,
-                      (field.text ?? "") == text else { return }
+                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16) else { return }
                 field.selectedTextRange = range
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired,
+                      (field.text ?? "").utf16.elementsEqual(nativeText.utf16),
                       scroll.contentOffset == desired.offset,
                       let selection = field.selectedTextRange,
-                      field.offset(from: field.beginningOfDocument, to: selection.start) == desired.lowerUTF16,
-                      field.offset(from: field.beginningOfDocument, to: selection.end) == desired.upperUTF16 else { return }
+                      field.offset(from: field.beginningOfDocument, to: selection.start) == lowerUTF16,
+                      field.offset(from: field.beginningOfDocument, to: selection.end) == upperUTF16 else { return }
                 configuration.restored(desired)
             } else {
                 configuration.capture(scroll.contentOffset)
