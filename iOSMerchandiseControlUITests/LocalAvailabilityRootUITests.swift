@@ -2474,13 +2474,46 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 editor.swipeUp()
                 continue
             }
-            let form = app.collectionViews.containing(.textField, identifier: field.identifier).firstMatch
-            let frame = field.frame
-            let surface: XCUIElement = form.exists ? form : app
-            let viewport = surface.frame.intersection(app.frame)
-            let controls = app.buttons["task144.controlled.editor.release"]
-            let upper = max(viewport.minY + 24, controls.exists ? controls.frame.maxY + 16 : viewport.minY + 24)
-            let lower = min(viewport.maxY - 24, app.frame.midY)
+            let targetIdentifier = field.identifier
+            let form = app.collectionViews.containing(.textField, identifier: targetIdentifier).firstMatch
+            let formPresent = form.exists
+            let root = try app.snapshot()
+            var nodes: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = [(root, [])]
+            var targets: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = []
+            var controls: [CGRect] = []
+            var visited = 0
+            while let (node, ancestors) = nodes.popLast() {
+                visited += 1
+                guard visited <= 1_024 else { break }
+                if node.elementType == .textField
+                    && (historyTitle ? node.label == "Display name (optional)" : node.identifier == targetIdentifier) {
+                    targets.append((node, ancestors))
+                }
+                if node.elementType == .button && node.identifier == "task144.controlled.editor.release" {
+                    controls.append(node.frame)
+                }
+                nodes.append(contentsOf: node.children.map { ($0, ancestors + [node]) })
+            }
+            guard visited <= 1_024, targets.count == 1, controls.count <= 1,
+                  let target = targets.first else {
+                let evidence = XCTAttachment(string: "visited=\(visited); target-count=\(targets.count); controls-count=\(controls.count); historyTitle=\(historyTitle)")
+                evidence.name = "Task145 domain field geometry FIRST-FAIL"; evidence.lifetime = .keepAlways; add(evidence)
+                throw NSError(domain: "Task145DomainUI", code: 5)
+            }
+            let applicationFrame = root.frame
+            let frame = target.0.frame
+            let surfaceFrame: CGRect
+            if formPresent {
+                guard let nativeForm = target.1.last(where: { $0.elementType == .collectionView }) else {
+                    throw NSError(domain: "Task145DomainUI", code: 6)
+                }
+                surfaceFrame = nativeForm.frame
+            } else {
+                surfaceFrame = applicationFrame
+            }
+            let viewport = surfaceFrame.intersection(applicationFrame)
+            let upper = max(viewport.minY + 24, controls.first.map { $0.maxY + 16 } ?? viewport.minY + 24)
+            let lower = min(viewport.maxY - 24, applicationFrame.midY)
             guard lower > upper + frame.height else { throw NSError(domain: "Task145DomainUI", code: 4) }
             if field.isHittable, frame.minY >= upper, frame.maxY <= lower { break }
             let displacement = frame.midY - (upper + lower) / 2
@@ -2488,7 +2521,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let startY = travel >= 0 ? viewport.maxY - 32 : upper + 16
             let finishY = min(viewport.maxY - 24, max(upper + 8, startY - travel))
             let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
-                CGVector(dx: viewport.minX + 8 - app.frame.minX, dy: startY - app.frame.minY))
+                CGVector(dx: viewport.minX + 8 - applicationFrame.minX, dy: startY - applicationFrame.minY))
             start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: finishY - startY)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)
         }
@@ -3529,27 +3562,57 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func positionNameInEditorViewport(_ field: XCUIElement) {
         let form = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
-        let viewport = app.frame
-        let formFrame = form.frame
+        // One fresh public tree supplies coherent geometry. Live existence and
+        // hit-point checks below and in text readiness keep their original gates.
+        guard let root = try? app.snapshot() else {
+            XCTFail("The native editor geometry snapshot must be available")
+            return
+        }
+        var pending: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = [(root, [])]
+        var targets: [(XCUIElementSnapshot, [XCUIElementSnapshot])] = []
+        var toolbars: [CGRect] = []
+        var controlsFrames: [CGRect] = []
+        var keyboardFrames: [CGRect] = []
+        var visited = 0
+        while let (node, ancestors) = pending.popLast() {
+            visited += 1
+            guard visited <= 1_024 else { break }
+            if node.elementType == .textField && node.identifier == "task144.product.name" {
+                targets.append((node, ancestors))
+            }
+            if node.elementType == .navigationBar && node.identifier == "Edit product" { toolbars.append(node.frame) }
+            if node.elementType == .button && node.identifier == "task144.controlled.editor.release" { controlsFrames.append(node.frame) }
+            if node.elementType == .keyboard { keyboardFrames.append(node.frame) }
+            pending.append(contentsOf: node.children.map { ($0, ancestors + [node]) })
+        }
+        guard visited <= 1_024, targets.count == 1, toolbars.count == 1,
+              controlsFrames.count <= 1, keyboardFrames.count <= 1,
+              let target = targets.first,
+              let nativeForm = target.1.last(where: { $0.elementType == .collectionView }) else {
+            let evidence = XCTAttachment(string: "visited=\(visited); Name=\(targets.count); toolbar=\(toolbars.count); controls=\(controlsFrames.count); keyboard=\(keyboardFrames.count)")
+            evidence.name = "Task144 Name geometry FIRST-FAIL"; evidence.lifetime = .keepAlways; add(evidence)
+            XCTFail("Require one current native Name field, enclosing Form and editor toolbar")
+            return
+        }
+        let viewport = root.frame
+        let formFrame = nativeForm.frame
         let visibleForm = formFrame.intersection(viewport)
-        let toolbar = app.navigationBars["Edit product"].frame
-        let controls = app.buttons["task144.controlled.editor.release"].frame
+        let toolbar = toolbars[0]
+        let controls = controlsFrames.first ?? .zero
         let padding: CGFloat = 16
         let upper = max(visibleForm.minY, max(toolbar.maxY, controls.maxY)) + padding
         // Reserve the lower half before focus; AX keyboard.frame can omit its accessory strip.
         var lower = min(visibleForm.maxY - padding, viewport.midY)
         var scrollBottom = visibleForm.maxY
         var measuredKeyboardFrame: CGRect?
-        let keyboard = app.keyboards.firstMatch
-        if keyboard.exists {
+        if let keyboardFrame = keyboardFrames.first {
             let accessoryReserve = max(44, viewport.height * 0.08)
-            let keyboardFrame = keyboard.frame
             measuredKeyboardFrame = keyboardFrame
             let keyboardTop = keyboardFrame.minY - accessoryReserve
             lower = min(lower, keyboardTop - padding)
             scrollBottom = min(scrollBottom, keyboardTop)
         }
-        let before = field.frame
+        let before = target.0.frame
         guard visibleForm.width > padding, before.height > 0, lower - upper > before.height else {
             XCTFail("No usable Name band: form=\(visibleForm); upper=\(upper); lower=\(lower); field=\(before)")
             return
@@ -3597,7 +3660,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 XCTFail("The actual Name row must exist before the sole scroll gesture")
                 return
             }
-            let rowFrame = row.frame
+            guard let nativeRow = target.1.last(where: { $0.elementType == .cell }) else {
+                captureGeometry()
+                XCTFail("The actual Name row must be in the current Form snapshot before the sole scroll gesture")
+                return
+            }
+            let rowFrame = nativeRow.frame
             measuredRowFrame = rowFrame
             let stripLeft = max(visibleForm.minX, rowFrame.minX)
             let stripRight = min(rowFrame.maxX, before.minX)
@@ -3606,18 +3674,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             panStripLeft = stripLeft
             panStripRight = stripRight
             let startX = (stripLeft + stripRight) / 2
-            let startY = (stripTop + stripBottom) / 2
-            panStart = CGPoint(x: startX, y: startY)
-            guard stripRight > stripLeft, stripBottom > stripTop, startY >= top, startY <= bottom,
-                  rowFrame.contains(CGPoint(x: startX, y: startY)) else {
+            // The Name row can lie just below the safe drag band. Its leading
+            // Form padding stays outside the field; clamp the start into the
+            // visible Form band instead of requiring an impossible row overlap.
+            let startY = min(bottom, max(top, (stripTop + stripBottom) / 2))
+            let startPoint = CGPoint(x: startX, y: startY)
+            panStart = startPoint
+            guard stripRight > stripLeft, startY >= top, startY <= bottom,
+                  visibleForm.contains(startPoint), !before.contains(startPoint) else {
                 captureGeometry()
-                XCTFail("The Name row must expose a visible leading padding strip outside its text field")
+                XCTFail("The visible Form must expose a leading padding strip outside the Name field")
                 return
             }
             let endY = min(bottom, max(top, startY - displacement))
             requestedTravel = endY - startY
             panEnd = CGPoint(x: startX, y: endY)
-            // Begin inside the measured Name row, outside the editable field.
+            // Begin in the measured Form leading padding, outside the editable field.
             let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                 dx: startX - formFrame.minX, dy: startY - formFrame.minY))
             panExecuted = true
@@ -4232,7 +4304,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire(options.waitForExistence(timeout: 5) && options.isHittable,
             stage: "C3-actual-Options-entry", downstream: ["load-A-summary", "select-B", "administrative-privacy", "explicit-return-A"])
         options.tap()
-        let summary = app.descendants(matching: .any).matching(identifier: "options.local-database-summary").firstMatch
+        // SwiftUI propagates the card ID to status and count Text descendants.
+        // Reveal the exact public Products row attested by this one-product fixture.
+        let summaryRows = app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label == %@",
+            "options.local-database-summary", "Products, 1"))
+        let summary = summaryRows.firstMatch
         let sync = app.descendants(matching: .any).matching(identifier: "options.sync-business-summary").firstMatch
         let form = try c3OptionsForm(stage: "C3-A", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         try c3OptionsRewindToTop(form, stage: "C3-A-top", privacy: false,
@@ -4242,7 +4318,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: "C3-actual-qualified-A-cloud-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         let admittedSyncAX = sync.debugDescription
         try c3OptionsReveal(summary, form: form, stage: "C3-A-local", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
-        try scopeRequire(summary.waitForExistence(timeout: 10) && summary.isHittable,
+        try scopeRequire(summary.waitForExistence(timeout: 10) && summaryRows.count == 1 && summary.isHittable,
             stage: "C3-actual-qualified-A-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         try c3RequireLocalSummaryValues(form,
             stage: "C3-real-A-product-count-and-baseline-date", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
