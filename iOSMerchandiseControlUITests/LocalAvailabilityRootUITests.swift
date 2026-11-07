@@ -4540,10 +4540,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: stage + "-traversal-deadline-after-viewport", downstream: downstream)
         return (anchors: anchors, viewport: viewportFrame, formOrigin: formFrame.origin)
     }
-    private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, formOrigin: CGPoint, upward: Bool) {
-        // Use the just-qualified visible viewport, keeping 42% geometric overlap.
-        // Both endpoints remain inside it; each subsequent drag requalifies it.
-        let halfStep = viewport.height * 0.29
+    private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, formOrigin: CGPoint, upward: Bool,
+                               halfStepFraction: CGFloat = 0.29) {
+        // The default keeps 42% overlap; B traversal retains 38% overlap.
+        // Both endpoints remain inside the just-qualified viewport, and each
+        // later viewport rechecks actual content overlap before advancing.
+        let halfStep = viewport.height * halfStepFraction
         let offset = upward ? halfStep : -halfStep
         let origin = form.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
         let start = origin.withOffset(CGVector(dx: viewport.midX - formOrigin.x, dy: viewport.midY + offset - formOrigin.y))
@@ -4645,8 +4647,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: "C3-B-traversal-deadline-after-privacy", downstream: downstream)
             if unavailable.exists && unavailable.isHittable { administrativeSurfaceSeen = true }
-            let footer = app.staticTexts["Account and cloud actions stay here."]
+            // Cloud is now first; Language is the final administrative section.
+            let footer = form.staticTexts["Language changes apply immediately."]
             if c3OptionsEndpoint(form, value: "100%") && footer.exists && footer.isHittable {
+                try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
+                    stage: "C3-B-traversal-deadline-at-bottom", downstream: downstream)
                 try scopeRequire(administrativeSurfaceSeen,
                     stage: "C3-administrative-Options-surface", downstream: downstream)
                 return
@@ -4654,7 +4659,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: "C3-B-bottom-endpoint-NOT_QUALIFIED", downstream: downstream)
             previousAnchors = anchors
-            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true)
+            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
+                halfStepFraction: 0.31)
         }
     }
 
