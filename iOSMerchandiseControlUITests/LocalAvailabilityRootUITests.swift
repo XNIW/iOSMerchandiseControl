@@ -3012,8 +3012,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 hierarchy.name = "Task144 relation input native hierarchy"; hierarchy.lifetime = .keepAlways; add(hierarchy)
             }
             XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertTrue(field.isHittable)
-            field.tap(); field.typeText(value)
-            XCTAssertEqual(field.value as? String, value)
+            field.tap()
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+            field.typeText(value)
+            let actual = field.value as? String
+            if actual != value { captureControlledAutomaticReadback() }
+            XCTAssertEqual(actual, value)
         }
         for _ in 0..<4 where !name.isHittable {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.30))
