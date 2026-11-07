@@ -347,6 +347,7 @@
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testTransientDeviceStatusDoesNotRevokeConfirmedLocalGeneration",
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testTransientRecoveryBudgetRenewsAfterFiveMinutesWithoutExplicitRetry",
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testTwoSameScopeShopRefreshesAfterPublicationCompleteOnlyTheOriginalGeneration",
+        "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testTypedRejectedCatalogWorkRetainsPriceChildAndGenerationAfterBoundLocalWorkDrain",
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testUnexplainedCleanBodyCorruptionIsNotLocalAvailabilityAfterReopenOrFreshBinding",
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testUnknownRecoveryFailureDoesNotRenewBudgetJustBecauseTimePasses",
         "iOSMerchandiseControlTests/AtomicGenerationRecoverySnapshotPullServiceTests/testUppercaseRPCPriceUsesCanonicalDecimalForVerifiedMaterialization",

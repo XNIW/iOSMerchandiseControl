@@ -399,6 +399,7 @@ actor AutomaticSyncEngine {
             recordDiagnostic("catalogPush.lastChanged", result.totalChanged)
             hasRejectedCatalogChanges = result.plan?.blockers.contains {
                 $0.hasPrefix("invalidCatalogText:") || $0.hasPrefix("unresolvedCatalogReference:")
+                    || $0.hasPrefix("catalogConflictRequiresReview:")
             } == true
         }
 

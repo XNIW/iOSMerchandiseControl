@@ -9783,6 +9783,88 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertTrue(setup.summaries.allSatisfy { $0.continuationReceipt == nil && !$0.verifiedConvergence })
     }
 
+    func testTypedRejectedCatalogWorkRetainsPriceChildAndGenerationAfterBoundLocalWorkDrain() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture()
+        let proof = setup.proof
+        let fixture = proof.fixture
+        let container = fixture.controller.modelContainer
+        let generation = fixture.controller.activeManifest?.generationID
+        proof.remote.catalogRejectionBeforeCommit = "23505"
+        let childToken = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: container,
+            ownerUserID: fixture.ownerUserID, defaults: fixture.defaults) { context in
+            let product = try CatalogConflictResolutionService.product(remoteID: proof.productID, context: context)
+            let price = ProductPrice(type: .purchase, price: 37,
+                effectiveAt: Date(timeIntervalSince1970: 1_700_000_100), product: product)
+            context.insert(price)
+            let child = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                ownerUserID: fixture.ownerUserID, storeIdentity: proof.scope.storeIdentity)
+                .recordProductPriceChange(price: price, origin: .productPriceSave))
+            try context.save()
+            return LocalPendingChangeCASToken(child)
+        }
+        let priceRemote = AtomicRecoveryLostAckPriceRemote()
+        let pull = SyncEventIncrementalPullService(modelContainer: container, remote: proof.remote,
+            defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        let observed = RI08TransformingRealPullProvider(pull: pull, transform: { summary in
+            setup.summaries.append(summary)
+            return summary
+        })
+        let engine = AutomaticSyncEngine(catalogPushProvider: CatalogPushService(modelContainer: container,
+            remote: proof.remote, defaults: fixture.defaults),
+            productPriceProvider: ProductPricePushService(modelContainer: container,
+                remote: priceRemote, defaults: fixture.defaults), historySessionProvider: nil,
+            incrementalPullProvider: observed,
+            activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: container,
+                recorder: proof.remote, defaults: fixture.defaults), defaults: fixture.defaults)
+        var retainedOriginal: LocalPendingChangeCASToken?
+        var retainedSeal: String?
+        for _ in 0..<2 {
+            let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+                await engine.run(action: .sequence([.pushPending, .bootstrap]),
+                    source: .rootForeground, ownerUserID: fixture.ownerUserID)
+            }
+            XCTAssertEqual(result.status, .failed)
+            XCTAssertEqual(result.errorCode, "catalog_local_changes_blocked")
+            XCTAssertEqual(result.failure, AutomaticSyncFailure(disposition: .stable, category: .payload))
+            XCTAssertFalse(result.didWork)
+            XCTAssertFalse(result.verifiedConvergence)
+            XCTAssertNil(result.continuationReceipt)
+            XCTAssertNil(result.verifiedFinalization)
+            XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
+            XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+            XCTAssertNil(fixture.defaults.object(forKey: "sync.runtime.recovery.requestedReason"))
+            XCTAssertEqual(ordinaryWatermark(fixture: fixture), 41)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1, "The typed rejected attempt is not resent")
+            XCTAssertTrue(proof.remote.recordRequests.isEmpty)
+            XCTAssertTrue(priceRemote.attempts.isEmpty, "The unresolved parent's real price provider cannot publish its child")
+            let summary = try XCTUnwrap(setup.summaries.last)
+            let deferral = try XCTUnwrap(summary.localWorkDeferral)
+            XCTAssertTrue(deferral.isBound(to: fixture.defaults))
+            XCTAssertTrue(deferral.matchesRejectedCatalogWork(summary))
+            try deferral.validateForPush()
+            let read = ModelContext(container)
+            let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+            XCTAssertEqual(changes.count, 2)
+            XCTAssertEqual(changes.filter { $0.status == .pending }.count, 2)
+            XCTAssertEqual(changes.filter { $0.status == .acknowledged }.count, 0)
+            let original = try XCTUnwrap(changes.first { $0.changeID == setup.changeID })
+            XCTAssertNotNil(try LocalPendingBusinessAttemptStore.rejectionProof(change: original, context: read, scope: proof.scope))
+            XCTAssertTrue(childToken.matches(try XCTUnwrap(changes.first { $0.changeID == childToken.changeID })))
+            let seal = try XCTUnwrap(LocalPendingBusinessAttemptStore.entry(changeID: setup.changeID, context: read)?.metadataPayloadJSON)
+            if let retainedOriginal, let retainedSeal {
+                XCTAssertTrue(retainedOriginal.matches(original))
+                XCTAssertEqual(seal, retainedSeal)
+            } else {
+                retainedOriginal = LocalPendingChangeCASToken(original)
+                retainedSeal = seal
+            }
+            XCTAssertEqual(try read.fetch(FetchDescriptor<ProductPrice>()).map(\.price), [37])
+            proof.stateStore.recordRunResult(result)
+            XCTAssertEqual(proof.stateStore.state.phase, .failed)
+            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        }
+    }
+
     func testRejectedCatalogWorkCannotSuppressRecoveryForMissingOrChangedDrainCapability() async throws {
         for mutation in ["reason", "cursor", "missingCapability"] {
             let setup = try await makePendingAutomaticSequenceFixture(blockedSupplier: true, transform: { original in
