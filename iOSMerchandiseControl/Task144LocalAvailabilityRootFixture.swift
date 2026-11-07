@@ -467,6 +467,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     let shopContextStore: ShopContextStore
     let stateStore: SyncStateStore
     private let usesT18AutomaticHeldRecovery: Bool
+    private let observesT18OSOffline: Bool
+    private var t18OSPathObserver: AutomaticSyncNetworkReachabilityObserver?
+    private var t18OSPathSequence = 0
+    private var t18OSPathObservedUptime: TimeInterval?
     private var usesT19InitialCanonicalRecovery: Bool {
         t19Control?.collecting == false && restartControl?.reopening == false
             && !facts.contains("task145.restart.admission-held")
@@ -614,7 +618,11 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         namespace = runID
         emptyBootstrap = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
         let t18Environment = ProcessInfo.processInfo.environment
-        usesT18AutomaticHeldRecovery = t18Environment["TASK145_T18_OBSERVATION"] == "1"
+        // This requests observation only; it never supplies a connectivity result.
+        observesT18OSOffline = t18Environment["TASK145_T18_OBSERVATION"] == "1"
+            && t18Environment["TASK146_T18_OS_OFFLINE"] == "1"
+        usesT18AutomaticHeldRecovery = !observesT18OSOffline
+            && t18Environment["TASK145_T18_OBSERVATION"] == "1"
             && !t18Environment.keys.contains { key in
                 (key.hasPrefix("TASK145_") && key != "TASK145_T18_OBSERVATION")
                     || (key.hasPrefix("TASK144_") && key != "TASK144_LOCAL_AVAILABILITY_FIXTURE")
@@ -1131,6 +1139,17 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             return encode()
         }
         result["phase"] = Self.phaseKind(state.phase)
+        if case .blocked(let reason) = state.phase { result["phaseBlockReason"] = String(describing: reason) }
+        if observesT18OSOffline {
+            result["osPathSource"] = "production-NWPathMonitor"
+            result["osPathSequence"] = t18OSPathSequence
+            if let observed = t18OSPathObservedUptime { result["osPathObservedUptime"] = observed }
+            if let unsatisfied = AutomaticSyncNetworkReachabilityObserver.systemPathIsUnsatisfied {
+                result["osPathUnsatisfied"] = unsatisfied
+            }
+            do { result["osOfflineBody"] = try seq6Body() }
+            catch { result["failure"] = "offline-local-body-read-failed"; return encode() }
+        }
         result["automaticWorkActive"] = state.phase.isAutomaticWorkActive
         switch state.lastOutcome {
         case .succeeded?: result["outcome"] = "succeeded"
@@ -1288,6 +1307,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             ? "task144.controlled.content-size.accessibility-xxxl"
             : "task144.controlled.content-size.other")
         hasPreparationStarted = true
+        if observesT18OSOffline {
+            // No scheduler and no state publication: this listener observes the real OS path only.
+            let observer = AutomaticSyncNetworkReachabilityObserver { [weak self] _ in
+                guard let self else { return }
+                self.t18OSPathSequence += 1
+                self.t18OSPathObservedUptime = ProcessInfo.processInfo.systemUptime
+            }
+            t18OSPathObserver = observer
+            observer.start()
+        }
         if provesSafeStoreLoadFailure {
             // No baseline, readback, recovery or business query is submitted.
             // The real App failure branch receives the controller's actual catch.
@@ -1407,6 +1436,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     guard qualified else {
                         facts.insert("task144.controlled.reopen-terminal.not-run")
                         throw SyncStoreGenerationError.activationReadBackFailed
+                    }
+                    if observesT18OSOffline {
+                        // Reopen the already persisted body; no recovery or transport release.
+                        guard !AccountBindingStore().hasPendingReplacementJournal,
+                              try seq6Body()["name"] == "Safe local baseline" else {
+                            throw SyncStoreGenerationError.activationReadBackFailed
+                        }
+                        hasStarted = true
+                        isPreparedForRoot = true
+                        return
                     }
                     if t10Control != nil { try prepareT10Root(); return }
                     if r4Control != nil { try prepareR4Root(reopening: true); return }
@@ -1604,6 +1643,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     hasStarted = true
                 }
                 try prepareHistoryFeedbackLocalSuccess()
+                // The initial controlled snapshot seeds the isolated persisted fixture only.
+                // The ordinary coordinator must derive offline from its own OS input.
+                if observesT18OSOffline { hasStarted = true }
                 if isolationControl != nil {
                     try seedIsolation()
                     transport.release(); hasStarted = true; isPreparedForRoot = true

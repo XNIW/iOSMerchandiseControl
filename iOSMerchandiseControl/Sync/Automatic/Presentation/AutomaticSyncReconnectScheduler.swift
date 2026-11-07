@@ -82,6 +82,8 @@ final class AutomaticSyncNetworkReachabilityObserver {
     private static let monitorQueue = DispatchQueue(label: "AutomaticSyncNetworkReachabilityObserver")
     private static var monitorID: UUID?
     private static var lastStatus: AutomaticSyncNetworkStatus?
+    // Passive OS fact from the same monitor; requiresConnection is not OS-offline proof.
+    private(set) static var systemPathIsUnsatisfied: Bool?
     private static var observers: [UUID: @MainActor (AutomaticSyncNetworkStatus) -> Void] = [:]
 
     private let scheduler: AutomaticSyncReconnectScheduler?
@@ -109,9 +111,11 @@ final class AutomaticSyncNetworkReachabilityObserver {
         let monitorID = UUID()
         monitor.pathUpdateHandler = { path in
             let status: AutomaticSyncNetworkStatus = path.status == .satisfied ? .satisfied : .unsatisfied
+            let systemPathIsUnsatisfied = path.status == .unsatisfied
             Task { @MainActor in
                 guard AutomaticSyncNetworkReachabilityObserver.monitorID == monitorID else { return }
                 AutomaticSyncNetworkReachabilityObserver.lastStatus = status
+                AutomaticSyncNetworkReachabilityObserver.systemPathIsUnsatisfied = systemPathIsUnsatisfied
                 let listeners = Array(AutomaticSyncNetworkReachabilityObserver.observers.keys)
                 for id in listeners {
                     AutomaticSyncNetworkReachabilityObserver.observers[id]?(status)
@@ -130,6 +134,7 @@ final class AutomaticSyncNetworkReachabilityObserver {
             Self.sharedMonitor = nil
             Self.monitorID = nil
             Self.lastStatus = nil
+            Self.systemPathIsUnsatisfied = nil
         }
         scheduler?.cancel()
     }

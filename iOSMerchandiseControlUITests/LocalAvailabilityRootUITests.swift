@@ -4422,7 +4422,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         let buttons = queryTiming.measure(.enumeration, site: .button) {
             form.buttons.matching(NSCompoundPredicate(orPredicateWithSubpredicates: rolePredicates))
-                .allElementsBoundByAccessibilityElement
+                .allElementsBoundByIndex
         }
         var qualifiedButtons: [String: [C3OptionsSnapshotNode]] = [:]
         for (buttonIndex, button) in buttons.enumerated() {
@@ -4443,6 +4443,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     try button.snapshot()
                 }
             } catch {
+                let failure = error as NSError
+                let detail = XCTAttachment(string: "stage=\(stage); ordinal=\(ordinal); buttonIndex=\(buttonIndex); domain=\(failure.domain); code=\(failure.code); description=\(String(failure.localizedDescription.prefix(2_048)))")
+                detail.name = "TASK145 C3 live Button snapshot error"
+                detail.lifetime = .keepAlways; add(detail)
                 try scopeRequire(false,
                     stage: stage + "-option-snapshot-live-capture-NOT_QUALIFIED", downstream: downstream)
                 throw ScopeSwitchUIStop.semanticGate
@@ -4672,9 +4676,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         var currentCell = 0
         var failure: String?
         do {
-            // OS offline has no qualified per-target controller in this candidate.
-            // Never substitute URLProtocol, a Wi-Fi icon, phase injection or fake authority.
-            try t18Require(state != "offline", "offline-OS-channel-NOT_QUALIFIED")
+            // The runner/operator must isolate only this target at the OS level.
+            // The request below is not evidence: actual NWPath and production denial gate every capture.
             let titles = t18TabTitles(language)
             let locale = ["en": "en_US", "it": "it_IT", "es": "es_ES", "zh": "zh_CN"][language]!
             let category: UIContentSizeCategory = maximumFont ? .accessibilityExtraExtraExtraLarge : .large
@@ -4683,12 +4686,26 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 "-UIPreferredContentSizeCategoryName", category.rawValue]
             app.launchEnvironment = ["TASK144_LOCAL_AVAILABILITY_FIXTURE": runID,
                 "TASK145_T18_OBSERVATION": "1", "TASK131_INITIAL_TAB": "database"]
+            if state == "offline" { app.launchEnvironment["TASK146_T18_OS_OFFLINE"] = "1" }
             if state == "idle" { app.launchEnvironment["TASK145_SCOPE_INCREMENTAL_UI"] = "healthy-incremental" }
             if state == "action" { app.launchEnvironment["TASK145_SCOPE_INCREMENTAL_UI"] = "membership-refusal" }
             if state == "retrying" { app.launchEnvironment["TASK145_RETRY_UI"] = "mixed-real-cooldown" }
             app.launch()
             switch state {
             case "idle": try t18Await("task145.seq6.automatic-terminal", timeout: 45)
+            case "offline":
+                try t18AwaitOSOffline(language: language, category: category, theme: theme)
+                let persisted = try t18Snapshot(state: state, language: language, category: category, theme: theme)
+                app.terminate()
+                app.launch() // Same fixture namespace and file-backed generation, new process.
+                try t18AwaitOSOffline(language: language, category: category, theme: theme)
+                let reopened = try t18Snapshot(state: state, language: language, category: category, theme: theme)
+                try t18Require(persisted["pid"] as? Int != reopened["pid"] as? Int
+                    && persisted["generation"] as? String == reopened["generation"] as? String
+                    && persisted["manifestShop"] as? String == reopened["manifestShop"] as? String
+                    && persisted["accountHash"] as? String == reopened["accountHash"] as? String
+                    && persisted["osOfflineBody"] as? [String: String] == reopened["osOfflineBody"] as? [String: String],
+                    "offline-restart-did-not-preserve-qualified-body-and-scope")
             case "recovery": try t18Await("task144.controlled.held", timeout: 30)
             case "retrying": try t18Await("task145.retry.cooldown-after-three", timeout: 45)
             case "action":
@@ -4758,6 +4775,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     && after["manifestShop"] as? String == before["manifestShop"] as? String
                     && after["accountHash"] as? String == before["accountHash"] as? String,
                     route + "-capture-not-bracketed-by-current-same-scope-reads")
+                if state == "offline" {
+                    try t18Require(after["osPathSequence"] as? Int == before["osPathSequence"] as? Int
+                        && before["osPathSequence"] as? Int == initial["osPathSequence"] as? Int
+                        && after["osOfflineBody"] as? [String: String] == initial["osOfflineBody"] as? [String: String],
+                        route + "-OS-path-or-persisted-body-changed-during-offline-capture")
+                }
                 cells[index]["status"] = "CAPTURED_AUTOMATED_PENDING_NATIVE_REVIEW"
                 cells[index]["before"] = before; cells[index]["after"] = after
                 cells[index]["screenshotAttachment"] = screenshotName; cells[index]["axAttachment"] = axName
@@ -4798,6 +4821,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func t18Await(_ marker: String, timeout: TimeInterval) throws {
         try t18Require(app.staticTexts[marker].waitForExistence(timeout: timeout), "producer-boundary-not-traversed-" + marker)
     }
+    private func t18AwaitOSOffline(language: String, category: UIContentSizeCategory, theme: String) throws {
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { [weak self] _, _ in
+            guard let self else { return false }
+            return (try? self.t18Snapshot(state: "offline", language: language, category: category, theme: theme)) != nil
+        }, object: nil)
+        try t18Require(XCTWaiter.wait(for: [ready], timeout: 30) == .completed,
+            "offline-actual-OS-path-or-production-network-denial-NOT_QUALIFIED")
+    }
+
     private func t18Snapshot(state: String, language: String, category: UIContentSizeCategory, theme: String) throws -> [String: Any] {
         let node = app.descendants(matching: .any).matching(identifier: "task144.controlled.native-name-observation").firstMatch
         try t18Require(node.waitForExistence(timeout: 5), "passive-observer-missing")
@@ -4819,6 +4851,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try t18Require(value["healthyTerminal"] as? Bool == true && value["phase"] as? String == "idle"
                 && value["automaticWorkActive"] as? Bool == false && value["journalPresent"] as? Bool == false,
                 "healthy-idle-not-current")
+        case "offline":
+            guard let observed = value["osPathObservedUptime"] as? Double,
+                  let uptime = value["uptime"] as? Double,
+                  let sequence = value["osPathSequence"] as? Int,
+                  let body = value["osOfflineBody"] as? [String: String] else {
+                throw T18Stop(stage: "offline-OS-or-local-body-observation-missing")
+            }
+            try t18Require(value["osPathSource"] as? String == "production-NWPathMonitor"
+                && value["osPathUnsatisfied"] as? Bool == true && sequence > 0 && observed > 0 && observed <= uptime
+                && value["phase"] as? String == "blocked" && value["phaseBlockReason"] as? String == "networkUnavailable"
+                && value["outcome"] as? String == "blocked" && value["blockReason"] as? String == "networkUnavailable"
+                && value["automaticWorkActive"] as? Bool == false && value["journalPresent"] as? Bool == false
+                && body["name"] == "Safe local baseline" && body["products"] == "1"
+                && body["pending"] == "0" && body["outbox"] == "" && body["watermark"] == "41"
+                && body["body-proof"] == "true" && body["local-access"] == "true",
+                "offline-actual-OS-path-production-denial-or-persisted-body-unqualified")
         case "recovery":
             do {
                 try t18Require(value["heldPage"] as? Bool == true && value["journalPresent"] as? Bool == true
@@ -4843,7 +4891,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 && value["syncAllowed"] as? Bool == false && value["selectedShop"] as? String == "none"
                 && value["localAccess"] as? Bool == false && value["journalPresent"] as? Bool == false,
                 "real-membership-action-denial-not-current")
-        default: throw T18Stop(stage: "offline-OS-channel-NOT_QUALIFIED")
+        default: throw T18Stop(stage: "unsupported-state")
         }
         if state != "action" {
             try t18Require(value["localAccess"] as? Bool == true && value["syncAllowed"] as? Bool == true
