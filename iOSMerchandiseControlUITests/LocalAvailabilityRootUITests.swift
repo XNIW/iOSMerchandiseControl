@@ -645,7 +645,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func t14HeldRecoveryGuardIsCurrent(_ snapshot: [String: Any]) -> Bool {
         guard let runtime = snapshot["runtime"] as? [String: Any],
               let witness = runtime["heldRecoveryGuard"] as? [String: Any],
+              witness["schema"] as? Int == 2,
+              witness["kind"] as? String == "HELD_RECOVERY_READ_ONLY_AUTHORITY",
               witness["status"] as? String == "CURRENT_READ_ONLY_MATCH",
+              witness["scopeLeaseCurrent"] == nil, witness["leaseGeneration"] == nil,
+              let currentLeaseText = witness["currentObservedLeaseGeneration"] as? String,
+              let currentLease = UInt64(currentLeaseText), String(currentLease) == currentLeaseText,
+              let heldLeaseText = witness["heldLeaseGeneration"] as? String,
+              let heldLease = UInt64(heldLeaseText), String(heldLease) == heldLeaseText,
+              currentLease >= heldLease,
               witness["runID"] as? String == runID.lowercased(), witness["pid"] as? Int == snapshot["pid"] as? Int,
               witness["phase"] as? String == "recovery-required",
               witness["journalMode"] as? String == "sameScopeRecovery", witness["journalPhase"] as? String == "staging",
@@ -656,7 +664,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
               witness["heldGeneration"] as? String == active,
               let target = witness["stagingGeneration"] as? String, UUID(uuidString: target) != nil, target != active,
               let baseline = witness["baselineRunID"] as? String, UUID(uuidString: baseline) != nil,
-              ["journalPhysical", "scopeLeaseCurrent", "physicalFenceStable", "heldPage", "pendingSaveA", "bodyProof",
+              ["journalPhysical", "currentLeaseStable", "physicalFenceStable", "heldPage", "pendingSaveA", "bodyProof",
                "journalBaselineAbsent", "journalWatermarkAbsent"].allSatisfy({ witness[$0] as? Bool == true }),
               ["accountHash", "deviceIdentityHash", "checkpointDigest", "journalSHA256", "progressSHA256", "physicalFenceSHA256"]
                 .allSatisfy({ (witness[$0] as? String)?.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression) != nil }) else { return false }
@@ -3567,7 +3575,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let tapAdmission = ProcessInfo.processInfo.systemUptime
             guard tapAdmission < deadline else { return false }
             tapStarted = tapAdmission
-            row.tap()
+            // The two coherent snapshots and current live hit check already
+            // admit this unique label. Use its qualified center for the sole
+            // native gesture, without a second element lookup or implicit scroll.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                .withOffset(CGVector(dx: title.midX - root.frame.minX,
+                                     dy: title.midY - root.frame.minY)).tap()
             let finished = ProcessInfo.processInfo.systemUptime
             tapFinished = finished
             return finished <= deadline
@@ -4328,11 +4341,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let form = try c3OptionsForm(stage: "C3-A", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         try c3OptionsRewindToTop(form, stage: "C3-A-top", privacy: false,
             downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
-        try c3OptionsReveal(sync, form: form, stage: "C3-A-cloud", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
+        try c3OptionsReveal(sync, form: form, stage: "C3-A-cloud", downstream: ["select-B", "administrative-privacy", "explicit-return-A"], velocity: .fast)
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable,
             stage: "C3-actual-qualified-A-cloud-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         let admittedSyncAX = sync.debugDescription
-        try c3OptionsReveal(summary, form: form, stage: "C3-A-local", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
+        try c3OptionsReveal(summary, form: form, stage: "C3-A-local", downstream: ["select-B", "administrative-privacy", "explicit-return-A"], velocity: .fast)
         try scopeRequire(summary.waitForExistence(timeout: 10) && summaryRows.count == 1 && summary.isHittable,
             stage: "C3-actual-qualified-A-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         try c3RequireLocalSummaryValues(form,
@@ -4952,7 +4965,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         return (anchors: anchors, viewport: viewportFrame, formOrigin: formFrame.origin)
     }
     private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, formOrigin: CGPoint, upward: Bool,
-                               halfStepFraction: CGFloat = 0.29) {
+                               halfStepFraction: CGFloat = 0.29, velocity: XCUIGestureVelocity = .slow) {
         // The default keeps 42% overlap; B traversal retains 38% overlap.
         // Both endpoints remain inside the just-qualified viewport, and each
         // later viewport rechecks actual content overlap before advancing.
@@ -4961,7 +4974,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let origin = form.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
         let start = origin.withOffset(CGVector(dx: viewport.midX - formOrigin.x, dy: viewport.midY + offset - formOrigin.y))
         let end = origin.withOffset(CGVector(dx: viewport.midX - formOrigin.x, dy: viewport.midY - offset - formOrigin.y))
-        start.press(forDuration: 0.2, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
+        start.press(forDuration: 0.2, thenDragTo: end, withVelocity: velocity, thenHoldForDuration: 0.2)
     }
     private func c3NoBusinessInCurrentViewport(stage: String, downstream: [String]) throws {
         // One public query resolves the four original absence conditions together.
@@ -5007,7 +5020,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
     }
     private func c3OptionsReveal(_ target: XCUIElement, form: XCUIElement, stage: String,
-                                downstream: [String]) throws {
+                                downstream: [String], velocity: XCUIGestureVelocity = .slow) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
             if target.exists && target.isHittable {
@@ -5019,7 +5032,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 stage: stage + "-visible-target-NOT_QUALIFIED", downstream: downstream)
             let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
                 deadline: deadline, collectContentAnchors: false, downstream: downstream)
-            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true)
+            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
+                velocity: velocity)
         }
     }
     private func c3OptionsTraverseAdministrativeForm(_ form: XCUIElement,
@@ -5127,7 +5141,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             case "retrying": try t18Await("task145.retry.cooldown-after-three", timeout: 45)
             case "action":
                 try t18Await("task145.seq6.ready", timeout: 30)
-                app.buttons["task144.controlled.release"].press(forDuration: 1.2)
+                // The fixture still requires one full second of recognized
+                // pressing. Keep margin for native delivery of this one gesture.
+                app.buttons["task144.controlled.release"].press(forDuration: 1.5)
                 do {
                     try t18Await("task145.seq6.safety-terminal", timeout: 30)
                 } catch {
@@ -5399,10 +5415,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
          "es": ["Inventario", "Historial", "Base de datos", "Opciones"],
          "zh": ["库存", "历史", "数据库", "选项"]][language]!
     }
-    private func t18Seek(_ element: XCUIElement, stage: String) throws {
+    private func t18Seek(_ element: XCUIElement, stage: String, requiresFullVisibility: Bool = false) throws {
         let fullyVisible = {
             guard element.exists, element.isHittable else { return false }
             let frame = element.frame, window = self.app.frame
+            // Account capture retains its original reachable-row contract.
+            // The action below additionally needs a fully exposed tap target.
+            if !requiresFullVisibility { return frame.width > 0 && frame.height > 0 && window.intersects(frame) }
             let top = max(window.minY, self.app.navigationBars.firstMatch.frame.maxY)
             let bottom = min(window.maxY, self.app.tabBars.firstMatch.frame.minY)
             return frame.width > 0 && frame.height > 0 && window.contains(frame)
@@ -5448,7 +5467,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let labels = t18DecisionLabels(language)
         try t18DismissExpectedDecision(language)
         let review = app.buttons[labels[0]]
-        try t18Seek(review, stage: "ordinary-review-action-not-reachable")
+        try t18Seek(review, stage: "ordinary-review-action-not-reachable", requiresFullVisibility: true)
         review.tap()
         let keep = app.alerts.buttons[labels[1]], replace = app.alerts.buttons[labels[2]]
         try t18Require(keep.waitForExistence(timeout: 5) && keep.isHittable && replace.exists && !replace.isEnabled,

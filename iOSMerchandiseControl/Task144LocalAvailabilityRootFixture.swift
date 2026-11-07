@@ -2820,6 +2820,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private func t14HeldRecoveryGuardWitness(pendingSaveA: Bool, bodyProof: Bool) -> [String: Any] {
         // Observation of this fixture's existing G0 -> staging G1 only. No
         // identity creation/repair, journal transition, trigger or lease renewal.
+        let witnessKind = "HELD_RECOVERY_READ_ONLY_AUTHORITY"
         var observedStage = "none"
         // A closed label records the last evaluated predicate/operation only.
         // The autoclosure preserves short-circuit order and evaluates once.
@@ -2828,7 +2829,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             return try value()
         }
         func notQualified(_ error: Error? = nil) -> [String: Any] {
-            ["status": "NOT_QUALIFIED", "firstFailedStage": observedStage,
+            ["schema": 2, "kind": witnessKind, "status": "NOT_QUALIFIED", "firstFailedStage": observedStage,
              "errorCategory": error.map { Task144RootObservation.errorCategory($0) } ?? "none"]
         }
         struct ProgressIdentity: Decodable {
@@ -2849,6 +2850,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             return data
         }
         func digest(_ bytes: Data) -> String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
+        // The held writer token may already be invalidated by an ordinary shop
+        // refresh. Observe a stable current counter; never replace that old token.
+        let observedLeaseGeneration = Task126OwnerStoreGate.automaticScopeLeaseGenerationForObservation
         let binding = AccountBindingStore()
         guard observed("pending-save-a", pendingSaveA), observed("body-proof", bodyProof),
               observed("phase-recovery-required", stateStore.state.phase == .recoveryRequired),
@@ -2863,7 +2867,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
               observed("active-account-mirror", UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == scope.accountHash),
               observed("device-install-mirror", DeviceInstallIDStore().lastKnownDeviceInstallID == scope.deviceInstallID),
               observed("device-identity-hash", DeviceInstallIDStore.identityHash(for: scope.deviceInstallID) == scope.deviceIdentityHash),
+              observed("selected-resolution-ready", SelectedShopStore().isResolutionReady(accountHash: scope.accountHash)),
               let selected = observed("selected-shop-present", SelectedShopStore().selectedShop(accountHash: scope.accountHash)),
+              observed("selected-status-active", selected.status == "active"),
+              observed("selected-can-write", selected.canWrite),
               observed("selected-shop", selected.shopID == shop),
               observed("selected-store", selected.localStoreIdentity == scope.storeIdentity),
               observed("selected-selectable", selected.selectable),
@@ -2902,11 +2909,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             return notQualified()
         }
         do {
-            // Empty validation of the previously captured lease counter only.
-            // No operation using this TaskLocal scope is admitted or performed.
-            try observed("scope-lease-before", try Task126OwnerStoreGate.$currentAutomaticScope.withValue(scope) {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {}
-            })
+            // All seven retained scope values above must still match current
+            // authority. This counter fences only this read-only observation.
+            guard observed("scope-lease-before",
+                Task126OwnerStoreGate.automaticScopeLeaseGenerationForObservation == observedLeaseGeneration) else {
+                return notQualified()
+            }
             let before = try observed("active-fence-before", try ownedRepository.captureActiveMutationFence(for: controller.active))
             let journalBytes = try observed("journal-file-read", try boundedFile(ownedRepository.recoveryJournalURL))
             let progressURL = ownedRepository.baseDirectory.appendingPathComponent("generations", isDirectory: true)
@@ -2937,15 +2945,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   observed("body-proof-still-current", Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer)) else {
                 return notQualified()
             }
-            try observed("scope-lease-after", try Task126OwnerStoreGate.$currentAutomaticScope.withValue(scope) {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {}
-            })
+            guard observed("scope-lease-after",
+                Task126OwnerStoreGate.automaticScopeLeaseGenerationForObservation == observedLeaseGeneration) else {
+                return notQualified()
+            }
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-            return ["status": "CURRENT_READ_ONLY_MATCH", "runID": namespace.uuidString.lowercased(),
+            return ["schema": 2, "kind": witnessKind, "status": "CURRENT_READ_ONLY_MATCH", "runID": namespace.uuidString.lowercased(),
                 "pid": ProcessInfo.processInfo.processIdentifier, "phase": "recovery-required",
                 "ownerID": owner.uuidString.lowercased(), "shopID": shop.uuidString.lowercased(),
                 "accountHash": scope.accountHash, "deviceIdentityHash": scope.deviceIdentityHash,
-                "leaseGeneration": scope.leaseGeneration, "scopeLeaseCurrent": true,
+                // Decimal strings preserve the complete UInt64 values in JSON.
+                "currentObservedLeaseGeneration": String(observedLeaseGeneration),
+                "heldLeaseGeneration": String(scope.leaseGeneration), "currentLeaseStable": true,
                 "activeGeneration": active.generationID.uuidString.lowercased(),
                 "heldGeneration": active.generationID.uuidString.lowercased(), "stagingGeneration": target.uuidString.lowercased(),
                 "journalMode": journal.mode.rawValue, "journalPhase": journal.phase.rawValue,
@@ -2968,8 +2979,19 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             recoveryReasonCategory = "ordinary_continuation_local_work_pending"
         default: recoveryReasonCategory = "other"
         }
+        let engineErrorCategory: String
+        if let code = UserDefaults.standard.string(forKey: "sync.runtime.automatic.lastError") {
+            if code.range(of: #"^[A-Za-z][A-Za-z0-9._-]{0,95}$"#, options: .regularExpression) != nil {
+                engineErrorCategory = code
+            } else {
+                engineErrorCategory = "non-scalar-error"
+            }
+        } else {
+            engineErrorCategory = "absent"
+        }
         var diagnostic = [lastAutomaticResult, "\(prefix)source-current.\(lastAutomaticPresentationID == controller.presentationID)",
             "\(prefix)recovery-request-reason.\(recoveryReasonCategory)",
+            "\(prefix)engine-error-code.\(engineErrorCategory)",
             "\(prefix)namespace.\(namespace.uuidString.lowercased())",
             "\(prefix)invocation.\(lastAutomaticInvocationID?.uuidString.lowercased() ?? "none")",
             "\(prefix)callback-uptime.\(lastAutomaticCallbackUptime ?? 0)",
@@ -5863,10 +5885,27 @@ private struct Task144ControlledRootControls: View {
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
                     .frame(width: 1, height: 1).allowsHitTesting(false)
             }
-            ForEach(displayedFacts, id: \.self) { fact in
-                Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
-                    .opacity(fixture.facts.contains(fact) ? 1 : 0)
-                    .accessibilityHidden(!fixture.facts.contains(fact))
+            if let mode = ProcessInfo.processInfo.environment["TASK145_T19_UI"],
+               ["cycles", "repeated-material"].contains(mode) {
+                // T19 appends thirty real poll facts. Keep their eager public
+                // markers within one fixed band instead of shrinking the app
+                // viewport as the passive ledger grows. Controls stay outside.
+                ScrollView(.vertical) {
+                    VStack(spacing: 1) {
+                        ForEach(displayedFacts, id: \.self) { fact in
+                            Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                                .opacity(fixture.facts.contains(fact) ? 1 : 0)
+                                .accessibilityHidden(!fixture.facts.contains(fact))
+                        }
+                    }
+                }
+                .frame(height: 96)
+            } else {
+                ForEach(displayedFacts, id: \.self) { fact in
+                    Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                        .opacity(fixture.facts.contains(fact) ? 1 : 0)
+                        .accessibilityHidden(!fixture.facts.contains(fact))
+                }
             }
             HStack {
                 if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {

@@ -478,6 +478,13 @@ nonisolated enum Task126OwnerStoreGate {
         }
     }
 
+    #if DEBUG
+    /// Passive counter only. This creates no scope and never renews a writer lease.
+    static var automaticScopeLeaseGenerationForObservation: UInt64 {
+        leaseStore.withCurrentLease { $0 }
+    }
+    #endif
+
     /// Invalidates already-captured work synchronously. The orchestrator calls
     /// this before asynchronous auth/shop refresh can update persisted state.
     static func invalidateAutomaticScopeLease() {
