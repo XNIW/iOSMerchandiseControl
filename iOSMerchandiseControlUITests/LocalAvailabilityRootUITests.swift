@@ -441,6 +441,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         row.tap()
         let name = app.textFields["task144.product.name"]
         try t14Require(name.waitForExistence(timeout: 5), "real-name-field")
+        positionNameInEditorViewport(name)
         replaceText(in: name, with: savedName)
         try t14Require(app.staticTexts["task144.controlled.held"].exists, "held-before-single-Save-A")
         app.buttons["Save"].tap()

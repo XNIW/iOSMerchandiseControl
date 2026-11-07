@@ -124,6 +124,8 @@ final class LocalRootPresentationState: ObservableObject {
         var focusedField: String?
         var selectionLowerBound: Int? = nil
         var selectionUpperBound: Int? = nil
+        var scrollOffsetX: Double? = nil
+        var scrollOffsetY: Double? = nil
     }
 
     struct CatalogConflictReviewRequest: Identifiable, Equatable {

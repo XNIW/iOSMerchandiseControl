@@ -5746,6 +5746,15 @@ private struct Task144ControlledRootControls: View {
     @ObservedObject var fixture: Task144LocalAvailabilityRootFixture
     let controlPrefix: String
     @State private var showsHistoryFeedback = false
+    private var displayedFacts: [String] {
+        var facts = fixture.facts
+        if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1" {
+            // Reserve existing rows without exposing absent facts to AX.
+            facts.formUnion(["task144.controlled.held", "task144.controlled.released",
+                "task144.controlled.activated", "task144.controlled.activated-and-drained"])
+        }
+        return facts.sorted()
+    }
     var body: some View {
         VStack(spacing: 1) {
 // TASK145_SCOPE_SWITCH_INSERT_BEGIN C-observation-controls
@@ -5773,8 +5782,10 @@ private struct Task144ControlledRootControls: View {
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
                     .frame(width: 1, height: 1).allowsHitTesting(false)
             }
-            ForEach(fixture.facts.sorted(), id: \.self) { fact in
+            ForEach(displayedFacts, id: \.self) { fact in
                 Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                    .opacity(fixture.facts.contains(fact) ? 1 : 0)
+                    .accessibilityHidden(!fixture.facts.contains(fact))
             }
             HStack {
                 if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {
