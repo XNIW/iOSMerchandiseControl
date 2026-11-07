@@ -412,7 +412,8 @@ struct EditProductView: View {
             ProductEditorNativeStateBridge(
                 identifier: nativeFocusedIdentifier, placeholder: nativeFocusedPlaceholder,
                 text: retainedFocusedField.map(fieldText), restoration: nativeRestoration,
-                capture: captureNativeScrollOffset, restored: finishNativeRestoration)
+                capture: captureNativeScrollOffset, restored: finishNativeRestoration,
+                abandoned: abandonNativeRestoration)
                 .frame(width: 0, height: 0).allowsHitTesting(false).accessibilityHidden(true)
         }
         .onAppear {
@@ -672,6 +673,12 @@ struct EditProductView: View {
         pendingNativeRestoration = nil
         nativeRestorationID = nil
         localPresentation?.update(presentationID: mountedPresentationID) { $0.editor = retainedDraft }
+    }
+
+    private func abandonNativeRestoration(_ abandoned: ProductEditorNativeStateBridge.Restoration) {
+        guard nativeRestoration() == abandoned else { return }
+        pendingNativeRestoration = nil
+        nativeRestorationID = nil
     }
 
     private func clearRetainedDraft() {
@@ -1739,6 +1746,7 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
     let restoration: () -> Restoration?
     let capture: (CGPoint) -> Void
     let restored: (Restoration) -> Void
+    let abandoned: (Restoration) -> Void
 
     func makeUIView(context: Context) -> AttachmentView { AttachmentView() }
     func updateUIView(_ view: AttachmentView, context: Context) { view.configure(self) }
@@ -1796,9 +1804,18 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
             }
         }
         private func observeAttachedField() {
-            guard let configuration, let window, let placeholder = configuration.placeholder,
-                  !placeholder.isEmpty, let text = configuration.text else { return }
+            guard let configuration, let window else { return }
             let observedConfigurationVersion = configurationVersion
+            if restorationAttempts >= 4, let desired = configuration.restoration(),
+               observedRestorationID == desired.id {
+                guard configurationVersion == observedConfigurationVersion,
+                      configuration.restoration() == desired else { return }
+                configuration.abandoned(desired)
+                schedule()
+                return
+            }
+            guard let placeholder = configuration.placeholder,
+                  !placeholder.isEmpty, let text = configuration.text else { return }
             var responder: UIResponder? = self
             var root: UIView?
             var seen = Set<ObjectIdentifier>()
@@ -1859,6 +1876,13 @@ private struct ProductEditorNativeStateBridge: UIViewRepresentable {
                       let upper = field.position(from: field.beginningOfDocument, offset: upperUTF16),
                       let range = field.textRange(from: lower, to: upper) else { return }
                 restorationAttempts += 1
+                defer {
+                    // A failed fourth attempt gets one coalesced abandonment
+                    // turn. A successful callback already clears this request.
+                    if restorationAttempts == 4, self.configuration?.restoration() == desired {
+                        schedule()
+                    }
+                }
                 // Revalidate before every native effect; no retired models.
                 guard configurationVersion == observedConfigurationVersion,
                       configuration.restoration() == desired,
