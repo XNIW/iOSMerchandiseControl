@@ -347,10 +347,6 @@ struct OptionsView: View {
 
     private var cloudAccountAndSyncPublicCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cloudAccountPublicHeader
-
-            Divider()
-
             if let accountSyncDecision = accountSyncDecisionForPublicBanner {
                 accountSyncDecisionBanner(accountSyncDecision)
                 Divider()
@@ -391,6 +387,9 @@ struct OptionsView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("options.business-summary-unavailable")
             }
+
+            Divider()
+            cloudAccountPublicHeader
         }
         .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .leading)
         .padding(.vertical, 4)
@@ -1631,6 +1630,8 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                 .accessibilityElement(children: .combine)
             }
 
+            actionRow(canRetry: canRetry)
+
             VStack(alignment: .leading, spacing: 8) {
                 LabeledContent(
                     L("options.supabase.automaticSync.lastDataSync"),
@@ -1650,8 +1651,6 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                 )
             }
             .font(.footnote)
-
-            actionRow(canRetry: canRetry)
 
             if isDiagnosticsExpanded {
                 diagnosticsView(diagnostics, isRunning: isRunning, isStalled: isStalled)

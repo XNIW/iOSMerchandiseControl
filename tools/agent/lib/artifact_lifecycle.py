@@ -383,6 +383,26 @@ def input_available(run):
     return False
 
 
+def _completed_xcode_build(execution, derived_data):
+    command = execution.get("command", [])
+    if (execution.get("state") != "terminal" or execution.get("raw_returncode") != 0
+            or execution.get("timed_out") or execution.get("cancel_signal") or execution.get("monitor_error")
+            or not isinstance(command, list) or not command or not all(isinstance(arg, str) for arg in command)
+            or Path(command[0]).name != "xcodebuild" or command.count("-derivedDataPath") != 1):
+        return False
+    index = command.index("-derivedDataPath") + 1
+    if index >= len(command) or command[index] != str(derived_data):
+        return False
+    read_only = {"-showbuildsettings", "-showdestinations", "-list", "-resolvepackagedependencies",
+                 "-dry-run", "-n", "-help", "-version", "-showsdks", "-showtestplans", "-enumerate-tests"}
+    if any(arg.split("=", 1)[0].lower() in read_only for arg in command[1:]):
+        return False
+    no_value = {"-quiet", "-parallelizeTargets", "-disableAutomaticPackageResolution",
+                "-onlyUsePackageVersionsFromResolvedFile", "-skipPackageUpdates"}
+    return any(arg in ("build", "build-for-testing") and (i == 1 or not command[i - 1].startswith("-")
+               or command[i - 1] in no_value) for i, arg in enumerate(command) if i > 0)
+
+
 class Registry:
     def __init__(self, root):
         self.root = no_links(root)
@@ -523,6 +543,157 @@ class Registry:
                     return str(path)
         raise Hold("no completed product with matching source inputs and dependencies")
 
+    def rebuild_products(self, args):
+        run, prior = self.read(args.run), self.read(args.prior)
+        if (run["token"] == prior["token"] or run["status"] != "running" or not live(run["owner"])
+                or prior["status"] not in ("success", "failed", "interrupted_needs_review")
+                or not self.quiescent(run, for_cleanup=False) or not self.quiescent(prior, for_cleanup=False)):
+            raise Hold("rebuild requires a live new run and quiescent terminal predecessor")
+        lease = json.loads(no_links(self.root / "xcode-lease.json").read_text())
+        if (lease.get("run") != run["token"] or lease.get("nonce") != run["lease_nonce"]
+                or lease.get("owner") != run["owner"]):
+            raise Hold("rebuild requires the new run's Xcode lease")
+        key = hashlib.sha256(args.configuration.encode()).hexdigest()[:20]
+        outputs = [o for o in prior["outputs"] if o["kind"] == "products" and o["configuration"] == key]
+        if len(outputs) != 1 or any(o["kind"] == "products" for o in run["outputs"]):
+            raise Hold("rebuild product ownership is ambiguous")
+        output = outputs[0]
+        path, archive, proof_path = no_links(output["path"]), no_links(args.archive), no_links(args.proof)
+        source = path / "Build/Products"
+        if (not output.get("managed", True) or output.get("removed") or output.get("reused_by")
+                or output.get("configuration_label") != args.configuration or path.parent != self.root / "products"
+                or not source.is_dir() or not archive.is_dir() or self.root == archive or self.root in archive.parents
+                or archive in path.parents or path in archive.parents):
+            raise Hold("rebuild requires managed products and a separate historical archive")
+        root_identities = [(p, file_identity(p.lstat())) for p in (path, source, archive)]
+        proof_stat = proof_path.lstat()
+        if (not stat.S_ISREG(proof_stat.st_mode) or proof_stat.st_uid != os.getuid()
+                or proof_stat.st_nlink != 1 or proof_stat.st_size > 5_000_000):
+            raise Hold("rebuild proof is not a bounded owned file")
+        proof = json.loads(proof_path.read_text())
+        proof_hash = file_sha256(proof_path)
+        if (not isinstance(proof, dict) or not isinstance(proof.get("dependency_root"), str)
+                or not proof["dependency_root"] or not isinstance(proof.get("files"), list)
+                or not 0 < len(proof["files"]) <= MAX_FILES):
+            raise Hold("rebuild proof has an invalid schema")
+        for row in proof["files"]:
+            if (not isinstance(row, dict) or not isinstance(row.get("path"), str)
+                    or not isinstance(row.get("size"), int) or row["size"] < 0
+                    or not isinstance(row.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", row["sha256"])
+                    or any(not isinstance(row.get(key), list) or len(row[key]) != 6
+                           or not all(isinstance(value, int) for value in row[key])
+                           for key in ("source_identity", "archive_identity"))):
+                raise Hold("rebuild proof has an invalid file identity")
+        if (proof.get("schema") != 1 or proof.get("run") != run["token"] or proof.get("prior_run") != prior["token"]
+                or proof.get("configuration") != args.configuration or proof.get("source_products") != str(source)
+                or proof.get("archive_products") != str(archive) or proof.get("prior_inputs") != prior["inputs"]
+                or proof.get("new_inputs") != run["inputs"] or proof.get("prior_commit") != prior["inputs"]["head"]
+                or proof.get("new_commit") != run["inputs"]["head"] or proof.get("owner") != os.getuid()
+                or proof.get("all_hashes_match") is not True or proof.get("consumers_complete") is not True
+                or proof.get("unattributed_consumers_reviewed_closed") is not True
+                or not proof.get("reason") or not proof.get("release_condition")):
+            raise Hold("rebuild proof is not bound to both runs and explicit consumer review")
+        if (not prior["inputs"].get("complete") or not run["inputs"].get("complete")
+                or prior["inputs"]["repo"] != run["inputs"]["repo"]
+                or prior["inputs"]["toolchain"] != run["inputs"]["toolchain"]
+                or source_context(Path(run["inputs"]["repo"])) != run["inputs"]):
+            raise Hold("rebuild source or toolchain context changed")
+        dependency_root = str(no_links(proof["dependency_root"]))
+        current_deps = dependencies(Path(run["inputs"]["repo"]), self.root, dependency_root)
+        prior_deps = prior.get("dependencies", {})
+        if not prior_deps.get("complete"):
+            # Older runners recorded their default cache despite Xcode receiving
+            # an explicit one. Admit only the recorded successful build and its
+            # immutable resolved pins, never a reviewer-supplied cache alone.
+            if not prior["inputs"].get("clean_inputs"):
+                raise Hold("prior dependency provenance is incomplete")
+            roots = set()
+            for token in prior.get("executions", []):
+                execution = json.loads(no_links(self.root / "executions" / (token + ".json")).read_text())
+                command = execution.get("command", [])
+                if _completed_xcode_build(execution, path) and command.count("-clonedSourcePackagesDirPath") == 1:
+                    index = command.index("-clonedSourcePackagesDirPath") + 1
+                    if index < len(command):
+                        roots.add(command[index])
+            if roots != {dependency_root}:
+                raise Hold("prior successful build does not attest the dependency root")
+            repo = Path(prior["inputs"]["repo"])
+            for relative in ("Package.resolved", "iOSMerchandiseControl.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"):
+                old = subprocess.run(["git", "--no-optional-locks", "-C", str(repo), "show",
+                                      prior["inputs"]["head"] + ":" + relative], capture_output=True)
+                current = no_links(repo / relative)
+                if old.returncode == 0:
+                    if not current.is_file() or current.read_bytes() != old.stdout:
+                        raise Hold("resolved dependency pins changed since the prior build")
+                elif current.exists() or old.returncode != 128:
+                    raise Hold("prior dependency declaration is unavailable")
+            prior_deps = current_deps
+        if (str(no_links(run["dependency_root"])) != dependency_root or not current_deps.get("complete")
+                or prior_deps != current_deps):
+            raise Hold("rebuild dependencies differ or are unavailable")
+        for consumer in self.all_runs():
+            if consumer["token"] in (prior["token"], run["token"]):
+                continue
+            if any((ref := no_links(o["path"])) == path or path in ref.parents or ref in path.parents
+                   for o in consumer["outputs"] if not o.get("removed") and not o.get("reused_by")):
+                if (consumer["status"] == "running" or consumer["pins"] or consumer["retry_pending"]
+                        or consumer["final_evidence"] or not self.quiescent(consumer, for_cleanup=False)):
+                    raise Hold("rebuild products still have a registered consumer")
+        allowed = {os.getpid(), run["owner"]["pid"]}
+        def check_handles():
+            opened = subprocess.run(["/usr/sbin/lsof", "-nP", "+D", str(path), "-Fpn"], capture_output=True, text=True)
+            pids = {int(line[1:]) for line in opened.stdout.splitlines() if re.fullmatch(r"p\d+", line)}
+            if (opened.stderr.strip() or opened.returncode not in (0, 1)
+                    or opened.returncode == 1 and opened.stdout.strip()
+                    or opened.returncode == 0 and (not pids or not pids <= allowed)):
+                raise Hold("rebuild products have native consumers or incomplete handle coverage")
+        check_handles()
+        source_entries, archive_entries = tree(source), tree(archive)
+        original = {str(p.relative_to(source)): (p, s) for p, s in source_entries if stat.S_ISREG(s.st_mode)}
+        copied = {str(p.relative_to(archive)): (p, s) for p, s in archive_entries if stat.S_ISREG(s.st_mode)}
+        rows = proof.get("files", [])
+        if (not original or len(rows) != len(original) or len(rows) > MAX_FILES
+                or {r["path"] for r in rows} != set(original) or set(copied) != set(original)):
+            raise Hold("historical archive file set is incomplete")
+        for row in rows:
+            src, src_stat = original[row["path"]]
+            dst, dst_stat = copied[row["path"]]
+            if (file_identity(src_stat) != row.get("source_identity") or file_identity(dst_stat) != row.get("archive_identity")
+                    or src_stat.st_size != row.get("size") or dst_stat.st_size != row.get("size")
+                    or file_sha256(src) != row.get("sha256") or file_sha256(dst) != row.get("sha256")):
+                raise Hold("historical archive identity or hash changed")
+        for p, before in source_entries + archive_entries:
+            if file_identity(p.lstat()) != file_identity(before):
+                raise Hold("historical products changed during verification")
+        if any(file_identity(no_links(p).lstat()) != identity for p, identity in root_identities):
+            raise Hold("rebuild directory identity changed during verification")
+        if file_identity(proof_path.lstat()) != file_identity(proof_stat) or file_sha256(proof_path) != proof_hash:
+            raise Hold("rebuild proof changed during verification")
+        if (source_context(Path(run["inputs"]["repo"])) != run["inputs"]
+                or dependencies(Path(run["inputs"]["repo"]), self.root, dependency_root) != current_deps):
+            raise Hold("rebuild inputs changed during archive verification")
+        check_handles()
+        transfer_path = self.root / ("rebuild-transfer-" + run["token"] + ".json")
+        if transfer_path.exists():
+            raise Hold("rebuild transfer already has a journal; inspect its retained state")
+        transfer = {"schema": 1, "state": "prepared", "run": run["token"], "prior_run": prior["token"],
+                    "path": str(path), "archive": str(archive), "proof": str(proof_path), "proof_sha256": proof_hash,
+                    "dependencies": current_deps, "prepared": now()}
+        # The prepared latch keeps cleanup from removing this path if either
+        # registry save is interrupted. No product/archive bytes are moved.
+        write_json(transfer_path, transfer)
+        output.update(reused_by=run["token"], historical_products=str(archive), rebuild_transfer=str(transfer_path))
+        prior["quiescence_review_receipt"] = {"path": str(proof_path), "sha256": proof_hash}
+        self.save(prior)
+        run["outputs"].append({"path": str(path), "kind": "products", "managed": True, "configuration": key,
+                               "configuration_label": args.configuration, "requires_rebuild": True, "valid_products": False,
+                               "rebuild_of": prior["token"], "rebuild_transfer": str(transfer_path), "created": now()})
+        self.save(run)
+        transfer.update(state="committed", committed=now())
+        write_json(transfer_path, transfer)
+        self.event("products_transferred_for_rebuild", **transfer)
+        return str(path)
+
     def finish(self, args):
         run = self.read(args.run)
         if run["status"] != "running":
@@ -563,6 +734,12 @@ class Registry:
                         output["requires_rebuild"] = True
                         break
             output["valid_products"] = output["kind"] != "products" or (path / "Build/Products").is_dir()
+            if output.get("rebuild_of"):
+                executions = [json.loads(no_links(self.root / "executions" / (token + ".json")).read_text())
+                              for token in run["executions"]]
+                output["valid_products"] = (output["valid_products"] and args.code == 0
+                    and source_context(Path(run["inputs"]["repo"])) == run["inputs"]
+                    and any(_completed_xcode_build(execution, path) for execution in executions))
             if path.exists() and output.get("managed", True):
                 measured = subprocess.run(["/usr/bin/du", "-k", "-P", "-x", "-s", str(path)], capture_output=True, text=True)
                 if measured.returncode == 0 and not measured.stderr:
@@ -758,6 +935,12 @@ class Registry:
         self.reconcile()
         runs = sorted(self.all_runs(), key=lambda r: r.get("finished", ""), reverse=True)
         keep, counts, consumers = set(), {}, set()
+        for journal in self.root.glob("rebuild-transfer-*.json"):
+            if no_links(journal).stat().st_size > 5_000_000:
+                raise Hold("unbounded rebuild transfer journal")
+            transfer = json.loads(journal.read_text())
+            if transfer.get("state") != "committed":
+                consumers.add(no_links(transfer["path"]))
         for run in runs:
             refs = [output for output in run["outputs"] if not output.get("managed", True)]
             if refs and (run["status"] == "running" or run["pins"] or run["retry_pending"]
@@ -1043,6 +1226,9 @@ def main():
     reuse = sub.add_parser("reuse-products")
     reuse.add_argument("--run", required=True)
     reuse.add_argument("--configuration", required=True)
+    rebuild = sub.add_parser("rebuild-products")
+    for key in ("run", "prior", "configuration", "archive", "proof"):
+        rebuild.add_argument("--" + key, required=True)
     r = sub.add_parser("reference")
     r.add_argument("--run", required=True)
     r.add_argument("--path", required=True)
@@ -1075,6 +1261,8 @@ def main():
                 print(reg.path(args))
             elif args.action == "reuse-products":
                 print(reg.reuse_products(args))
+            elif args.action == "rebuild-products":
+                print(reg.rebuild_products(args))
             elif args.action == "finish":
                 reg.finish(args)
             elif args.action == "reference":

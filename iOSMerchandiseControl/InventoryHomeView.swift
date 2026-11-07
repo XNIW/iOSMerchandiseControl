@@ -109,8 +109,13 @@ struct InventoryHomeView: View {
             if isBusinessContentAvailable {
                 businessContent
             } else {
-                LocalWorkbookPreparationView(preparation: workbookPreparation, session: excelSession,
-                    statusTitle: L(unavailableTitleKey), statusDetail: L(unavailableDetailKey), openOptions: openOptions)
+                VStack(alignment: .leading, spacing: 0) {
+                    shopContextHeader
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                    LocalWorkbookPreparationView(preparation: workbookPreparation, session: excelSession,
+                        statusTitle: L(unavailableTitleKey), statusDetail: L(unavailableDetailKey), openOptions: openOptions)
+                }
             }
         }
         .sheet(isPresented: $showShopPicker) { shopPickerSheet }

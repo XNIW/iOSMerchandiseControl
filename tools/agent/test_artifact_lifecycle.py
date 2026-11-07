@@ -131,6 +131,130 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(self.clean(True)["removed_outputs"], [str(old)])
         self.assertTrue(current.exists())
 
+    def rebuild_fixture(self):
+        prior = self.begin()
+        products = self.output(prior, "products")
+        self.finish(prior, 1)
+        self.context.update(head="new-" + uuid.uuid4().hex, delta_sha256="changed-source")
+        run = self.begin()
+        with self.reg.exclusive():
+            self.reg.lease(args(run=run, action="lease-acquire"))
+        archive = self.base / ("historical-products-" + prior)
+        shutil.copytree(products / "Build/Products", archive)
+        old, new = self.reg.read(prior), self.reg.read(run)
+        files = []
+        for source, source_stat in m.tree(products / "Build/Products"):
+            if not source.is_file():
+                continue
+            relative = str(source.relative_to(products / "Build/Products"))
+            files.append(dict(path=relative, size=source_stat.st_size, sha256=m.file_sha256(source),
+                              source_identity=m.file_identity(source_stat),
+                              archive_identity=m.file_identity((archive / relative).lstat())))
+        proof = self.base / (run + ".rebuild-proof.json")
+        proof.write_text(json.dumps(dict(schema=1, run=run, prior_run=prior, configuration="Debug",
+            source_products=str(products / "Build/Products"), archive_products=str(archive),
+            prior_inputs=old["inputs"], new_inputs=new["inputs"], prior_commit=old["inputs"]["head"],
+            new_commit=new["inputs"]["head"], owner=os.getuid(), dependency_root=new["dependency_root"],
+            all_hashes_match=True, consumers_complete=True, unattributed_consumers_reviewed_closed=True,
+            reason="fixture incremental rebuild", release_condition="first failure closes", files=files)))
+        return args(run=run, prior=prior, configuration="Debug", archive=str(archive), proof=str(proof)), products
+
+    def test_rebuild_products_transfers_ownership_and_retains_historical_products(self):
+        for action in (None, "test-without-building", "source-changed", "build-for-testing"):
+            request, products = self.rebuild_fixture()
+            with self.reg.exclusive():
+                self.assertEqual(self.reg.rebuild_products(request), str(products))
+            old, new = self.reg.read(request.prior), self.reg.read(request.run)
+            self.assertNotEqual(old["inputs"], new["inputs"])
+            self.assertEqual(old["status"], "failed")
+            self.assertEqual(old["outputs"][0]["reused_by"], request.run)
+            self.assertEqual(old["outputs"][0]["historical_products"], request.archive)
+            self.assertTrue(new["outputs"][0]["managed"])
+            self.assertTrue(new["outputs"][0]["requires_rebuild"])
+            self.assertFalse(new["outputs"][0]["valid_products"])
+            if action:
+                token = uuid.uuid4().hex
+                execution = dict(state="terminal", raw_returncode=0, observed=[], pgid=-999999,
+                    command=["/usr/bin/xcodebuild", "-derivedDataPath", str(products),
+                             "build-for-testing" if action == "source-changed" else action])
+                m.write_json(self.root / "executions" / (token + ".json"), execution)
+                new["executions"].append(token)
+                with self.reg.exclusive():
+                    self.reg.save(new)
+                if action == "source-changed":
+                    self.context.update(delta_sha256="changed-after-compile")
+            self.finish(request.run)
+            self.assertEqual(self.reg.read(request.run)["outputs"][0]["valid_products"],
+                             action == "build-for-testing", action)
+            self.assertEqual((Path(request.archive) / "app.bin").read_bytes(), b"generated app")
+            with self.reg.exclusive():
+                self.reg.lease(args(run=request.run, action="lease-release"))
+        for flag in ("-showBuildSettings", "-showdestinations", "-list", "-resolvePackageDependencies", "-dry-run", "-n"):
+            probe = dict(execution, command=execution["command"] + [flag])
+            self.assertFalse(m._completed_xcode_build(probe, products), flag)
+        for flag in ("timed_out", "cancel_signal", "monitor_error"):
+            self.assertFalse(m._completed_xcode_build(dict(execution, **{flag: True}), products), flag)
+
+    def test_rebuild_products_rejects_live_consumers_and_changed_archive_proof(self):
+        request, products = self.rebuild_fixture()
+        with self.reg.exclusive(), patch.object(self.reg, "quiescent", return_value=False):
+            self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        consumer = self.begin(retry_pending=True)
+        with self.reg.exclusive():
+            self.reg.reference(args(run=consumer, path=str(products), kind="products", configuration="Debug"))
+        self.finish(consumer)
+        with self.reg.exclusive():
+            self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        self.release(consumer, [])
+        proof_path = Path(request.proof)
+        original_proof = json.loads(proof_path.read_text())
+        for missing in ("dependency_root", "path"):
+            malformed = json.loads(json.dumps(original_proof))
+            if missing == "path":
+                del malformed["files"][0][missing]
+            else:
+                del malformed[missing]
+            proof_path.write_text(json.dumps(malformed))
+            with self.reg.exclusive():
+                self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        proof_path.write_text(json.dumps(original_proof))
+        native = subprocess.CompletedProcess([], 0, stdout="p999999\nn" + str(products / "app.bin") + "\n", stderr="")
+        with self.reg.exclusive(), patch.object(m.subprocess, "run", return_value=native):
+            self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        copied = Path(request.archive) / "app.bin"
+        replacement = copied.with_suffix(".replacement")
+        replacement.write_bytes(copied.read_bytes())
+        os.replace(replacement, copied)
+        with self.reg.exclusive():
+            self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        proof = json.loads(proof_path.read_text())
+        proof["files"][0]["archive_identity"] = m.file_identity(copied.lstat())
+        proof_path.write_text(json.dumps(proof))
+        before = copied.stat()
+        copied.write_bytes(b"X" * before.st_size)
+        os.utime(copied, ns=(before.st_atime_ns, before.st_mtime_ns))
+        with self.reg.exclusive():
+            self.assertRaises(m.Hold, self.reg.rebuild_products, request)
+        self.assertNotIn("reused_by", self.reg.read(request.prior)["outputs"][0])
+        self.assertEqual(self.reg.read(request.run)["outputs"], [])
+        self.assertEqual(list(self.root.glob("rebuild-transfer-*.json")), [])
+        self.assertEqual((products / "Build/Products/app.bin").read_bytes(), b"generated app")
+
+    def test_rebuild_products_interrupted_transfer_preserves_both_copies(self):
+        request, products = self.rebuild_fixture()
+        save = self.reg.save
+        def interrupted(run):
+            if run["token"] == request.run:
+                raise OSError("fixture crash before successor registry save")
+            save(run)
+        with self.reg.exclusive(), patch.object(self.reg, "save", side_effect=interrupted):
+            self.assertRaises(OSError, self.reg.rebuild_products, request)
+        journal = json.loads((self.root / ("rebuild-transfer-" + request.run + ".json")).read_text())
+        self.assertEqual(journal["state"], "prepared")
+        self.assertEqual(self.clean(True)["removed_outputs"], [])
+        self.assertTrue((products / "Build/Products/app.bin").exists())
+        self.assertTrue((Path(request.archive) / "app.bin").exists())
+
     def test_active_retry_pin_final_and_external_symlink_kept(self):
         protected = []
         for settings in ({}, {"retry_pending": True}, {"pin": ["open-issue"]}, {"final_evidence": True}):
