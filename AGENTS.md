@@ -223,6 +223,8 @@ Un prodotto necessario al prossimo test non è eliminabile solo perché la compi
 
 Per ricompilare lo stesso target iOS con sorgenti modificati, `rebuild-products` trasferisce il DerivedData registrato alla nuova run dopo la chiusura dei consumer e l'acquisizione della lease Xcode. Richiede una copia verificata dei soli `Build/Products` necessari alla prima failure, con manifest completo di identità e hash, proprietario e condizione di rilascio. Il journal lega le copie storiche ai nuovi output e protegge un trasferimento interrotto. La nuova attribuzione richiede una compilazione effettiva riuscita sullo stesso DerivedData e sorgenti invariati durante la run. Dichiarare il `dependency-root` realmente usato da Xcode e usare la stessa etichetta di configurazione per piattaforma, target, configurazione, architettura e toolchain in tutte le run equivalenti.
 
+Il cleanup dei risultati registrati riconosce anche `database.sqlite3` dei bundle `.xcresult` Xcode 3.60, con formato `fileBacked2`, riferimento radice e schema di 40 tabelle verificati in sola lettura. Per i componenti `Build/Intermediates.noindex` registrati verifica le tre tabelle dei metadati `XCBuildData/build.db`. La qualifica richiede il Registry concreto e le corrispondenti assegnazioni di percorso e tipo. I database applicativi conservano le protezioni ordinarie. Formati o schemi diversi mantengono il lotto in HOLD.
+
 ### Conservazione e limiti
 
 - Preservare sorgenti/WIP, indice e riferimenti Git, patch utili con preimage, manifest dei candidati correnti, dati applicativi e commerciali, database/WAL/SHM, Keychain, autenticazioni, credenziali e sessioni. Dati e sessioni non sono cache; questo cleanup ordinario non ne autorizza la cancellazione.
