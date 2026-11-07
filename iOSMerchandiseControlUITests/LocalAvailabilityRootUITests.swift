@@ -5410,7 +5410,21 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         for _ in 0..<8 {
             if fullyVisible() { return }
-            app.swipeUp()
+            let window = app.frame
+            let top = max(window.minY, app.navigationBars.firstMatch.frame.maxY) + 8
+            let bottom = min(window.maxY, app.tabBars.firstMatch.frame.minY) - 8
+            try t18Require(bottom > top, stage)
+            var movement: CGFloat = -160
+            if element.exists {
+                // A full-screen swipe can carry the row past the navigation
+                // bar. Reveal it in either direction through bounded gestures.
+                movement = max(-160, min(160, (top + bottom) / 2 - element.frame.midY))
+                if abs(movement) < 44 { movement = movement < 0 ? -44 : 44 }
+            }
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+                .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
+            start.press(forDuration: 0.05,
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)))
         }
         try t18Require(fullyVisible(), stage)
     }
