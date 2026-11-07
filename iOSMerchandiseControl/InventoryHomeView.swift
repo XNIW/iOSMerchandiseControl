@@ -113,6 +113,9 @@ struct InventoryHomeView: View {
                     shopContextHeader
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
+                    POSReadEntry()
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
                     LocalWorkbookPreparationView(preparation: workbookPreparation, session: excelSession,
                         statusTitle: L(unavailableTitleKey), statusDetail: L(unavailableDetailKey), openOptions: openOptions)
                 }

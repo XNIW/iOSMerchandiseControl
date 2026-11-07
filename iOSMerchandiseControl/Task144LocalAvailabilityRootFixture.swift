@@ -2727,7 +2727,116 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         catch { observed["pendingSaveA"] = ["status": "UNKNOWN_READ_FAILED"] }
         do { observed["terminalSaveA"] = ["status": "VALUE", "value": try terminalReadback()] }
         catch { observed["terminalSaveA"] = ["status": "UNKNOWN_READ_FAILED"] }
+        observed["heldRecoveryGuard"] = t14HeldRecoveryGuardWitness(
+            pendingSaveA: (observed["pendingSaveA"] as? [String: Any])?["value"] as? Bool == true,
+            bodyProof: observed["bodyProof"] as? Bool == true)
         return observed
+    }
+
+    private func t14HeldRecoveryGuardWitness(pendingSaveA: Bool, bodyProof: Bool) -> [String: Any] {
+        // Observation of this fixture's existing G0 -> staging G1 only. No
+        // identity creation/repair, journal transition, trigger or lease renewal.
+        struct ProgressIdentity: Decodable {
+            let schemaVersion: String; let generationID: UUID; let accountHash: String; let shopID: UUID
+            let storeIdentity: LocalStoreIdentity; let deviceIdentityHash: String
+            let checkpointA: ShopSyncRecoveryCheckpoint; let baselineRunID: UUID
+        }
+        func boundedFile(_ url: URL) throws -> Data {
+            let fresh = URL(fileURLWithPath: url.path)
+            let values = try fresh.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard fresh.resolvingSymlinksInPath() == fresh.standardizedFileURL,
+                  values.isRegularFile == true, values.isSymbolicLink != true,
+                  let size = values.fileSize, size > 0, size <= ShopSyncRecoveryLimits.maximumGenerationManifestBytes else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            let data = try Data(contentsOf: fresh)
+            guard data.count == size else { throw SyncStoreGenerationError.activationReadBackFailed }
+            return data
+        }
+        func digest(_ bytes: Data) -> String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
+        let binding = AccountBindingStore()
+        guard pendingSaveA, bodyProof, stateStore.state.phase == .recoveryRequired,
+              facts.contains("task144.controlled.held"), transport.holdsProducts, !transport.isReleased,
+              let scope = heldRecoveryScope, scope.ownerUserID == owner, scope.shopID == shop,
+              scope.accountHash == AccountBindingStore.accountHash(for: owner),
+              authViewModel.isSignedIn, authViewModel.localMutationOwnerUserID == owner,
+              UserDefaults.standard.string(forKey: "mobile.shopContext.activeAccountHash.v1") == scope.accountHash,
+              DeviceInstallIDStore().lastKnownDeviceInstallID == scope.deviceInstallID,
+              DeviceInstallIDStore.identityHash(for: scope.deviceInstallID) == scope.deviceIdentityHash,
+              let selected = SelectedShopStore().selectedShop(accountHash: scope.accountHash),
+              selected.shopID == shop, selected.localStoreIdentity == scope.storeIdentity, selected.selectable,
+              !SelectedShopStore().hasConfirmedDeviceDenial(accountHash: scope.accountHash, shopID: shop,
+                  deviceIdentityHash: scope.deviceIdentityHash),
+              let currentBinding = binding.currentBinding, currentBinding.accountHash == scope.accountHash,
+              currentBinding.storeIdentity == scope.storeIdentity,
+              let active = controller.activeManifest, active.generationID == heldGenerationID,
+              active.accountHash == scope.accountHash, active.shopID == shop,
+              active.storeIdentity == scope.storeIdentity, active.deviceIdentityHash == scope.deviceIdentityHash,
+              binding.durableRecoveryJournalURLForTesting == ownedRepository.recoveryJournalURL,
+              ownedRepository.baseDirectory.lastPathComponent == "generation-root",
+              ownedRepository.baseDirectory.deletingLastPathComponent().lastPathComponent == namespace.uuidString.lowercased(),
+              ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]?.lowercased() == namespace.uuidString.lowercased(),
+              binding.hasPendingReplacementJournal, let journal = binding.pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery, journal.phase == .staging,
+              journal.replacement == scope.pendingReplacement, journal.replacement.accountHash == scope.accountHash,
+              journal.replacement.storeIdentity == scope.storeIdentity, journal.deviceIdentityHash == scope.deviceIdentityHash,
+              let target = journal.generationID, target != active.generationID,
+              journal.baselineRunID == nil, journal.watermark == nil else { return ["status": "NOT_QUALIFIED"] }
+        // At staging, this field can still hold the prepared reason hash; the
+        // actual checkpoint/baseline belong to progress, not yet the journal.
+        let preparedReasons = ["TASK144_CONTROLLED_ROOT_HELD", "automatic_full_recovery"]
+            .map { AccountBindingStore.redactedAccountHash(for: $0) }
+        if let prepared = journal.checkpointDigest, !preparedReasons.contains(prepared) {
+            return ["status": "NOT_QUALIFIED"]
+        }
+        do {
+            // Empty validation of the previously captured lease counter only.
+            // No operation using this TaskLocal scope is admitted or performed.
+            try Task126OwnerStoreGate.$currentAutomaticScope.withValue(scope) {
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {}
+            }
+            let before = try ownedRepository.captureActiveMutationFence(for: controller.active)
+            let journalBytes = try boundedFile(ownedRepository.recoveryJournalURL)
+            let progressURL = ownedRepository.baseDirectory.appendingPathComponent("generations", isDirectory: true)
+                .appendingPathComponent(target.uuidString.lowercased(), isDirectory: true)
+                .appendingPathComponent("recovery-page-progress-v1.json")
+            let progressBytes = try boundedFile(progressURL)
+            let progress = try JSONDecoder().decode(ProgressIdentity.self, from: progressBytes)
+            try progress.checkpointA.validate(expectedShopID: shop, expectedDeviceIdentifier: scope.deviceInstallID,
+                                             expectedOwnerUserID: owner)
+            guard progress.schemaVersion == "recovery-page-progress-v1", progress.generationID == target,
+                  progress.accountHash == scope.accountHash, progress.shopID == shop,
+                  progress.storeIdentity == scope.storeIdentity, progress.deviceIdentityHash == scope.deviceIdentityHash,
+                  progress.checkpointA.scope.accountKey == scope.accountHash,
+                  progress.checkpointA.scope.deviceKey == scope.deviceIdentityHash,
+                  before.presentationID == active.generationID.uuidString.lowercased(), !before.files.isEmpty,
+                  try boundedFile(ownedRepository.recoveryJournalURL) == journalBytes,
+                  try boundedFile(progressURL) == progressBytes,
+                  binding.pendingRecoveryJournal == journal, controller.activeManifest == active,
+                  try ownedRepository.captureActiveMutationFence(for: controller.active) == before,
+                  stateStore.state.phase == .recoveryRequired, transport.holdsProducts, !transport.isReleased,
+                  Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer) else {
+                return ["status": "NOT_QUALIFIED"]
+            }
+            try Task126OwnerStoreGate.$currentAutomaticScope.withValue(scope) {
+                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {}
+            }
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            return ["status": "CURRENT_READ_ONLY_MATCH", "runID": namespace.uuidString.lowercased(),
+                "pid": ProcessInfo.processInfo.processIdentifier, "phase": "recovery-required",
+                "ownerID": owner.uuidString.lowercased(), "shopID": shop.uuidString.lowercased(),
+                "accountHash": scope.accountHash, "deviceIdentityHash": scope.deviceIdentityHash,
+                "leaseGeneration": scope.leaseGeneration, "scopeLeaseCurrent": true,
+                "activeGeneration": active.generationID.uuidString.lowercased(),
+                "heldGeneration": active.generationID.uuidString.lowercased(), "stagingGeneration": target.uuidString.lowercased(),
+                "journalMode": journal.mode.rawValue, "journalPhase": journal.phase.rawValue,
+                "journalPhysical": true, "journalSHA256": digest(journalBytes), "progressSHA256": digest(progressBytes),
+                "journalBaselineAbsent": true, "journalWatermarkAbsent": true,
+                "checkpointDigest": progress.checkpointA.checkpointDigest,
+                "baselineRunID": progress.baselineRunID.uuidString.lowercased(),
+                "physicalFenceStable": true, "physicalFenceSHA256": digest(try encoder.encode(before.files)),
+                "heldPage": true, "pendingSaveA": true, "bodyProof": true]
+        } catch { return ["status": "NOT_QUALIFIED"] }
     }
 // TASK145_T14_INSERT_END passive-runtime-values
     /// Observational only: no runtime trigger, scope grant or queue action.

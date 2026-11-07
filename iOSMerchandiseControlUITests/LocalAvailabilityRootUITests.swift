@@ -502,7 +502,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                initialRequest == nil || requested != initialRequest,
                let source = t14DefaultString(observed, "sync.runtime.foreground.source"), !source.isEmpty,
                let outcome = t14DefaultString(observed, "sync.runtime.foreground.outcome"),
-               ["deferred_busy", "deferred_existing_task", "deferred_runtime_busy", "deferred_store_replacement"].contains(outcome) {
+               (["deferred_busy", "deferred_existing_task", "deferred_runtime_busy", "deferred_store_replacement"].contains(outcome)
+                || (outcome == "recovery_required_preserved" && t14HeldRecoveryGuardIsCurrent(observed))) {
+                // The controlled initial Atomic owner may leave the ordinary
+                // coordinator preserving its exact pending recovery. This is a
+                // recovery-guard witness, not necessarily the UI-busy branch.
                 freshBusyDeferral = true
             }
             // Short bounded pacing between real actions is not the witness:
@@ -635,6 +639,27 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         observed["keyboardFrame"] = keyboard.exists
             ? [Double(keyboard.frame.minX), Double(keyboard.frame.minY), Double(keyboard.frame.width), Double(keyboard.frame.height)] : []
         return observed
+    }
+
+    private func t14HeldRecoveryGuardIsCurrent(_ snapshot: [String: Any]) -> Bool {
+        guard let runtime = snapshot["runtime"] as? [String: Any],
+              let witness = runtime["heldRecoveryGuard"] as? [String: Any],
+              witness["status"] as? String == "CURRENT_READ_ONLY_MATCH",
+              witness["runID"] as? String == runID.lowercased(), witness["pid"] as? Int == snapshot["pid"] as? Int,
+              witness["phase"] as? String == "recovery-required",
+              witness["journalMode"] as? String == "sameScopeRecovery", witness["journalPhase"] as? String == "staging",
+              witness["ownerID"] as? String == "14400000-0000-4000-8000-000000000001",
+              witness["shopID"] as? String == "14400000-0000-4000-8000-000000000002",
+              let active = witness["activeGeneration"] as? String, UUID(uuidString: active) != nil,
+              active == snapshot["activeManifestGeneration"] as? String, active == runtime["generation"] as? String,
+              witness["heldGeneration"] as? String == active,
+              let target = witness["stagingGeneration"] as? String, UUID(uuidString: target) != nil, target != active,
+              let baseline = witness["baselineRunID"] as? String, UUID(uuidString: baseline) != nil,
+              ["journalPhysical", "scopeLeaseCurrent", "physicalFenceStable", "heldPage", "pendingSaveA", "bodyProof",
+               "journalBaselineAbsent", "journalWatermarkAbsent"].allSatisfy({ witness[$0] as? Bool == true }),
+              ["accountHash", "deviceIdentityHash", "checkpointDigest", "journalSHA256", "progressSHA256", "physicalFenceSHA256"]
+                .allSatisfy({ (witness[$0] as? String)?.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression) != nil }) else { return false }
+        return runtime["bodyProof"] as? Bool == true && t14ReadbackBool(snapshot, "pendingSaveA") == true
     }
 
     private func t14DefaultNumber(_ snapshot: [String: Any], _ key: String) -> Double? {
@@ -1177,7 +1202,28 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         for drag in 0...5 {
             if element.exists && element.isHittable { return }
             guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
-            app.swipeUp()
+            let keyboard = app.keyboards.firstMatch
+            let editor = app.navigationBars["Edit product"]
+            if keyboard.exists && editor.exists {
+                let viewport = app.frame.intersection(app.windows.firstMatch.frame)
+                var upper = max(viewport.minY + 12, editor.frame.maxY + 12)
+                let band = app.otherElements["task144.controlled.editor.band"]
+                if band.exists { upper = max(upper, band.frame.maxY + 12) }
+                var lower = min(viewport.maxY, keyboard.frame.minY) - 12
+                // The predictive/input-assistant strip sits ABOVE Keyboard's
+                // frame. The historical app swipe began on this strip, so the
+                // Form never received any of the five real gestures.
+                let assistant = app.otherElements["SystemInputAssistantView"]
+                if assistant.exists {
+                    let covered = assistant.frame.intersection(viewport)
+                    if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
+                }
+                guard lower > upper + 16, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
+                    CGVector(dx: viewport.minX + 24 - app.frame.minX, dy: lower - app.frame.minY))
+                start.press(forDuration: 0, thenDragTo: start.withOffset(
+                    CGVector(dx: 0, dy: -min(200, lower - upper))), withVelocity: .slow, thenHoldForDuration: 0.2)
+            } else { app.swipeUp() }
         }
         XCTAssertTrue(element.exists && element.isHittable, "R4 control not reachable within 15 seconds and 5 drags")
     }
@@ -2369,7 +2415,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(save.waitForExistence(timeout: 5)); save.tap()
     }
 
-    private func replaceDomainField(_ field: XCUIElement, with value: String, historyTitle: Bool) throws {
+    private func replaceDomainField(_ field: XCUIElement, with value: String, historyTitle: Bool, feedbackUI: Bool = false) throws {
         // The same four gestures also materialize a virtualized price row before
         // its existing five-second existence gate. No extra scroll loop is added.
         // No Name-only observation is reused for a price or history field.
@@ -2402,10 +2448,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if !historyTitle { XCTAssertTrue(field.waitForExistence(timeout: 5)) }
         guard field.isHittable else { throw NSError(domain: "Task145DomainUI", code: 1) }
         field.tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(feedbackUI ? historyFeedbackExists(keyboard, timeout: 5) : keyboard.waitForExistence(timeout: 5))
         if historyTitle {
             let clear = app.buttons["Clear"].firstMatch
-            XCTAssertTrue(clear.waitForExistence(timeout: 5)); clear.tap()
+            XCTAssertTrue(feedbackUI ? historyFeedbackExists(clear, timeout: 5) : clear.waitForExistence(timeout: 5)); clear.tap()
         } else if let current = field.value as? String, !current.isEmpty, current != field.placeholderValue {
             field.press(forDuration: 1.1)
             let selectAll = app.menuItems["Select All"].firstMatch
@@ -2422,8 +2469,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if historyTitle, app.buttons["Done"].firstMatch.exists { app.buttons["Done"].firstMatch.tap() }
     }
 
-    private func awaitDomainFact(_ suffix: String, timeout: TimeInterval) throws {
-        let observed = app.staticTexts["task145.domain." + suffix].waitForExistence(timeout: timeout)
+    private func awaitDomainFact(_ suffix: String, timeout: TimeInterval, fastPresence: Bool = false) throws {
+        let fact = app.staticTexts["task145.domain." + suffix]
+        let observed = fastPresence ? historyFeedbackExists(fact, timeout: timeout) : fact.waitForExistence(timeout: timeout)
         if !observed { captureControlledAutomaticReadback() }
         XCTAssertTrue(observed, "Native domain boundary not traversed: \(suffix)")
     }
@@ -2455,21 +2503,21 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let initialCard = try captureHistoryFeedbackUI("initial real local success", title: "Controlled history baseline", pending: false)
         try saveHistoryFeedback(second: false)
         try closeHistoryFeedback()
-        try awaitDomainFact("a-durable-held-page", timeout: 5)
+        try awaitDomainFact("a-durable-held-page", timeout: 5, fastPresence: true)
         let localA = try domainLedgerAttachment("History feedback: real local application followed by real Save A")
         let localSuccess = try XCTUnwrap((localA.state["historyFeedback"] as? [String: Any])?["localSuccess"] as? [String: Int])
         XCTAssertEqual(localSuccess["attempted"], 1); XCTAssertEqual(localSuccess["succeeded"], 1)
         XCTAssertEqual(localSuccess["failed"], 0); XCTAssertEqual(localSuccess["pendingCloudChanges"], 0)
         app.buttons["task144.controlled.release"].press(forDuration: 1.2)
-        try awaitDomainFact("cutover-pending-stale-writer-rejected", timeout: 40)
-        try awaitDomainFact("a-committed-response-held", timeout: 40)
+        try awaitDomainFact("cutover-pending-stale-writer-rejected", timeout: 40, fastPresence: true)
+        try awaitDomainFact("a-committed-response-held", timeout: 40, fastPresence: true)
         try openHistoryFeedback()
         try saveHistoryFeedback(second: true)
         // Capture first; semantic assertions are evaluated after the full ACK/reopen
         // sequence so an ambiguous label does not discard later causal evidence.
         let dirtyB = try captureHistoryFeedbackUI("B dirty while response A is held", title: "History title saved while ACK is held", pending: true)
         try closeHistoryFeedback()
-        try awaitDomainFact("b-durable-a-held", timeout: 5)
+        try awaitDomainFact("b-durable-a-held", timeout: 5, fastPresence: true)
         let beforeA = try domainLedgerAttachment("History feedback B dirty, local success preserved, A remote response held")
         try assertHistoryFeedbackFrame(beforeA.state, stage: "b-dirty-a-held", dirty: true, pending: "2")
         XCTAssertEqual((beforeA.state["requests"] as? [Any])?.count, 1)
@@ -2487,7 +2535,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let dirtyAfterA = try captureHistoryFeedbackUI("B still dirty after ACK A", title: "History title saved while ACK is held", pending: true)
         app.buttons["task145.history-feedback.release-b"].tap()
         try closeHistoryFeedback()
-        try awaitDomainFact("b-own-ack", timeout: 40)
+        try awaitDomainFact("b-own-ack", timeout: 40, fastPresence: true)
         let ownB = try domainLedgerAttachment("Own ACK B and one emitted History event per sealed revision")
         try assertHistoryFeedbackFrame(ownB.state, stage: "b-own-ack", dirty: false, pending: "0")
         XCTAssertEqual((ownB.state["requests"] as? [Any])?.count, 2)
@@ -2501,7 +2549,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try closeHistoryFeedback()
         app.terminate(); XCTAssertEqual(app.state, .notRunning)
         app.launch()
-        try awaitDomainFact("terminal-reopened-no-resend", timeout: 40)
+        try awaitDomainFact("terminal-reopened-no-resend", timeout: 40, fastPresence: true)
         let reopened = try domainLedgerAttachment("New process real normal wake, same B ACK and no business/event resend")
         XCTAssertNotEqual(ownB.pid, reopened.pid)
         XCTAssertEqual(ownB.bytes, reopened.bytes)
@@ -2515,33 +2563,40 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             "The actual B row must not present the prior local/import success as unqualified cloud convergence of B")
     }
 
+    private func historyFeedbackExists(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = ProcessInfo.processInfo.systemUptime + timeout
+        let present = element.exists || element.waitForExistence(
+            timeout: max(0, deadline - ProcessInfo.processInfo.systemUptime))
+        return present && ProcessInfo.processInfo.systemUptime <= deadline
+    }
+
     private func openHistoryFeedback() throws {
         let open = app.buttons["task145.history-feedback.open"]
-        XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
-        XCTAssertTrue(app.buttons["task145.history-feedback.close"].waitForExistence(timeout: 5))
+        XCTAssertTrue(historyFeedbackExists(open, timeout: 5)); open.tap()
+        XCTAssertTrue(historyFeedbackExists(app.buttons["task145.history-feedback.close"], timeout: 5))
         XCTAssertFalse(app.staticTexts["Cloud history is not available on this device."].exists,
             "This is the real History consumer with its real concrete service, not the nil fixture card")
     }
     private func closeHistoryFeedback() throws {
         let close = app.buttons["task145.history-feedback.close"]
-        XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
-        XCTAssertTrue(app.buttons["task145.history-feedback.open"].waitForExistence(timeout: 5))
+        XCTAssertTrue(historyFeedbackExists(close, timeout: 5)); close.tap()
+        XCTAssertTrue(historyFeedbackExists(app.buttons["task145.history-feedback.open"], timeout: 5))
     }
     private func saveHistoryFeedback(second: Bool) throws {
         let title = second ? "History title saved during recovery" : "Controlled history baseline"
         let row = app.staticTexts[title]
         for _ in 0..<4 {
-            if row.waitForExistence(timeout: 1), row.isHittable { break }
+            if historyFeedbackExists(row, timeout: 1), row.isHittable { break }
             app.swipeUp()
         }
         XCTAssertTrue(row.exists && row.isHittable); row.swipeRight()
         let edit = app.buttons["Edit"].firstMatch
-        XCTAssertTrue(edit.waitForExistence(timeout: 5)); edit.tap()
+        XCTAssertTrue(historyFeedbackExists(edit, timeout: 5)); edit.tap()
         let field = app.textFields["Display name (optional)"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        try replaceDomainField(field, with: second ? "History title saved while ACK is held" : "History title saved during recovery", historyTitle: true)
+        XCTAssertTrue(historyFeedbackExists(field, timeout: 5))
+        try replaceDomainField(field, with: second ? "History title saved while ACK is held" : "History title saved during recovery", historyTitle: true, feedbackUI: true)
         let save = app.buttons["Save"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 5)); save.tap()
+        XCTAssertTrue(historyFeedbackExists(save, timeout: 5)); save.tap()
     }
     private func assertHistoryFeedbackFrame(_ ledger: [String: Any], stage: String, dirty: Bool, pending: String) throws {
         let feedback = try XCTUnwrap(ledger["historyFeedback"] as? [String: Any])
@@ -2557,11 +2612,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(frame["localRevision"], String(try XCTUnwrap(ledger["revisionB"] as? Int)))
     }
     private func captureHistoryFeedbackUI(_ stage: String, title: String, pending: Bool) throws -> (cloudText: String, pendingVisible: Bool, unqualifiedSynced: Bool) {
-        if pending { _ = app.staticTexts["Local History changes pending: 1."].waitForExistence(timeout: 5) }
+        if pending { _ = historyFeedbackExists(app.staticTexts["Local History changes pending: 1."], timeout: 5) }
         let card = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ OR label BEGINSWITH %@",
             "Local History changes pending:", "History synchronized:")).firstMatch
         for _ in 0..<4 {
-            if card.waitForExistence(timeout: 1), card.isHittable { break }
+            if historyFeedbackExists(card, timeout: 1), card.isHittable { break }
             app.swipeDown()
         }
         let cardText = card.exists ? card.label : "MISSING_REAL_CLOUD_CARD"
@@ -2573,14 +2628,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if !pending { XCTAssertTrue(cardText.hasPrefix("History synchronized:")) }
         let label = app.staticTexts[title]
         for _ in 0..<4 {
-            if label.waitForExistence(timeout: 1), label.isHittable { break }
+            if historyFeedbackExists(label, timeout: 1), label.isHittable { break }
             app.swipeUp()
         }
         XCTAssertTrue(label.exists && label.isHittable, "The current real History body stays consultable")
         let row = app.cells.containing(.staticText, identifier: title).firstMatch
         XCTAssertTrue(row.exists, "Scope feedback to this exact native History row")
-        XCTAssertLessThanOrEqual(row.staticTexts.count, 24, "Bounded row-only accessibility observation")
-        let rowText = ([row.label] + row.staticTexts.allElementsBoundByIndex.prefix(24).map(\.label)).joined(separator: " | ")
+        let rowSnapshot = try row.snapshot()
+        var pendingNodes = Array(rowSnapshot.children.reversed())
+        var rowLabels: [String] = []
+        while let node = pendingNodes.popLast() {
+            if node.elementType == .staticText { rowLabels.append(node.label) }
+            pendingNodes.append(contentsOf: node.children.reversed())
+        }
+        XCTAssertLessThanOrEqual(rowLabels.count, 24, "Bounded row-only accessibility observation")
+        XCTAssertTrue(rowLabels.contains(title), "The coherent row snapshot must still contain this exact History title")
+        let rowText = ([rowSnapshot.label] + Array(rowLabels.prefix(24))).joined(separator: " | ")
         let genericSynced = rowText.range(of: "\\bSynced\\b", options: [.regularExpression, .caseInsensitive]) != nil
         let localQualifier = rowText.range(of: "\\b(local|locally|import|imported|stock|device)\\b", options: [.regularExpression, .caseInsensitive]) != nil
         XCTAssertTrue(genericSynced || localQualifier, "Observe the actual row status; a missing accessibility label cannot qualify the feedback")
@@ -2794,7 +2857,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             field.tap()
         }
         field.typeText(value); XCTAssertEqual(field.value as? String, value)
-        field.typeText("\n")
+        // Activate the actual native Search action exposed by this keyboard;
+        // a newline sent as field text need not submit or resign focus.
+        let submit = app.keyboards.firstMatch.buttons.matching(NSPredicate(format: "identifier == %@", "Search"))
+        XCTAssertEqual(submit.count, 1)
+        let search = submit.element(boundBy: 0)
+        XCTAssertTrue(search.isHittable); search.tap()
         let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
         XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 5), .completed)
     }
@@ -5344,9 +5412,19 @@ extension LocalAvailabilityRootUITests {
                 let frame = try XCTUnwrap(row["frame"] as? Int)
                 XCTAssertGreaterThan(frame, 0)
                 for tab in ["Database", "History", "Inventory", "Options"] {
-                    let button = app.tabBars.buttons[tab]
-                    XCTAssertTrue(button.waitForExistence(timeout: 5)); button.tap()
-                    XCTAssertTrue(button.isSelected)
+                    XCTAssertEqual(app.state, .runningForeground)
+                    let tabDeadline = ProcessInfo.processInfo.systemUptime + 5
+                    let buttons = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", tab))
+                    let button = buttons.element(boundBy: 0)
+                    // A present tab needs no one-second existence polling. An
+                    // absent tab retains the same bounded five-second admission.
+                    let present = button.exists || button.waitForExistence(
+                        timeout: max(0, tabDeadline - ProcessInfo.processInfo.systemUptime))
+                    XCTAssertTrue(present && ProcessInfo.processInfo.systemUptime <= tabDeadline)
+                    if !button.isSelected { button.tap() }
+                    // Root recreation may replace the bar; require the real
+                    // current selected flag even when no redundant tap was needed.
+                    XCTAssertTrue(buttons.element(boundBy: 0).isSelected)
                     XCTAssertFalse(app.staticTexts["task145.t19.failed"].exists)
                 }
                 let optionsForm = try c3OptionsForm(stage: "T19-verified-date", downstream: ["verified-date"])
