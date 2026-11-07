@@ -1,6 +1,7 @@
 import XCTest
 import CryptoKit
 import Supabase
+import SwiftData
 #if DEBUG
 import Darwin
 import Security
@@ -111,7 +112,7 @@ final class SupabaseConfigSecurityTests: XCTestCase {
         var stage = "host"
         func fail() { XCTFail("TASK146 iOS owned TEST authentication failed at \(stage).") }
         do {
-            guard mode == "preflight" || mode == "seed",
+            guard mode == "preflight" || mode == "seed" || mode == "seed-retired-cohort",
                   Bundle.main.bundleIdentifier == "com.niwcyber.iOSMerchandiseControl",
                   environment["XCTestConfigurationFilePath"] != nil,
                   environment["TEST_RUNNER_TASK145_B6_OBSERVE"] != "1",
@@ -126,8 +127,52 @@ final class SupabaseConfigSecurityTests: XCTestCase {
                   let projectRef = config.projectURL.host?.split(separator: ".").first else { return fail() }
             let sessionKey = "sb-\(projectRef)-auth-token"
 
-            stage = "empty-namespace"
-            guard Self.task146AuthNamespaceIsEmpty(sessionKey: sessionKey) else { return fail() }
+            // The only reuse admission is this exact retired TEST fixture. This imports
+            // authentication only; the ordinary account-replacement review retains authority.
+            var retiredController: SyncStoreGenerationController?
+            var retiredBinding: AccountBinding?
+            var retiredManifest: SyncStoreGenerationManifest?
+            let retiredOwner = UUID(uuidString: "2d0c4246-9fda-49cb-97f7-9e276d7bb844")!
+            let retiredShop = UUID(uuidString: "6145d83a-d22a-499f-8ce4-6f69f3ee1a73")!
+            let retiredHash = AccountBindingStore.accountHash(for: retiredOwner)
+            if mode == "seed-retired-cohort" {
+                stage = "retired-cohort"
+                let binding = AccountBindingStore()
+                guard target == UUID(uuidString: "3B25E4F5-DCAB-4325-B50F-0951D21DAA9F"),
+                      environment["TEST_RUNNER_TASK146_B4_IOS_DEVICE_ID"] == "79f06e95-0343-44c6-9384-947c15d3586e",
+                      environment["TEST_RUNNER_TASK146_B4_IOS_OWNER_ID"]?.lowercased() == "66029c8d-83bc-4cf3-8fa7-e15962e7c197",
+                      environment["TEST_RUNNER_TASK146_RETIRED_COHORT_RUN"] == "3d0d5e5f0a63",
+                      let prior = binding.currentBinding, prior.accountHash == retiredHash,
+                      prior.storeIdentity.rawValue.lowercased() == retiredShop.uuidString.lowercased(),
+                      !binding.hasPendingReplacementJournal,
+                      SelectedShopStore().selectedShop(accountHash: retiredHash)?.shopID == retiredShop else { return fail() }
+                let controller = try await SyncStoreBootstrap.shared.waitUntilOpened()
+                guard let manifest = controller.activeManifest,
+                      manifest.accountHash == retiredHash, manifest.shopID == retiredShop,
+                      manifest.storeIdentity == prior.storeIdentity,
+                      manifest.generationID == UUID(uuidString: "E3DAF0BB-A610-4824-B8E5-2F6809CACBBB") else { return fail() }
+                retiredController = controller; retiredBinding = prior; retiredManifest = manifest
+            }
+            let namespaceIsAdmitted: () throws -> Bool = {
+                guard let controller = retiredController, let prior = retiredBinding,
+                      let manifest = retiredManifest else {
+                    return Self.task146AuthNamespaceIsEmpty(sessionKey: sessionKey)
+                }
+                let defaults = UserDefaults.standard
+                let account = defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1")
+                let binding = AccountBindingStore()
+                guard controller.activeManifest == manifest, binding.currentBinding == prior,
+                      !binding.hasPendingReplacementJournal,
+                      account == nil || account == retiredHash,
+                      defaults.object(forKey: "\(sessionKey)-code-verifier") == nil,
+                      SelectedShopStore().selectedShop(accountHash: retiredHash)?.shopID == retiredShop else { return false }
+                let context = ModelContext(controller.modelContainer)
+                context.autosaveEnabled = false
+                return try context.fetchCount(FetchDescriptor<LocalPendingChange>()) == 0
+                    && context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()) == 0
+            }
+            stage = "empty-or-exact-retired-namespace"
+            guard try namespaceIsAdmitted() else { return fail() }
             let devices = DeviceInstallIDStore()
             stage = "device"
             if mode == "preflight" {
@@ -172,12 +217,15 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             stage = "server-user"
             let provider = SupabaseClientProvider(config: config)
             let snapshot = provider.authSnapshot
+            if mode == "seed-retired-cohort", let previous = snapshot.client.auth.currentSession {
+                guard previous.user.id == retiredOwner else { return fail() }
+            }
             let user = try await snapshot.client.auth.user(jwt: tokens.access)
             guard user.id == owner, user.aud == "authenticated", user.role == "authenticated",
                   !user.isAnonymous else { return fail() }
 
             stage = "persist"
-            guard Self.task146AuthNamespaceIsEmpty(sessionKey: sessionKey),
+            guard try namespaceIsAdmitted(),
                   provider.acceptsAuthGeneration(snapshot.generation),
                   claims.exp > Date().timeIntervalSince1970 + 120 else { return fail() }
             let session = try await snapshot.client.auth.setSession(
@@ -188,6 +236,10 @@ final class SupabaseConfigSecurityTests: XCTestCase {
                   let stored = snapshot.client.auth.currentSession, stored.user.id == owner,
                   stored.accessToken == tokens.access, stored.refreshToken == tokens.refresh,
                   !stored.isExpired else { return fail() }
+            if mode == "seed-retired-cohort" {
+                guard try namespaceIsAdmitted() else { return fail() }
+                print("TASK146_B4_IOS_AUTH retired_cohort=preserved pending=0 outbox=0")
+            }
             let ownerHash = Self.liveHash(Data(owner.uuidString.lowercased().utf8))
             print("TASK146_B4_IOS_AUTH seed=persisted owner_sha256=\(ownerHash)")
         } catch {
