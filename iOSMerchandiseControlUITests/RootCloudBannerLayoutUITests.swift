@@ -365,8 +365,14 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         let diagnostic = "fixture-band=\(fixtureBands);native-viewports=\(viewports);navigation=\(navigation);navigation-ancestors=\(navigationAncestors);control-ancestors=\(controlAncestors);banner-ancestors=\(bannerAncestors);inventory-scroll-title=\(inventoryAnchors);banner-identities=\(bannerIdentities);error-message-frames=\(messageFrames);message-labels=\(messageLabels);retry=\(retries);banner-container=\(banners);controls=\(controls);tabBar=\(tabBars);selected=\(selectedTabs);held=\(held);released=\(released)"
         guard (isInventory || navigation.count == 1), controls.count == 1, tabBars.count == 1,
               fixtureBands.count == 1, fixtureBands[0].width > 0, fixtureBands[0].height > 0,
+              fixtureBands[0].minY == root.frame.minY,
+              root.frame.contains(fixtureBands[0]), fixtureBands[0].contains(controls[0]),
               viewports.count == 1,
-              (showsBanner ? viewports[0] != root.frame : viewports[0] == root.frame),
+              // The synthetic controls occupy their own VStack band above the
+              // app. Only that attested band is excluded from the quiet root.
+              (showsBanner ? viewports[0] != root.frame : viewports[0] == CGRect(
+                x: root.frame.minX, y: fixtureBands[0].maxY,
+                width: root.frame.width, height: root.frame.maxY - fixtureBands[0].maxY)),
               banners.count == (showsBanner ? 1 : 0), selectedTabs == 1, held, !released,
               (isInventory || navigation[0].height > 0), controls[0].height > 0, tabBars[0].height > 0,
               !isInventory || (inventoryAnchors.count == 1 && inventoryAnchors[0].scroll.height > 0
