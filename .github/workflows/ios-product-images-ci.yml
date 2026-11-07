@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
+        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
     runs-on: macos-26
     timeout-minutes: 75
     steps:

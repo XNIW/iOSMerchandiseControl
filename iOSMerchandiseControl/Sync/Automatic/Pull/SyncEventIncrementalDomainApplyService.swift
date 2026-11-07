@@ -163,9 +163,9 @@ nonisolated final class SyncIncrementalContinuationReceipt: @unchecked Sendable,
     }
 }
 
-/// A no-events observation with local work may only defer the initial
-/// reconciliation until the same automatic plan pushes and performs a fresh
-/// complete drain. This is deliberately not a continuation/readiness receipt.
+/// A complete observation with local work can defer an initial no-events
+/// reconciliation to push, or retain a stable catalog rejection after push.
+/// It cannot authorize continuation, convergence or readiness.
 nonisolated final class SyncIncrementalLocalWorkDeferral: @unchecked Sendable, Equatable {
     private let identity = UUID()
     private let scope: Task126VerifiedOwnerStoreScope
@@ -176,7 +176,7 @@ nonisolated final class SyncIncrementalLocalWorkDeferral: @unchecked Sendable, E
     private let generationID: UUID
     private let fenceKey: String
     private let watermark: Int64
-    private let syncType: RuntimeSyncExecutionType
+    private let observedSummary: SyncIncrementalPullSummary
 
     fileprivate init(scope: Task126VerifiedOwnerStoreScope, controller: SyncStoreGenerationController,
         container: ModelContainer, defaults: UserDefaults, generationLease: SyncStoreGenerationLease,
@@ -189,7 +189,9 @@ nonisolated final class SyncIncrementalLocalWorkDeferral: @unchecked Sendable, E
         self.generationID = generationID
         self.fenceKey = fenceKey
         watermark = summary.watermarkAfter
-        syncType = summary.syncType
+        var observed = summary
+        observed.localWorkDeferral = nil
+        observedSummary = observed
     }
 
     static func == (lhs: SyncIncrementalLocalWorkDeferral, rhs: SyncIncrementalLocalWorkDeferral) -> Bool {
@@ -199,11 +201,19 @@ nonisolated final class SyncIncrementalLocalWorkDeferral: @unchecked Sendable, E
     func isBound(to consumerDefaults: UserDefaults) -> Bool { defaults === consumerDefaults }
 
     func matches(_ summary: SyncIncrementalPullSummary) -> Bool {
-        summary.requiresFullRecoveryReason == "ordinary_continuation_local_work_pending"
-            && !summary.verifiedConvergence && summary.continuationReceipt == nil
-            && summary.syncType == syncType && summary.eventsFetched == 0 && summary.eventsProcessed == 0
+        matchesRejectedCatalogWork(summary)
+            && summary.eventsFetched == 0 && summary.eventsProcessed == 0
             && summary.totalApplied == 0 && summary.watermarkBefore == watermark
             && summary.watermarkAfter == watermark
+    }
+
+    func matchesRejectedCatalogWork(_ summary: SyncIncrementalPullSummary) -> Bool {
+        var observed = summary
+        observed.localWorkDeferral = nil
+        return observed == observedSummary
+            && summary.requiresFullRecoveryReason == "ordinary_continuation_local_work_pending"
+            && !summary.verifiedConvergence && !summary.checkpointPublicationPending
+            && summary.continuationReceipt == nil && summary.totalApplied == 0
     }
 
     @MainActor
@@ -1053,7 +1063,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         guard !localWorkPending else {
             var summary = classifiedSummary ?? SyncIncrementalPullSummary.noWork(watermark: watermark)
             summary.requiresFullRecoveryReason = "ordinary_continuation_local_work_pending"
-            if classifiedSummary == nil, !protectedIDs.hasCappedImportMarker {
+            if !protectedIDs.hasCappedImportMarker {
                 let deferral = SyncIncrementalLocalWorkDeferral(scope: scope, controller: controller,
                     container: modelContainer, defaults: defaults, generationLease: generation.lease,
                     generationID: generation.generationID, fenceKey: generation.fenceKey, summary: summary)

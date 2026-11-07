@@ -9740,7 +9740,79 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .pending)
     }
 
-    private func makePendingAutomaticSequenceFixture(cancelAfterProvider: Bool = false) async throws
+    func testRejectedCatalogWorkKeepsStableFailureAfterRealSelfACKAndEmptyDrain() async throws {
+        let setup = try await makePendingAutomaticSequenceFixture(blockedSupplier: true)
+        let proof = setup.proof
+        let container = proof.fixture.controller.modelContainer
+        let initial = ModelContext(container)
+        let supplierIntent = try XCTUnwrap(initial.fetch(FetchDescriptor<LocalPendingChange>()).first {
+            $0.entityKind == .supplier
+        })
+        let supplierToken = LocalPendingChangeCASToken(supplierIntent)
+        let generation = proof.fixture.controller.activeManifest?.generationID
+        for pass in 0..<2 {
+            let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+                await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                    source: .foregroundPoll, ownerUserID: proof.fixture.ownerUserID)
+            }
+            XCTAssertEqual(result.status, .failed)
+            XCTAssertEqual(result.errorCode, "catalog_local_changes_blocked")
+            XCTAssertEqual(result.failure, AutomaticSyncFailure(disposition: .stable, category: .payload))
+            XCTAssertEqual(result.didWork, pass == 0)
+            XCTAssertNil(result.continuationReceipt)
+            XCTAssertNil(result.verifiedFinalization)
+            XCTAssertFalse(result.verifiedConvergence)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1)
+            XCTAssertEqual(proof.remote.recordRequests.count, 1)
+            XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42)
+            XCTAssertEqual(proof.fixture.controller.activeManifest?.generationID, generation)
+            XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
+            XCTAssertNil(proof.fixture.defaults.object(forKey: "sync.runtime.recovery.requestedReason"))
+            let read = ModelContext(container)
+            let changes = try read.fetch(FetchDescriptor<LocalPendingChange>())
+            XCTAssertEqual(changes.count, 2)
+            XCTAssertTrue(supplierToken.matches(try XCTUnwrap(changes.first { $0.changeID == supplierToken.changeID })))
+            XCTAssertEqual(changes.first { $0.changeID == setup.changeID }?.status, .acknowledged)
+            XCTAssertEqual(changes.filter { $0.status == .pending }.count, 1)
+            proof.stateStore.recordRunResult(result)
+            XCTAssertEqual(proof.stateStore.state.phase, .failed)
+            XCTAssertEqual(proof.stateStore.state.lastVerifiedAt, proof.verifiedAt)
+        }
+        XCTAssertEqual(setup.summaries.filter { $0.eventsFetched == 1 }.count, 1,
+            "The ordinary drain must consume the real self ACK exactly once")
+        XCTAssertTrue(setup.summaries.allSatisfy { $0.continuationReceipt == nil && !$0.verifiedConvergence })
+    }
+
+    func testRejectedCatalogWorkCannotSuppressRecoveryForMissingOrChangedDrainCapability() async throws {
+        for mutation in ["reason", "cursor", "missingCapability"] {
+            let setup = try await makePendingAutomaticSequenceFixture(blockedSupplier: true, transform: { original in
+                guard original.eventsFetched == 1 else { return original }
+                var summary = original
+                if mutation == "reason" { summary.requiresFullRecoveryReason = "sync_event_missing_entity_ids" }
+                if mutation == "cursor" { summary.watermarkAfter += 1 }
+                if mutation == "missingCapability" { summary.localWorkDeferral = nil }
+                return summary
+            })
+            let proof = setup.proof
+            let result = await Task126OwnerStoreGate.withAutomaticScope(proof.scope) {
+                await setup.engine.run(action: .sequence([.lightReconcile, .pushPending, .drainEvents]),
+                    source: .foregroundPoll, ownerUserID: proof.fixture.ownerUserID)
+            }
+            XCTAssertEqual(result.status, .recoveryRequired, mutation)
+            XCTAssertNil(result.continuationReceipt, mutation)
+            XCTAssertNil(result.verifiedFinalization, mutation)
+            XCTAssertFalse(result.verifiedConvergence, mutation)
+            XCTAssertEqual(ordinaryWatermark(fixture: proof.fixture), 42, mutation)
+            XCTAssertEqual(proof.remote.catalogPushCallCount, 1, mutation)
+            XCTAssertEqual(proof.remote.recordRequests.count, 1, mutation)
+            XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal, mutation)
+        }
+    }
+
+    private func makePendingAutomaticSequenceFixture(
+        cancelAfterProvider: Bool = false, blockedSupplier: Bool = false,
+        transform: ((SyncIncrementalPullSummary) -> SyncIncrementalPullSummary)? = nil
+    ) async throws
         -> RI08PendingAutomaticSequenceFixture {
         let proof = try await makeRealContinuationProof()
         proof.stateStore.recordRunResult(proof.result)
@@ -9758,6 +9830,13 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 ownerUserID: proof.fixture.ownerUserID, storeIdentity: proof.scope.storeIdentity)
                 .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
                     changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+            if blockedSupplier {
+                let supplier = Supplier(name: String(repeating: "X", count: 161))
+                context.insert(supplier)
+                try LocalPendingChangeAccumulator(context: context, ownerUserID: proof.fixture.ownerUserID,
+                    storeIdentity: proof.scope.storeIdentity).recordSupplierChange(
+                        supplier: supplier, operation: .create, origin: .manualCatalogSave)
+            }
             try context.save()
             return change.changeID
         }
@@ -9767,7 +9846,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let policy = AutomaticSyncCancellationPolicy()
         let provider = RI08TransformingRealPullProvider(pull: pull, transform: { [weak observed] summary in
             observed?.summaries.append(summary)
-            return summary
+            return transform?(summary) ?? summary
         }, cancelAfterProvider: cancelAfterProvider ? policy : nil)
         let controller = proof.fixture.controller
         let lease = try XCTUnwrap(controller.captureLease(for: controller.modelContainer))

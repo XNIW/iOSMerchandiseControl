@@ -4236,7 +4236,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
     @discardableResult
     private func c3OptionsViewport(_ form: XCUIElement, stage: String, ordinal: Int,
-                                   deadline: TimeInterval, downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, formOrigin: CGPoint) {
+                                   deadline: TimeInterval, collectContentAnchors: Bool = true,
+                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, formOrigin: CGPoint) {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
@@ -4289,6 +4290,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire([viewportFrame.minX, viewportFrame.minY, viewportFrame.maxX, viewportFrame.maxY].allSatisfy { $0.isFinite }
             && !viewportFrame.isNull && !viewportFrame.isInfinite && viewportFrame.width > 1 && viewportFrame.height > 1,
             stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
+        // Qualified A navigation needs fresh drag geometry and the live target.
+        // B's administrative traversal keeps the complete content/privacy oracle.
+        if !collectContentAnchors {
+            try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
+                stage: stage + "-traversal-deadline-after-geometry", downstream: downstream)
+            return (anchors: [:], viewport: viewportFrame, formOrigin: formFrame.origin)
+        }
         // Preserve the current public OptionRows before any Button hittability
         // getter can terminate this viewport. This cached projection is evidence
         // only: it never supplies live existence, hittability or privacy.
@@ -4474,7 +4482,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                                      downstream: [String]) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
-            let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal, deadline: deadline, downstream: downstream)
+            let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
+                deadline: deadline, collectContentAnchors: privacy, downstream: downstream)
             if privacy { try c3NoBusinessInCurrentViewport(stage: stage + "-rewind-\(ordinal)", downstream: downstream) }
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-traversal-deadline-after-privacy", downstream: downstream)
@@ -4488,7 +4497,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                                 downstream: [String]) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
-            let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal, deadline: deadline, downstream: downstream)
             if target.exists && target.isHittable {
                 try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                     stage: stage + "-traversal-deadline-at-target", downstream: downstream)
@@ -4496,6 +4504,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-visible-target-NOT_QUALIFIED", downstream: downstream)
+            let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
+                deadline: deadline, collectContentAnchors: false, downstream: downstream)
             c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true)
         }
     }

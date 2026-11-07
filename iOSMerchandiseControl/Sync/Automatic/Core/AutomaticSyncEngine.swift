@@ -186,7 +186,8 @@ actor AutomaticSyncEngine {
                         cancellationToken: cancellationToken,
                         forceLightReconcile: false,
                         allowsExplicitRecovery: false,
-                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain
+                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain,
+                        hasRejectedCatalogChanges: hasRejectedCatalogChanges
                     )
                     didRun = drain.didWork || didRun
                     pendingWorkDeferral = drain.localWorkDeferral
@@ -210,7 +211,8 @@ actor AutomaticSyncEngine {
                         cancellationToken: cancellationToken,
                         forceLightReconcile: true,
                         allowsExplicitRecovery: false,
-                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain
+                        allowsLocalWorkDeferral: mayDeferUntilPushAndFreshDrain,
+                        hasRejectedCatalogChanges: hasRejectedCatalogChanges
                     )
                     didRun = drain.didWork || didRun
                     pendingWorkDeferral = drain.localWorkDeferral
@@ -437,7 +439,8 @@ actor AutomaticSyncEngine {
         cancellationToken: Int,
         forceLightReconcile: Bool,
         allowsExplicitRecovery: Bool,
-        allowsLocalWorkDeferral: Bool = false
+        allowsLocalWorkDeferral: Bool = false,
+        hasRejectedCatalogChanges: Bool = false
     ) async throws -> (didWork: Bool, didRecoverSnapshot: Bool, continuationReceipt: SyncIncrementalContinuationReceipt?, verifiedRecoveryConvergence: Bool, localWorkDeferral: SyncIncrementalLocalWorkDeferral?, verifiedFinalization: SyncStoreRecoveryFinalization?) {
         guard let incrementalPullProvider else {
             recordDiagnostic("incremental.lastOutcome", "blocked_missing_provider")
@@ -468,11 +471,13 @@ actor AutomaticSyncEngine {
             throw AutomaticIncrementalRecoveryError.checkpointPublicationPending(didWork: summary.totalApplied > 0)
         }
         if summary.requiresFullRecovery {
-            if allowsLocalWorkDeferral, let deferral = summary.localWorkDeferral,
-               deferral.isBound(to: defaults), deferral.matches(summary) {
+            if let deferral = summary.localWorkDeferral, deferral.isBound(to: defaults),
+               (allowsLocalWorkDeferral && deferral.matches(summary)
+                || hasRejectedCatalogChanges && deferral.matchesRejectedCatalogWork(summary)) {
                 try await MainActor.run { try deferral.validateForPush() }
-                // No receipt, watermark change, recovery or readiness grant.
-                return (false, false, nil, false, deferral, nil)
+                // A rejected local intent cannot turn this completed drain into
+                // recovery. Keep the caller's stable payload failure and no grant.
+                return (false, false, nil, false, allowsLocalWorkDeferral ? deferral : nil, nil)
             }
             let reason = summary.requiresFullRecoveryReason
             recordRecoveryRequest(reason: reason)
