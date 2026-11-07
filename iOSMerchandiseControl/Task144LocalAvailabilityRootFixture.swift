@@ -615,6 +615,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }
 
     private init(runID: UUID) throws {
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.fixture-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         namespace = runID
         emptyBootstrap = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_EMPTY_BOOTSTRAP"] == "1"
         let t18Environment = ProcessInfo.processInfo.environment
@@ -863,6 +866,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         stateStore = SyncStateStore(keyPrefix: "task144.controlled.\(runID.uuidString.lowercased())",
             storeGenerationController: controller)
 
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.auth-setup-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         let storage = Task144ControlledAuthStorage()
         let host = "task144-\(runID.uuidString.lowercased()).example.invalid"
         let user = User(id: owner, appMetadata: [:], userMetadata: [:], aud: "authenticated",
@@ -881,6 +887,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             authRegistry: SupabaseAuthClientRegistry())
         let authService = SupabaseAuthService(provider: provider)
         authViewModel = SupabaseAuthViewModel(authService: authService)
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.auth-setup-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         if provesTransientAuthStorageFailure {
             t13AuthStorage = storage; t13AuthProvider = provider; t13AuthService = authService
             catalogRemote.observeRawProductEntry = { [weak self] in self?.t13CatalogEntries += 1 }
@@ -1108,6 +1117,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 root: root, owner: owner, shopA: linkedShop, device: device))
         }
 // TASK145_SCOPE_SWITCH_INSERT_END configure-C-only
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.fixture-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
     }
 
     // TASK145_T18_INSERT_BEGIN passive-snapshot
@@ -1302,6 +1314,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
 
     func prepareIfNeeded() {
         guard !hasPreparationStarted else { return }
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.prepare-admission uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         let actualCategory = UIApplication.shared.preferredContentSizeCategory
         facts.insert(actualCategory == .accessibilityExtraExtraExtraLarge
             ? "task144.controlled.content-size.accessibility-xxxl"
@@ -1335,10 +1350,24 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         }
         // Establish the fixture's real persisted baseline before mounting the
         // business root. Its normal startup must not race this setup recovery.
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.prepare-task-submit uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         preparationTask = Task { [weak self] in
             guard let self else { return }
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                NSLog("TASK146_B2_COST39 phase.prepare-task-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            }
+            defer {
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    NSLog("TASK146_B2_COST39 phase.prepare-task-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                }
+            }
             var setupStage = SetupStage.shopDiscovery
             do {
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    NSLog("TASK146_B2_COST39 phase.auth-wait-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                }
                 for _ in 0..<200 {
                     if authViewModel.isSignedIn,
                        authViewModel.localMutationOwnerUserID == owner { break }
@@ -1346,7 +1375,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 }
                 guard authViewModel.isSignedIn,
                       authViewModel.localMutationOwnerUserID == owner else { throw URLError(.timedOut) }
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    NSLog("TASK146_B2_COST39 phase.auth-wait-ready uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                }
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    NSLog("TASK146_B2_COST39 phase.shop-refresh-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                }
                 await shopContextStore.refresh(ownerUserID: owner)
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    NSLog("TASK146_B2_COST39 phase.shop-refresh-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                }
                 guard shopContextStore.context.syncAllowed else { throw URLError(.timedOut) }
                 if controller.activeManifest != nil {
                     setupStage = .reopen
@@ -1361,11 +1399,23 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                             return true
                         }
                         controller.preferLocalReadDomain(.catalog)
+                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                            NSLog("TASK146_B2_COST39 phase.owner-qualification-call uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                        }
                         controller.startLocalBodyQualification(ownerUserID: owner)
+                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                            NSLog("TASK146_B2_COST39 phase.owner-qualification-call-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                        }
                         transport.release()
                         hasStarted = true
                         isPreparedForRoot = true
+                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                            NSLog("TASK146_B2_COST39 phase.root-admitted uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                        }
                         var qualified = await controller.awaitLocalBodyQualification()
+                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                            NSLog("TASK146_B2_COST39 phase.owner-qualification-await-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                        }
                         if !qualified, independentDomainPhase.heldDomain != nil, sameOwnerAndGeneration() {
                             // The ordinary root may already have requested the same owner's successor.
                             qualified = await controller.awaitLocalBodyQualification()

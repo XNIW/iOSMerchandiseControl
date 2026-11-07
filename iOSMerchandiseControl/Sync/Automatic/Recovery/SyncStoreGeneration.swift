@@ -1752,16 +1752,31 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         repository: SyncStoreGenerationRepository,
         defaults: UserDefaults = .standard
     ) throws {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
         guard repository.defaults === defaults else {
             throw SyncStoreGenerationError.defaultsConfigurationMismatch
         }
         self.defaults = defaults
         self.repository = repository
         let loaded = try repository.loadActive()
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-load-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
         self.active = loaded
         self.loadFailureCode = nil
         Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container, manifest: loaded.manifest)
         startLocalBodyQualification()
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
     }
 
     /// Adopts the exact container already opened by the one physical bootstrap worker.

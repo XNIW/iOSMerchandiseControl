@@ -1564,9 +1564,47 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func r3Show(_ element: XCUIElement, up: Bool) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for drag in 0...5 {
-            if element.exists && element.isHittable { return }
+            let targetExists = element.exists
+            if targetExists && element.isHittable { return }
             guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
-            if up { app.swipeUp() } else { app.swipeDown() }
+            let editor = app.navigationBars["Edit product"]
+            if targetExists && element.elementType == .textField && editor.exists {
+                let identifier = element.identifier.isEmpty ? element.label : element.identifier
+                let form = app.collectionViews.containing(.textField, identifier: identifier).firstMatch
+                try r3Require(form.exists, "editor-field-native-Form")
+                let applicationFrame = app.frame
+                let viewport = form.frame.intersection(applicationFrame)
+                var upper = max(viewport.minY, editor.frame.maxY) + 12
+                let band = app.otherElements["task144.controlled.editor.band"]
+                if band.exists { upper = max(upper, band.frame.maxY + 12) }
+                var lower = viewport.maxY - 12
+                let keyboard = app.keyboards.firstMatch
+                if keyboard.exists { lower = min(lower, keyboard.frame.minY - 12) }
+                let assistant = app.otherElements["SystemInputAssistantView"]
+                if assistant.exists {
+                    let covered = assistant.frame.intersection(viewport)
+                    if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
+                }
+                let targetFrame = element.frame
+                let hasTargetFrame = targetFrame.width > 0 && targetFrame.height > 0
+                    && [targetFrame.minX, targetFrame.maxX, targetFrame.minY, targetFrame.maxY].allSatisfy { $0.isFinite }
+                try r3Require(viewport.width > 48 && lower > upper + 16
+                    && [upper, lower].allSatisfy { $0.isFinite },
+                    "editor-field-measured-content-band")
+                var upward = up
+                if hasTargetFrame {
+                    if targetFrame.minY < upper { upward = false }
+                    else if targetFrame.maxY > lower { upward = true }
+                }
+                let travel = min(200, (lower - upper) / 2)
+                let startY = upward ? lower : upper
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
+                    CGVector(dx: viewport.minX + 24 - applicationFrame.minX, dy: startY - applicationFrame.minY))
+                try r3Require(ProcessInfo.processInfo.systemUptime < deadline,
+                    "editor-field-existing-drag-deadline")
+                start.press(forDuration: 0, thenDragTo: start.withOffset(
+                    CGVector(dx: 0, dy: upward ? -travel : travel)), withVelocity: .slow, thenHoldForDuration: 0.2)
+            } else if up { app.swipeUp() } else { app.swipeDown() }
         }
         try r3Require(element.exists && element.isHittable, "control-reachable-within-15s-five-drags")
     }
@@ -2075,6 +2113,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(entries.count, 6); XCTAssertLessThanOrEqual(entries.count, 12)
         XCTAssertEqual(entries.filter { $0["failureUTC"] != nil }.count, 5)
         XCTAssertEqual(results.count, 5); XCTAssertEqual(finalCompletions.count, 5)
+        // The first three attempts precede the real Save. Attempt four pushes
+        // that Save before recovery; its own ACK leaves attempt five bootstrap-only.
+        let expectedActions = ["bootstrap", "bootstrap", "bootstrap", "push-bootstrap", "bootstrap"]
         for index in 0..<5 {
             let claim = try retryBudget(entries[index])
             XCTAssertEqual(claim["totalAttempts"] as? Int, index + 1)
@@ -2082,7 +2123,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             XCTAssertEqual(entries[index]["journalIdentity"] as? String, terminal["journalIdentity"] as? String)
             XCTAssertEqual(entries[index]["journalPhase"] as? String, "prepared")
             let result = results[index]
-            XCTAssertEqual(result["action"] as? String, "push-bootstrap")
+            XCTAssertEqual(result["action"] as? String, expectedActions[index])
             XCTAssertEqual(result["status"] as? String, "failed")
             XCTAssertEqual(result["verified"] as? Bool, false)
             let failure = try XCTUnwrap(result["failure"] as? [String: Any])
@@ -4595,6 +4636,38 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // after every drag, takes a new snapshot; it never supplies hittability.
         let queryTiming = C3OptionsQueryTiming(stage: stage, ordinal: ordinal)
         let nodes = try c3OptionsSnapshotNodes(root, stage: stage, downstream: downstream)
+        if !collectContentAnchors {
+            // Qualified A navigation needs only coherent current drag geometry;
+            // the caller still requires the actual live target's hittability.
+            let forms = nodes.filter { $0.elementType == .collectionView }
+            let windows = nodes.filter { $0.elementType == .window }
+            let navigation = nodes.filter { $0.elementType == .navigationBar }
+            let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.band" }
+            let tabs = nodes.filter { $0.elementType == .tabBar }
+            try scopeRequire(forms.count == 1 && windows.count == 1 && navigation.count <= 1
+                && bands.count <= 1 && tabs.count <= 1
+                && forms[0].path.starts(with: windows[0].path),
+                stage: stage + "-coherent-native-Form-geometry", downstream: downstream)
+            let geometry = forms + windows + navigation + bands + tabs
+            try scopeRequire(geometry.allSatisfy { node in
+                let frame = node.frame
+                return [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                    && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1
+            }, stage: stage + "-coherent-native-geometry-frames", downstream: downstream)
+            let formFrame = forms[0].frame
+            let clipped = formFrame.intersection(windows[0].frame)
+            var top = clipped.minY
+            var bottom = clipped.maxY
+            if let frame = navigation.first?.frame { top = max(top, frame.maxY) }
+            if let frame = bands.first?.frame { top = max(top, frame.maxY) }
+            if let frame = tabs.first?.frame { bottom = min(bottom, frame.minY) }
+            let viewport = CGRect(x: clipped.minX, y: top, width: clipped.width, height: bottom - top)
+            try scopeRequire([viewport.minX, viewport.minY, viewport.maxX, viewport.maxY].allSatisfy { $0.isFinite }
+                && !viewport.isNull && !viewport.isInfinite && viewport.width > 1 && viewport.height > 1
+                && ProcessInfo.processInfo.systemUptime < deadline,
+                stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
+            return (anchors: [:], viewport: viewport, formOrigin: formFrame.origin)
+        }
         let formNode = try c3OptionsSnapshotMatch(form, type: .collectionView, nodes: nodes,
             stage: stage + "-Form", downstream: downstream, timing: queryTiming, site: .form)
         let formNodes = nodes.filter { $0.path.count > formNode.path.count && $0.path.starts(with: formNode.path) }
@@ -4626,13 +4699,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire([viewportFrame.minX, viewportFrame.minY, viewportFrame.maxX, viewportFrame.maxY].allSatisfy { $0.isFinite }
             && !viewportFrame.isNull && !viewportFrame.isInfinite && viewportFrame.width > 1 && viewportFrame.height > 1,
             stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
-        // Qualified A navigation needs fresh drag geometry and the live target.
-        // B's administrative traversal keeps the complete content/privacy oracle.
-        if !collectContentAnchors {
-            try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
-                stage: stage + "-traversal-deadline-after-geometry", downstream: downstream)
-            return (anchors: [:], viewport: viewportFrame, formOrigin: formFrame.origin)
-        }
         // Preserve the current public OptionRows before any Button hittability
         // getter can terminate this viewport. This cached projection is evidence
         // only: it never supplies live existence, hittability or privacy.

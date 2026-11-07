@@ -302,7 +302,19 @@ struct ContentView: View {
         .environmentObject(shopContextStore)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
-        .onAppear { restoreLocalPresentation() }
+        .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                NSLog("TASK146_B2_COST39 phase.content-on-appear-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            }
+            #endif
+            restoreLocalPresentation()
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                NSLog("TASK146_B2_COST39 phase.content-on-appear-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            }
+            #endif
+        }
         .onChange(of: syncStoreGenerationController.presentationID) { _, _ in restoreLocalPresentation() }
         .onChange(of: selectedTab) { _, value in
             syncStoreGenerationController.preferLocalReadDomain(value == 2 ? .sessions : .catalog)

@@ -24,10 +24,16 @@ struct iOSMerchandiseControlApp: App {
     init() {
         #if DEBUG
         Task144RootObservation.performanceEntry() // TASK145_PERF first measurable app entry
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.app-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         if Self.task141ResetUIStateRequested {
             Self.resetTask141UIState()
         }
         let controlledRoot = Task144LocalAvailabilityRootFixture.current
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.fixture-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
         let isTask139AtomicCrashHarness = Self.task139AtomicCrashHarnessRequested
         let isTask139PreboundHarness = Self.task139PreboundHarnessRequested
@@ -100,6 +106,9 @@ struct iOSMerchandiseControlApp: App {
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
         #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.app-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         if controlledRoot != nil { return }
         #endif
     }

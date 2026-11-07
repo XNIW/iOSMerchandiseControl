@@ -209,6 +209,54 @@ final class CatalogTextImportUITests: XCTestCase {
     private func scrollUntilHittable(_ element: XCUIElement, swipeDown: Bool = false) {
         var attempts = 0
         while attempts < 6 {
+            let editorBars = app.navigationBars.matching(NSPredicate(
+                format: "identifier IN %@ OR label IN %@", ["New product", "Edit product"], ["New product", "Edit product"]))
+            if editorBars.count > 0 {
+                let editorFieldIDs = ["task141.product.barcode", "task141.product.stock-quantity",
+                    "task141.product.purchase-price", "task141.product.retail-price"]
+                let forms = app.collectionViews.containing(NSPredicate(
+                    format: "elementType == %d AND identifier IN %@", XCUIElement.ElementType.textField.rawValue, editorFieldIDs))
+                XCTAssertEqual(editorBars.count, 1, "Require the current product editor's native navigation bar")
+                XCTAssertEqual(forms.count, 1, "Require the native Form containing the product editor fields")
+                let applicationFrame = app.frame
+                let viewport = forms.element(boundBy: 0).frame.intersection(applicationFrame)
+                var upper = max(viewport.minY, editorBars.element(boundBy: 0).frame.maxY) + 12
+                let band = app.otherElements["task144.controlled.editor.band"]
+                if band.exists { upper = max(upper, band.frame.maxY + 12) }
+                var lower = viewport.maxY - 12
+                let keyboard = app.keyboards.firstMatch
+                if keyboard.exists { lower = min(lower, keyboard.frame.minY - 12) }
+                let assistant = app.otherElements["SystemInputAssistantView"]
+                if assistant.exists {
+                    let covered = assistant.frame.intersection(viewport)
+                    if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
+                }
+                guard viewport.width > 48 && lower > upper + 16
+                    && [viewport.minX, upper, lower].allSatisfy({ $0.isFinite }) else { break }
+                let present = element.exists
+                let frame = present ? element.frame : CGRect.null
+                let hasTargetFrame = present && frame.width > 0 && frame.height > 0
+                    && [frame.minX, frame.maxX, frame.minY, frame.maxY].allSatisfy { $0.isFinite }
+                let inside = hasTargetFrame && frame.minY >= upper && frame.maxY <= lower
+                if inside && element.isHittable { break }
+                // A whole-app fling overshot Stock, then the reverse fling
+                // overshot back. Move only toward this actual usable Form band.
+                var upward = !swipeDown
+                if hasTargetFrame {
+                    if frame.minY < upper { upward = false }
+                    else if frame.maxY > lower { upward = true }
+                }
+                let displacement = hasTargetFrame && !inside ? abs(frame.midY - (upper + lower) / 2) : (lower - upper) / 2
+                let travel = min((lower - upper) / 2, displacement)
+                guard travel > 0 && travel.isFinite else { break }
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(
+                    CGVector(dx: viewport.minX + 24 - applicationFrame.minX,
+                        dy: (upward ? lower : upper) - applicationFrame.minY))
+                start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: upward ? -travel : travel)),
+                    withVelocity: .slow, thenHoldForDuration: 0.2)
+                attempts += 1
+                continue
+            }
             let coveredByNavigation = element.exists && app.navigationBars.firstMatch.exists
                 && element.frame.midY <= app.navigationBars.firstMatch.frame.maxY + 20
             if element.isHittable && !coveredByNavigation { break }
