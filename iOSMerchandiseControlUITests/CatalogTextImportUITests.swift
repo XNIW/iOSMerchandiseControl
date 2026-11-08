@@ -169,8 +169,20 @@ final class CatalogTextImportUITests: XCTestCase {
     }
 
     private func openNewProductAndEnterBarcode(_ value: String) {
+        let admissionDeadline = ProcessInfo.processInfo.systemUptime + 5
         let newProductButton = app.buttons["New product"].firstMatch
-        XCTAssertTrue(newProductButton.waitForExistence(timeout: 5))
+        let ready = NSPredicate { _, _ in
+            guard ProcessInfo.processInfo.systemUptime < admissionDeadline,
+                  newProductButton.exists,
+                  ProcessInfo.processInfo.systemUptime < admissionDeadline else { return false }
+            return newProductButton.isHittable && ProcessInfo.processInfo.systemUptime < admissionDeadline
+        }
+        let immediatelyReady = ready.evaluate(with: nil)
+        let remaining = admissionDeadline - ProcessInfo.processInfo.systemUptime
+        let admitted = immediatelyReady || (remaining > 0 && XCTWaiter.wait(for: [
+            XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: remaining) == .completed)
+        XCTAssertTrue(admitted && ProcessInfo.processInfo.systemUptime < admissionDeadline,
+            "New product must admit its native hit point within the existing five seconds")
         newProductButton.tap()
 
         let barcode = app.textFields["task141.product.barcode"]

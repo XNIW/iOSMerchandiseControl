@@ -398,6 +398,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     override func tearDown() {
         if (testRun?.failureCount ?? 0) > 0, app?.state == .runningForeground {
+            if app.launchEnvironment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" {
+                // The primary XCTest failure is already recorded. Read the one
+                // existing UIKit getter before the broader central capture.
+                let nodes = app.otherElements.matching(identifier: "task144.controlled.native-name-observation")
+                let count = nodes.count
+                let raw = count == 1 ? (nodes.element.value as? String ?? "MISSING_VALUE")
+                    : "NON_UNIQUE_OR_MISSING_NATIVE_GETTER count=\(count)"
+                let witness = XCTAttachment(string: raw.utf8.count <= 8192 ? raw : "NATIVE_RUNTIME_BYTE_LIMIT")
+                witness.name = "BaseRoot FIRST_FAIL current runtime read-only"
+                witness.lifetime = .keepAlways; add(witness)
+            }
             captureControlledAutomaticReadback()
         }
         app.terminate()
@@ -1791,7 +1802,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testR23UseCurrentThenEditorCancelDoesNotRollBackPeerAndDisjointSaveMerges() throws {
         let name = try r3LaunchEditor("use-current")
-        positionNameInEditorViewport(name); replaceText(in: name, with: "R23 abandoned local draft")
+        replaceText(in: name, with: "R23 abandoned local draft", positionViewportAfterFocus: true)
         try r3Peer(step: 1)
         app.buttons["Save"].tap()
         try r3Require(name.waitForExistence(timeout: 5), "overlap-rejected-before-use-current")
@@ -1811,7 +1822,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try r3AssertPeerOnly(afterCancel, step: 1)
         app.staticTexts["R23 peer name 1"].tap()
         try r3Require(name.waitForExistence(timeout: 5), "new-editor-uses-peer-base")
-        positionNameInEditorViewport(name); replaceText(in: name, with: "R23 disjoint local name")
+        replaceText(in: name, with: "R23 disjoint local name", positionViewportAfterFocus: true)
         try r3Peer(step: 2) // This peer changes only itemNumber.
         app.buttons["Save"].tap()
         try r3Require(app.staticTexts["R23 disjoint local name"].waitForExistence(timeout: 5),
@@ -2146,6 +2157,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testRealRootRemainsUsableWithHeldRecoveryAndPreservesSavedAndUnsavedIntentAcrossCutover() {
+        app.launchEnvironment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] = "1"
         app.launch()
         XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
                       "The real recovery RPC must enter its held boundary before business input")
@@ -2740,6 +2752,37 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try runDomainSaveRestart("history")
     }
 
+    /// Passive native input admission only; callers own the one press and their absolute budget.
+    private func controlledReleaseInputIsReady(_ release: XCUIElement, identifier: String,
+                                                stage: String, deadline: TimeInterval) throws -> Bool {
+        var previousReleaseGeometry: (button: CGRect, window: CGRect)?
+        var releaseReady = false
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: stage, downstream: [])
+            let matches = nodes.filter { $0.elementType == .button && $0.identifier == identifier }
+            let buttonFrame = matches.first?.frame ?? .zero
+            let windows = nodes.filter { $0.elementType == .window && matches.count == 1
+                && matches[0].path.starts(with: $0.path) }
+            let windowFrame = windows.first?.frame ?? .zero
+            let geometryReady = matches.count == 1 && windows.count == 1
+                && [buttonFrame, windowFrame].allSatisfy({ frame in
+                    [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                        && frame.width > 0 && frame.height > 0
+                }) && windowFrame.contains(buttonFrame)
+            let stable = geometryReady && previousReleaseGeometry?.button == buttonFrame
+                && previousReleaseGeometry?.window == windowFrame
+            previousReleaseGeometry = geometryReady ? (buttonFrame, windowFrame) : nil
+            if stable {
+                releaseReady = ProcessInfo.processInfo.systemUptime < deadline
+                    && release.isHittable && ProcessInfo.processInfo.systemUptime < deadline
+                if releaseReady { break }
+            }
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
+        }
+        return releaseReady
+    }
+
     private func runDomainSaveRestart(_ domain: String) throws {
         app.launchEnvironment["TASK145_DOMAIN_UI"] = domain
         app.launch()
@@ -2748,7 +2791,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try awaitDomainFact("a-durable-held-page", timeout: 5)
         let savedA = try domainLedgerAttachment("real Save A committed locally during held recovery page")
         XCTAssertEqual((savedA.state["requests"] as? [Any])?.count, 0)
-        app.buttons["task144.controlled.release"].press(forDuration: 1.2)
+        let release = app.buttons["task144.controlled.release"]
+        if domain == "history" {
+            let releaseDeadline = ProcessInfo.processInfo.systemUptime + 5
+            let ready = try controlledReleaseInputIsReady(release,
+                identifier: "task144.controlled.release", stage: "history-first-release-admission",
+                deadline: releaseDeadline)
+            guard ready && ProcessInfo.processInfo.systemUptime < releaseDeadline else {
+                XCTFail("History requires stable current native release input before its sole press")
+                return
+            }
+        }
+        release.press(forDuration: 1.2)
         try awaitDomainFact("cutover-pending-stale-writer-rejected", timeout: 40)
         try awaitDomainFact("a-committed-response-held", timeout: 40)
         let remoteA = try domainLedgerAttachment("publish preserves A; old gate rejects writer; remote A committed and response held")
@@ -4139,12 +4193,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func replaceText(in field: XCUIElement, with value: String,
-                             readinessTarget: TextFieldReadinessTarget = .identifier("task144.product.name")) {
+                             readinessTarget: TextFieldReadinessTarget = .identifier("task144.product.name"),
+                             positionViewportAfterFocus: Bool = false) {
         field.tap()
         let current = field.value as? String ?? ""
-        if !current.isEmpty && current != field.placeholderValue {
-            let keyboard = app.keyboards.firstMatch
+        let hasCurrentText = !current.isEmpty && current != field.placeholderValue
+        let keyboard = app.keyboards.firstMatch
+        if hasCurrentText || positionViewportAfterFocus {
             XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
+            if positionViewportAfterFocus { positionNameInEditorViewport(field) }
+        }
+        if hasCurrentText {
             var previousFieldFrame: CGRect?
             var previousKeyboardFrame: CGRect?
             var readinessSamples: [String] = []
@@ -5509,8 +5568,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: "C3-B-bottom-endpoint-NOT_QUALIFIED", downstream: downstream)
             previousAnchors = anchors
+            // Shorter nominal30% pan; actual anchored overlap is still required.
             c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
-                halfStepFraction: 0.31, velocity: .fast)
+                halfStepFraction: 0.15, velocity: .slow)
         }
     }
 
@@ -5570,31 +5630,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let releaseDeadline = ProcessInfo.processInfo.systemUptime + 30
                 try t18Await("task145.seq6.ready", timeout: max(0, releaseDeadline - ProcessInfo.processInfo.systemUptime))
                 let release = app.buttons.matching(NSPredicate(format: "identifier == %@", "task144.controlled.release")).element(boundBy: 0)
-                var previousReleaseGeometry: (button: CGRect, window: CGRect)?
-                var releaseReady = false
-                while ProcessInfo.processInfo.systemUptime < releaseDeadline {
-                    let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: groupID + "-release-admission", downstream: [])
-                    let matches = nodes.filter { $0.elementType == .button && $0.identifier == "task144.controlled.release" }
-                    let buttonFrame = matches.first?.frame ?? .zero
-                    let windows = nodes.filter { $0.elementType == .window && matches.count == 1
-                        && matches[0].path.starts(with: $0.path) }
-                    let windowFrame = windows.first?.frame ?? .zero
-                    let geometryReady = matches.count == 1 && windows.count == 1
-                        && [buttonFrame, windowFrame].allSatisfy({ frame in
-                            [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
-                                && frame.width > 0 && frame.height > 0
-                        }) && windowFrame.contains(buttonFrame)
-                    let stable = geometryReady && previousReleaseGeometry?.button == buttonFrame
-                        && previousReleaseGeometry?.window == windowFrame
-                    previousReleaseGeometry = geometryReady ? (buttonFrame, windowFrame) : nil
-                    if stable {
-                        releaseReady = ProcessInfo.processInfo.systemUptime < releaseDeadline
-                            && release.isHittable && ProcessInfo.processInfo.systemUptime < releaseDeadline
-                        if releaseReady { break }
-                    }
-                    let remaining = releaseDeadline - ProcessInfo.processInfo.systemUptime
-                    if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
-                }
+                let releaseReady = try controlledReleaseInputIsReady(release,
+                    identifier: "task144.controlled.release", stage: groupID + "-release-admission",
+                    deadline: releaseDeadline)
                 try t18Require(releaseReady && ProcessInfo.processInfo.systemUptime < releaseDeadline,
                     "release-input-not-qualified-within-ready-window")
                 // The fixture still requires one full second of recognized
@@ -5780,8 +5818,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func t18Snapshot(state: String, language: String, category: UIContentSizeCategory, theme: String) throws -> [String: Any] {
         let readDeadline = ProcessInfo.processInfo.systemUptime + 5
-        let node = app.descendants(matching: .any).matching(identifier: "task144.controlled.native-name-observation").firstMatch
-        try t18Require(node.waitForExistence(timeout: 5), "passive-observer-missing")
+        let node = app.otherElements.matching(NSPredicate(format: "identifier == %@",
+            "task144.controlled.native-name-observation")).element
+        try t18Require(node.exists || node.waitForExistence(
+            timeout: max(0, readDeadline - ProcessInfo.processInfo.systemUptime)), "passive-observer-missing")
         guard let raw = node.value as? String, var bytes = raw.data(using: .utf8), bytes.count <= 8192,
               var value = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
             throw T18Stop(stage: "passive-observer-invalid-JSON")

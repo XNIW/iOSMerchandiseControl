@@ -949,7 +949,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 .init(product: product, supplier: nil, category: nil, eventMaxID: 41,
                     prices: [price], history: [history], hasDomains: true)
             }
-            if independentDomainPhase != .seed {
+            if independentDomainPhase.heldDomain != nil {
                 controller.localBodyQualificationBeforeDomainForTesting = { [weak self] domain in
                     guard let self, domain == independentDomainPhase.heldDomain,
                           !self.r23QualificationReleased else { return }
@@ -1319,6 +1319,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
 
     func prepareIfNeeded() {
         guard !hasPreparationStarted else { return }
+        let cacheManifest = independentDomainPhase == .cache ? controller.activeManifest : nil
+        let cacheContainer = controller.modelContainer
+        let cacheMemoWasPresent = independentDomainPhase == .cache
+            && FileManager.default.fileExists(atPath: ownedRepository.physicalBodyProofURL.path)
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             NSLog("TASK146_B2_COST39 phase.prepare-admission uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
@@ -1346,12 +1350,17 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             observeSafeStoreFailure()
             return
         }
-        if r23ShellMode == "hold", controller.activeManifest != nil {
+        if r23ShellMode == "hold" || independentDomainPhase == .cache,
+           controller.activeManifest != nil {
             // Remove only the fixture's artificial pre-gate on a persisted store.
             // ContentView still owns all production privacy/capability decisions.
             hasStarted = true
             isPreparedForRoot = true
-            facts.insert("task144.r23.persisted-root-mounted")
+            if independentDomainPhase == .cache {
+                NSLog("TASK146_B2_COST39 phase.root-admitted uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            } else {
+                facts.insert("task144.r23.persisted-root-mounted")
+            }
         }
         // Establish the fixture's real persisted baseline before mounting the
         // business root. Its normal startup must not race this setup recovery.
@@ -1385,18 +1394,21 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
                     NSLog("TASK146_B2_COST39 phase.auth-wait-ready uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
                 }
-                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                    NSLog("TASK146_B2_COST39 phase.shop-refresh-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                if independentDomainPhase != .cache {
+                    await shopContextStore.refresh(ownerUserID: owner)
+                    guard shopContextStore.context.syncAllowed else { throw URLError(.timedOut) }
                 }
-                await shopContextStore.refresh(ownerUserID: owner)
-                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                    NSLog("TASK146_B2_COST39 phase.shop-refresh-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                if independentDomainPhase == .cache {
+                    guard let cacheManifest, controller.activeManifest == cacheManifest,
+                          controller.modelContainer === cacheContainer else {
+                        throw SyncStoreGenerationError.activationReadBackFailed
+                    }
                 }
-                guard shopContextStore.context.syncAllowed else { throw URLError(.timedOut) }
                 if controller.activeManifest != nil {
                     setupStage = .reopen
                     if let independentDomainPhase {
-                        let memoWasPresent = FileManager.default.fileExists(atPath: ownedRepository.physicalBodyProofURL.path)
+                        let memoWasPresent = independentDomainPhase == .cache ? cacheMemoWasPresent
+                            : FileManager.default.fileExists(atPath: ownedRepository.physicalBodyProofURL.path)
                         let expectedManifest = controller.activeManifest
                         let expectedContainer = controller.modelContainer
                         @MainActor func sameOwnerAndGeneration() -> Bool {
@@ -1406,26 +1418,35 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                             return true
                         }
                         controller.preferLocalReadDomain(.catalog)
-                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                            NSLog("TASK146_B2_COST39 phase.owner-qualification-call uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
-                        }
-                        controller.startLocalBodyQualification(ownerUserID: owner)
-                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                            NSLog("TASK146_B2_COST39 phase.owner-qualification-call-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
-                        }
-                        transport.release()
-                        hasStarted = true
-                        isPreparedForRoot = true
-                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                            NSLog("TASK146_B2_COST39 phase.root-admitted uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
-                        }
-                        var qualified = await controller.awaitLocalBodyQualification()
-                        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                            NSLog("TASK146_B2_COST39 phase.owner-qualification-await-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
-                        }
-                        if !qualified, independentDomainPhase.heldDomain != nil, sameOwnerAndGeneration() {
-                            // The ordinary root may already have requested the same owner's successor.
+                        var qualified = false
+                        if independentDomainPhase == .cache {
+                            // Observe the production root's current capability, not one
+                            // qualification task that its lifecycle may have superseded.
+                            transport.release()
+                            let deadline = ProcessInfo.processInfo.systemUptime + 10
+                            while ProcessInfo.processInfo.systemUptime < deadline {
+                                guard sameOwnerAndGeneration() else {
+                                    throw SyncStoreGenerationError.activationReadBackFailed
+                                }
+                                if shopContextStore.context.syncAllowed,
+                                   Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+                                    modelContainer: expectedContainer, ownerUserID: owner) {
+                                    qualified = true
+                                    break
+                                }
+                                try await Task.sleep(for: .milliseconds(50))
+                            }
+                            NSLog("TASK146_B2_COST39 phase.owner-qualification-observed uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+                        } else {
+                            controller.startLocalBodyQualification(ownerUserID: owner)
+                            transport.release()
+                            hasStarted = true
+                            isPreparedForRoot = true
                             qualified = await controller.awaitLocalBodyQualification()
+                            if !qualified, independentDomainPhase.heldDomain != nil, sameOwnerAndGeneration() {
+                                // The ordinary root may already have requested the same owner's successor.
+                                qualified = await controller.awaitLocalBodyQualification()
+                            }
                         }
                         guard qualified, sameOwnerAndGeneration(),
                               Task126OwnerStoreGate.hasCurrentLocalBodyProof(expectedContainer) else {
@@ -2294,6 +2315,48 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         }
     }
 
+    /// On-demand metadata from the current weak runtime; no dispatch or publication.
+    func baseRootCurrentRuntimeReadback() -> [String: Any] {
+        guard ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" else {
+            return ["status": "OBSERVATION_NOT_ENABLED"]
+        }
+        let leaseBefore = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
+        let manifest = controller.activeManifest
+        let binding = AccountBindingStore().currentBinding
+        let selection = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner))
+        var runtimeObservation: [String: Any] = ["status": "UNAVAILABLE_NO_RUNTIME_REFERENCE"]
+        if let runtime = rootPresentationRuntime {
+            runtimeObservation = ["status": "OBSERVED", "isRunning": runtime.isRunning,
+                "originPresentationID": runtime.observationOriginPresentationID ?? "missing",
+                "originCurrent": runtime.observationOriginPresentationID == controller.presentationID]
+            if let entry = runtime.presentationEntry {
+                runtimeObservation["entry"] = ["id": entry.id.uuidString.lowercased(),
+                    "source": entry.source.rawValue, "action": Self.actionKind(entry.action),
+                    "enteredUTC": entry.enteredUTC, "enteredUptime": entry.enteredUptime]
+            }
+        }
+        var value: [String: Any] = ["schema": 1, "kind": "BASE_ROOT_CURRENT_RUNTIME_READ_ONLY",
+            "namespace": namespace.uuidString.lowercased(), "pid": ProcessInfo.processInfo.processIdentifier,
+            "observedUTC": Date().timeIntervalSince1970, "observedUptime": ProcessInfo.processInfo.systemUptime,
+            "presentationID": controller.presentationID,
+            "generation": manifest?.generationID.uuidString.lowercased() ?? "missing",
+            "phase": Self.phaseKind(stateStore.state.phase),
+            "hasActivePresentationInvocation": stateStore.hasActivePresentationInvocation,
+            "bodyProof": Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer),
+            "sessionOwnerMatches": authViewModel.localMutationOwnerUserID == owner,
+            "manifestMatchesFixture": manifest?.accountHash == AccountBindingStore.accountHash(for: owner)
+                && manifest?.shopID == shop,
+            "bindingMatchesManifest": manifest != nil && binding?.accountHash == manifest?.accountHash
+                && binding?.storeIdentity == manifest?.storeIdentity,
+            "selectionMatchesManifest": manifest != nil && selection?.shopID == manifest?.shopID
+                && selection?.localStoreIdentity == manifest?.storeIdentity,
+            "syncAllowed": shopContextStore.context.syncAllowed, "runtime": runtimeObservation]
+        let leaseAfter = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
+        value["observedLeaseGeneration"] = String(leaseAfter)
+        value["status"] = leaseBefore == leaseAfter ? "CURRENT_READ_ONLY" : "READ_REJECTED_SCOPE_CHANGED"
+        return value
+    }
+
     func observeRootPresentation() {
         guard ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" else { return }
         rootPresentationObservationOrdinal += 1
@@ -2696,7 +2759,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         observed.t19Observe = { [weak self] action, source, result in self?.t19Observe(action: action, source: source, result: result) }
 
 // TASK145_T19_INSERT_END runtime-observer
-        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {
+        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1"
+            || ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" {
             rootPresentationRuntime = observed
         }
         return observed
@@ -5901,7 +5965,8 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
     var isRunning: Bool { runtime.isRunning }
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
         var observedID: UUID?
-        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {
+        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1"
+            || ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" {
             let id = UUID()
             presentationEntry = PresentationEntry(id: id, source: source, action: action,
                 enteredUTC: Date().timeIntervalSince1970, enteredUptime: ProcessInfo.processInfo.systemUptime)
@@ -6207,6 +6272,12 @@ private final class Task144NativeNameReadbackView: UIView {
         // TASK145_T18_INSERT_END existing-AX-getter
         guard sampleCount < 256 else { return "native-name-observation=CAP256" }
         sampleCount += 1
+        if ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" {
+            guard let fixture, window != nil else { return "native-runtime-observation=MISSING_FIXTURE_OR_WINDOW" }
+            var value = fixture.baseRootCurrentRuntimeReadback()
+            value["sample"] = sampleCount
+            return encode(value)
+        }
         if let fixture, fixture.hasR4ReviewControl {
             guard window != nil else { return "native-r4-observation=MISSING_WINDOW" }
             return fixture.r4CurrentWriterLedger()
@@ -6547,7 +6618,8 @@ private struct Task144ControlledRootModifier: ViewModifier {
                         // TASK145_T18_INSERT_BEGIN existing-observer-root-admission
                         if (inEditor && ProcessInfo.processInfo.environment[
                             "TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1")
-                            || ProcessInfo.processInfo.environment["TASK145_T18_OBSERVATION"] == "1" {
+                            || ProcessInfo.processInfo.environment["TASK145_T18_OBSERVATION"] == "1"
+                            || ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1" {
                         // TASK145_T18_INSERT_END existing-observer-root-admission
                             Task144NativeNameReadback(fixture: fixture)
                                 .frame(width: 1, height: 1).allowsHitTesting(false)
