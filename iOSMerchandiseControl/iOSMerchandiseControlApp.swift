@@ -44,7 +44,8 @@ struct iOSMerchandiseControlApp: App {
         let isTask139PreboundHarness = false
         let isTask140UITest = false
         #endif
-        _selectedTab = State(initialValue: ContentView.initialSelectedTab())
+        let initialTab = ContentView.initialSelectedTab()
+        _selectedTab = State(initialValue: initialTab)
         let dependencies: SupabaseAppDependencies
         let bootstrap: SyncStoreBootstrap
         let normalDependencies = { () -> (SupabaseAppDependencies, SyncStoreBootstrap) in
@@ -88,13 +89,32 @@ struct iOSMerchandiseControlApp: App {
         #endif
         // Registration remains during launch; the handler joins this same opener if invoked early.
         if ordinaryRoot { SyncBackgroundTaskScheduler.shared.register() }
-        bootstrap.observeOpened { [weak productImageStore, weak localPresentation, weak excelSession] controller in
+        #if DEBUG
+        let qualifiesCachedLocalReadsEarly = ordinaryRoot || (controlledRoot != nil
+            && ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache")
+        #else
+        let qualifiesCachedLocalReadsEarly = ordinaryRoot
+        #endif
+        bootstrap.observeOpened { [weak productImageStore, weak localPresentation, weak excelSession,
+                                   weak auth = dependencies.authViewModel] controller in
             localPresentation?.advanceStoreGeneration(presentationID: controller.presentationID)
             productImageStore?.advanceStoreGeneration(presentationID: controller.presentationID)
             controller.setPresentationBoundaryObserver { [weak productImageStore, weak localPresentation, weak excelSession] presentationID in
                 excelSession?.schedulePersistedEntryWithdrawal()
                 localPresentation?.advanceStoreGeneration(presentationID: presentationID)
                 productImageStore?.advanceStoreGeneration(presentationID: presentationID)
+            }
+            // A cached SDK owner is already available before the first SwiftUI
+            // appearance. Start the existing guarded reader while that UI lays
+            // out; later root requests coalesce or see the same completed proof.
+            if qualifiesCachedLocalReadsEarly, controller.loadFailureCode == nil,
+               let owner = auth?.localMutationOwnerUserID,
+               let manifest = controller.activeManifest,
+               manifest.accountHash == AccountBindingStore.accountHash(for: owner),
+               let shop = SelectedShopStore().selectedShop(accountHash: manifest.accountHash),
+               shop.shopID == manifest.shopID, shop.localStoreIdentity == manifest.storeIdentity {
+                controller.preferLocalReadDomain(initialTab == 2 ? .sessions : .catalog)
+                controller.startLocalBodyQualification(ownerUserID: owner)
             }
             if ordinaryRoot, controller.loadFailureCode == nil {
                 SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)

@@ -1457,45 +1457,67 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                           optionsTitle: String? = nil, resolution: Bool = false) {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         if resolution {
-            // The resolution sheet owns a different Form from both the editor
-            // and the tab root. Pan only within its current native viewport.
-            for drag in 0...5 {
-                guard ProcessInfo.processInfo.systemUptime < deadline,
-                      let root = try? app.snapshot(),
-                      let nodes = try? c3OptionsSnapshotNodes(root, stage: "R4-resolution-\(drag)", downstream: []) else { break }
-                let sheets = nodes.filter { $0.elementType == .other && $0.identifier == "task145.product.resolution" }
-                guard sheets.count == 1 else { break }
+            // Capture only the real resolution sheet. Its editor and Database
+            // ancestors were consuming 6s or more in an application-wide capture.
+            var drags = 0
+            var observations: [String] = []
+            var emitted = false
+            let emit = { [weak self] in
+                guard let self, !emitted else { return }
+                emitted = true
+                let evidence = XCTAttachment(string: observations.joined(separator: "\n"))
+                evidence.name = "R4 bounded owned-sheet reveal"
+                evidence.lifetime = .keepAlways; self.add(evidence)
+            }
+            addTeardownBlock { emit() }
+            defer { emit() }
+            let identifier = "task145.product.resolution"
+            while ProcessInfo.processInfo.systemUptime < deadline {
+                let captureStarted = ProcessInfo.processInfo.systemUptime
+                let candidates = app.otherElements.matching(identifier: identifier)
+                let count = candidates.count
+                guard count == 1 else {
+                    if observations.count < 24 { observations.append("capture-start=\(captureStarted); sheet-count=\(count); drags=\(drags)") }
+                    continue
+                }
+                guard let root = try? candidates.element(boundBy: 0).snapshot(),
+                      let nodes = try? c3OptionsSnapshotNodes(root, stage: "R4-resolution-\(drags)", downstream: []) else { continue }
+                let sheets = nodes.filter { $0.elementType == .other && $0.identifier == identifier }
+                guard sheets.count == 1 else { continue }
                 let forms = nodes.filter { $0.elementType == .collectionView && $0.path.starts(with: sheets[0].path) }
                 let bars = nodes.filter { $0.elementType == .navigationBar && $0.path.starts(with: sheets[0].path) }
-                guard forms.count == 1, bars.count == 1, bars[0].identifier == "Review saved change" else { break }
-                let windows = nodes.filter { $0.elementType == .window && sheets[0].path.starts(with: $0.path) }
-                guard windows.count == 1 else { break }
-                let window = windows[0].frame
+                guard forms.count == 1, bars.count == 1, bars[0].identifier == "Review saved change" else { continue }
+                let owners = app.windows.containing(.other, identifier: identifier)
+                guard owners.count == 1 else { continue }
+                let window = owners.element(boundBy: 0).frame
                 let frame = forms[0].frame.intersection(window)
                 let top = max(frame.minY, bars[0].frame.maxY) + 12
                 let bottom = frame.maxY - 16
                 guard [frame.minX, frame.maxX, top, bottom].allSatisfy({ $0.isFinite }),
-                      frame.width > 24, bottom > top + 24 else { break }
+                      frame.width > 24, bottom > top + 24 else { continue }
                 let targets = nodes.filter { $0.elementType == .button
                     && $0.identifier == "task145.product.resolution.adopt-remote"
                     && $0.path.starts(with: forms[0].path) }
                 guard targets.count <= 1 else { break }
                 let target = targets.first?.frame
-                if let target, target.width > 0, target.height > 0,
-                   target.minY >= top, target.maxY <= bottom, element.isHittable,
-                   ProcessInfo.processInfo.systemUptime < deadline { return }
-                guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let inside = target.map { $0.width > 0 && $0.height > 0 && $0.minY >= top && $0.maxY <= bottom } ?? false
+                let hitStarted = ProcessInfo.processInfo.systemUptime
+                let hit = inside && hitStarted < deadline ? element.isHittable : false
+                if observations.count < 24 {
+                    observations.append("capture-start=\(captureStarted); capture-end=\(hitStarted); target=\(String(describing: target)); top=\(top); bottom=\(bottom); inside=\(inside); hittable=\(hit); hit-end=\(ProcessInfo.processInfo.systemUptime); drags=\(drags); deadline=\(deadline)")
+                }
+                if inside, hit, ProcessInfo.processInfo.systemUptime < deadline { return }
+                guard drags < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
                 let upward = target.map { $0.midY > (top + bottom) / 2 } ?? true
                 let distance = min(360, (bottom - top) * 0.6)
-                // Keep both endpoints in the middle of the current sheet.
-                // The former y820 start was only 24pt from the edge of the
-                // observed 844pt window; the Form also includes that bottom inset.
                 let y = (top + bottom) / 2 + (upward ? distance / 2 : -distance / 2)
                 let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                     dx: frame.midX - window.minX, dy: y - window.minY))
+                drags += 1
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
                     dx: 0, dy: upward ? -distance : distance)), withVelocity: .slow, thenHoldForDuration: 0.2)
             }
+            emit()
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
             return
         }
@@ -3338,26 +3360,27 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false,
                                         observe: ((String) -> Void)? = nil) -> Bool {
         let started = ProcessInfo.processInfo.systemUptime
-        guard let root = try? app.snapshot(),
-              let nodes = try? c3OptionsSnapshotNodes(root, stage: "T11-tab-" + title, downstream: []) else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-unavailable")
+        // Admission needs native cardinality, selection and window ownership,
+        // not every attribute of every fixture/control in an application snapshot.
+        let barCount = app.tabBars.count
+        let navigationCount = app.navigationBars.count
+        let formCount = requiresForm ? app.collectionViews.count : -1
+        guard barCount == 1, navigationCount == 1, !requiresForm || formCount == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); bars=\(barCount); navigation=\(navigationCount); forms=\(formCount)")
             return false
         }
-        let bars = nodes.filter { $0.elementType == .tabBar }
-        let navigation = nodes.filter { $0.elementType == .navigationBar }
-        let forms = nodes.filter { $0.elementType == .collectionView }
-        guard bars.count == 1, navigation.count == 1, navigation[0].identifier == title,
-              !requiresForm || forms.count == 1 else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); bars=\(bars.count); navigation=\(navigation.count); expected-title=\(navigation.first?.identifier == title); forms=\(forms.count)")
+        let owners = app.windows.containing(.tabBar, identifier: nil)
+            .containing(.navigationBar, identifier: title)
+        let windows = requiresForm ? owners.containing(.collectionView, identifier: nil) : owners
+        let windowCount = windows.count
+        guard windowCount == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount)")
             return false
         }
-        let windows = nodes.filter { $0.elementType == .window && bars[0].path.starts(with: $0.path)
-            && navigation[0].path.starts(with: $0.path)
-            && (!requiresForm || forms[0].path.starts(with: $0.path)) }
-        let buttons = nodes.filter { $0.elementType == .button && $0.label == title
-            && $0.path.starts(with: bars[0].path) }
-        let selected = windows.count == 1 && buttons.count == 1 && buttons[0].isSelected
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windows.count); buttons=\(buttons.count); selected=\(selected)")
+        let buttons = windows.element(boundBy: 0).tabBars.buttons.matching(NSPredicate(format: "label == %@", title))
+        let buttonCount = buttons.count
+        let selected = buttonCount == 1 && buttons.element(boundBy: 0).isSelected
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount); buttons=\(buttonCount); selected=\(selected); native-query-admission=true")
         return selected
     }
 
@@ -5070,10 +5093,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
     // C3-only native Form traversal. No C1/C2 helper or production authority changes.
     private func c3OptionsForm(stage: String, downstream: [String]) throws -> XCUIElement {
-        let form = app.collectionViews.firstMatch
-        try scopeRequire(form.waitForExistence(timeout: 5) && app.collectionViews.count == 1,
-            stage: stage + "-unique-native-Form", downstream: downstream)
-        return form
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        var ready = false
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            if isolationTabIsSelected("Options", requiresForm: true) {
+                ready = ProcessInfo.processInfo.systemUptime < deadline
+                break
+            }
+        }
+        try scopeRequire(ready, stage: stage + "-unique-native-Form", downstream: downstream)
+        return app.collectionViews.element(boundBy: 0)
     }
     private func c3OptionsScrollValues(_ form: XCUIElement) -> [String] {
         form.descendants(matching: .any)
@@ -5331,8 +5360,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
+        // Preserve global cardinality and one owning window, then capture that
+        // window once. Application-level metadata and unrelated windows are not
+        // part of the Options viewport whose coherent frames are required below.
+        try scopeRequire(app.collectionViews.count == 1 && app.navigationBars.count <= 1 && app.tabBars.count <= 1,
+            stage: stage + "-native-viewport-cardinality", downstream: downstream)
+        let owners = app.windows.containing(.navigationBar, identifier: "Options")
+            .containing(.collectionView, identifier: nil).containing(.tabBar, identifier: nil)
+        try scopeRequire(owners.count == 1 && ProcessInfo.processInfo.systemUptime < deadline,
+            stage: stage + "-unique-native-Options-window", downstream: downstream)
         let captureStarted = ProcessInfo.processInfo.systemUptime
-        let captureResult = Result(catching: { try app.snapshot() })
+        let captureResult = Result(catching: { try owners.element(boundBy: 0).snapshot() })
         let captureFinished = ProcessInfo.processInfo.systemUptime
         let root: XCUIElementSnapshot
         switch captureResult {
@@ -6109,13 +6147,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // bar. Reveal it in either direction through bounded gestures.
                 let frame = element.frame
                 if [frame.minY, frame.maxY].allSatisfy({ $0.isFinite }), frame.height > 0 {
-                    if requiresFullVisibility, frame.height <= bottom - top {
+                    let pageDistance = min(360, (bottom - top) * 0.75)
+                    if frame.minY > bottom {
+                        movement = -min(pageDistance, max(24, frame.maxY - bottom))
+                    } else if frame.maxY < top {
+                        movement = min(pageDistance, max(24, top - frame.minY))
+                    } else if requiresFullVisibility, frame.height <= bottom - top {
                         // Correct the clipped edge. Centering plus the old44pt
                         // minimum oscillated across the narrow max-font fit.
                         // Keep24pt of real movement: observed8-13pt drags did
                         // not begin scrolling a clipped Review button.
-                        if frame.maxY > bottom { movement = -min(160, max(24, (frame.maxY - bottom) / 2)) }
-                        else if frame.minY < top { movement = min(160, max(24, (top - frame.minY) / 2)) }
+                        if frame.maxY > bottom { movement = -min(160, max(24, frame.maxY - bottom)) }
+                        else if frame.minY < top { movement = min(160, max(24, top - frame.minY)) }
                         else { movement = 0 }
                     } else {
                         movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
@@ -6123,8 +6166,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     }
                 }
             }
+            // Both ends stay inside the measured viewport, including the
+            // longer page used only for a wholly offscreen target.
+            movement = max(-min(360, (bottom - top) * 0.75), min(min(360, (bottom - top) * 0.75), movement))
+            let startY = (top + bottom) / 2 - movement / 2
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-                .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
+                .withOffset(CGVector(dx: 0, dy: startY))
             if observations.count < 24 {
                 observations.append("gesture=\(gesture); requested-dy=\(movement); viewport-top=\(top); viewport-bottom=\(bottom); midpoint=\((top + bottom) / 2)")
             }
