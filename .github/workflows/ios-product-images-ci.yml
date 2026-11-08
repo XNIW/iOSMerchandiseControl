@@ -27,6 +27,12 @@ on:
         type: boolean
         required: false
         default: false
+      task146_runner:
+        description: "Focused diagnostic environment only; ordinary CI stays on macos-26"
+        type: choice
+        required: false
+        default: macos-26
+        options: [macos-26, xcode-27]
       task146_focused_tests:
         description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
         type: string
@@ -47,7 +53,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
-    runs-on: macos-26
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_runner || 'macos-26' }}
     timeout-minutes: 75
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
@@ -56,6 +62,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Restrict alternate toolchain to focused diagnostics
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_runner == 'xcode-27' }}
+        env:
+          TASK146_DIAGNOSTIC_SELECTION: ${{ inputs.task146_focused_tests }}
+        run: test -n "$TASK146_DIAGNOSTIC_SELECTION"
 
       - name: Validate explicit focused selection
         if: ${{ matrix.shard == 'focused' }}
@@ -368,7 +380,7 @@ jobs:
                       and not result.get('timedOut') and not result.get('errorType'))
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
-          export('toolchain.txt', ['xcodebuild', '-version'])
+          export('toolchain.txt', ['python3', '-c', "import json,subprocess; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; print(json.dumps({key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()},sort_keys=True))"])
           if os.environ.get('TASK146_FOCUSED_TESTS') or os.environ.get('TASK146_CI_SHARD') == 'ui-core':
               # Diagnostic only, inside the existing byte/time-limited exporter.
               # These public fields are closed qualification timings, not Auth/body logs.
