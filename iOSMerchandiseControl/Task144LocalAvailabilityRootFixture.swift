@@ -840,7 +840,29 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             try Task145StoreLoadFailureObservation.malformedManifest.write(to: repository.manifestURL, options: .withoutOverwriting)
             controller = try SyncStoreGenerationController.openingControlledRepositoryForTesting(repository, runID: runID)
         } else {
-            controller = try SyncStoreGenerationController(repository: repository)
+            do { controller = try SyncStoreGenerationController(repository: repository) }
+            catch {
+                if r4Enabled, let manifest = existingManifest {
+                    // Failure-only synthetic R4 metadata; no model query, retry,
+                    // authority repair, defaults write or production guard change.
+                    let mirror = WatermarkStore(defaults: repository.defaults)
+                    let scope = WatermarkStore.Scope(accountHash: manifest.accountHash,
+                        storeIdentity: manifest.storeIdentity)
+                    let cursor = mirror.watermark(for: scope)
+                    let fence = ShopSyncRecoveryFenceStore(defaults: repository.defaults)
+                    let durable = fence.persistedWatermark(accountHash: manifest.accountHash,
+                        storeIdentity: manifest.storeIdentity, deviceIdentityHash: manifest.deviceIdentityHash)
+                    let matches = fence.scopeKey(accountHash: manifest.accountHash,
+                        storeIdentity: manifest.storeIdentity, deviceIdentityHash: manifest.deviceIdentityHash,
+                        watermark: cursor) == manifest.checkpoint.scope.key
+                    NSLog("TASK146_R4_INIT stage.controller-load category.%@ defaults-same.%d checkpoint.%lld mirror.%lld mirror-generation-matches.%d fence.%lld fence-at-mirror-matches.%d",
+                        Task144RootObservation.errorCategory(error), repository.defaults === UserDefaults.standard ? 1 : 0,
+                        manifest.checkpoint.maxEventID, cursor,
+                        mirror.matchesRecoveryGeneration(manifest.generationID, watermark: cursor, scope: scope) ? 1 : 0,
+                        durable ?? -1, matches ? 1 : 0)
+                }
+                throw error
+            }
         }
         let product = RemoteInventoryProductRow(
             id: Task145PerformanceConfiguration.enabled ? Task145PerformanceConfiguration.targetID : UUID(uuidString: "14400000-0000-4000-8000-000000000003")!,

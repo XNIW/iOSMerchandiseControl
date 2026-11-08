@@ -5080,10 +5080,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         options.tap()
         let returnedForm = try c3OptionsForm(stage: "C3-return-A", downstream: ["qualified-summary-return"])
         try c3OptionsRewindToTop(returnedForm, stage: "C3-return-A-top", privacy: false, downstream: ["qualified-summary-return"])
-        try c3OptionsReveal(sync, form: returnedForm, stage: "C3-return-A-cloud", downstream: ["qualified-summary-return"])
+        try c3OptionsReveal(sync, form: returnedForm, stage: "C3-return-A-cloud", downstream: ["qualified-summary-return"], velocity: .fast)
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable && !unavailable.exists,
             stage: "C3-current-A-cloud-return", downstream: ["qualified-summary-return"])
-        try c3OptionsReveal(summary, form: returnedForm, stage: "C3-return-A-local", downstream: ["qualified-summary-return"])
+        try c3OptionsReveal(summary, form: returnedForm, stage: "C3-return-A-local", downstream: ["qualified-summary-return"], velocity: .fast)
         try scopeRequire(summary.waitForExistence(timeout: 10) && summary.isHittable && !unavailable.exists,
             stage: "C3-current-A-summary-return", downstream: ["qualified-summary-return"])
         try c3RequireLocalSummaryValues(returnedForm,

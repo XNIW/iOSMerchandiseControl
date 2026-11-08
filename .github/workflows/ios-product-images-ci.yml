@@ -471,7 +471,7 @@ jobs:
               # These public fields are closed qualification timings, not Auth/body logs.
               export('runtime-cost.log', ['xcrun', 'simctl', 'spawn', os.environ['DEVICE_ID'],
                   'log', 'show', '--style', 'compact', '--last', '75m',
-                  '--predicate', '(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39"'])
+                  '--predicate', '(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39" OR eventMessage BEGINSWITH "TASK146_R4_INIT"'])
           base = ['xcrun', 'xcresulttool', 'get', 'test-results']
           summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)])
           tests_ok = export('tests.json', base + ['tests', '--path', str(bundle)])
