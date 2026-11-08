@@ -445,7 +445,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard let raw = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"] else { return nil }
         guard let runID = UUID(uuidString: raw) else { preconditionFailure("Invalid controlled fixture namespace") }
         do { return try Task144LocalAvailabilityRootFixture(runID: runID) }
-        catch { preconditionFailure("Controlled root fixture could not establish its isolated store") }
+        catch {
+            if ProcessInfo.processInfo.environment["TASK145_R4_REVIEW_UI"] == "noop-price" {
+                NSLog("TASK146_R4_INIT stage.fixture-init category.%@",
+                    Task144RootObservation.errorCategory(error))
+            }
+            preconditionFailure("Controlled root fixture could not establish its isolated store")
+        }
     }()
 
     @Published private(set) var facts: Set<String> = []
@@ -2329,6 +2335,18 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             runtimeObservation = ["status": "OBSERVED", "isRunning": runtime.isRunning,
                 "originPresentationID": runtime.observationOriginPresentationID ?? "missing",
                 "originCurrent": runtime.observationOriginPresentationID == controller.presentationID]
+            runtimeObservation["historyDropped"] = runtime.presentationHistoryDropped
+            runtimeObservation["history"] = runtime.presentationHistory.map { observation in
+                var value: [String: Any] = ["id": observation.entry.id.uuidString.lowercased(),
+                    "source": observation.entry.source.rawValue, "action": Self.actionKind(observation.entry.action),
+                    "enteredUTC": observation.entry.enteredUTC, "enteredUptime": observation.entry.enteredUptime]
+                if let status = observation.status { value["status"] = status }
+                if let returnedUTC = observation.runtimeReturnedUTC { value["runtimeReturnedUTC"] = returnedUTC }
+                if let returnedUptime = observation.runtimeReturnedUptime { value["runtimeReturnedUptime"] = returnedUptime }
+                if let finishedUTC = observation.finishedUTC { value["finishedUTC"] = finishedUTC }
+                if let finishedUptime = observation.finishedUptime { value["finishedUptime"] = finishedUptime }
+                return value
+            }
             if let entry = runtime.presentationEntry {
                 runtimeObservation["entry"] = ["id": entry.id.uuidString.lowercased(),
                     "source": entry.source.rawValue, "action": Self.actionKind(entry.action),
@@ -5944,8 +5962,18 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
         let enteredUTC: TimeInterval
         let enteredUptime: TimeInterval
     }
+    struct HistoricalPresentationEntry {
+        let entry: PresentationEntry
+        var status: String? = nil
+        var runtimeReturnedUTC: TimeInterval? = nil
+        var runtimeReturnedUptime: TimeInterval? = nil
+        var finishedUTC: TimeInterval? = nil
+        var finishedUptime: TimeInterval? = nil
+    }
     let observationOriginPresentationID: String?
     private(set) var presentationEntry: PresentationEntry?
+    private(set) var presentationHistory: [HistoricalPresentationEntry] = []
+    private(set) var presentationHistoryDropped = 0
     private let runtime: any SyncAutomaticRuntimeProviding
     private let observe: (SyncAction, SyncAutomaticRunResult) -> Void
     private let invocation: ((UUID, Bool) -> Void)?
@@ -5971,8 +5999,18 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
             presentationEntry = PresentationEntry(id: id, source: source, action: action,
                 enteredUTC: Date().timeIntervalSince1970, enteredUptime: ProcessInfo.processInfo.systemUptime)
             observedID = id
+            if ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1",
+               let entry = presentationEntry {
+                if presentationHistory.count < 8 {
+                    presentationHistory.append(HistoricalPresentationEntry(entry: entry))
+                } else { presentationHistoryDropped += 1 }
+            }
         }
         defer {
+            if let observedID, let index = presentationHistory.firstIndex(where: { $0.entry.id == observedID }) {
+                presentationHistory[index].finishedUTC = Date().timeIntervalSince1970
+                presentationHistory[index].finishedUptime = ProcessInfo.processInfo.systemUptime
+            }
             if let observedID, presentationEntry?.id == observedID { presentationEntry = nil }
         }
         if let invocation {
@@ -5980,6 +6018,7 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
             defer { invocation(callID, false) }
             return await Task145PerformanceCallContext.$invocationID.withValue(callID) {
                 let result = await runtime.run(action: action, source: source)
+                recordPresentationResult(result, id: observedID)
                 observe(action, result); return result
             }
         }
@@ -5987,11 +6026,18 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
         t19Begin?(action, source)
 // TASK145_T19_INSERT_END wrapper-before
         let result = await runtime.run(action: action, source: source)
+        recordPresentationResult(result, id: observedID)
         observe(action, result)
 // TASK145_T19_INSERT_BEGIN wrapper-after
         t19Observe?(action, source, result)
 // TASK145_T19_INSERT_END wrapper-after
         return result
+    }
+    private func recordPresentationResult(_ result: SyncAutomaticRunResult, id: UUID?) {
+        guard let id, let index = presentationHistory.firstIndex(where: { $0.entry.id == id }) else { return }
+        presentationHistory[index].status = result.status.rawValue
+        presentationHistory[index].runtimeReturnedUTC = Date().timeIntervalSince1970
+        presentationHistory[index].runtimeReturnedUptime = ProcessInfo.processInfo.systemUptime
     }
     func cancel() { runtime.cancel() }
     func cancelAndWait() async {
@@ -6057,7 +6103,20 @@ private struct Task144ControlledRootControls: View {
     private var displayedFacts: [String] {
         fixture.facts.sorted()
     }
+    @ViewBuilder
     var body: some View {
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            VStack(spacing: 1) {
+                Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
+                    readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
+                    .frame(width: 1, height: 1).allowsHitTesting(false)
+                ForEach(displayedFacts, id: \.self) { fact in
+                    Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                }
+            }
+            .dynamicTypeSize(.medium ... .large)
+            .accessibilityElement(children: .contain)
+        } else {
         VStack(spacing: 1) {
 // TASK145_SCOPE_SWITCH_INSERT_BEGIN C-observation-controls
             if fixture.hasScopeSwitchControl {
@@ -6078,11 +6137,6 @@ private struct Task144ControlledRootControls: View {
                 Text(fixture.performanceExport).lineLimit(1).font(.system(size: 1))
                     .accessibilityIdentifier("task145.perf.sample-json").accessibilityValue(fixture.performanceExport)
                 if fixture.performanceWarmReady { Text("task145.perf.warm-ready").accessibilityIdentifier("task145.perf.warm-ready") }
-            }
-            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-                Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
-                    readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
-                    .frame(width: 1, height: 1).allowsHitTesting(false)
             }
             if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1"
                 || ["cycles", "repeated-material"].contains(ProcessInfo.processInfo.environment["TASK145_T19_UI"] ?? "") {
@@ -6235,6 +6289,7 @@ private struct Task144ControlledRootControls: View {
                     Task145HistoryFeedbackHost(fixture: fixture, service: service)
                 }
             }
+        }
     }
 }
 /// On-demand public UIKit observations in the isolated fixture only. This view
@@ -6604,6 +6659,14 @@ private struct Task144ControlledRootModifier: ViewModifier {
     let inEditor: Bool
     func body(content: Content) -> some View {
         if let fixture = Task144LocalAvailabilityRootFixture.current,
+           !inEditor, ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            content.overlay(alignment: .topLeading) {
+                // The cache phase consumes metadata only. Keep ordinary root
+                // geometry while the actual ProductRow owns the render witness.
+                Task144ControlledRootControls(fixture: fixture, controlPrefix: "task144.controlled")
+                    .allowsHitTesting(false)
+            }
+        } else if let fixture = Task144LocalAvailabilityRootFixture.current,
            !inEditor {
             VStack(spacing: 0) {
                 Task144ControlledRootControls(fixture: fixture,
@@ -6912,21 +6975,42 @@ private final class Task145R4ReviewControl {
     init(url: URL, runID: UUID, initial: RemoteInventoryProductRow, reopening: Bool) throws {
         self.url = url; self.reopening = reopening
         if reopening {
-            let data = try Data(contentsOf: url)
-            guard data.count <= 262_144 else { throw SyncStoreGenerationError.activationReadBackFailed }
-            state = try JSONDecoder().decode(State.self, from: data)
+            let data: Data
+            do { data = try Data(contentsOf: url) }
+            catch {
+                NSLog("TASK146_R4_INIT stage.state-read category.%@", Task144RootObservation.errorCategory(error))
+                throw error
+            }
+            guard data.count <= 262_144 else {
+                NSLog("TASK146_R4_INIT stage.state-size bytes.%ld", data.count)
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            do { state = try JSONDecoder().decode(State.self, from: data) }
+            catch {
+                NSLog("TASK146_R4_INIT stage.state-decode category.%@", Task144RootObservation.errorCategory(error))
+                throw error
+            }
             guard state.schema == 1, state.runID == runID, state.product.id == initial.id,
                   state.product.ownerUserID == initial.ownerUserID, state.product.shopID == initial.shopID,
                   state.receiptJSON != nil, state.processIDs.count < 3,
                   !state.processIDs.contains(ProcessInfo.processInfo.processIdentifier) else {
+                let flags = "schema.\(state.schema == 1);run.\(state.runID == runID);product.\(state.product.id == initial.id);owner.\(state.product.ownerUserID == initial.ownerUserID);shop.\(state.product.shopID == initial.shopID);receipt.\(state.receiptJSON != nil);process-count.\(state.processIDs.count);pid-seen.\(state.processIDs.contains(ProcessInfo.processInfo.processIdentifier))"
+                NSLog("TASK146_R4_INIT stage.reopen-guard %@", flags)
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
         } else {
-            guard !FileManager.default.fileExists(atPath: url.path) else { throw SyncStoreGenerationError.activationReadBackFailed }
+            guard !FileManager.default.fileExists(atPath: url.path) else {
+                NSLog("TASK146_R4_INIT stage.unexpected-state-file")
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
             state = State(schema: 1, runID: runID, product: initial)
         }
         state.processIDs.append(ProcessInfo.processInfo.processIdentifier)
-        try persist()
+        do { try persist() }
+        catch {
+            NSLog("TASK146_R4_INIT stage.state-persist category.%@", Task144RootObservation.errorCategory(error))
+            throw error
+        }
     }
     func persist() throws {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]

@@ -2136,15 +2136,36 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         return value
     }
     private func r3WaitNativeSelection(text: String, start: Int, end: Int) throws {
-        let node = app.descendants(matching: .any).matching(identifier: "task144.controlled.native-name-observation").firstMatch
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            guard node.exists, let raw = node.value as? String, let data = raw.data(using: .utf8),
+        let node = app.otherElements.matching(NSPredicate(format: "identifier == %@",
+            "task144.controlled.native-name-observation")).element
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        var lastRaw: String?
+        let predicate = NSPredicate { _, _ in
+            guard ProcessInfo.processInfo.systemUptime < deadline, node.exists,
+                  ProcessInfo.processInfo.systemUptime < deadline,
+                  let raw = node.value as? String else { return false }
+            lastRaw = raw.utf8.count <= 8192 ? raw : nil
+            guard ProcessInfo.processInfo.systemUptime < deadline,
+                  let data = raw.data(using: .utf8),
                   let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
-            return value["status"] as? String == "EXACT_NATIVE_NAME" && value["isFirstResponder"] as? Bool == true
+            return ProcessInfo.processInfo.systemUptime < deadline
+                && value["status"] as? String == "EXACT_NATIVE_NAME" && value["isFirstResponder"] as? Bool == true
                 && value["draft"] as? String == text && value["selectionStatus"] as? String == "EXACT_UTF16"
                 && value["selectionStart"] as? Int == start && value["selectionEnd"] as? Int == end
-        }, object: nil)
-        try r3Require(XCTWaiter.wait(for: [expectation], timeout: 5) == .completed, "native-focus-selection-restored")
+        }
+        var restored = predicate.evaluate(with: nil)
+        let remaining = max(0, deadline - ProcessInfo.processInfo.systemUptime)
+        if !restored, remaining > 0 {
+            let expectation = XCTNSPredicateExpectation(predicate: predicate, object: nil)
+            restored = XCTWaiter.wait(for: [expectation], timeout: remaining) == .completed
+        }
+        let qualified = restored && ProcessInfo.processInfo.systemUptime < deadline
+        if !qualified, let lastRaw {
+            let attachment = XCTAttachment(string: lastRaw)
+            attachment.name = "R23 last native focus and selection observation before failure"
+            attachment.lifetime = .keepAlways; add(attachment)
+        }
+        try r3Require(qualified, "native-focus-selection-restored")
         _ = try r3Native("restored focus and exact selection")
     }
     private func r3SelectAllName(_ field: XCUIElement) throws {
@@ -2681,7 +2702,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         try awaitRestartFact("admission-held", timeout: 20)
         if scenario == "post-commit" {
-            app.buttons["task144.controlled.release"].press(forDuration: 1.2)
+            app.buttons["task144.controlled.release"].press(forDuration: 1.5)
             try awaitRestartFact("availability-restored", timeout: 5)
         }
         XCTAssertTrue(tapStableInitialReplayProduct(app.staticTexts.matching(
@@ -2792,17 +2813,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let savedA = try domainLedgerAttachment("real Save A committed locally during held recovery page")
         XCTAssertEqual((savedA.state["requests"] as? [Any])?.count, 0)
         let release = app.buttons["task144.controlled.release"]
-        if domain == "history" {
+        if domain == "history" || domain == "prices" {
             let releaseDeadline = ProcessInfo.processInfo.systemUptime + 5
             let ready = try controlledReleaseInputIsReady(release,
-                identifier: "task144.controlled.release", stage: "history-first-release-admission",
+                identifier: "task144.controlled.release", stage: domain + "-first-release-admission",
                 deadline: releaseDeadline)
             guard ready && ProcessInfo.processInfo.systemUptime < releaseDeadline else {
-                XCTFail("History requires stable current native release input before its sole press")
+                XCTFail("The domain requires stable current native release input before its sole press")
                 return
             }
         }
-        release.press(forDuration: 1.2)
+        release.press(forDuration: 1.5)
         try awaitDomainFact("cutover-pending-stale-writer-rejected", timeout: 40)
         try awaitDomainFact("a-committed-response-held", timeout: 40)
         let remoteA = try domainLedgerAttachment("publish preserves A; old gate rejects writer; remote A committed and response held")
@@ -3530,8 +3551,20 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             field.tap()
             XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
             field.typeText(value)
-            let actual = field.value as? String
-            if actual != value { captureControlledAutomaticReadback() }
+            let inputDeadline = ProcessInfo.processInfo.systemUptime + 5
+            var actual: String?
+            let published = NSPredicate { _, _ in
+                guard ProcessInfo.processInfo.systemUptime < inputDeadline else { return false }
+                actual = field.value as? String
+                return actual == value && ProcessInfo.processInfo.systemUptime <= inputDeadline
+            }
+            let immediatelyPublished = published.evaluate(with: nil)
+            let remaining = inputDeadline - ProcessInfo.processInfo.systemUptime
+            let observed = immediatelyPublished || (remaining > 0 && XCTWaiter.wait(for: [
+                XCTNSPredicateExpectation(predicate: published, object: nil)], timeout: remaining) == .completed)
+            let inputQualified = observed && ProcessInfo.processInfo.systemUptime <= inputDeadline
+            if !inputQualified { captureControlledAutomaticReadback() }
+            XCTAssertTrue(inputQualified, "The one native relation input must publish its exact value within five seconds")
             XCTAssertEqual(actual, value)
         }
         for _ in 0..<4 where !name.isHittable {
@@ -4835,7 +4868,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         options.tap()
         let unavailable = app.staticTexts["options.business-summary-unavailable"]
         let administrativeForm = try c3OptionsForm(stage: "C3-B", downstream: ["explicit-return-A"])
-        try c3OptionsTraverseAdministrativeForm(administrativeForm, unavailable: unavailable)
+        try c3OptionsTraverseAdministrativeForm(administrativeForm)
         let deniedAX = XCTAttachment(string: app.debugDescription)
         deniedAX.name = "TASK145 C3 B-selected Options native AX: administrative controls and no A business cards"
         deniedAX.lifetime = .keepAlways; add(deniedAX)
@@ -5179,24 +5212,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: stage + "-snapshot-live-association-NOT_QUALIFIED", downstream: downstream)
         return matches[0]
     }
-    private func c3OptionsSnapshotOccluder(_ element: XCUIElement, type: XCUIElement.ElementType,
-                                           identifier: String? = nil, nodes: [C3OptionsSnapshotNode],
-                                           stage: String, downstream: [String], timing: C3OptionsQueryTiming,
-                                           site: C3OptionsQueryTiming.Site) throws -> CGRect? {
-        let candidates = nodes.filter { $0.elementType == type && (identifier == nil || $0.identifier == identifier) }
-        guard timing.measure(.exists, site: site, { element.exists }) else {
-            try scopeRequire(candidates.isEmpty,
-                stage: stage + "-snapshot-live-absence-NOT_QUALIFIED", downstream: downstream)
-            return nil
-        }
-        let node = try c3OptionsSnapshotMatch(element, type: type, nodes: candidates,
-            stage: stage, downstream: downstream, timing: timing, site: site)
-        let frame = node.frame
-        try scopeRequire([frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
-            && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1,
-            stage: stage + "-snapshot-occluder-frame-NOT_QUALIFIED", downstream: downstream)
-        return frame
-    }
     @discardableResult
     private func c3OptionsViewport(_ form: XCUIElement, stage: String, ordinal: Int,
                                    deadline: TimeInterval, collectContentAnchors: Bool = true,
@@ -5222,52 +5237,52 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // after every drag, takes a new snapshot; it never supplies hittability.
         let queryTiming = C3OptionsQueryTiming(stage: stage, ordinal: ordinal)
         let nodes = try c3OptionsSnapshotNodes(root, stage: stage, downstream: downstream)
-        if !collectContentAnchors {
-            // Qualified A navigation needs only coherent current drag geometry;
-            // the caller still requires the actual live target's hittability.
-            let forms = nodes.filter { $0.elementType == .collectionView }
-            let navigation = nodes.filter { $0.elementType == .navigationBar }
-            let windows = nodes.filter { window in
-                window.elementType == .window && navigation.contains { node in
-                    node.identifier == "Options" && node.path.starts(with: window.path)
-                }
+        // Use one fresh same-window geometry for all C3 viewports. The Form
+        // query is firstMatch and this hierarchy must contain exactly one Form.
+        // Live Button hit points and fresh complete association remain below.
+        let forms = nodes.filter { $0.elementType == .collectionView }
+        let navigation = nodes.filter { $0.elementType == .navigationBar }
+        let windows = nodes.filter { window in
+            window.elementType == .window && navigation.contains { node in
+                node.identifier == "Options" && node.path.starts(with: window.path)
             }
-            let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.band" }
-            let tabs = nodes.filter { $0.elementType == .tabBar }
-            try scopeRequire(forms.count == 1 && windows.count == 1 && navigation.count <= 1
-                && bands.count <= 1 && tabs.count <= 1
-                && forms[0].path.starts(with: windows[0].path)
-                && (navigation + bands + tabs).allSatisfy({ $0.path.starts(with: windows[0].path) }),
-                stage: stage + "-coherent-native-Form-geometry", downstream: downstream)
-            let geometry = forms + windows + navigation + bands + tabs
-            try scopeRequire(geometry.allSatisfy { node in
-                let frame = node.frame
-                return [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
-                    && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1
-            }, stage: stage + "-coherent-native-geometry-frames", downstream: downstream)
-            let formFrame = forms[0].frame
-            let clipped = formFrame.intersection(windows[0].frame)
-            var top = clipped.minY
-            var bottom = clipped.maxY
-            if let frame = navigation.first?.frame { top = max(top, frame.maxY) }
-            if let frame = bands.first?.frame { top = max(top, frame.maxY) }
-            if let frame = tabs.first?.frame { bottom = min(bottom, frame.minY) }
-            let viewport = CGRect(x: clipped.minX, y: top, width: clipped.width, height: bottom - top)
-            try scopeRequire([viewport.minX, viewport.minY, viewport.maxX, viewport.maxY].allSatisfy { $0.isFinite }
-                && !viewport.isNull && !viewport.isInfinite && viewport.width > 1 && viewport.height > 1
-                && ProcessInfo.processInfo.systemUptime < deadline,
-                stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
+        }
+        let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.band" }
+        let tabs = nodes.filter { $0.elementType == .tabBar }
+        try scopeRequire(forms.count == 1 && windows.count == 1 && navigation.count <= 1
+            && bands.count <= 1 && tabs.count <= 1
+            && forms[0].path.starts(with: windows[0].path)
+            && (navigation + bands + tabs).allSatisfy({ $0.path.starts(with: windows[0].path) }),
+            stage: stage + "-coherent-native-Form-geometry", downstream: downstream)
+        let geometry = forms + windows + navigation + bands + tabs
+        try scopeRequire(geometry.allSatisfy { node in
+            let frame = node.frame
+            return [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1
+        }, stage: stage + "-coherent-native-geometry-frames", downstream: downstream)
+        let formNode = forms[0]
+        let formFrame = formNode.frame
+        let clipped = formFrame.intersection(windows[0].frame)
+        var top = clipped.minY
+        var bottom = clipped.maxY
+        if let frame = navigation.first?.frame { top = max(top, frame.maxY) }
+        if let frame = bands.first?.frame { top = max(top, frame.maxY) }
+        if let frame = tabs.first?.frame { bottom = min(bottom, frame.minY) }
+        let viewportFrame = CGRect(x: clipped.minX, y: top, width: clipped.width, height: bottom - top)
+        try scopeRequire([viewportFrame.minX, viewportFrame.minY, viewportFrame.maxX, viewportFrame.maxY].allSatisfy { $0.isFinite }
+            && !viewportFrame.isNull && !viewportFrame.isInfinite && viewportFrame.width > 1 && viewportFrame.height > 1
+            && ProcessInfo.processInfo.systemUptime < deadline,
+            stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
+        if !collectContentAnchors {
             // Use this same fresh hierarchy for Review geometry; the caller
             // still requires its actual live hit point before the sole tap.
             let reviews = nodes.filter { $0.elementType == .button && $0.label == "Review" }
             try scopeRequire(reviews.count <= 1
                 && reviews.allSatisfy({ $0.path.starts(with: forms[0].path) }),
                 stage: stage + "-unique-native-Review-in-Form", downstream: downstream)
-            return (anchors: [:], viewport: viewport, formOrigin: formFrame.origin,
+            return (anchors: [:], viewport: viewportFrame, formOrigin: formFrame.origin,
                 decisionReviewFrame: reviews.first?.frame)
         }
-        let formNode = try c3OptionsSnapshotMatch(form, type: .collectionView, nodes: nodes,
-            stage: stage + "-Form", downstream: downstream, timing: queryTiming, site: .form)
         let formNodes = nodes.filter { $0.path.count > formNode.path.count && $0.path.starts(with: formNode.path) }
         // These eight source-unique OptionRow roles are Buttons in Section bodies,
         // never Theme/Language/Cloud headers. Titles and subtitles are the pinned English UI.
@@ -5281,22 +5296,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             ("language.es", "Español", "For stores and staff who speak Spanish."),
             ("language.en", "English", "Basic international interface.")
         ]
-        let formFrame = formNode.frame
-        try scopeRequire([formFrame.minX, formFrame.minY, formFrame.maxX, formFrame.maxY].allSatisfy { $0.isFinite }
-            && !formFrame.isNull && !formFrame.isInfinite && formFrame.width > 1 && formFrame.height > 1,
-            stage: stage + "-snapshot-Form-frame-NOT_QUALIFIED", downstream: downstream)
-        var top = formFrame.minY
-        var bottom = formFrame.maxY
-        if let frame = try c3OptionsSnapshotOccluder(app.navigationBars.firstMatch, type: .navigationBar,
-            nodes: nodes, stage: stage + "-navigation", downstream: downstream, timing: queryTiming, site: .navigation) { top = max(top, frame.maxY) }
-        if let frame = try c3OptionsSnapshotOccluder(app.otherElements["task144.controlled.band"], type: .other,
-            identifier: "task144.controlled.band", nodes: nodes, stage: stage + "-band", downstream: downstream, timing: queryTiming, site: .band) { top = max(top, frame.maxY) }
-        if let frame = try c3OptionsSnapshotOccluder(app.tabBars.firstMatch, type: .tabBar,
-            nodes: nodes, stage: stage + "-tab", downstream: downstream, timing: queryTiming, site: .tab) { bottom = min(bottom, frame.minY) }
-        let viewportFrame = CGRect(x: formFrame.minX, y: top, width: formFrame.width, height: bottom - top)
-        try scopeRequire([viewportFrame.minX, viewportFrame.minY, viewportFrame.maxX, viewportFrame.maxY].allSatisfy { $0.isFinite }
-            && !viewportFrame.isNull && !viewportFrame.isInfinite && viewportFrame.width > 1 && viewportFrame.height > 1,
-            stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
         // Preserve the current public OptionRows before any Button hittability
         // getter can terminate this viewport. This cached projection is evidence
         // only: it never supplies live existence, hittability or privacy.
@@ -5387,8 +5386,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let administrative = form.staticTexts.matching(identifier: "options.business-summary-unavailable")
         if queryTiming.measure(.count, site: .administrative, { administrative.count }) == 1 {
             let element = administrative.firstMatch
-            if queryTiming.measure(.exists, site: .administrative, { element.exists })
-                && queryTiming.measure(.hittable, site: .administrative, { element.isHittable }) {
+            if queryTiming.measure(.hittable, site: .administrative, { element.isHittable }) {
                 let node = try c3OptionsSnapshotMatch(element, type: .staticText, nodes: formNodes,
                     stage: stage + "-administrative", downstream: downstream, timing: queryTiming, site: .administrative)
                 let frame = node.frame
@@ -5517,8 +5515,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 velocity: velocity)
         }
     }
-    private func c3OptionsTraverseAdministrativeForm(_ form: XCUIElement,
-                                                    unavailable: XCUIElement) throws {
+    private func c3OptionsTraverseAdministrativeForm(_ form: XCUIElement) throws {
         let downstream = ["explicit-return-A"]
         try c3OptionsRewindToTop(form, stage: "C3-B-qualified-top", privacy: true, downstream: downstream)
         let deadline = ProcessInfo.processInfo.systemUptime + 15
@@ -5555,7 +5552,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try c3NoBusinessInCurrentViewport(stage: "C3-B-viewport-\(ordinal)", downstream: downstream)
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: "C3-B-traversal-deadline-after-privacy", downstream: downstream)
-            if unavailable.exists && unavailable.isHittable { administrativeSurfaceSeen = true }
+            // This anchor already required current live hit and fresh identity/content.
+            if anchors["cloud.administrative-text"] != nil { administrativeSurfaceSeen = true }
             // Cloud is now first; Language is the final administrative section.
             let footer = form.staticTexts["Language changes apply immediately."]
             if c3OptionsEndpoint(form, value: "100%") && footer.exists && footer.isHittable {
@@ -5958,15 +5956,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
     private func t18Seek(_ element: XCUIElement, stage: String, requiresFullVisibility: Bool = false) throws {
         let fullyVisible = {
-            guard element.exists, element.isHittable else { return false }
+            guard element.exists else { return false }
             let frame = element.frame, window = self.app.frame
-            // Account capture retains its original reachable-row contract.
-            // The action below additionally needs a fully exposed tap target.
-            if !requiresFullVisibility { return frame.width > 0 && frame.height > 0 && window.intersects(frame) }
+            guard [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy({ $0.isFinite }),
+                  frame.width > 0 && frame.height > 0 else { return false }
+            // Qualify geometry before asking XCTest for a live activation point;
+            // the SDK can fail that query for a clipped composite account label.
+            if !requiresFullVisibility { return window.intersects(frame) && element.isHittable }
             let top = max(window.minY, self.app.navigationBars.firstMatch.frame.maxY)
             let bottom = min(window.maxY, self.app.tabBars.firstMatch.frame.minY)
-            return frame.width > 0 && frame.height > 0 && window.contains(frame)
-                && frame.minY >= top && frame.maxY <= bottom
+            return window.contains(frame) && frame.minY >= top && frame.maxY <= bottom
+                && element.isHittable
         }
         for _ in 0..<8 {
             if fullyVisible() { return }
@@ -5978,8 +5978,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             if element.exists {
                 // A full-screen swipe can carry the row past the navigation
                 // bar. Reveal it in either direction through bounded gestures.
-                movement = max(-160, min(160, (top + bottom) / 2 - element.frame.midY))
-                if abs(movement) < 44 { movement = movement < 0 ? -44 : 44 }
+                let frame = element.frame
+                if [frame.minY, frame.maxY].allSatisfy({ $0.isFinite }), frame.height > 0 {
+                    movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
+                    if abs(movement) < 44 { movement = movement < 0 ? -44 : 44 }
+                }
             }
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
                 .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
@@ -5993,7 +5996,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             "es": "Cuenta cloud conectada", "zh": "云账号已连接"][language]!
         let element = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@",
             heading, "l***@long-account-domain.example.invalid")).firstMatch
-        try t18Seek(element, stage: "actual-account-card-not-reachable")
+        try t18Seek(element, stage: "actual-account-card-not-reachable", requiresFullVisibility: true)
         let bounds = app.windows.firstMatch.frame
         try t18Require(element.frame.minX >= bounds.minX && element.frame.maxX <= bounds.maxX,
             "actual-account-card-outside-width")

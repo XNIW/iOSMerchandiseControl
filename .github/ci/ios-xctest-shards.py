@@ -127,9 +127,13 @@ def run(shard_id):
             '-scheme', 'iOSMerchandiseControl', '-configuration', 'Debug',
             '-destination', 'platform=iOS Simulator,id=' + os.environ['DEVICE_ID'],
             'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'test']
-    cutoff = float((Path(os.environ['RUNNER_TEMP']) / 'ios-ci-start.monotonic').read_text()) + 3600
-    # The first 60 minutes include preparation/compilation/enumeration/testing;
-    # the existing job remains75. No per-test timeout, threshold or opt-in changes.
+    cutoff_seconds = 4200 if shard_id == 'ui-core' else 3600
+    cutoff = float((Path(os.environ['RUNNER_TEMP']) / 'ios-ci-start.monotonic').read_text()) + cutoff_seconds
+    # Core used 61 minutes including preparation and was killed while finalizing
+    # its result bundle. Allow 70 minutes from the recorded CI start for that
+    # shard, with a nominal five-minute export/upload reserve in the 75-minute
+    # job. Other shards retain 60 minutes from the same recorded start.
+    record['xctestCutoffSecondsSinceRecordedCIStart'] = cutoff_seconds
     try:
         enumeration = output / 'enumeration.json'
         enum_argv = base + ['-enumerate-tests', '-test-enumeration-style', 'flat',
