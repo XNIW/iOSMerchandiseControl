@@ -27,12 +27,6 @@ on:
         type: boolean
         required: false
         default: false
-      task146_runner:
-        description: "Focused diagnostic environment only; ordinary CI stays on macos-26"
-        type: choice
-        required: false
-        default: macos-26
-        options: [macos-26, xcode-27]
       task146_focused_tests:
         description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
         type: string
@@ -53,7 +47,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_runner || 'macos-26' }}
+    runs-on: macos-26
     timeout-minutes: 75
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
@@ -62,12 +56,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Restrict alternate toolchain to focused diagnostics
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_runner == 'xcode-27' }}
-        env:
-          TASK146_DIAGNOSTIC_SELECTION: ${{ inputs.task146_focused_tests }}
-        run: test -n "$TASK146_DIAGNOSTIC_SELECTION"
 
       - name: Validate explicit focused selection
         if: ${{ matrix.shard == 'focused' }}
@@ -114,12 +102,39 @@ jobs:
             DEVICE_ID="$(select_device_id "$DESTINATIONS")"
           fi
           echo "Selected compatible simulator: $DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
-      - name: Record Xcode toolchain
-        run: xcodebuild -version
+      - name: Record Xcode and SDK resource preflight
+        run: |
+          xcodebuild -version
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='before-sdk'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
 
       - name: Build Debug
         timeout-minutes: 15
@@ -129,6 +144,70 @@ jobs:
           -configuration Debug
           -destination "platform=iOS Simulator,id=$DEVICE_ID"
           CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build-for-testing
+
+      - name: Release SDK memory before Simulator boot
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-sdk'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
+      - name: Boot selected Simulator after SDK compilation
+        run: |
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-boot'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
 
       - name: XCTest exact coverage shard
         if: ${{ matrix.shard != 'campaign-a' }}
@@ -380,7 +459,7 @@ jobs:
                       and not result.get('timedOut') and not result.get('errorType'))
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
-          export('toolchain.txt', ['python3', '-c', "import json,subprocess; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; print(json.dumps({key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()},sort_keys=True))"])
+          export('toolchain.txt', ['python3', '-c', "import json,subprocess,pathlib,os; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; result={key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()}; profile=pathlib.Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'; result['resourcePhases']=[json.loads(line)for line in profile.read_text().splitlines()] if profile.exists() else []; print(json.dumps(result,sort_keys=True))"])
           if os.environ.get('TASK146_FOCUSED_TESTS') or os.environ.get('TASK146_CI_SHARD') == 'ui-core':
               # Diagnostic only, inside the existing byte/time-limited exporter.
               # These public fields are closed qualification timings, not Auth/body logs.
@@ -398,10 +477,14 @@ jobs:
                   with (output / 'tests.json').open() as source:
                       tests = json.load(source)
                   provenance['failedLeafCount'] = 0
+                  cache_observation = None
                   def walk(value, module=None):
                       if isinstance(value, dict):
+                          global cache_observation
                           if value.get('nodeType') in {'Unit test bundle', 'UI test bundle'}:
                               module = value.get('name')
+                          if value.get('nodeType') == 'Test Case' and value.get('result') == 'Passed' and value.get('nodeIdentifier') == 'LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld()' and module == 'iOSMerchandiseControlUITests':
+                              cache_observation = value['nodeIdentifier']
                           if value.get('nodeType') == 'Test Case' and value.get('result') == 'Failed':
                               provenance['failedLeafCount'] += 1
                               if len(provenance['failedTests']) < MAX_FAILED_LEAVES:
@@ -423,6 +506,9 @@ jobs:
                       for kind in ['test-details', 'activities']:
                           export(f'failure-{index:03d}.{kind}.json',
                                  base + [kind, '--path', str(bundle), '--test-id', case['id']])
+                  if cache_observation:
+                      provenance['cacheObservationTest'] = {'id': cache_observation, 'result': 'Passed', 'purpose': 'Existing physical timing attachment; no acceptance override'}
+                      export('cache-observation.activities.json', base + ['activities', '--path', str(bundle), '--test-id', cache_observation])
               except (KeyError, ValueError, OSError, TypeError, RecursionError) as error:
                   provenance['selectionErrorType'] = type(error).__name__
                   provenance['selectionStatus'] = 'NOT_PARSED_SELECTION_ERROR'
@@ -440,6 +526,38 @@ jobs:
         if: ${{ always() && matrix.shard != 'campaign-a' }}
         run: python3 .github/ci/ios-xctest-shards.py qualify '${{ matrix.shard }}'
 
+      - name: Stop selected Simulator after native consumers
+        if: ${{ always() && env.DEVICE_ID != '' }}
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-tests'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
       - name: Preserve exact shard logs, coverage and XCTest diagnostics
         if: ${{ always() && matrix.shard != 'campaign-a' }}
         timeout-minutes: 5
@@ -450,6 +568,7 @@ jobs:
             ${{ runner.temp }}/ios-xctest-shard
             ${{ runner.temp }}/ios-xctest-failure-summary
             ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
+            ${{ runner.temp }}/task146-runner-resources.jsonl
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
