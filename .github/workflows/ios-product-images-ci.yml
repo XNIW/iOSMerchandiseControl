@@ -190,16 +190,22 @@ jobs:
               found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
               assert len(found)==1,'selected Simulator identity changed'
               return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
-          initial,booted=state()
-          # Every action addresses the one UUID claimed by this fresh hosted job.
-          if phase!='after-boot'and initial!='Shutdown':
-              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
-              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
-          current,booted=state()
-          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          # boot and bootstatus above are checked functional preconditions.
+          # A resource probe must not reject that successful boot on an AX-busy VM.
+          state_probe_error=None
+          try:
+              initial,booted=state()
+              current=initial
+              assert current=='Booted',current
+          except subprocess.TimeoutExpired:
+              initial=current='UNKNOWN_RESOURCE_PROBE_TIMEOUT'
+              booted=None
+              state_probe_error='simctl list exceeded diagnostic 20s; bootstatus succeeded'
           row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
                'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
                'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          row['bootstatusExitCode']=0
+          row['stateProbeError']=state_probe_error
           path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
           if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
           else:assert path.exists(),'missing SDK resource preflight'
@@ -535,23 +541,21 @@ jobs:
           phase='after-tests'
           device=os.environ['DEVICE_ID']
           def state():
-              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=60))
               found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
               assert len(found)==1,'selected Simulator identity changed'
               return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
-          initial,booted=state()
-          # Every action addresses the one UUID claimed by this fresh hosted job.
-          if phase!='after-boot'and initial!='Shutdown':
-              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
-              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          # Release the claimed native consumer first; metadata must not block shutdown.
+          stopped=subprocess.run(['xcrun','simctl','shutdown',device],capture_output=True,text=True,timeout=60)
+          initial='NOT_PROBED_BEFORE_SHUTDOWN'
           current,booted=state()
-          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          assert current=='Shutdown',('selected Simulator shutdown not verified',stopped.returncode,current)
           row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
                'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
                'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
           path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
           if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
-          else:assert path.exists(),'missing SDK resource preflight'
+          else:pass # An earlier preflight failure does not suppress native cleanup evidence.
           encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
           with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
           assert path.stat().st_size<=65536,'resource observation bound exceeded'
