@@ -4478,6 +4478,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             XCTAssertTrue(selectAll.waitForExistence(timeout: 5), "The native edit menu must select the full existing value")
             selectAll.tap()
             if case .identifier("task144.product.name") = readinessTarget,
+               app.launchEnvironment["TASK145_DRAFT_REVIEW_UI"] != nil,
                app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
                 do { try r3WaitNativeSelection(text: current, start: 0, end: current.utf16.count) }
                 catch { XCTFail("Native Select All did not select the complete Name before typing"); return }
@@ -6049,8 +6050,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     if requiresFullVisibility, frame.height <= bottom - top {
                         // Correct the clipped edge. Centering plus the old44pt
                         // minimum oscillated across the narrow max-font fit.
-                        if frame.maxY > bottom { movement = -min(160, max(8, (frame.maxY - bottom) / 2)) }
-                        else if frame.minY < top { movement = min(160, max(8, (top - frame.minY) / 2)) }
+                        // Keep24pt of real movement: observed8-13pt drags did
+                        // not begin scrolling a clipped Review button.
+                        if frame.maxY > bottom { movement = -min(160, max(24, (frame.maxY - bottom) / 2)) }
+                        else if frame.minY < top { movement = min(160, max(24, (top - frame.minY) / 2)) }
                         else { movement = 0 }
                     } else {
                         movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
