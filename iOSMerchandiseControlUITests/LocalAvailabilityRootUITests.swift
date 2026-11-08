@@ -1308,7 +1308,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(records.count, 1, "The saved record must be the unique attention button with its exact title")
         record.tap()
         let adopt = app.buttons["task145.product.resolution.adopt-remote"]
-        r4Reveal(adopt)
+        r4Reveal(adopt, resolution: true)
         let adoptionDeadline = ProcessInfo.processInfo.systemUptime + 15
         guard adopt.waitForExistence(timeout: max(0, adoptionDeadline - ProcessInfo.processInfo.systemUptime)) else {
             captureControlledAutomaticReadback()
@@ -1427,8 +1427,46 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func r4Reveal(_ element: XCUIElement, optionsIdentifier: String? = nil,
-                          optionsTitle: String? = nil) {
+                          optionsTitle: String? = nil, resolution: Bool = false) {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
+        if resolution {
+            // The resolution sheet owns a different Form from both the editor
+            // and the tab root. Pan only within its current native viewport.
+            for drag in 0...5 {
+                guard ProcessInfo.processInfo.systemUptime < deadline,
+                      let root = try? app.snapshot(),
+                      let nodes = try? c3OptionsSnapshotNodes(root, stage: "R4-resolution-\(drag)", downstream: []) else { break }
+                let sheets = nodes.filter { $0.elementType == .other && $0.identifier == "task145.product.resolution" }
+                guard sheets.count == 1 else { break }
+                let forms = nodes.filter { $0.elementType == .collectionView && $0.path.starts(with: sheets[0].path) }
+                let bars = nodes.filter { $0.elementType == .navigationBar && $0.path.starts(with: sheets[0].path) }
+                guard forms.count == 1, bars.count == 1, bars[0].identifier == "Review saved change" else { break }
+                let window = app.frame
+                let frame = forms[0].frame.intersection(window)
+                let top = max(frame.minY, bars[0].frame.maxY) + 12
+                let bottom = frame.maxY - 16
+                guard [frame.minX, frame.maxX, top, bottom].allSatisfy({ $0.isFinite }),
+                      frame.width > 24, bottom > top + 24 else { break }
+                let targets = nodes.filter { $0.elementType == .button
+                    && $0.identifier == "task145.product.resolution.adopt-remote"
+                    && $0.path.starts(with: forms[0].path) }
+                guard targets.count <= 1 else { break }
+                let target = targets.first?.frame
+                if let target, target.width > 0, target.height > 0,
+                   target.minY >= top, target.maxY <= bottom, element.isHittable,
+                   ProcessInfo.processInfo.systemUptime < deadline { return }
+                guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let upward = target.map { $0.midY > (top + bottom) / 2 } ?? true
+                let distance = min(360, (bottom - top) * 0.6)
+                let y = upward ? bottom - 8 : top + 8
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                    dx: frame.midX - window.minX, dy: y - window.minY))
+                start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
+            }
+            XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
+            return
+        }
         let optionsNavigation = app.navigationBars["Options"]
         if app.navigationBars.count == 1 && optionsNavigation.exists && app.tabBars.buttons["Options"].isSelected {
             for drag in 0...5 {
@@ -3264,6 +3302,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }, "Need a new current-PID facade outcome and the providers required by this scenario; old outcomes cannot qualify")
     }
 
+    private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false) -> Bool {
+        guard let root = try? app.snapshot(),
+              let nodes = try? c3OptionsSnapshotNodes(root, stage: "T11-tab-" + title, downstream: []) else { return false }
+        let bars = nodes.filter { $0.elementType == .tabBar }
+        let navigation = nodes.filter { $0.elementType == .navigationBar }
+        let forms = nodes.filter { $0.elementType == .collectionView }
+        guard bars.count == 1, navigation.count == 1, navigation[0].identifier == title,
+              !requiresForm || forms.count == 1 else { return false }
+        let windows = nodes.filter { $0.elementType == .window && bars[0].path.starts(with: $0.path)
+            && navigation[0].path.starts(with: $0.path)
+            && (!requiresForm || forms[0].path.starts(with: $0.path)) }
+        let buttons = nodes.filter { $0.elementType == .button && $0.label == title
+            && $0.path.starts(with: bars[0].path) }
+        return windows.count == 1 && buttons.count == 1 && buttons[0].isSelected
+    }
+
     private func assertIsolationVisible(_ scenario: String, pending: String, failedUI: Bool) throws {
         app.tabBars.buttons["Options"].tap()
         var observations: [String] = []
@@ -3285,13 +3339,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         let forms = app.collectionViews
         let optionsNavigation = app.navigationBars.matching(NSPredicate(format: "identifier == %@", "Options"))
-        let optionsSelected = app.tabBars.buttons.matching(NSPredicate(
-            format: "label == %@ AND isSelected == true", "Options"))
         // The existing Form admission owns one five-second window. A Form
         // from the previously selected Database cannot admit Options geometry.
         let admissionDeadline = ProcessInfo.processInfo.systemUptime + 5
         let optionsAdmission = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            optionsSelected.count == 1 && optionsNavigation.count == 1 && forms.count == 1
+            self.isolationTabIsSelected("Options", requiresForm: true)
         }, object: nil)
         try require(XCTWaiter.wait(for: [optionsAdmission], timeout: 5) == .completed
             && ProcessInfo.processInfo.systemUptime <= admissionDeadline,
@@ -3359,7 +3411,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         for title in ["History", "Database"] {
             let tab = app.tabBars.buttons[title]
             tab.tap()
-            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
+            let deadline = ProcessInfo.processInfo.systemUptime + 5
+            let selected = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                self.isolationTabIsSelected(title) && ProcessInfo.processInfo.systemUptime <= deadline
+            }, object: nil)
             XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed)
         }
         let search = app.textFields.matching(NSPredicate(format: "identifier == %@ AND label == %@",
@@ -4422,6 +4477,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             )).firstMatch
             XCTAssertTrue(selectAll.waitForExistence(timeout: 5), "The native edit menu must select the full existing value")
             selectAll.tap()
+            if case .identifier("task144.product.name") = readinessTarget,
+               app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] == "1" {
+                do { try r3WaitNativeSelection(text: current, start: 0, end: current.utf16.count) }
+                catch { XCTFail("Native Select All did not select the complete Name before typing"); return }
+            }
         }
         field.typeText(value)
         XCTAssertEqual(field.value as? String, value, "The actual input replacement must be complete")
@@ -5450,9 +5510,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // later viewport rechecks actual content overlap before advancing.
         let halfStep = viewport.height * halfStepFraction
         let offset = upward ? halfStep : -halfStep
-        let origin = form.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
-        let start = origin.withOffset(CGVector(dx: viewport.midX - formOrigin.x, dy: viewport.midY + offset - formOrigin.y))
-        let end = origin.withOffset(CGVector(dx: viewport.midX - formOrigin.x, dy: viewport.midY - offset - formOrigin.y))
+        let appOrigin = app.frame.origin
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: viewport.midX - appOrigin.x, dy: viewport.midY + offset - appOrigin.y))
+        let end = origin.withOffset(CGVector(dx: viewport.midX - appOrigin.x, dy: viewport.midY - offset - appOrigin.y))
         start.press(forDuration: 0.2, thenDragTo: end, withVelocity: velocity, thenHoldForDuration: 0.2)
     }
     private func c3NoBusinessInCurrentViewport(stage: String, downstream: [String]) throws {
@@ -5566,9 +5627,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: "C3-B-bottom-endpoint-NOT_QUALIFIED", downstream: downstream)
             previousAnchors = anchors
-            // Shorter nominal30% pan; actual anchored overlap is still required.
+            // Keep a previously qualified body anchor in the next viewport.
+            // The first Cloud-only viewport needs a shorter step; later rows
+            // allow a larger native pan. Actual overlap is still mandatory.
+            let anchorBottom = anchors.values.map { min($0.frame.maxY, observation.viewport.maxY) }.max()!
+            let distance = min(observation.viewport.height * 0.58,
+                max(24, anchorBottom - observation.viewport.minY - 44))
             c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
-                halfStepFraction: 0.15, velocity: .slow)
+                halfStepFraction: distance / observation.viewport.height / 2, velocity: .fast)
         }
     }
 
@@ -5980,8 +6046,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // bar. Reveal it in either direction through bounded gestures.
                 let frame = element.frame
                 if [frame.minY, frame.maxY].allSatisfy({ $0.isFinite }), frame.height > 0 {
-                    movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
-                    if abs(movement) < 44 { movement = movement < 0 ? -44 : 44 }
+                    if requiresFullVisibility, frame.height <= bottom - top {
+                        // Correct the clipped edge. Centering plus the old44pt
+                        // minimum oscillated across the narrow max-font fit.
+                        if frame.maxY > bottom { movement = -min(160, max(8, (frame.maxY - bottom) / 2)) }
+                        else if frame.minY < top { movement = min(160, max(8, (top - frame.minY) / 2)) }
+                        else { movement = 0 }
+                    } else {
+                        movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
+                        if abs(movement) < 44 { movement = movement < 0 ? -44 : 44 }
+                    }
                 }
             }
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
