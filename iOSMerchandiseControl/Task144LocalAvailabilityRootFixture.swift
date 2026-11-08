@@ -2281,6 +2281,22 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             "productWriteEntries": r23DraftProductWriteEntries, "eventEntries": r23DraftEventEntries,
             "transportReleased": transport.isReleased, "operationInFlight": r23DraftOperationInFlight,
             "failureFacts": facts.filter { $0.hasPrefix("task145.r3.") && $0.contains("failed") }.sorted()]
+        // Read-only diagnostics for cleanupRequiresRelaunch. Do not remove a
+        // generation, retry recovery or relax the production retention budget.
+        if let directories = try? FileManager.default.contentsOfDirectory(
+            at: ownedRepository.baseDirectory.appendingPathComponent("generations"),
+            includingPropertiesForKeys: nil) {
+            let generations = directories.filter { UUID(uuidString: $0.lastPathComponent) != nil }
+            value["generationDirectoryCount"] = generations.count
+            value["quarantinedGenerationCount"] = generations.filter {
+                FileManager.default.fileExists(atPath: $0.appendingPathComponent("quarantined").path)
+            }.count
+        }
+        if let runtime = rootPresentationRuntime {
+            value["recentRuntimeActions"] = runtime.presentationHistory.suffix(8).map {
+                ["source": $0.entry.source.rawValue, "action": Self.actionKind($0.entry.action)]
+            }
+        }
         do {
             let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner,
                 allowsPendingSameScopeRecovery: true)
@@ -2844,6 +2860,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     "continuation": String(result.continuationReceipt != nil),
                     "generation": controller.activeManifest?.generationID.uuidString ?? "missing"])
             } catch { recordSetupFailure(error, stage: .automaticTerminal) }
+        }
+        if let control = saveBControl, let code = result.errorCode {
+            // The engine has already sanitized this diagnostic. Keep a bounded
+            // passive RAM witness in this synthetic fixture's existing ledger.
+            var errors = control.state.runtimeErrors ?? []
+            if errors.count < 4 { errors.append(String(code.prefix(512))) }
+            control.state.runtimeErrors = errors
         }
         lastAutomaticResult = "\(prefix)result.\(Self.actionKind(action)).\(result.status.rawValue).\(error)"
         lastAutomaticPresentationID = presentationID
@@ -8387,6 +8410,7 @@ private final class Task145SaveBControl {
         // only the existing durable boundaries may also persist these values.
         var ingressObservations: [IngressObservation]?
         var ingressObservationCapped: Bool?
+        var runtimeErrors: [String]?
         var requests: [Data] = []
         var committed: [String] = []
         var returned: [String] = []

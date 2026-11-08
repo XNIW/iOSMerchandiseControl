@@ -25,6 +25,11 @@ on:
         type: boolean
         required: false
         default: false
+      task146_focused_tests:
+        description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -39,13 +44,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
+        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
     runs-on: macos-26
     timeout-minutes: 75
+    env:
+      TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
+      TASK144_A_CAMPAIGN: ${{ inputs.task144_a_campaign || false }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Validate explicit focused selection
+        if: ${{ matrix.shard == 'focused' }}
+        run: python3 .github/ci/ios-xctest-shards.py validate-focused focused
 
       - name: Record diagnostic export reservation
         run: python3 -c 'from pathlib import Path; import os,time; (Path(os.environ["RUNNER_TEMP"])/"ios-ci-start.monotonic").write_text(str(time.monotonic()))'
@@ -354,6 +366,12 @@ jobs:
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
           export('toolchain.txt', ['xcodebuild', '-version'])
+          if os.environ.get('TASK146_FOCUSED_TESTS'):
+              # Diagnostic only, inside the existing byte/time-limited exporter.
+              # These public fields are closed qualification timings, not Auth/body logs.
+              export('runtime-cost.log', ['xcrun', 'simctl', 'spawn', os.environ['DEVICE_ID'],
+                  'log', 'show', '--style', 'compact', '--last', '75m',
+                  '--predicate', '(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39"'])
           base = ['xcrun', 'xcresulttool', 'get', 'test-results']
           summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)])
           tests_ok = export('tests.json', base + ['tests', '--path', str(bundle)])
@@ -467,7 +485,7 @@ jobs:
           PY
 
   complete-coverage:
-    if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.task144_a_campaign != true) }}
+    if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
     needs: product-images
     runs-on: ubuntu-latest
     timeout-minutes: 10

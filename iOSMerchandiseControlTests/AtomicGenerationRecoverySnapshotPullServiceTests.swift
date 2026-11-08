@@ -4529,9 +4529,16 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let container = controller.modelContainer
         let entered = expectation(description: "Populated readback held before publication: \(change)")
         let gate = Task144ManifestQualificationGate(entered: entered)
-        controller.localBodyQualificationBeforePublicationForTesting = { await gate.wait() }
+        let preparationStarted = ProcessInfo.processInfo.systemUptime
+        controller.localBodyQualificationBeforePublicationForTesting = {
+            print("TASK146_POPULATED_ENTRY case=\(change) preparation-seconds=\(ProcessInfo.processInfo.systemUptime - preparationStarted)")
+            await gate.wait()
+        }
         defer { gate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
-        await fulfillment(of: [entered], timeout: 2)
+        // This waits for preparation of the real cold file readback, before
+        // exercising the recovery/editor contract. Keep the two-second
+        // negative control below; no application startup deadline is moved.
+        await fulfillment(of: [entered], timeout: 5)
         XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(container))
         let bodyBefore = try completedRecoveryBusinessSnapshot(fixture)
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)

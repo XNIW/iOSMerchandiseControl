@@ -1441,7 +1441,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let forms = nodes.filter { $0.elementType == .collectionView && $0.path.starts(with: sheets[0].path) }
                 let bars = nodes.filter { $0.elementType == .navigationBar && $0.path.starts(with: sheets[0].path) }
                 guard forms.count == 1, bars.count == 1, bars[0].identifier == "Review saved change" else { break }
-                let window = app.frame
+                let windows = nodes.filter { $0.elementType == .window && sheets[0].path.starts(with: $0.path) }
+                guard windows.count == 1 else { break }
+                let window = windows[0].frame
                 let frame = forms[0].frame.intersection(window)
                 let top = max(frame.minY, bars[0].frame.maxY) + 12
                 let bottom = frame.maxY - 16
@@ -3302,20 +3304,30 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }, "Need a new current-PID facade outcome and the providers required by this scenario; old outcomes cannot qualify")
     }
 
-    private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false) -> Bool {
+    private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false,
+                                        observe: ((String) -> Void)? = nil) -> Bool {
+        let started = ProcessInfo.processInfo.systemUptime
         guard let root = try? app.snapshot(),
-              let nodes = try? c3OptionsSnapshotNodes(root, stage: "T11-tab-" + title, downstream: []) else { return false }
+              let nodes = try? c3OptionsSnapshotNodes(root, stage: "T11-tab-" + title, downstream: []) else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-unavailable")
+            return false
+        }
         let bars = nodes.filter { $0.elementType == .tabBar }
         let navigation = nodes.filter { $0.elementType == .navigationBar }
         let forms = nodes.filter { $0.elementType == .collectionView }
         guard bars.count == 1, navigation.count == 1, navigation[0].identifier == title,
-              !requiresForm || forms.count == 1 else { return false }
+              !requiresForm || forms.count == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); bars=\(bars.count); navigation=\(navigation.count); expected-title=\(navigation.first?.identifier == title); forms=\(forms.count)")
+            return false
+        }
         let windows = nodes.filter { $0.elementType == .window && bars[0].path.starts(with: $0.path)
             && navigation[0].path.starts(with: $0.path)
             && (!requiresForm || forms[0].path.starts(with: $0.path)) }
         let buttons = nodes.filter { $0.elementType == .button && $0.label == title
             && $0.path.starts(with: bars[0].path) }
-        return windows.count == 1 && buttons.count == 1 && buttons[0].isSelected
+        let selected = windows.count == 1 && buttons.count == 1 && buttons[0].isSelected
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windows.count); buttons=\(buttons.count); selected=\(selected)")
+        return selected
     }
 
     private func assertIsolationVisible(_ scenario: String, pending: String, failedUI: Bool) throws {
@@ -3342,11 +3354,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // The existing Form admission owns one five-second window. A Form
         // from the previously selected Database cannot admit Options geometry.
         let admissionDeadline = ProcessInfo.processInfo.systemUptime + 5
-        let optionsAdmission = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            self.isolationTabIsSelected("Options", requiresForm: true)
-        }, object: nil)
-        try require(XCTWaiter.wait(for: [optionsAdmission], timeout: 5) == .completed
-            && ProcessInfo.processInfo.systemUptime <= admissionDeadline,
+        var optionsAdmitted = false
+        // Reuse one complete current snapshot per sample. XCTest predicate
+        // polling adds an idle interval between already expensive snapshots.
+        while ProcessInfo.processInfo.systemUptime < admissionDeadline {
+            if isolationTabIsSelected("Options", requiresForm: true, observe: {
+                if observations.count < 8 { observations.append($0) }
+            }) {
+                optionsAdmitted = ProcessInfo.processInfo.systemUptime <= admissionDeadline
+                break
+            }
+        }
+        try require(optionsAdmitted,
             "T11 requires selected Options with its unique navigation bar and Form")
         let form = forms.element(boundBy: 0)
         func reveal(_ rows: XCUIElementQuery, stage: String, upward: Bool,
@@ -4763,7 +4782,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             }
                             drags += 1
                             try checked({ c3OptionsDrag(form, viewport: viewport,
-                                formOrigin: observation.formOrigin, upward: upward, velocity: .fast) })
+                                applicationOrigin: observation.applicationOrigin, upward: upward, velocity: .fast) })
                         }
                     }
                 }
@@ -5276,7 +5295,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     @discardableResult
     private func c3OptionsViewport(_ form: XCUIElement, stage: String, ordinal: Int,
                                    deadline: TimeInterval, collectContentAnchors: Bool = true,
-                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, formOrigin: CGPoint, decisionReviewFrame: CGRect?) {
+                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, applicationOrigin: CGPoint, decisionReviewFrame: CGRect?) {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
@@ -5341,7 +5360,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(reviews.count <= 1
                 && reviews.allSatisfy({ $0.path.starts(with: forms[0].path) }),
                 stage: stage + "-unique-native-Review-in-Form", downstream: downstream)
-            return (anchors: [:], viewport: viewportFrame, formOrigin: formFrame.origin,
+            return (anchors: [:], viewport: viewportFrame, applicationOrigin: root.frame.origin,
                 decisionReviewFrame: reviews.first?.frame)
         }
         let formNodes = nodes.filter { $0.path.count > formNode.path.count && $0.path.starts(with: formNode.path) }
@@ -5502,16 +5521,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         timing.lifetime = .keepAlways; add(timing)
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-after-viewport", downstream: downstream)
-        return (anchors: anchors, viewport: viewportFrame, formOrigin: formFrame.origin, decisionReviewFrame: nil)
+        return (anchors: anchors, viewport: viewportFrame, applicationOrigin: root.frame.origin, decisionReviewFrame: nil)
     }
-    private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, formOrigin: CGPoint, upward: Bool,
+    private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, applicationOrigin: CGPoint, upward: Bool,
                                halfStepFraction: CGFloat = 0.29, velocity: XCUIGestureVelocity = .slow) {
         // The default keeps 42% overlap; B traversal retains 38% overlap.
         // Both endpoints remain inside the just-qualified viewport, and each
         // later viewport rechecks actual content overlap before advancing.
         let halfStep = viewport.height * halfStepFraction
         let offset = upward ? halfStep : -halfStep
-        let appOrigin = app.frame.origin
+        let appOrigin = applicationOrigin
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let start = origin.withOffset(CGVector(dx: viewport.midX - appOrigin.x, dy: viewport.midY + offset - appOrigin.y))
         let end = origin.withOffset(CGVector(dx: viewport.midX - appOrigin.x, dy: viewport.midY - offset - appOrigin.y))
@@ -5557,7 +5576,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             if c3OptionsEndpoint(form, value: "0%") && app.staticTexts["Theme"].isHittable { return }
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-top-endpoint-NOT_QUALIFIED", downstream: downstream)
-            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: false)
+            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: false)
         }
     }
     private func c3OptionsReveal(_ target: XCUIElement, form: XCUIElement, stage: String,
@@ -5573,7 +5592,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 stage: stage + "-visible-target-NOT_QUALIFIED", downstream: downstream)
             let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
                 deadline: deadline, collectContentAnchors: false, downstream: downstream)
-            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
+            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
                 velocity: velocity)
         }
     }
@@ -5634,8 +5653,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let anchorBottom = anchors.values.map { min($0.frame.maxY, observation.viewport.maxY) }.max()!
             let distance = min(observation.viewport.height * 0.58,
                 max(24, anchorBottom - observation.viewport.minY - 44))
-            c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
-                halfStepFraction: distance / observation.viewport.height / 2, velocity: .fast)
+            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
+                halfStepFraction: distance / observation.viewport.height / 2, velocity: .slow)
         }
     }
 
@@ -6064,7 +6083,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
                 .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
             start.press(forDuration: 0.05,
-                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)))
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)),
+                        withVelocity: .slow, thenHoldForDuration: 0.2)
         }
         try t18Require(fullyVisible(), stage)
     }

@@ -69,6 +69,29 @@ def qualified_status(counts):
     return 'COMPLETE_WITH_OPT_IN_SKIPS' if counts.get('Skipped') else 'PASS'
 
 
+def selected_shard(manifest, shard_id):
+    if shard_id != 'focused':
+        return next(row for row in manifest['shards'] if row['id'] == shard_id)
+    # Explicit hosted diagnostics reuse the same build, discovery and exports.
+    # They never stand in for the complete eight-shard acceptance matrix.
+    assert os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch', 'focus requires explicit dispatch'
+    assert os.environ.get('TASK144_A_CAMPAIGN') != 'true', 'focus and campaign are exclusive'
+    selectors = json.loads(os.environ['TASK146_FOCUSED_TESTS'])
+    assert isinstance(selectors, list) and 1 <= len(selectors) <= 16
+    assert all(isinstance(case, str) and ID.fullmatch(case) for case in selectors)
+    assert len(selectors) == len(set(selectors)), 'duplicate focused selector'
+    active = {case for row in manifest['shards'] for case in row['expected']}
+    active -= set(T18_OS_OFFLINE) | set(manifest['allowedOptInSkips'])
+    assert set(selectors) <= active, 'focus must name active non-skipped frozen selectors'
+    return {'id': 'focused', 'expected': selectors, 'onlyTesting': selectors}
+
+
+def validate_focused(_):
+    shard = selected_shard(load_manifest(), 'focused')
+    print(json.dumps({'coverageScope': 'FOCUSED_NOT_FINAL', 'selected': shard['expected']}))
+    return 0
+
+
 def current_provenance():
     return {'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
             'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'],
@@ -114,11 +137,12 @@ def bounded(argv, log, deadline):
 
 def run(shard_id):
     manifest = load_manifest()
-    shard = next(row for row in manifest['shards'] if row['id'] == shard_id)
+    shard = selected_shard(manifest, shard_id)
     selection = shard_selection(manifest, shard)
     output = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-shard'
     output.mkdir(exist_ok=False)
     record = dict(current_provenance(), shard=shard_id, status='NOT_RUN',
+                  coverageScope='FOCUSED_NOT_FINAL' if shard_id == 'focused' else 'FULL_SHARD',
                   expected=shard['expected'], **selection,
                   cases={case: 'DEFERRED_USER' if case in selection['deferredIds'] else 'NOT_RUN'
                          for case in shard['expected']})
@@ -189,12 +213,13 @@ def test_cases(value):
 
 def qualify(shard_id):
     manifest = load_manifest()
-    shard = next(row for row in manifest['shards'] if row['id'] == shard_id)
+    shard = selected_shard(manifest, shard_id)
     expected = shard['expected']
     selection = shard_selection(manifest, shard)
     active = selection['activeExpected']
     output = Path(os.environ['RUNNER_TEMP']) / 'ios-xctest-shard'
     report = dict(current_provenance(), shard=shard_id, status='FAIL', **selection,
+                  coverageScope='FOCUSED_NOT_FINAL' if shard_id == 'focused' else 'FULL_SHARD',
                   expectedTotal=len(expected), observedTotal=0, deferredTotal=len(selection['deferredIds']),
                   cases={case: 'DEFERRED_USER' if case in selection['deferredIds'] else 'NOT_RUN'
                          for case in expected}, errors=[])
@@ -309,4 +334,5 @@ if __name__ == '__main__':
         raise InterruptedError('runner cancellation; unobserved cases remain NOT_RUN')
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
-    sys.exit({'run': run, 'qualify': qualify, 'aggregate': aggregate}[sys.argv[1]](sys.argv[2]))
+    sys.exit({'run': run, 'qualify': qualify, 'aggregate': aggregate,
+              'validate-focused': validate_focused}[sys.argv[1]](sys.argv[2]))
