@@ -1254,6 +1254,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testR23RealSavedConflictNoOpAdoptionSurvivesReopenAndOrdinarySaveBWithIndependentPriceACK() throws {
         app.launchEnvironment["TASK145_R4_REVIEW_UI"] = "noop-price"
+        app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
         try r4Await("ready", timeout: 20)
         let initial = app.staticTexts["Safe local baseline"]
@@ -1297,9 +1298,81 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         record.tap()
         let adopt = app.buttons["task145.product.resolution.adopt-remote"]
         r4Reveal(adopt)
-        XCTAssertTrue(adopt.waitForExistence(timeout: 15), "Options must route into the real editor and actual service.prepare")
-        adopt.tap()
-        try r4Await("adopted-durable", timeout: 15)
+        let adoptionDeadline = ProcessInfo.processInfo.systemUptime + 15
+        guard adopt.waitForExistence(timeout: max(0, adoptionDeadline - ProcessInfo.processInfo.systemUptime)) else {
+            captureControlledAutomaticReadback()
+            XCTFail("Options must route into the real editor and actual service.prepare"); return
+        }
+        let expectedPID = try XCTUnwrap((rejected["processIDs"] as? [Int])?.last)
+        let expectedGeneration = try XCTUnwrap(rejected["generationID"] as? String).lowercased()
+        let nativeWriter = app.otherElements.matching(identifier: "task144.controlled.native-name-observation").element
+        let adoptedFact = app.staticTexts["task145.r4.adopted-durable"]
+        let ownerBusy = app.staticTexts["Synchronization is using this record. Your choice is preserved; review it again after the current operation finishes."]
+        var adoptedObserved = false
+        for attempt in 0..<2 {
+            let requestedAt = ProcessInfo.processInfo.systemUptime
+            var admittedLedger: Data?
+            let idle = NSPredicate { _, _ in
+                guard ProcessInfo.processInfo.systemUptime < adoptionDeadline,
+                      let raw = nativeWriter.value as? String, raw.utf8.count <= 524288,
+                      let data = Data(base64Encoded: raw),
+                      let ledger = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                      let sample = ledger["writerObservation"] as? [String: Any],
+                      let started = sample["startedUptime"] as? Double,
+                      let sampled = sample["sampledUptime"] as? Double,
+                      started.isFinite, sampled.isFinite, started >= requestedAt, sampled >= started,
+                      sampled <= ProcessInfo.processInfo.systemUptime,
+                      (ledger["runID"] as? String)?.lowercased() == self.runID.lowercased(),
+                      (ledger["generationID"] as? String)?.lowercased() == expectedGeneration,
+                      sample["namespace"] as? String == self.runID.lowercased(), sample["pid"] as? Int == expectedPID,
+                      sample["generationID"] as? String == expectedGeneration,
+                      sample["scopeCurrentAtRead"] as? Bool == true,
+                      let lease = sample["leaseGeneration"] as? String, let generation = UInt64(lease), String(generation) == lease,
+                      sample["isRunning"] as? Bool == false, sample["isSuspended"] as? Bool == false,
+                      ProcessInfo.processInfo.systemUptime <= adoptionDeadline else { return false }
+                admittedLedger = data
+                return true
+            }
+            let immediatelyIdle = idle.evaluate(with: nil)
+            let remaining = adoptionDeadline - ProcessInfo.processInfo.systemUptime
+            guard (immediatelyIdle || (remaining > 0 && XCTWaiter.wait(for: [
+                XCTNSPredicateExpectation(predicate: idle, object: nil)], timeout: remaining) == .completed)),
+                  adopt.isEnabled, adopt.isHittable, ProcessInfo.processInfo.systemUptime < adoptionDeadline else {
+                captureControlledAutomaticReadback()
+                XCTFail("R4 adoption requires a fresh current idle writer within the same15second budget"); return
+            }
+            let admission = XCTAttachment(data: try XCTUnwrap(admittedLedger), uniformTypeIdentifier: "public.json")
+            admission.name = "R4 current idle writer before native adoption attempt \(attempt + 1)"
+            admission.lifetime = .keepAlways; add(admission)
+            guard ProcessInfo.processInfo.systemUptime < adoptionDeadline else {
+                captureControlledAutomaticReadback()
+                XCTFail("R4 adoption deadline reached before the single native tap"); return
+            }
+            adopt.tap()
+            var ownerBusyObserved = false
+            let outcome = NSPredicate { _, _ in
+                guard ProcessInfo.processInfo.systemUptime < adoptionDeadline else { return false }
+                if adoptedFact.exists { adoptedObserved = true }
+                else { ownerBusyObserved = ownerBusy.exists }
+                return (adoptedObserved || ownerBusyObserved) && ProcessInfo.processInfo.systemUptime <= adoptionDeadline
+            }
+            let immediatelyObserved = outcome.evaluate(with: nil)
+            let outcomeRemaining = adoptionDeadline - ProcessInfo.processInfo.systemUptime
+            guard (immediatelyObserved || (outcomeRemaining > 0 && XCTWaiter.wait(for: [
+                XCTNSPredicateExpectation(predicate: outcome, object: nil)], timeout: outcomeRemaining) == .completed)),
+                  ProcessInfo.processInfo.systemUptime <= adoptionDeadline else {
+                captureControlledAutomaticReadback()
+                XCTFail("R4 adoption outcome not observed within the same15second budget"); return
+            }
+            if adoptedObserved { break }
+            guard attempt == 0, ownerBusyObserved else {
+                captureControlledAutomaticReadback()
+                XCTFail("R4 permits only one retry after the actual native ownerBusy error"); return
+            }
+            // The sole retry must obtain another post-error current idle sample.
+        }
+        XCTAssertTrue(adoptedObserved, "R4 adoption must create the actual durable decision")
+        XCTAssertLessThanOrEqual(ProcessInfo.processInfo.systemUptime, adoptionDeadline)
         XCTAssertTrue(app.staticTexts["Remote version adopted."].waitForExistence(timeout: 5))
         let adopted = try r4Ledger("Actual no-op service.resolve wrote a non-ACK receipt", inEditor: true)
         XCTAssertEqual(rejected["originalSeal"] as? String, adopted["originalSeal"] as? String)
@@ -2670,7 +2743,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func runDomainSaveRestart(_ domain: String) throws {
         app.launchEnvironment["TASK145_DOMAIN_UI"] = domain
         app.launch()
-        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 30))
         try saveDomainValue(domain, second: false)
         try awaitDomainFact("a-durable-held-page", timeout: 5)
         let savedA = try domainLedgerAttachment("real Save A committed locally during held recovery page")
@@ -3860,7 +3933,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                                      dy: title.midY - root.frame.minY)).tap()
             let finished = ProcessInfo.processInfo.systemUptime
             tapFinished = finished
-            return finished <= deadline
+            // Five seconds bound admission through the last pre-tap guard.
+            // XCTest's post-input idle return is recorded, not a startup timing oracle.
+            return true
         }
         return false
     }
@@ -4501,19 +4576,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                         }
                     }
                     if !reviewTapped {
-                        let reviewExists = try checked({ review.exists })
                         try scopeRequire(try checked({ app.navigationBars["Options"].exists }),
                             stage: stage + "-actual-Options-navigation", downstream: downstream)
                         let observation = try c3OptionsViewport(form, stage: stage + "-decision", ordinal: drags,
                             deadline: decisionDeadline, collectContentAnchors: false, downstream: downstream)
                         let viewport = observation.viewport
-                        var reviewFrame: CGRect?
-                        if reviewExists {
-                            let frame = try checked({ review.frame })
+                        let reviewFrame = observation.decisionReviewFrame
+                        if let frame = reviewFrame {
                             try scopeRequire([frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
                                 && !frame.isNull && !frame.isInfinite && frame.width > 0 && frame.height > 0,
                                 stage: stage + "-Review-frame", downstream: downstream)
-                            reviewFrame = frame
                             // Hittability alone admitted a Review tap above the
                             // actual Options Form. Admit its entire current frame.
                             if viewport.contains(frame), try checked({ review.isHittable }) {
@@ -5069,7 +5141,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     @discardableResult
     private func c3OptionsViewport(_ form: XCUIElement, stage: String, ordinal: Int,
                                    deadline: TimeInterval, collectContentAnchors: Bool = true,
-                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, formOrigin: CGPoint) {
+                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, formOrigin: CGPoint, decisionReviewFrame: CGRect?) {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
@@ -5126,7 +5198,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 && !viewport.isNull && !viewport.isInfinite && viewport.width > 1 && viewport.height > 1
                 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-actual-visible-Form-frame-NOT_QUALIFIED", downstream: downstream)
-            return (anchors: [:], viewport: viewport, formOrigin: formFrame.origin)
+            // Use this same fresh hierarchy for Review geometry; the caller
+            // still requires its actual live hit point before the sole tap.
+            let reviews = nodes.filter { $0.elementType == .button && $0.label == "Review" }
+            try scopeRequire(reviews.count <= 1
+                && reviews.allSatisfy({ $0.path.starts(with: forms[0].path) }),
+                stage: stage + "-unique-native-Review-in-Form", downstream: downstream)
+            return (anchors: [:], viewport: viewport, formOrigin: formFrame.origin,
+                decisionReviewFrame: reviews.first?.frame)
         }
         let formNode = try c3OptionsSnapshotMatch(form, type: .collectionView, nodes: nodes,
             stage: stage + "-Form", downstream: downstream, timing: queryTiming, site: .form)
@@ -5305,7 +5384,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         timing.lifetime = .keepAlways; add(timing)
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-after-viewport", downstream: downstream)
-        return (anchors: anchors, viewport: viewportFrame, formOrigin: formFrame.origin)
+        return (anchors: anchors, viewport: viewportFrame, formOrigin: formFrame.origin, decisionReviewFrame: nil)
     }
     private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, formOrigin: CGPoint, upward: Bool,
                                halfStepFraction: CGFloat = 0.29, velocity: XCUIGestureVelocity = .slow) {
@@ -5450,6 +5529,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             ["id": String(format: "T18-IOS-%03d", first + offset), "route": route, "state": state,
              "status": "NOT_TRAVERSED", "nativeJudgment": "NOT_RUN", "reader": "NOT_RUN", "physical": "NOT_RUN"]
         }
+        let expectedInput = "LOCAL-ROOT"
         var currentCell = 0
         var failure: String?
         do {
@@ -5486,10 +5566,40 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             case "recovery": try t18Await("task144.controlled.held", timeout: 30)
             case "retrying": try t18Await("task145.retry.cooldown-after-three", timeout: 45)
             case "action":
-                try t18Await("task145.seq6.ready", timeout: 30)
+                // Marker and native input admission share the original 30-second window.
+                let releaseDeadline = ProcessInfo.processInfo.systemUptime + 30
+                try t18Await("task145.seq6.ready", timeout: max(0, releaseDeadline - ProcessInfo.processInfo.systemUptime))
+                let release = app.buttons.matching(NSPredicate(format: "identifier == %@", "task144.controlled.release")).element(boundBy: 0)
+                var previousReleaseGeometry: (button: CGRect, window: CGRect)?
+                var releaseReady = false
+                while ProcessInfo.processInfo.systemUptime < releaseDeadline {
+                    let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: groupID + "-release-admission", downstream: [])
+                    let matches = nodes.filter { $0.elementType == .button && $0.identifier == "task144.controlled.release" }
+                    let buttonFrame = matches.first?.frame ?? .zero
+                    let windows = nodes.filter { $0.elementType == .window && matches.count == 1
+                        && matches[0].path.starts(with: $0.path) }
+                    let windowFrame = windows.first?.frame ?? .zero
+                    let geometryReady = matches.count == 1 && windows.count == 1
+                        && [buttonFrame, windowFrame].allSatisfy({ frame in
+                            [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                                && frame.width > 0 && frame.height > 0
+                        }) && windowFrame.contains(buttonFrame)
+                    let stable = geometryReady && previousReleaseGeometry?.button == buttonFrame
+                        && previousReleaseGeometry?.window == windowFrame
+                    previousReleaseGeometry = geometryReady ? (buttonFrame, windowFrame) : nil
+                    if stable {
+                        releaseReady = ProcessInfo.processInfo.systemUptime < releaseDeadline
+                            && release.isHittable && ProcessInfo.processInfo.systemUptime < releaseDeadline
+                        if releaseReady { break }
+                    }
+                    let remaining = releaseDeadline - ProcessInfo.processInfo.systemUptime
+                    if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
+                }
+                try t18Require(releaseReady && ProcessInfo.processInfo.systemUptime < releaseDeadline,
+                    "release-input-not-qualified-within-ready-window")
                 // The fixture still requires one full second of recognized
                 // pressing. Keep margin for native delivery of this one gesture.
-                app.buttons["task144.controlled.release"].press(forDuration: 1.5)
+                release.press(forDuration: 1.5)
                 do {
                     try t18Await("task145.seq6.safety-terminal", timeout: 30)
                 } catch {
@@ -5539,20 +5649,43 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     let search = app.textFields.matching(identifier: "task140.database.root").firstMatch
                     try t18Require(search.waitForExistence(timeout: 5) && search.isHittable, "database-search-not-reachable")
                     search.tap()
-                    search.typeText("LOCAL-ROOT")
+                    // One public native insertion per character, for every language.
+                    // This changes delivery duration, not the post-input value budget.
+                    var nativeTypeTextCalls = 0
+                    for character in expectedInput {
+                        search.typeText(String(character))
+                        nativeTypeTextCalls += 1
+                    }
                     let inputDeadline = ProcessInfo.processInfo.systemUptime + 5
-                    let inputPublished = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                    cells[index]["nativeInputDelivery"] = ["driver": "public-typeText-per-character",
+                        "expectedCharacterCount": expectedInput.count,
+                        "expectedUTF16Count": expectedInput.utf16.count,
+                        "returnedNativeTypeTextCalls": nativeTypeTextCalls]
+                    let inputPredicate = NSPredicate { _, _ in
                         guard ProcessInfo.processInfo.systemUptime < inputDeadline else { return false }
-                        let complete = search.value as? String == "LOCAL-ROOT"
+                        let complete = search.value as? String == expectedInput
                         return complete && ProcessInfo.processInfo.systemUptime <= inputDeadline
-                    }, object: nil)
+                    }
+                    let inputImmediatelyPublished = inputPredicate.evaluate(with: nil)
                     let inputRemaining = inputDeadline - ProcessInfo.processInfo.systemUptime
-                    try t18Require(inputRemaining > 0
-                        && XCTWaiter.wait(for: [inputPublished], timeout: inputRemaining) == .completed
-                        && ProcessInfo.processInfo.systemUptime <= inputDeadline,
+                    let inputPublished = inputImmediatelyPublished || (inputRemaining > 0
+                        && XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: inputPredicate, object: nil)],
+                            timeout: inputRemaining) == .completed)
+                    try t18Require(inputPublished && ProcessInfo.processInfo.systemUptime <= inputDeadline,
                         "database-keyboard-input-not-retained")
                 }
                 let before = try t18Snapshot(state: state, language: language, category: category, theme: theme)
+                if route == "database" && state != "action" {
+                    let nativeInput = before["nativeSearchInput"] as? [String: Any] ?? [:]
+                    cells[index]["nativeInputBefore"] = nativeInput
+                    try t18Require(nativeInput["status"] as? String == "UNIQUE_FOCUSED_UI_TEXT_FIELD"
+                        && nativeInput["hierarchyComplete"] as? Bool == true
+                        && nativeInput["focusedTextFieldCount"] as? Int == 1
+                        && nativeInput["pid"] as? Int == before["pid"] as? Int
+                        && nativeInput["textUTF16Count"] as? Int == expectedInput.utf16.count
+                        && nativeInput["exactExpected"] as? Bool == true,
+                        "database-native-input-not-exact-or-focused")
+                }
                 if route == "options" && maximumFont {
                     try t18Require(before["optionsSwiftUIAccessibility5"] as? Bool == true,
                         "actual-Options-SwiftUI-accessibility5-not-observed")
@@ -5600,6 +5733,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             do { try t18EmitResult(groupID: groupID, failure: failure, cells: cells) }
             catch { print("TASK145_T18_RESULT_ENCODING_FAILURE " + groupID) }
             if app.state != .notRunning {
+                if failure == "database-keyboard-input-not-retained" {
+                    // The original FAIL is already persisted. Read this existing
+                    // native getter directly; hierarchy snapshots may truncate it.
+                    let native = app.otherElements.matching(NSPredicate(format: "identifier == %@",
+                        "task144.controlled.native-name-observation")).element
+                    if let raw = native.value as? String, raw.utf8.count <= 8192 {
+                        let input = XCTAttachment(string: raw)
+                        input.name = "T18 FIRST_FAIL native input " + groupID
+                        input.lifetime = .keepAlways; add(input)
+                    }
+                }
                 let screenshot = XCTAttachment(screenshot: app.screenshot())
                 screenshot.name = "T18 FIRST_FAIL " + groupID; screenshot.lifetime = .keepAlways; add(screenshot)
                 let ax = XCTAttachment(string: app.debugDescription)

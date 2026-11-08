@@ -4020,6 +4020,30 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     var hasR4ReviewControl: Bool { r4Control != nil }
     lazy var catalogConflictResolutionService = CatalogConflictResolutionService(remote: catalogRemote)
     var r4Ledger: String { r4Control?.ledger ?? "" }
+    private var r4WriterObservation: (scope: Task126VerifiedOwnerStoreScope,
+        generation: UUID, presentation: UUID, started: TimeInterval, sampled: TimeInterval,
+        running: Bool, suspended: Bool)?
+
+    // The existing UIKit AX getter calls this on demand. No ObservableObject
+    // update, model query, persisted field or writer admission is added here.
+    fileprivate func r4CurrentWriterLedger() -> String {
+        guard let sample = r4WriterObservation,
+              let data = Data(base64Encoded: r4Ledger),
+              var ledger = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return r4Ledger }
+        let current = (try? Task126OwnerStoreGate.revalidateAutomaticScope(sample.scope)) != nil
+            && controller.activeManifest?.generationID == sample.generation
+            && controller.presentationID == sample.presentation
+        let observation: [String: Any] = [
+            "namespace": namespace.uuidString.lowercased(), "pid": ProcessInfo.processInfo.processIdentifier,
+            "generationID": sample.generation.uuidString.lowercased(),
+            "presentationID": sample.presentation.uuidString.lowercased(),
+            "leaseGeneration": String(sample.scope.leaseGeneration), "scopeCurrentAtRead": current,
+            "startedUptime": sample.started, "sampledUptime": sample.sampled,
+            "isRunning": sample.running, "isSuspended": sample.suspended]
+        ledger["writerObservation"] = observation
+        guard let encoded = try? JSONSerialization.data(withJSONObject: ledger, options: [.sortedKeys]) else { return "encoding-failed" }
+        return encoded.base64EncodedString()
+    }
 
     func prepareR4Peer() {
         guard let control = r4Control, !control.reopening else { return }
@@ -4061,6 +4085,21 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             guard let self else { return }
             do {
                 for _ in 0..<600 {
+                    r4WriterObservation = nil
+                    if let scope = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: owner) {
+                        let generation = controller.activeManifest?.generationID
+                        let presentation = controller.presentationID
+                        let started = ProcessInfo.processInfo.systemUptime
+                        let running = await AutomaticSyncSingleFlight.processShared.isRunning
+                        let suspended = await AutomaticSyncSingleFlight.processShared.isSuspendedForStoreReplacement
+                        try Task.checkCancellation()
+                        if (try? Task126OwnerStoreGate.revalidateAutomaticScope(scope)) != nil,
+                           let generation, controller.activeManifest?.generationID == generation,
+                           controller.presentationID == presentation {
+                            r4WriterObservation = (scope, generation, presentation, started,
+                                ProcessInfo.processInfo.systemUptime, running, suspended)
+                        }
+                    }
                     if try observeR4State() { return }
                     try await Task.sleep(for: .milliseconds(100))
                 }
@@ -6156,12 +6195,22 @@ private final class Task144NativeNameReadbackView: UIView {
         // TASK145_T14_INSERT_END existing-AX-getter
         // TASK145_T18_INSERT_BEGIN existing-AX-getter
         if ProcessInfo.processInfo.environment["TASK145_T18_OBSERVATION"] == "1" {
-            guard let fixture, window != nil else { return "{\"status\":\"MISSING_FIXTURE_OR_WINDOW\"}" }
-            return fixture.t18PassiveSnapshot(traits: traitCollection)
+            guard let fixture, let window else { return "{\"status\":\"MISSING_FIXTURE_OR_WINDOW\"}" }
+            let raw = fixture.t18PassiveSnapshot(traits: traitCollection)
+            guard let bytes = raw.data(using: .utf8), bytes.count <= 8192,
+                  var value = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any] else {
+                return "{\"status\":\"INVALID_PASSIVE_SNAPSHOT\"}"
+            }
+            value["nativeSearchInput"] = t18NativeSearchInput(in: window)
+            return encode(value)
         }
         // TASK145_T18_INSERT_END existing-AX-getter
         guard sampleCount < 256 else { return "native-name-observation=CAP256" }
         sampleCount += 1
+        if let fixture, fixture.hasR4ReviewControl {
+            guard window != nil else { return "native-r4-observation=MISSING_WINDOW" }
+            return fixture.r4CurrentWriterLedger()
+        }
         var result: [String: Any] = [
             "sample": sampleCount, "uptime": ProcessInfo.processInfo.systemUptime,
             "observerID": String(describing: ObjectIdentifier(self))
@@ -6241,6 +6290,46 @@ private final class Task144NativeNameReadbackView: UIView {
         result["ancestors"] = ancestors
         result["ancestorLimitReached"] = ancestor != nil
         return encode(result)
+    }
+
+    /// Passive UIKit text witness; this does not observe or write the SwiftUI binding.
+    private func t18NativeSearchInput(in window: UIWindow) -> [String: Any] {
+        let expected = "LOCAL-ROOT"
+        var result: [String: Any] = ["status": "UNQUALIFIED_NATIVE_HIERARCHY",
+            "observedUptime": ProcessInfo.processInfo.systemUptime,
+            "pid": ProcessInfo.processInfo.processIdentifier, "hierarchyComplete": false]
+        var pending: [UIView] = [window]
+        var visited = Set<ObjectIdentifier>()
+        var focused: [UITextField] = []
+        while let view = pending.popLast() {
+            guard visited.count < 1024, visited.insert(ObjectIdentifier(view)).inserted else {
+                result["visitedViewCount"] = visited.count
+                return result
+            }
+            if let field = view as? UITextField, field.window === window, field.isFirstResponder {
+                focused.append(field)
+            }
+            pending.append(contentsOf: view.subviews)
+        }
+        result["hierarchyComplete"] = true
+        result["visitedViewCount"] = visited.count
+        result["focusedTextFieldCount"] = focused.count
+        guard focused.count == 1, let field = focused.first else {
+            result["status"] = "NONUNIQUE_FOCUSED_UI_TEXT_FIELD"
+            return result
+        }
+        result["status"] = "UNIQUE_FOCUSED_UI_TEXT_FIELD"
+        result["textUTF16Count"] = field.text?.utf16.count ?? -1
+        result["exactExpected"] = field.text == expected
+        result["hasMarkedText"] = field.markedTextRange != nil
+        if let marked = field.markedTextRange {
+            result["markedTextUTF16Count"] = field.offset(from: marked.start, to: marked.end)
+        } else {
+            result["markedTextUTF16Count"] = 0
+        }
+        result["inputModeLanguage"] = field.textInputMode?.primaryLanguage
+            .map { String($0.prefix(64)) } ?? "unavailable"
+        return result
     }
 
 // TASK145_T14_INSERT_BEGIN passive-native-getter
