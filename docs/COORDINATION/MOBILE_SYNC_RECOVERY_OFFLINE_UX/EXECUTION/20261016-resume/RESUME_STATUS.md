@@ -1,5 +1,13 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — C3 banda reale bounded e pan nativo mirato — 2026-11-08T22:30:51.046417+00:00
+
+**✅ STATIC ESEGUITO, PASS; BUILD/SIM successori NOT_RUN.** Due file: fixtureDEBUG e UItest. C3 riusa lo ScrollView eager già qualificato T14/T19 per contenere soltanto i fatti tecnici veri in32pt, invece della banda espansa182,3pt osservata. Flag esclusivo del caso C3; controlli esterni, fatti/font/ID/visibilità semantica invariati. La traversata B usa.fast al posto.slow, stessi estremi/hold e cinque gesti. Ogni viewport mantiene tutte le query native, associazione completa degli otto ruoli, privacy e overlap reale positivo;15s/10s/5s invariati. Parse Swift e diffcheck PASS. Qualifica nativa deve attestare i fatti reali e l’intero A/B/A; il caso non può passare saltando controlli. [Patch/review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-native-viewport.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Cinque selettori dopoSDK reale: oracolo14alberi malformati, C3 completo e tre T11. B2/R4 restano attribuiti al binario d2d della run42530332673 indipendente; il delta C3 non interviene nel ramo cache né nell’editor R4 o nel codice produzione. Libero31467995136B, soli runner ospitati e forecast20MB+150MB per batch, nessun SDK/device locale. Atomicità/B1a/manual/outbox/incremental/POS e dati/WIP/indici preservati.16offline fisici e statistiche DIFFERITI.
+
+**Handoff ACTIVE/EXECUTION.** ROOT qualifica i due lotti, risolve gli errori effettivi, poi matrice stabile, review/mainCI e integrazione, PR28 e cleanup; nessun REVIEW/DONE con gate critici FAIL.
+
 ### Execution — timeout diagnostico distinto dal boot e dai gate app — 2026-11-08T22:27:07.441075+00:00
 
 - **✅ BUILD ESEGUITA PASS; SIM funzionale NON ESEGUITO.** Run42529350603 su8cdc15428c5a5f91524d3e4fbe24c6ca627ec8c4: SDK PASS, boot/bootstatus terminati; la nuova query diagnostica simctl list supera20s e impedisce XCTest. Coverage esplicita2NOT_RUN, nessun report nativo qualificabile. La query postflight fallisce ugualmente prima dello shutdown. Primo log completo bounded2182065B e due campioni risorse conservati: zero swap prima/dopoSDK, nessuna causa memoria dimostrata. [Postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-sdk-before-simulator.ROOT/POSTFLIGHT.ROOT.json).

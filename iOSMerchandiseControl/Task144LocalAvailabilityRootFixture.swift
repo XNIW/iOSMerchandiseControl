@@ -6192,7 +6192,8 @@ private struct Task144ControlledRootControls: View {
                 if fixture.performanceWarmReady { Text("task145.perf.warm-ready").accessibilityIdentifier("task145.perf.warm-ready") }
             }
             if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1"
-                || ["cycles", "repeated-material"].contains(ProcessInfo.processInfo.environment["TASK145_T19_UI"] ?? "") {
+                || ["cycles", "repeated-material"].contains(ProcessInfo.processInfo.environment["TASK145_T19_UI"] ?? "")
+                || ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1" {
                 // Long witnesses append real facts. Keep their eager public
                 // markers within one fixed band instead of shrinking the app
                 // viewport as the passive ledger grows. Controls stay outside.
@@ -6205,7 +6206,7 @@ private struct Task144ControlledRootControls: View {
                         }
                     }
                 }
-                .frame(height: 96)
+                .frame(height: ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1" ? 32 : 96)
             } else {
                 ForEach(displayedFacts, id: \.self) { fact in
                     Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)

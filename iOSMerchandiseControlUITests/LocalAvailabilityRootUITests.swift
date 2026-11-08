@@ -4983,6 +4983,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     // Adjacent privacy witness uses the same bounded explicit Review reveal.
     func testOptionsWithdrawsQualifiedASummaryWhileBSelectedAndRestoresItOnlyAfterExplicitReturn() throws {
         try task146ConfigureAnimationIdleDriver()
+        app.launchEnvironment["TASK146_C3_COMPACT_FACT_BAND"] = "1"
         app.launchEnvironment["TASK145_SCOPE_SWITCH_UI"] = "cancel-explicit-return"
         app.launch()
         try scopeRequire(app.staticTexts["task145.scope.root-startup-completed"].waitForExistence(timeout: 30),
@@ -5744,7 +5745,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let distance = min(observation.viewport.height * 0.58,
                 max(24, anchorBottom - observation.viewport.minY - 44))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
-                halfStepFraction: distance / observation.viewport.height / 2, velocity: .slow)
+                halfStepFraction: distance / observation.viewport.height / 2, velocity: .fast)
         }
     }
 
