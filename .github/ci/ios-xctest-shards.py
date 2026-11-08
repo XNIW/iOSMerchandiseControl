@@ -150,7 +150,7 @@ def run(shard_id):
     base = ['xcodebuild', '-project', 'iOSMerchandiseControl.xcodeproj',
             '-scheme', 'iOSMerchandiseControl', '-configuration', 'Debug',
             '-destination', 'platform=iOS Simulator,id=' + os.environ['DEVICE_ID'],
-            'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'test']
+            'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'test-without-building']
     cutoff_seconds = 4200 if shard_id == 'ui-core' else 3600
     cutoff = float((Path(os.environ['RUNNER_TEMP']) / 'ios-ci-start.monotonic').read_text()) + cutoff_seconds
     # Core used 61 minutes including preparation and was killed while finalizing
@@ -228,6 +228,7 @@ def qualify(shard_id):
         assert {key: run_record[key] for key in current_provenance()} == current_provenance()
         assert run_record['shard'] == shard_id and run_record['expected'] == expected
         assert all(run_record[key] == value for key, value in selection.items()), 'wrong user deferral record'
+        assert 'testArgv' in run_record, 'tests not started; run failure: ' + str(run_record.get('error', 'unknown'))[:2000]
         assert [arg.removeprefix('-only-testing:') for arg in run_record['testArgv']
                 if arg.startswith('-only-testing:')] == selection['selectedOnlyTesting'], 'wrong active CI selection'
         discovery_count = sum(len(row['expected']) for row in manifest['shards'])

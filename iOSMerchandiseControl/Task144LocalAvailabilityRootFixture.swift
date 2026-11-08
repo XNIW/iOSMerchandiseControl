@@ -857,7 +857,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                         watermark: cursor) == manifest.checkpoint.scope.key
                     NSLog("TASK146_R4_INIT stage.controller-load category.%@ defaults-same.%d checkpoint.%lld mirror.%lld mirror-generation-matches.%d fence.%lld fence-at-mirror-matches.%d",
                         Task144RootObservation.errorCategory(error), repository.defaults === UserDefaults.standard ? 1 : 0,
-                        manifest.checkpoint.maxEventID, cursor,
+                        manifest.checkpoint.maxEventID ?? -1, cursor,
                         mirror.matchesRecoveryGeneration(manifest.generationID, watermark: cursor, scope: scope) ? 1 : 0,
                         durable ?? -1, matches ? 1 : 0)
                 }
