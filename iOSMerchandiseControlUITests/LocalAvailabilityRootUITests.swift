@@ -733,7 +733,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let pid = try t14Number(value["pid"], stage + "-pid")
         let observerID = try XCTUnwrap(value["observerID"] as? String)
         try t14Require(!observerID.isEmpty && value["context"] as? String == context, stage + "-actual-observer-context")
-        try t14Require(sample.rounded() == sample && sample > 0 && sample <= 256,
+        try t14Require(sample.rounded() == sample && sample > 0 && sample <= 1024,
             stage + "-fresh-bounded-sample")
         try t14Require(pid.rounded() == pid && pid > 0 && (t14AppPID == nil || t14AppPID == Int(pid)), stage + "-same-real-app-PID")
         try t14Require(uptime > t14LastAppUptime && value["namespace"] as? String == runID, stage + "-current-run-namespace-and-fresh-time")
@@ -2537,7 +2537,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let terminal = try saveBLedgerAttachment("Only B ACK confirms B; two durable remote operations and events")
         XCTAssertEqual((terminal["committed"] as? [String])?.count, 2)
         XCTAssertEqual((terminal["returned"] as? [String])?.count, 2)
-        XCTAssertEqual((terminal["requests"] as? [String])?.count, 3)
+        let requests = try XCTUnwrap(terminal["requests"] as? [String])
+        let firstEnvelope = try XCTUnwrap(terminal["firstEnvelope"] as? String)
+        let secondEnvelope = try XCTUnwrap(terminal["secondEnvelope"] as? String)
+        XCTAssertNotEqual(firstEnvelope, secondEnvelope)
+        let firstRequests = requests.filter { $0 == firstEnvelope }
+        XCTAssertTrue((1...2).contains(firstRequests.count))
+        XCTAssertEqual(requests, firstRequests + [secondEnvelope, secondEnvelope])
         let terminalEventAttempts = try JSONSerialization.data(
             withJSONObject: XCTUnwrap(terminal["eventAttempts"]), options: [.sortedKeys])
         app.terminate()
@@ -4413,9 +4419,42 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire(inventory.waitForExistence(timeout: 5) && inventory.isHittable,
             stage: stage + "-inventory-entry", downstream: downstream)
         inventory.tap()
-        let switcher = app.buttons[current]
-        try scopeRequire(switcher.waitForExistence(timeout: 5) && switcher.isHittable,
+        // One five-second window admits existence and two coherent native frames.
+        let switcherDeadline = ProcessInfo.processInfo.systemUptime + 5
+        let switcher = app.buttons.matching(NSPredicate(format: "label == %@", current)).element(boundBy: 0)
+        var previousGeometry: (button: CGRect, window: CGRect)?
+        var switcherReady = false
+        while ProcessInfo.processInfo.systemUptime < switcherDeadline {
+            let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: stage + "-switcher", downstream: downstream)
+            let matches = nodes.filter { $0.elementType == .button && $0.label == current }
+            let buttonFrame = matches.first?.frame ?? .zero
+            let windows = nodes.filter { $0.elementType == .window && matches.count == 1
+                && matches[0].path.starts(with: $0.path) }
+            let windowFrame = windows.first?.frame ?? .zero
+            let geometryReady = matches.count == 1 && windows.count == 1
+                && [buttonFrame, windowFrame].allSatisfy({ frame in
+                    [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                        && frame.width > 0 && frame.height > 0
+                }) && windowFrame.contains(buttonFrame)
+            let stable = geometryReady && previousGeometry?.button == buttonFrame
+                && previousGeometry?.window == windowFrame
+            previousGeometry = geometryReady ? (buttonFrame, windowFrame) : nil
+            if stable {
+                switcherReady = ProcessInfo.processInfo.systemUptime < switcherDeadline
+                    && switcher.isHittable && ProcessInfo.processInfo.systemUptime < switcherDeadline
+                if switcherReady { break }
+            }
+            let remaining = switcherDeadline - ProcessInfo.processInfo.systemUptime
+            if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
+        }
+        try scopeRequire(switcherReady && ProcessInfo.processInfo.systemUptime < switcherDeadline,
             stage: stage + "-actual-switcher", downstream: downstream)
+        let admission = XCTAttachment(string: "stage=\(stage); native-geometry=\(String(describing: previousGeometry)); admitted-uptime=\(ProcessInfo.processInfo.systemUptime); deadline=\(switcherDeadline)")
+        admission.name = "Task145 shop switcher admission " + stage
+        admission.lifetime = .keepAlways
+        add(admission)
+        try scopeRequire(ProcessInfo.processInfo.systemUptime < switcherDeadline,
+            stage: stage + "-switcher-admission-before-single-tap", downstream: downstream)
         switcher.tap()
         let choice = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", target)).firstMatch
         try scopeRequire(choice.waitForExistence(timeout: 5) && choice.isEnabled && choice.isHittable,

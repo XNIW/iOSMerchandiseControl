@@ -4179,12 +4179,16 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let context = ModelContext(controller.modelContainer)
         let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
         let outbox = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
-        return try saveBEnvelope(id: id, payload: payload, scope: scope, changes: changes, outbox: outbox)
+        guard let envelope = try saveBEnvelope(id: id, payload: payload, scope: scope,
+            changes: changes, outbox: outbox) else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        return envelope
     }
 
     private func saveBEnvelope(id: UUID, payload: SyncAutomaticProductUpdatePayload,
         scope: Task126VerifiedOwnerStoreScope, changes: [LocalPendingChange],
-        outbox: [SyncEventOutboxEntry]) throws -> Data {
+        outbox: [SyncEventOutboxEntry]) throws -> Data? {
         guard changes.count <= 2, outbox.count <= 6 else { throw SyncStoreGenerationError.activationReadBackFailed }
         let matching = try outbox.filter(LocalPendingBusinessAttemptStore.isSealed).compactMap { entry -> Data? in
             let data = try LocalPendingBusinessAttemptStore.validate(entry, kind: "catalog", scope: scope)
@@ -4195,8 +4199,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   changes.contains(where: { envelope.pending.matches($0) }) else { return nil }
             return data
         }
-        guard matching.count == 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
-        return matching[0]
+        guard matching.count <= 1 else { throw SyncStoreGenerationError.activationReadBackFailed }
+        return matching.first
     }
 
     private func prepareSeq6() async throws {
@@ -4637,11 +4641,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
               Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer),
               changes.allSatisfy({ LocalPendingChangeScopeMatcher.matches($0, ownerUserID: owner,
                   accountHash: scope.accountHash, storeIdentity: scope.storeIdentity) }) else { return false }
-        // An ACK can retire the seal between the serial pending/outbox fetches.
-        // This observation cannot qualify either pending or terminal state.
-        if changes.contains(where: { $0.status == .pending }),
-           !outbox.contains(where: LocalPendingBusinessAttemptStore.isSealed) { return false }
         guard let firstData = control.state.firstEnvelope else { return false }
+        let firstRequestCount = control.state.requests.filter { $0 == firstData }.count
+        guard (1...2).contains(firstRequestCount) else { return false }
         let first = try control.token(firstData)
         guard let a = changes.first(where: { $0.changeID == first.changeID }),
               a.idempotencyKey == first.idempotencyKey,
@@ -4710,11 +4712,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   control.state.eventChangeIDs[events[0].clientEventID] == first.changeID,
                   control.state.eventAttempts.count == 1,
                   control.state.eventAttempts[0].clientEventID == events[0].clientEventID,
-                  control.state.eventAttempts[0].requestIdentity == control.state.eventRequests[events[0].clientEventID] else { return false }
+                  control.state.eventAttempts[0].requestIdentity == control.state.eventRequests[events[0].clientEventID],
+                  control.state.requests == Array(repeating: firstData, count: firstRequestCount) + [secondData] else { return false }
             if reopening {
                 guard control.state.pendingReopenToken == LocalPendingChangeCASToken(b),
                       control.state.firstPID != ProcessInfo.processInfo.processIdentifier,
-                      control.state.requests.count == 2 else { return false }
+                      control.state.requests.count == firstRequestCount + 1 else { return false }
                 facts.insert("task145.save-b.pending-reopened")
             } else if control.bHeld, !control.reopening {
                 if control.state.pendingReopenToken != LocalPendingChangeCASToken(b) {
@@ -4727,11 +4730,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             refreshAutomaticObservation()
             return true
         }
-        guard b.status == .acknowledged, receipt.isCloudConfirmed(by: [b]),
+        guard let secondData = control.state.secondEnvelope,
+              b.status == .acknowledged, receipt.isCloudConfirmed(by: [b]),
               control.state.product.productName == Task145SaveBControl.nameB,
               control.state.committed == [first.changeID, savedB.changeID],
               control.state.returned == [first.changeID, savedB.changeID],
-              control.state.requests.count == 3, control.state.events.count == 2,
+              control.state.requests == Array(repeating: firstData, count: firstRequestCount) + [secondData, secondData],
+              control.state.events.count == 2,
               events.count == 2, events.allSatisfy({ $0.status == .sent }),
               Set(events.map(\.clientEventID)) == Set(control.state.eventRequests.keys),
               Set(control.state.eventChangeIDs.values) == Set([first.changeID, savedB.changeID]),
@@ -6241,7 +6246,9 @@ private final class Task144NativeNameReadbackView: UIView {
 // TASK145_T14_INSERT_BEGIN passive-native-getter
     /// Reads native getters only. IDs diagnose provenance; they are not cross-cutover equality oracles.
     private func t14PassiveNativeReadback() -> String {
-        guard sampleCount < 256 else { return "native-name-observation=CAP256" }
+        // XCTest also requests this value during hierarchy captures. Keep those
+        // native reads bounded separately from the runner's 96 observations.
+        guard sampleCount < 1024 else { return "t14-native-observation=CAP1024" }
         sampleCount += 1
         var result: [String: Any] = ["sample": sampleCount,
             "uptime": ProcessInfo.processInfo.systemUptime, "utc": Date().timeIntervalSince1970,
@@ -8161,7 +8168,7 @@ private final class Task145SaveBControl {
             state = try JSONDecoder().decode(State.self, from: bytes)
             guard state.runID == runID, state.product.id == initial.id,
                   state.product.ownerUserID == initial.ownerUserID, state.product.shopID == initial.shopID,
-                  state.requests.count <= 3, state.events.count <= 2,
+                  state.requests.count <= 4, state.events.count <= 2,
                   state.eventAttempts.count <= 4, state.eventRequests.count <= 2, state.eventClientIDs.count <= 2,
                   state.firstEnvelope != nil, state.secondSavedToken != nil,
                   state.pendingReopenToken != nil, state.generationID != nil else {
@@ -8185,7 +8192,7 @@ private final class Task145SaveBControl {
     func persist() throws {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let bytes = try encoder.encode(state)
-        guard bytes.count <= 131_072, state.requests.count <= 3, state.events.count <= 2,
+        guard bytes.count <= 131_072, state.requests.count <= 4, state.events.count <= 2,
               state.eventAttempts.count <= 4, state.eventRequests.count <= 2, state.eventClientIDs.count <= 2 else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
@@ -8226,7 +8233,7 @@ private final class Task145SaveBControl {
     }
 
     func enter(id: UUID, payload: SyncAutomaticProductUpdatePayload, scope: Task126VerifiedOwnerStoreScope) async throws -> Data {
-        guard let captureEnvelope, state.requests.count < 3 else { throw SyncStoreGenerationError.activationReadBackFailed }
+        guard let captureEnvelope, state.requests.count < 4 else { throw SyncStoreGenerationError.activationReadBackFailed }
         let payloadClass = payload.productName == Self.nameA ? "nameA"
             : payload.productName == Self.nameB ? "nameB" : "other"
         let envelope: Data
@@ -8243,6 +8250,13 @@ private final class Task145SaveBControl {
         if state.firstEnvelope == nil {
             guard !reopening, payload.productName == Self.nameA else { throw SyncStoreGenerationError.activationReadBackFailed }
             state.firstEnvelope = envelope
+        } else if envelope == state.firstEnvelope {
+            // A committed response can be rejected by the real scope fence.
+            // Count one exact A replay before B enters, without another mutation.
+            guard !reopening, payload.productName == Self.nameA, state.secondEnvelope == nil,
+                  state.requests.filter({ $0 == envelope }).count == 1 else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
         } else {
             guard let saved = state.secondSavedToken, incoming.changeID == saved.changeID,
                   incoming.idempotencyKey == saved.idempotencyKey,
@@ -8265,17 +8279,28 @@ private final class Task145SaveBControl {
 
     func committed(_ response: RemoteInventoryProductRow, envelope: Data) async throws {
         let changeID = try token(envelope).changeID
-        guard !state.committed.contains(changeID) else { throw SyncStoreGenerationError.activationReadBackFailed }
-        state.product = response
-        state.committed.append(changeID)
-        try persist() // Persist + sync + exact readback before exposing committed.
+        if state.committed.contains(changeID) {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            guard envelope == state.firstEnvelope, state.secondEnvelope == nil,
+                  try encoder.encode(response) == encoder.encode(state.product) else {
+                throw SyncStoreGenerationError.activationReadBackFailed
+            }
+        } else {
+            state.product = response
+            state.committed.append(changeID)
+            try persist() // Persist + sync + exact readback before exposing committed.
+        }
         if envelope == state.firstEnvelope {
             aHeld = true
             defer { aHeld = false }
             try await awaitRelease { self.releaseA }
         }
-        state.returned.append(changeID)
-        try persist()
+        // Returned operations are unique. The requests journal retains each replay.
+        if !state.returned.contains(changeID) {
+            state.returned.append(changeID)
+            try persist()
+        }
     }
 
     private func awaitRelease(_ released: () -> Bool) async throws {

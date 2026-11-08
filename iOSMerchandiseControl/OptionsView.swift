@@ -324,7 +324,10 @@ struct OptionsView: View {
             refreshOptionsSummaryProvider()
         }
         .onReceive(NotificationCenter.default.publisher(for: .localPendingChangesDidChange)) { _ in
-            refreshOptionsSummaryProvider()
+            // Pending changes can notify synchronously inside the writer lease.
+            Task { @MainActor in
+                refreshOptionsSummaryProvider()
+            }
         }
         .accountSyncDecisionDialog(
             isPresented: $isAccountDecisionDialogPresented,
