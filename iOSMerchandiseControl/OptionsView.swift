@@ -401,10 +401,14 @@ struct OptionsView: View {
     }
 
     private func accountSyncDecisionBanner(_ decision: AccountSyncDecision) -> some View {
-        HStack(alignment: .center, spacing: 12) {
+        let usesAccessibilityStack = dynamicTypeSize.isAccessibilitySize
+        let layout = usesAccessibilityStack
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        return layout {
             Image(systemName: "person.crop.circle.badge.exclamationmark")
                 .foregroundStyle(.orange)
-                .frame(width: 28)
+                .frame(width: usesAccessibilityStack ? nil : 28)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(accountDecisionTitle(decision))
@@ -414,7 +418,7 @@ struct OptionsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Spacer(minLength: 8)
+            if !usesAccessibilityStack { Spacer(minLength: 8) }
 
             Button {
                 presentAccountDecisionManually()
