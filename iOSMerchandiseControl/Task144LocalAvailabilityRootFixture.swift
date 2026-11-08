@@ -452,6 +452,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     @Published private(set) var automaticReadback = ""
     @Published private(set) var rootPresentationObservation = ""
     private var rootPresentationObservationOrdinal = 0
+    private weak var rootPresentationRuntime: Task144ObservedAutomaticRuntime?
     @Published private(set) var safeStoreFailureObservation = ""
     @Published private(set) var authStorageObservation = ""
     let provesTransientAuthStorageFailure = ProcessInfo.processInfo.environment["TASK145_AUTH_STORAGE_UI"] == "cached-read-failure"
@@ -578,6 +579,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private var lastAutomaticPresentationID: String?
     private var lastAutomaticInvocationID: UUID?
     private var lastAutomaticCallbackUptime: TimeInterval?
+    private var terminalPublicationUptime: TimeInterval?
     private var lastObservationPayload = ""
     private var observationSequence = 0
     // Bounded value-only evidence for the existing independent-pending control.
@@ -1841,7 +1843,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                             return
                         }
                         if try terminalReadback(), catalogRemote.attemptCount == 1, catalogRemote.eventCount == 1 {
+                            terminalPublicationUptime = ProcessInfo.processInfo.systemUptime
                             facts.formUnion(["task144.controlled.activated-and-drained", "task144.controlled.queue-empty-no-duplicates"])
+                            refreshAutomaticObservation()
                             return
                         }
                     }
@@ -2292,9 +2296,11 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" else { return }
         rootPresentationObservationOrdinal += 1
         // Reads current presentation/owner metadata only, never model records,
-        // admission, runtime dispatch, phase setters or durable state.
+        // admission, runtime dispatch, phase setters or durable writes.
+        let observedUptime = ProcessInfo.processInfo.systemUptime
+        let state = stateStore.state
         let outcome: String
-        switch stateStore.state.lastOutcome {
+        switch state.lastOutcome {
         case .succeeded?: outcome = "succeeded"
         case .noWork?: outcome = "noWork"
         case .failed?: outcome = "failed"
@@ -2304,11 +2310,40 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         case .blocked?: outcome = "blocked"
         case nil: outcome = "none"
         }
+        var diagnostics: [String: Any] = [:]
+        for key in ["sync.runtime.timer.lastTickAt", "sync.runtime.timer.intervalSeconds",
+            "sync.runtime.foreground.requestedAt", "sync.runtime.orchestrator.lastDecisionAt",
+            "sync.runtime.orchestrator.safetyLoopTickCount", "sync.runtime.orchestrator.safetyLoopLastTickAt"] {
+            if let number = UserDefaults.standard.object(forKey: key) as? NSNumber,
+               String(cString: number.objCType) != "c", number.doubleValue.isFinite {
+                diagnostics[key] = ["status": "VALUE", "value": number.doubleValue]
+            } else { diagnostics[key] = ["status": "UNKNOWN_MISSING_OR_TYPE"] }
+        }
+        for key in ["sync.runtime.foreground.source", "sync.runtime.foreground.outcome",
+            "sync.runtime.orchestrator.lastTrigger", "sync.runtime.orchestrator.lastAction"] {
+            if let value = UserDefaults.standard.string(forKey: key),
+               value.range(of: #"^[A-Za-z][A-Za-z0-9._+-]{0,127}$"#, options: .regularExpression) != nil {
+                diagnostics[key] = ["status": "VALUE", "value": value]
+            } else { diagnostics[key] = ["status": "UNKNOWN_MISSING_TYPE_OR_CATEGORY"] }
+        }
+        var runtimeObservation: [String: Any] = ["status": "UNAVAILABLE_NO_RUNTIME_REFERENCE"]
+        if let runtime = rootPresentationRuntime {
+            runtimeObservation = ["status": "OBSERVED", "isRunning": runtime.isRunning,
+                "originPresentationID": runtime.observationOriginPresentationID ?? "missing",
+                "originCurrent": runtime.observationOriginPresentationID == controller.presentationID]
+            if let entry = runtime.presentationEntry {
+                runtimeObservation["entry"] = ["id": entry.id.uuidString.lowercased(),
+                    "source": entry.source.rawValue, "action": Self.actionKind(entry.action),
+                    "enteredUTC": entry.enteredUTC, "enteredUptime": entry.enteredUptime]
+            }
+        }
         let values: [String: Any] = ["observation": rootPresentationObservationOrdinal,
             "namespace": namespace.uuidString.lowercased(), "presentationID": controller.presentationID,
+            "pid": ProcessInfo.processInfo.processIdentifier, "observedUptime": observedUptime, "observedUTC": Date().timeIntervalSince1970,
             "hasActivePresentationInvocation": stateStore.hasActivePresentationInvocation,
-            "phase": String(describing: stateStore.state.phase),
-            "outcome": outcome,
+            "phase": String(describing: state.phase), "outcome": outcome,
+            "runtime": runtimeObservation,
+            "diagnostics": diagnostics,
             "held": facts.contains("task144.controlled.held"), "released": transport.isReleased]
         rootPresentationObservation = (try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]).base64EncodedString()) ?? "invalid"
     }
@@ -2641,7 +2676,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 if self.performanceInvocations.isEmpty { self.performanceLastAllInvocationsFinishedNS = DispatchTime.now().uptimeNanoseconds }
             }
         } : nil
-        let observed = Task144ObservedAutomaticRuntime(runtime: runtime, invocation: invocationObserver) { [weak self] action, result in
+        let observed = Task144ObservedAutomaticRuntime(runtime: runtime, invocation: invocationObserver,
+            originPresentationID: lease?.presentationID) { [weak self] action, result in
             if Task145PerformanceConfiguration.measures, let callID = Task145PerformanceCallContext.invocationID {
                 if let self {
                     if self.performanceResults.count < 64 || self.performanceResults[callID] != nil {
@@ -2658,6 +2694,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         observed.t19Observe = { [weak self] action, source, result in self?.t19Observe(action: action, source: source, result: result) }
 
 // TASK145_T19_INSERT_END runtime-observer
+        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {
+            rootPresentationRuntime = observed
+        }
         return observed
     }
 
@@ -3013,6 +3052,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             "\(prefix)new-generation.\(controller.activeManifest?.generationID != heldGenerationID)",
             "\(prefix)body-proof.\(Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer))",
             "\(prefix)phase.\(Self.phaseKind(stateStore.state.phase))"]
+        if let terminalPublicationUptime {
+            diagnostic.append("\(prefix)terminal-published-uptime.\(terminalPublicationUptime)")
+        }
         do {
             let context = ModelContext(controller.modelContainer)
             var pendingDescriptor = FetchDescriptor<LocalPendingChange>()
@@ -5773,6 +5815,15 @@ private nonisolated struct Task144ObservedAtomicRecoveryProvider: SyncRecoverySn
 
 @MainActor
 private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProviding {
+    struct PresentationEntry {
+        let id: UUID
+        let source: SyncAutomaticTriggerSource
+        let action: SyncAction
+        let enteredUTC: TimeInterval
+        let enteredUptime: TimeInterval
+    }
+    let observationOriginPresentationID: String?
+    private(set) var presentationEntry: PresentationEntry?
     private let runtime: any SyncAutomaticRuntimeProviding
     private let observe: (SyncAction, SyncAutomaticRunResult) -> Void
     private let invocation: ((UUID, Bool) -> Void)?
@@ -5783,13 +5834,24 @@ private final class Task144ObservedAutomaticRuntime: SyncAutomaticRuntimeProvidi
 // TASK145_T19_INSERT_END wrapper-properties
 
     init(runtime: any SyncAutomaticRuntimeProviding, invocation: ((UUID, Bool) -> Void)? = nil,
-         observe: @escaping (SyncAction, SyncAutomaticRunResult) -> Void) {
+         originPresentationID: String? = nil, observe: @escaping (SyncAction, SyncAutomaticRunResult) -> Void) {
+        observationOriginPresentationID = originPresentationID
         self.runtime = runtime
         self.observe = observe
         self.invocation = invocation
     }
     var isRunning: Bool { runtime.isRunning }
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        var observedID: UUID?
+        if ProcessInfo.processInfo.environment["TASK145_ROOT_PRESENTATION_OBSERVATION"] == "1" {
+            let id = UUID()
+            presentationEntry = PresentationEntry(id: id, source: source, action: action,
+                enteredUTC: Date().timeIntervalSince1970, enteredUptime: ProcessInfo.processInfo.systemUptime)
+            observedID = id
+        }
+        defer {
+            if let observedID, presentationEntry?.id == observedID { presentationEntry = nil }
+        }
         if let invocation {
             let callID = UUID(); invocation(callID, true)
             defer { invocation(callID, false) }
@@ -5870,14 +5932,7 @@ private struct Task144ControlledRootControls: View {
     let controlPrefix: String
     @State private var showsHistoryFeedback = false
     private var displayedFacts: [String] {
-        var facts = fixture.facts
-        if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1" {
-            // Reserve existing rows without exposing absent facts to AX.
-            facts.formUnion(["task144.controlled.held", "task144.controlled.released",
-                "task144.controlled.activated", "task144.controlled.activated-and-drained",
-                "task144.controlled.queue-empty-no-duplicates"])
-        }
-        return facts.sorted()
+        fixture.facts.sorted()
     }
     var body: some View {
         VStack(spacing: 1) {
@@ -5906,9 +5961,9 @@ private struct Task144ControlledRootControls: View {
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
                     .frame(width: 1, height: 1).allowsHitTesting(false)
             }
-            if let mode = ProcessInfo.processInfo.environment["TASK145_T19_UI"],
-               ["cycles", "repeated-material"].contains(mode) {
-                // T19 appends thirty real poll facts. Keep their eager public
+            if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1"
+                || ["cycles", "repeated-material"].contains(ProcessInfo.processInfo.environment["TASK145_T19_UI"] ?? "") {
+                // Long witnesses append real facts. Keep their eager public
                 // markers within one fixed band instead of shrinking the app
                 // viewport as the passive ledger grows. Controls stay outside.
                 ScrollView(.vertical) {
@@ -7137,8 +7192,15 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
                 ? "2026-07-21T12:02:00.000000Z" : "2026-07-21T12:01:00.000000Z", deletedAt: payload.deletedAt)
         if let saveBControl, let saveBEnvelope {
             let response = current
-            try await saveBControl.committed(response, envelope: saveBEnvelope)
-            _ = try verifiedScope()
+            do {
+                try await saveBControl.committed(response, envelope: saveBEnvelope)
+                _ = try verifiedScope()
+            } catch {
+                saveBControl.observeIngress(stage: "response-rejected", scope: scope,
+                    envelope: saveBEnvelope, error: error)
+                throw error
+            }
+            saveBControl.observeIngress(stage: "response-ready", scope: scope, envelope: saveBEnvelope)
             // A's response is a captured value, never a later mutable B body.
             return response
         }
@@ -8033,6 +8095,19 @@ private final class Task145SaveBControl {
         let clientEventID: String
         let requestIdentity: String
     }
+    nonisolated struct IngressObservation: Codable {
+        let stage: String
+        let uptime: TimeInterval
+        let capturedLeaseGeneration: UInt64
+        let observedLeaseGeneration: UInt64
+        let taskCancelled: Bool
+        let payloadClass: String?
+        let envelopeSHA256: String?
+        let changeID: String?
+        let matchesFirstEnvelope: Bool?
+        let matchesSavedBIdentity: Bool?
+        let errorCategory: String?
+    }
     nonisolated struct State: Codable {
         let runID: UUID
         let firstPID: Int32
@@ -8042,6 +8117,10 @@ private final class Task145SaveBControl {
         var secondSavedToken: LocalPendingChangeCASToken?
         var pendingReopenToken: LocalPendingChangeCASToken?
         var generationID: UUID?
+        // Optional for old ledger decode compatibility. Passive RAM records;
+        // only the existing durable boundaries may also persist these values.
+        var ingressObservations: [IngressObservation]?
+        var ingressObservationCapped: Bool?
         var requests: [Data] = []
         var committed: [String] = []
         var returned: [String] = []
@@ -8107,10 +8186,46 @@ private final class Task145SaveBControl {
         guard try Data(contentsOf: url) == bytes else { throw SyncStoreGenerationError.activationReadBackFailed }
     }
 
+    // Diagnostic only: no write, await, identity capture or admission change.
+    // A rejected raw entry stays visible in the existing in-process readback.
+    func observeIngress(stage: String, scope: Task126VerifiedOwnerStoreScope,
+        envelope: Data? = nil, pending: LocalPendingChangeCASToken? = nil,
+        payloadClass: String? = nil, error: Error? = nil) {
+        var observations = state.ingressObservations ?? []
+        guard observations.count < 8 else { state.ingressObservationCapped = true; return }
+        let savedBMatches = pending.map { incoming in
+            state.secondSavedToken.map { saved in
+                incoming.changeID == saved.changeID && incoming.idempotencyKey == saved.idempotencyKey
+                    && incoming.intendedFingerprintHash == saved.intendedFingerprintHash
+            } ?? false
+        }
+        observations.append(IngressObservation(stage: stage, uptime: ProcessInfo.processInfo.systemUptime,
+            capturedLeaseGeneration: scope.leaseGeneration,
+            observedLeaseGeneration: Task126OwnerStoreGate.automaticScopeLeaseGenerationForObservation,
+            taskCancelled: Task.isCancelled, payloadClass: payloadClass,
+            envelopeSHA256: envelope.map { SHA256.hash(data: $0).map { String(format: "%02x", $0) }.joined() },
+            changeID: pending?.changeID,
+            matchesFirstEnvelope: envelope.flatMap { bytes in state.firstEnvelope.map { $0 == bytes } },
+            matchesSavedBIdentity: savedBMatches,
+            errorCategory: error.map { Task144RootObservation.errorCategory($0) }))
+        state.ingressObservations = observations
+    }
+
     func enter(id: UUID, payload: SyncAutomaticProductUpdatePayload, scope: Task126VerifiedOwnerStoreScope) async throws -> Data {
         guard let captureEnvelope, state.requests.count < 3 else { throw SyncStoreGenerationError.activationReadBackFailed }
-        let envelope = try captureEnvelope(id, payload, scope)
-        let incoming = try token(envelope)
+        let payloadClass = payload.productName == Self.nameA ? "nameA"
+            : payload.productName == Self.nameB ? "nameB" : "other"
+        let envelope: Data
+        let incoming: LocalPendingChangeCASToken
+        do {
+            envelope = try captureEnvelope(id, payload, scope)
+            incoming = try token(envelope)
+        } catch {
+            observeIngress(stage: "capture-envelope-failed", scope: scope, payloadClass: payloadClass, error: error)
+            throw error
+        }
+        observeIngress(stage: "captured-envelope", scope: scope, envelope: envelope,
+            pending: incoming, payloadClass: payloadClass)
         if state.firstEnvelope == nil {
             guard !reopening, payload.productName == Self.nameA else { throw SyncStoreGenerationError.activationReadBackFailed }
             state.firstEnvelope = envelope

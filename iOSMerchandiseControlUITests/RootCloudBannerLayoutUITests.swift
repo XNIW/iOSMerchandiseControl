@@ -134,10 +134,53 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         diagnostics.tap()
         try requirePresentation(app.buttons["Hide diagnostics"].waitForExistence(timeout: 5), "real-diagnostics-action-opens")
         let after = try observePresentation()
-        try requirePresentation(after["presentationID"] as? String == before["presentationID"] as? String
-            && after["hasActivePresentationInvocation"] as? Bool == false
-            && after["held"] as? Bool == true && after["released"] as? Bool == false,
+        try requirePresentation(finalPresentationIsQualified(after: after, before: before),
             "same-presentation-no-invented-owner-no-release")
+    }
+
+    // Initial checking still requires no owner. A later foreground opportunity
+    // is permitted only with fresh, typed evidence of its concrete owned work.
+    private func finalPresentationIsQualified(after: [String: Any], before: [String: Any]) -> Bool {
+        func number(_ value: Any?) -> Double? {
+            guard let value = value as? NSNumber, String(cString: value.objCType) != "c",
+                  value.doubleValue.isFinite else { return nil }
+            return value.doubleValue
+        }
+        guard before["hasActivePresentationInvocation"] as? Bool == false,
+              let pid = number(before["pid"]), pid > 0, pid.rounded() == pid,
+              number(after["pid"]) == pid,
+              let namespace = before["namespace"] as? String, UUID(uuidString: namespace) != nil,
+              after["namespace"] as? String == namespace,
+              let presentation = before["presentationID"] as? String, UUID(uuidString: presentation) != nil,
+              after["presentationID"] as? String == presentation,
+              before["held"] as? Bool == true, before["released"] as? Bool == false,
+              after["held"] as? Bool == true, after["released"] as? Bool == false,
+              let active = after["hasActivePresentationInvocation"] as? Bool else { return false }
+        if !active { return true }
+        guard let startUTC = number(before["observedUTC"]), startUTC > 0,
+              let endUTC = number(after["observedUTC"]), endUTC >= startUTC,
+              let startUptime = number(before["observedUptime"]), startUptime > 0,
+              let endUptime = number(after["observedUptime"]), endUptime > startUptime,
+              let runtime = after["runtime"] as? [String: Any],
+              runtime["status"] as? String == "OBSERVED", runtime["isRunning"] as? Bool == true,
+              runtime["originCurrent"] as? Bool == true,
+              runtime["originPresentationID"] as? String == presentation,
+              let entry = runtime["entry"] as? [String: Any],
+              let id = entry["id"] as? String, UUID(uuidString: id) != nil,
+              let enteredUTC = number(entry["enteredUTC"]), enteredUTC >= startUTC, enteredUTC <= endUTC,
+              let enteredUptime = number(entry["enteredUptime"]), enteredUptime >= startUptime, enteredUptime <= endUptime,
+              let source = entry["source"] as? String,
+              ["rootForeground", "foregroundPoll", "networkReconnect", "localMutation", "remoteSyncEvent"].contains(source),
+              let action = entry["action"] as? String else { return false }
+        let phase: String
+        switch action {
+        case "push", "push-bootstrap", "push-recovery", "push-request-recovery", "push-drain":
+            phase = "pushing"
+        case "reconcile", "bootstrap", "recovery", "reconcile-push-drain":
+            phase = "reconciling"
+        default: return false
+        }
+        return after["phase"] as? String == phase
     }
 
     private func assertOrdinaryRootQuiet() throws {

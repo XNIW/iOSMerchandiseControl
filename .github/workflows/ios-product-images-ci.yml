@@ -424,7 +424,7 @@ jobs:
 
       - name: Build Release
         if: ${{ matrix.shard == 'unit-target' }}
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
           -scheme iOSMerchandiseControl

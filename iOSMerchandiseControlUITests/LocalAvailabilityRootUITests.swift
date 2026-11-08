@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import ObjectiveC
 
 /// Drives the production App/ContentView/Database/EditProductView. Only the
 /// SDK session, RPC transport and isolated file-backed TEST store are controlled.
@@ -7,6 +8,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private var app: XCUIApplication!
     private var runID = ""
     private static let r23ItemCodeFieldLabel = "Item code (itemNumber)"
+    private var task146OriginalAnimationIdleWait: Bool?
 
     override func setUp() {
         super.setUp()
@@ -395,9 +397,68 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     override func tearDown() {
+        if (testRun?.failureCount ?? 0) > 0, app?.state == .runningForeground {
+            captureControlledAutomaticReadback()
+        }
         app.terminate()
+        if let original = task146OriginalAnimationIdleWait {
+            let before = (app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue
+            app.setValue(NSNumber(value: original), forKey: "idleAnimationWaitEnabled")
+            let after = (app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue
+            task146OriginalAnimationIdleWait = nil
+            let proof = XCTAttachment(string: "TASK146 runner-only per-instance animation-idle setting; "
+                + "app animations and original main-loop wait retained; original=\(original); "
+                + "beforeRestore=\(String(describing: before)); afterRestore=\(String(describing: after))")
+            proof.name = "TASK146 animation-idle driver restoration"; proof.lifetime = .keepAlways; add(proof)
+            XCTAssertEqual(before, Optional(false), "TASK146 runner animation-idle setting changed during its owned witness")
+            XCTAssertEqual(after, Optional(original), "TASK146 runner animation-idle setting was not restored")
+        }
         app = nil
         super.tearDown()
+    }
+
+    /// Runner-only, per-instance private SDK setting for the two long witnesses.
+    /// App animations stay enabled; native events and original main-loop waits
+    /// remain in force. Unknown SDK selectors, ABI or KVC behavior fail admission.
+    private func task146ConfigureAnimationIdleDriver() throws {
+        let unsupported = NSError(domain: "Task146AnimationIdleDriver", code: 1, userInfo: [
+            NSLocalizedDescriptionKey: "Unsupported private XCTest animation-idle ABI or KVC behavior; witness not admitted."])
+        guard let application = app else { throw unsupported }
+        let getter = NSSelectorFromString("isIdleAnimationWaitEnabled")
+        let setter = NSSelectorFromString("setIdleAnimationWaitEnabled:")
+        let valueForKey = NSSelectorFromString("valueForKey:")
+        let setValueForKey = NSSelectorFromString("setValue:forKey:")
+        let type = object_getClass(application)
+        let getterResponds = application.responds(to: getter)
+        let setterResponds = application.responds(to: setter)
+        let alternateGetter = application.responds(to: NSSelectorFromString("getIdleAnimationWaitEnabled"))
+            || application.responds(to: NSSelectorFromString("idleAnimationWaitEnabled"))
+        let getterType = class_getInstanceMethod(type, getter).flatMap { method_getTypeEncoding($0) }
+            .map { String(cString: $0) }
+        let setterType = class_getInstanceMethod(type, setter).flatMap { method_getTypeEncoding($0) }
+            .map { String(cString: $0) }
+        let defaultKVCGetter = class_getInstanceMethod(NSObject.self, valueForKey)
+        let defaultKVCSetter = class_getInstanceMethod(NSObject.self, setValueForKey)
+        let inheritedKVCGetter = defaultKVCGetter != nil
+            && class_getInstanceMethod(type, valueForKey) == defaultKVCGetter
+        let inheritedKVCSetter = defaultKVCSetter != nil
+            && class_getInstanceMethod(type, setValueForKey) == defaultKVCSetter
+        let proof = XCTAttachment(string: "TASK146 private runner-only animation-idle admission; witness=\(name); "
+            + "classPresent=\(type != nil); getterResponds=\(getterResponds); setterResponds=\(setterResponds); "
+            + "getterEncoding=\(getterType ?? "absent"); setterEncoding=\(setterType ?? "absent"); "
+            + "alternateGetter=\(alternateGetter); NSObjectKVCGetter=\(inheritedKVCGetter); NSObjectKVCSetter=\(inheritedKVCSetter)")
+        proof.name = "TASK146 animation-idle driver ABI admission"; proof.lifetime = .keepAlways; add(proof)
+        guard task146OriginalAnimationIdleWait == nil, type != nil,
+              getterResponds, setterResponds, !alternateGetter,
+              getterType == "B16@0:8", setterType == "v20@0:8B16",
+              inheritedKVCGetter, inheritedKVCSetter,
+              let original = application.value(forKey: "idleAnimationWaitEnabled") as? NSNumber else { throw unsupported }
+        task146OriginalAnimationIdleWait = original.boolValue
+        application.setValue(NSNumber(value: false), forKey: "idleAnimationWaitEnabled")
+        guard (application.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue == false else {
+            // tearDown still restores the saved original after this admission failure.
+            throw unsupported
+        }
     }
 
 // TASK145_T14_INSERT_BEGIN native-long-use-witness
@@ -410,6 +471,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     /// Controlled native long-use subcase only. Review Cancel remains the
     /// separately qualified short C1 case, not part of these 600 seconds.
     func testTenMinuteNormalUseDuringHeldRecoveryPreservesNativeEditorAndResumesAfterQuietGap() throws {
+        try task146ConfigureAnimationIdleDriver()
         var witnessCompleted = false
         defer {
             if !witnessCompleted && !t14FailureCaptured {
@@ -419,6 +481,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         app.launchEnvironment["TASK145_T14_OBSERVATION"] = "1"
         app.launch()
+        guard (app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue == false else {
+            throw NSError(domain: "Task146AnimationIdleDriver", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "Private XCTest animation-idle setting missing or reset after initial launch; witness not admitted."])
+        }
         try t14Require(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20), "qualified-held-page")
         let initial = try t14Observe("qualified-held-page-before-t0")
         let startApp = try t14Number(initial["uptime"], "initial-app-uptime")
@@ -2413,6 +2479,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func runSavedNameRestartScenario(_ scenario: String) throws {
         app.launchEnvironment["TASK145_RESTART_UI"] = scenario
         app.launch()
+        if task146OriginalAnimationIdleWait != nil {
+            guard (app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue == false else {
+                throw NSError(domain: "Task146AnimationIdleDriver", code: 2, userInfo: [
+                    NSLocalizedDescriptionKey: "Private XCTest animation-idle setting missing or reset after initial launch; witness not admitted."])
+            }
+        }
         try awaitRestartFact("admission-held", timeout: 20)
         if scenario == "post-commit" {
             app.buttons["task144.controlled.release"].press(forDuration: 1.2)
@@ -4324,7 +4396,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             }
                             drags += 1
                             try checked({ c3OptionsDrag(form, viewport: viewport,
-                                formOrigin: observation.formOrigin, upward: upward) })
+                                formOrigin: observation.formOrigin, upward: upward, velocity: .fast) })
                         }
                     }
                 }
@@ -4880,13 +4952,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // Qualified A navigation needs only coherent current drag geometry;
             // the caller still requires the actual live target's hittability.
             let forms = nodes.filter { $0.elementType == .collectionView }
-            let windows = nodes.filter { $0.elementType == .window }
             let navigation = nodes.filter { $0.elementType == .navigationBar }
+            let windows = nodes.filter { window in
+                window.elementType == .window && navigation.contains { node in
+                    node.identifier == "Options" && node.path.starts(with: window.path)
+                }
+            }
             let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.band" }
             let tabs = nodes.filter { $0.elementType == .tabBar }
             try scopeRequire(forms.count == 1 && windows.count == 1 && navigation.count <= 1
                 && bands.count <= 1 && tabs.count <= 1
-                && forms[0].path.starts(with: windows[0].path),
+                && forms[0].path.starts(with: windows[0].path)
+                && (navigation + bands + tabs).allSatisfy({ $0.path.starts(with: windows[0].path) }),
                 stage: stage + "-coherent-native-Form-geometry", downstream: downstream)
             let geometry = forms + windows + navigation + bands + tabs
             try scopeRequire(geometry.allSatisfy { node in
@@ -5314,8 +5391,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 if route == "database" && state != "action" {
                     let search = app.textFields.matching(identifier: "task140.database.root").firstMatch
                     try t18Require(search.waitForExistence(timeout: 5) && search.isHittable, "database-search-not-reachable")
-                    search.tap(); search.typeText("LOCAL-ROOT")
-                    try t18Require(search.value as? String == "LOCAL-ROOT", "database-keyboard-input-not-retained")
+                    search.tap()
+                    let inputDeadline = ProcessInfo.processInfo.systemUptime + 5
+                    search.typeText("LOCAL-ROOT")
+                    let inputPublished = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                        guard ProcessInfo.processInfo.systemUptime < inputDeadline else { return false }
+                        let complete = search.value as? String == "LOCAL-ROOT"
+                        return complete && ProcessInfo.processInfo.systemUptime <= inputDeadline
+                    }, object: nil)
+                    let inputRemaining = inputDeadline - ProcessInfo.processInfo.systemUptime
+                    try t18Require(inputRemaining > 0
+                        && XCTWaiter.wait(for: [inputPublished], timeout: inputRemaining) == .completed
+                        && ProcessInfo.processInfo.systemUptime <= inputDeadline,
+                        "database-keyboard-input-not-retained")
                 }
                 let before = try t18Snapshot(state: state, language: language, category: category, theme: theme)
                 if route == "options" && maximumFont {
@@ -5705,6 +5793,7 @@ extension LocalAvailabilityRootUITests {
         app.launchEnvironment["TASK145_T19_UI"] = mode
         app.launchEnvironment["TASK145_T19_STAGE"] = "setup"
         let deadline = ProcessInfo.processInfo.systemUptime + (cycles == 30 ? 1530 : 180)
+        if mode == "cycles", cycles == 30 { try task146ConfigureAnimationIdleDriver() }
         var stage = "own-ACK-precondition"
         var uiRows: [[String: Any]] = []
         var terminal = "FAIL"
