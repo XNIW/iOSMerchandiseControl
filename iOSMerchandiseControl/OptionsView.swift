@@ -368,7 +368,7 @@ struct OptionsView: View {
                 )
                 .accessibilityIdentifier("options.sync-business-summary")
                 if !syncSummaryProvider.catalogConflictAttention.isEmpty {
-                    DisclosureGroup(L("product.resolution.action")) {
+                    DisclosureGroup {
                         ForEach(syncSummaryProvider.catalogConflictAttention) { item in
                             Button(item.title) {
                                 guard canPresentBusinessSummary else { return }
@@ -377,8 +377,10 @@ struct OptionsView: View {
                             }
                             .accessibilityIdentifier("task145.catalog.attention.\(item.remoteID.uuidString.lowercased())")
                         }
+                    } label: {
+                        Text(L("product.resolution.action"))
+                            .accessibilityIdentifier("task145.catalog.attention")
                     }
-                    .accessibilityIdentifier("task145.catalog.attention")
                 }
             } else {
                 Text(L(localSummaryUnavailableDetailKey))

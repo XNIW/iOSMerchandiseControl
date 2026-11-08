@@ -444,12 +444,27 @@ jobs:
 
       - name: Secret scan
         if: ${{ matrix.shard == 'unit-target' || matrix.shard == 'campaign-a' }}
-        run: >-
-          ./tools/agent/mc-agent.sh scan sensitive
-          iOSMerchandiseControl
-          iOSMerchandiseControlTests
-          contracts
-          .github/workflows/ios-product-images-ci.yml
+        run: |
+          scan_config="$RUNNER_TEMP/task146-sensitive.env"
+          scan_evidence="$RUNNER_TEMP/task146-sensitive-evidence"
+          cp tools/agent/config.example.env "$scan_config"
+          printf '\nMC_IOS_REPO=%q\n' "$GITHUB_WORKSPACE" >> "$scan_config"
+          MC_AGENT_CONFIG="$scan_config" MC_TASK_ID=TASK-146 MC_EVIDENCE_DIR="$scan_evidence" \
+            ./tools/agent/mc-agent.sh scan sensitive \
+            iOSMerchandiseControl iOSMerchandiseControlTests contracts .github/workflows/ios-product-images-ci.yml
+          python3 - "$scan_evidence/agent-runs" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          reports = list(Path(sys.argv[1]).glob("*.json"))
+          assert len(reports) == 1, "Expected one persisted sensitive-scan report"
+          report = reports[0]
+          assert json.loads(report.read_text())["result"] == "PASS"
+          for suffix in (".json", ".md", ".log"):
+              assert report.with_suffix(suffix).stat().st_size > 0
+          print("Sensitive-scan report and log verified")
+          PY
 
   complete-coverage:
     if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.task144_a_campaign != true) }}

@@ -1358,7 +1358,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             NSLog("TASK146_B2_COST39 phase.prepare-task-submit uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
-        preparationTask = Task { [weak self] in
+        // Preparation admits the foreground root, including cache reopen from
+        // App.init. Match the user-initiated priority of SwiftUI's root task.
+        preparationTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
                 NSLog("TASK146_B2_COST39 phase.prepare-task-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
@@ -4177,6 +4179,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let context = ModelContext(controller.modelContainer)
         let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
         let outbox = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+        return try saveBEnvelope(id: id, payload: payload, scope: scope, changes: changes, outbox: outbox)
+    }
+
+    private func saveBEnvelope(id: UUID, payload: SyncAutomaticProductUpdatePayload,
+        scope: Task126VerifiedOwnerStoreScope, changes: [LocalPendingChange],
+        outbox: [SyncEventOutboxEntry]) throws -> Data {
         guard changes.count <= 2, outbox.count <= 6 else { throw SyncStoreGenerationError.activationReadBackFailed }
         let matching = try outbox.filter(LocalPendingBusinessAttemptStore.isSealed).compactMap { entry -> Data? in
             let data = try LocalPendingBusinessAttemptStore.validate(entry, kind: "catalog", scope: scope)
@@ -4629,6 +4637,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
               Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer),
               changes.allSatisfy({ LocalPendingChangeScopeMatcher.matches($0, ownerUserID: owner,
                   accountHash: scope.accountHash, storeIdentity: scope.storeIdentity) }) else { return false }
+        // An ACK can retire the seal between the serial pending/outbox fetches.
+        // This observation cannot qualify either pending or terminal state.
+        if changes.contains(where: { $0.status == .pending }),
+           !outbox.contains(where: LocalPendingBusinessAttemptStore.isSealed) { return false }
         guard let firstData = control.state.firstEnvelope else { return false }
         let first = try control.token(firstData)
         guard let a = changes.first(where: { $0.changeID == first.changeID }),
@@ -4646,7 +4658,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                   b.status == .pending, b.idempotencyKey != first.idempotencyKey,
                   b.intendedFingerprintHash == LocalPendingChangeLogicalKey.productFingerprintHash(product),
                   product.productName == Task145SaveBControl.nameB, first.matches(a), control.aHeld,
-                  try saveBEnvelope(id: product.remoteID!, payload: try control.payload(firstData), scope: scope) == firstData else {
+                  try saveBEnvelope(id: product.remoteID!, payload: try control.payload(firstData), scope: scope,
+                      changes: changes, outbox: outbox) == firstData else {
                 return false
             }
             control.state.secondSavedToken = LocalPendingChangeCASToken(b)
@@ -4689,7 +4702,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         if b.status == .pending {
             guard let secondData = control.state.secondEnvelope,
                   try control.token(secondData).matches(b),
-                  try saveBEnvelope(id: product.remoteID!, payload: try control.payload(secondData), scope: scope) == secondData,
+                  try saveBEnvelope(id: product.remoteID!, payload: try control.payload(secondData), scope: scope,
+                      changes: changes, outbox: outbox) == secondData,
                   !receipt.isCloudConfirmed(by: [b]), control.state.returned == [first.changeID],
                   control.state.committed == [first.changeID], control.state.product.productName == Task145SaveBControl.nameA,
                   events.count == 1, events[0].status == .sent, control.state.events.count == 1,

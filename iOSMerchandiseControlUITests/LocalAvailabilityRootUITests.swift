@@ -706,13 +706,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try t14Require(t14ReadCount < 96, stage + "-explicit-observation-cap96")
         t14ReadCount += 1
         let context = t14EditorOpen ? "editor" : "root"
+        let observerIdentifier = "task145.t14.native-observation." + context
         let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: "T14-" + stage, downstream: [])
         let matches = nodes.filter { $0.elementType == .other
-            && $0.identifier == "task145.t14.native-observation." + context }
+            && $0.identifier == observerIdentifier }
         try t14Require(matches.count == 1, stage + "-unique-passive-" + context + "-observer")
-        let text = try XCTUnwrap(matches[0].value)
+        // Read the JSON through the native getter. The hierarchy snapshot supplies
+        // observer uniqueness, keyboard geometry and modal presence.
+        let text = try XCTUnwrap(app.otherElements[observerIdentifier].element.value as? String)
         try t14Require(text.utf8.count <= 8192, stage + "-observer-byte-cap")
-        let value = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
         let keyboardFrame: [Double]
         if let frame = nodes.first(where: { $0.elementType == .keyboard })?.frame {
             keyboardFrame = [Double(frame.minX), Double(frame.minY), Double(frame.width), Double(frame.height)]
@@ -723,6 +725,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         attachment.name = "T14 passive observation \(t14ReadCount) \(stage)"
         attachment.lifetime = .keepAlways
         add(attachment)
+        let value = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
         try t14Require(["SHELL_NO_NAME", "EXACT_NATIVE_NAME"].contains(value["status"] as? String ?? ""), stage + "-actual-observer-status")
         let sample = try t14Number(value["sample"], stage + "-sample")
         let uptime = try t14Number(value["uptime"], stage + "-uptime")
@@ -5149,7 +5152,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         var qualifiedButtons: [String: [C3OptionsSnapshotNode]] = [:]
         for (buttonIndex, button) in buttons.enumerated() {
-            guard queryTiming.measure(.exists, site: .button, index: buttonIndex, { button.exists }) else { continue }
+            // The live hittability getter resolves this enumerated Button. Its
+            // fresh snapshot below still verifies complete content and ownership.
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-before", downstream: downstream)
             // The extra per-Button snapshot/count witness consumed measured AX
@@ -5387,7 +5391,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 stage: "C3-B-bottom-endpoint-NOT_QUALIFIED", downstream: downstream)
             previousAnchors = anchors
             c3OptionsDrag(form, viewport: observation.viewport, formOrigin: observation.formOrigin, upward: true,
-                halfStepFraction: 0.31)
+                halfStepFraction: 0.31, velocity: .fast)
         }
     }
 
