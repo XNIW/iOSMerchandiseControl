@@ -283,7 +283,7 @@ def aggregate(directory):
             errors.append(shard + ': status does not preserve deferral/skip result')
         if report.get('errors') != []:
             errors.append(shard + ': qualification errors')
-        all_cases.update({case: cases.get(case, 'NOT_RUN') for case in expected})
+        all_cases.update({case: cases.get(case, 'DEFERRED_USER' if case in deferred else 'NOT_RUN') for case in expected})
     counts = dict(collections.Counter(all_cases.values()))
     if os.environ['MATRIX_RESULT'] != 'success':
         errors.append('matrix job result: ' + os.environ['MATRIX_RESULT'])
