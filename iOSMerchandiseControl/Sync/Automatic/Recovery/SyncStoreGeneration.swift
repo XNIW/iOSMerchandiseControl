@@ -1945,12 +1945,15 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         #if DEBUG
         if Task144RootObservation.enabled { rootQualificationObservationTicket &+= 1 }
         #endif
+        // Initial local reads depend on this qualification. Preserve the caller's
+        // priority for maintenance of a store whose body proof is already current.
+        let foregroundQualificationPriority: TaskPriority? = hasCurrentBodyProof ? nil : .userInitiated
 // TASK145_COST39_BEGIN qualification-start
 #if DEBUG
         let qualificationCostStartNS = DispatchTime.now().uptimeNanoseconds
 #endif
 // TASK145_COST39_END qualification-start
-        localBodyQualificationTask = Task { [weak self] in
+        localBodyQualificationTask = Task(priority: foregroundQualificationPriority) { [weak self] in
 // TASK145_COST39_BEGIN qualification-attempts
 #if DEBUG
             var qualificationCostAttempts: UInt64 = 0
@@ -2009,7 +2012,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let qualificationCostAttempt = qualificationCostAttempts
 #endif
 // TASK145_COST39_END worker-attempt-ordinal
-                let work = Task.detached(priority: .utility) { [weak self] in
+                let work = Task.detached(priority: foregroundQualificationPriority ?? .utility) { [weak self] in
                     var stage = "capture-before"
                     var performedFullValidation = false
 // TASK145_COST39_BEGIN worker-start

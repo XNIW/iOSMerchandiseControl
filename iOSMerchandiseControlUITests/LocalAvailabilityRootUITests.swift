@@ -706,13 +706,20 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try t14Require(t14ReadCount < 96, stage + "-explicit-observation-cap96")
         t14ReadCount += 1
         let context = t14EditorOpen ? "editor" : "root"
-        let matches = app.otherElements.matching(identifier: "task145.t14.native-observation." + context)
+        let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: "T14-" + stage, downstream: [])
+        let matches = nodes.filter { $0.elementType == .other
+            && $0.identifier == "task145.t14.native-observation." + context }
         try t14Require(matches.count == 1, stage + "-unique-passive-" + context + "-observer")
-        let node = matches.element(boundBy: 0)
-        let text = try XCTUnwrap(node.value as? String)
+        let text = try XCTUnwrap(matches[0].value)
         try t14Require(text.utf8.count <= 8192, stage + "-observer-byte-cap")
         let value = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
-        let attachment = XCTAttachment(string: "stage=\(stage); runner-uptime=\(ProcessInfo.processInfo.systemUptime); runner-UTC=\(Date().timeIntervalSince1970); runner-pid=\(ProcessInfo.processInfo.processIdentifier); \(text)")
+        let keyboardFrame: [Double]
+        if let frame = nodes.first(where: { $0.elementType == .keyboard })?.frame {
+            keyboardFrame = [Double(frame.minX), Double(frame.minY), Double(frame.width), Double(frame.height)]
+        } else {
+            keyboardFrame = []
+        }
+        let attachment = XCTAttachment(string: "stage=\(stage); runner-uptime=\(ProcessInfo.processInfo.systemUptime); runner-UTC=\(Date().timeIntervalSince1970); runner-pid=\(ProcessInfo.processInfo.processIdentifier); keyboard-frame-from-public-snapshot=\(keyboardFrame); \(text)")
         attachment.name = "T14 passive observation \(t14ReadCount) \(stage)"
         attachment.lifetime = .keepAlways
         add(attachment)
@@ -730,12 +737,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try t14Require(runtime["bodyProof"] as? Bool == true
             && (value["activeManifestGeneration"] as? String).map({ !$0.isEmpty && $0 != "missing" }) == true,
             stage + "-current-file-backed-body-and-generation")
-        try t14Require(app.state == .runningForeground && app.alerts.count == 0, stage + "-foreground-without-network-modal")
+        try t14Require(app.state == .runningForeground && !nodes.contains(where: { $0.elementType == .alert }),
+            stage + "-foreground-without-network-modal")
         t14LastAppUptime = uptime; t14AppPID = Int(pid)
-        let keyboard = app.keyboards.firstMatch
         var observed = value
-        observed["keyboardFrame"] = keyboard.exists
-            ? [Double(keyboard.frame.minX), Double(keyboard.frame.minY), Double(keyboard.frame.width), Double(keyboard.frame.height)] : []
+        observed["keyboardFrame"] = keyboardFrame
         return observed
     }
 
@@ -811,7 +817,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try t14Require(try t14Number(rect["width"], "geometry-width") > 0 && t14Number(rect["height"], "geometry-height") > 0,
                 "nonempty-native-geometry")
         }
-        for key in ["sizeW", "sizeH", "boundsW", "boundsH", "insetTop", "insetBottom", "insetLeft", "insetRight"] {
+        // The viewport uses window/field/scroll frames, bounds, insets and keyboard.
+        // Content extent remains a finite positive diagnostic in each raw readback.
+        for key in ["sizeW", "sizeH"] {
+            try t14Require(try t14Number(scroll[key], "scroll-extent-\(key)") > 0,
+                "positive-scroll-extent-\(key)")
+        }
+        for key in ["boundsW", "boundsH", "insetTop", "insetBottom", "insetLeft", "insetRight"] {
             tuple.append(try t14Number(scroll[key], "scroll-geometry-\(key)"))
         }
         let keyboard = try XCTUnwrap(value["keyboardFrame"] as? [Double])
@@ -846,7 +858,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try t14Editor(current, expected: expected, stage: stage)
             if let previous,
                try t14EditorGeometry(previous) == t14EditorGeometry(current),
-               try t14ScrollPosition(previous) == t14ScrollPosition(current) { return current }
+               try t14ScrollPosition(previous) == t14ScrollPosition(current) {
+                try t14Require(ProcessInfo.processInfo.systemUptime < deadline, stage + "-geometry-bound5s")
+                return current
+            }
             previous = current
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
@@ -1258,18 +1273,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertNotNil(rejected["originalPending"])
         XCTAssertNotNil(rejected["childBefore"])
         XCTAssertNil(rejected["receiptJSON"])
-        app.tabBars.buttons["Options"].tap()
-        let attention = app.descendants(matching: .any).matching(identifier: "task145.catalog.attention").firstMatch
-        r4Reveal(attention); attention.tap()
         let pending = try XCTUnwrap(rejected["originalPending"] as? [String: Any])
         XCTAssertEqual(pending["entityRemoteIDRaw"] as? String, "14400000-0000-4000-8000-000000000003")
         let savedRemoteIDText = try XCTUnwrap(pending["entityRemoteIDRaw"] as? String)
         let savedRemoteID = try XCTUnwrap(UUID(uuidString: savedRemoteIDText))
-        let records = app.buttons.matching(identifier:
-            "task145.catalog.attention.\(savedRemoteID.uuidString.lowercased())")
+        let recordIdentifier = "task145.catalog.attention.\(savedRemoteID.uuidString.lowercased())"
+        app.tabBars.buttons["Options"].tap()
+        let attention = app.buttons.matching(identifier: "task145.catalog.attention").element
+        r4Reveal(attention, optionsIdentifier: "task145.catalog.attention")
+        attention.tap()
+        let afterParent = try c3OptionsSnapshotNodes(try app.snapshot(),
+            stage: "R4-after-single-parent-tap", downstream: [])
+        r4OptionsSnapshotDiagnostic(afterParent, stage: "after-single-parent-tap")
+        let records = app.buttons.matching(identifier: recordIdentifier)
             .matching(NSPredicate(format: "label == %@", "R23 saved catalog A"))
         let record = records.element
-        r4Reveal(record)
+        r4Reveal(record, optionsIdentifier: recordIdentifier, optionsTitle: "R23 saved catalog A")
         XCTAssertEqual(records.count, 1, "The saved record must be the unique attention button with its exact title")
         record.tap()
         let adopt = app.buttons["task145.product.resolution.adopt-remote"]
@@ -1319,40 +1338,72 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual((final["processIDs"] as? [Int])?.count, 3)
     }
 
-    private func r4Reveal(_ element: XCUIElement) {
+    private func r4Reveal(_ element: XCUIElement, optionsIdentifier: String? = nil,
+                          optionsTitle: String? = nil) {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         let optionsNavigation = app.navigationBars["Options"]
         if app.navigationBars.count == 1 && optionsNavigation.exists && app.tabBars.buttons["Options"].isSelected {
-            let forms = app.collectionViews
-            let windows = app.windows.containing(.navigationBar, identifier: "Options")
-            let tabBar = app.tabBars.firstMatch
             for drag in 0...5 {
-                guard ProcessInfo.processInfo.systemUptime < deadline,
-                      forms.count == 1, windows.count == 1, tabBar.exists else { break }
-                let form = forms.element(boundBy: 0)
-                let formFrame = form.frame
-                let windowFrame = windows.element(boundBy: 0).frame
-                let navigationFrame = optionsNavigation.frame
-                let tabFrame = tabBar.frame
-                guard [formFrame, windowFrame, navigationFrame, tabFrame].allSatisfy({ frame in
-                    [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
+                guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let nodes: [C3OptionsSnapshotNode]
+                do {
+                    nodes = try c3OptionsSnapshotNodes(try app.snapshot(),
+                        stage: "R4-Options-reveal-\(drag)", downstream: [])
+                } catch { XCTFail("R4 coherent Options snapshot unavailable"); return }
+                let navigation = nodes.filter { $0.elementType == .navigationBar }
+                let windows = nodes.filter { window in
+                    window.elementType == .window && navigation.contains {
+                        $0.identifier == "Options" && $0.path.starts(with: window.path)
+                    }
+                }
+                let forms = nodes.filter { $0.elementType == .collectionView }
+                let tabs = nodes.filter { $0.elementType == .tabBar }
+                let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.band" }
+                guard navigation.count == 1, navigation[0].identifier == "Options",
+                      windows.count == 1, forms.count == 1, tabs.count == 1, bands.count <= 1,
+                      (navigation + forms + tabs + bands).allSatisfy({ $0.path.starts(with: windows[0].path) }) else { break }
+                let optionsTabs = nodes.filter { $0.elementType == .button && $0.label == "Options"
+                    && $0.path.starts(with: tabs[0].path) }
+                guard optionsTabs.count == 1, optionsTabs[0].isSelected else { break }
+                let formFrame = forms[0].frame, windowFrame = windows[0].frame
+                let navigationFrame = navigation[0].frame, tabFrame = tabs[0].frame
+                guard (forms + windows + navigation + tabs + bands).allSatisfy({ node in
+                    let frame = node.frame
+                    return [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
                         && !frame.isNull && !frame.isInfinite && frame.width > 1 && frame.height > 1
                 }), tabFrame.minY > navigationFrame.maxY else { break }
+                let upper = max(navigationFrame.maxY, bands.first?.frame.maxY ?? navigationFrame.maxY)
                 let viewport = formFrame.intersection(windowFrame).intersection(CGRect(
-                    x: windowFrame.minX, y: navigationFrame.maxY, width: windowFrame.width,
-                    height: tabFrame.minY - navigationFrame.maxY))
+                    x: windowFrame.minX, y: upper, width: windowFrame.width,
+                    height: tabFrame.minY - upper))
                 guard viewport.width > 24, viewport.height > 24,
                       ProcessInfo.processInfo.systemUptime < deadline else { break }
-                let exists = element.exists
-                let target = exists ? element.frame : nil
+                let target: CGRect?
+                if let optionsIdentifier {
+                    let targets = nodes.filter { $0.elementType == .button && $0.identifier == optionsIdentifier
+                        && (optionsTitle == nil || $0.label == optionsTitle) }
+                    guard targets.count <= 1,
+                          targets.allSatisfy({ $0.path.starts(with: windows[0].path) }) else { break }
+                    target = targets.first?.frame
+                } else {
+                    // Preserve identifierless Options callers such as Sign out.
+                    let exists = element.exists
+                    target = exists ? element.frame : nil
+                }
                 if let target, [target.minX, target.minY, target.maxX, target.maxY].allSatisfy({ $0.isFinite }),
                    !target.isNull, !target.isInfinite, target.width > 0, target.height > 0,
-                   viewport.contains(target), element.isHittable,
-                   ProcessInfo.processInfo.systemUptime < deadline { return }
+                   viewport.contains(target), element.isHittable {
+                    if optionsIdentifier == "task145.catalog.attention" {
+                        r4OptionsSnapshotDiagnostic(nodes, stage: "before-single-parent-tap")
+                    }
+                    guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+                    return
+                }
                 guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
                 let upward = target.map { $0.midY > viewport.midY } ?? true
                 let distance = min(160, viewport.height - 24)
                 let startY = upward ? viewport.maxY - 12 : viewport.minY + 12
+                let form = app.collectionViews.element(boundBy: 0)
                 let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                     dx: viewport.midX - formFrame.minX, dy: startY - formFrame.minY))
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
@@ -1388,6 +1439,54 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             } else { app.swipeUp() }
         }
         XCTAssertTrue(element.exists && element.isHittable, "R4 control not reachable within 15 seconds and 5 drags")
+    }
+    private func r4OptionsSnapshotDiagnostic(_ nodes: [C3OptionsSnapshotNode], stage: String) {
+        func bounded(_ text: String, utf8Limit: Int) -> String {
+            var bytes = Array(text.utf8.prefix(utf8Limit))
+            while String(bytes: bytes, encoding: .utf8) == nil { bytes.removeLast() }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        func describe(_ node: C3OptionsSnapshotNode) -> [String: Any] {
+            let raw: Any
+            if let value = node.rawValue as? String { raw = bounded(value, utf8Limit: 512) }
+            else if let value = node.rawValue as? NSNumber, value.doubleValue.isFinite { raw = value }
+            else { raw = NSNull() }
+            return ["type": node.elementType.rawValue, "identifier": node.identifier,
+                "label": bounded(node.label, utf8Limit: 512), "frame": String(describing: node.frame),
+                "isSelected": node.isSelected, "value": raw,
+                "valueTruncated": ((node.rawValue as? String)?.utf8.count ?? 0) > 512, "valueType": node.rawValue.map { String(reflecting: type(of: $0)) } ?? "nil"]
+        }
+        let attention = nodes.filter { $0.identifier.hasPrefix("task145.catalog.attention") }
+        let context = nodes.filter { node in
+            [.window, .navigationBar, .collectionView, .tabBar].contains(node.elementType)
+                || node.identifier == "task144.controlled.band"
+                || (node.elementType == .button && node.label == "Options")
+        }
+        let runtime = nodes.first { $0.elementType == .button && $0.identifier == "task144.controlled.release" }?.value
+        let source = nodes.first { $0.elementType == .button && $0.identifier == "task144.controlled.r4-peer" }?.value
+        let encoded = source.flatMap { $0.utf8.count <= 43692 ? $0 : nil }
+        let ledger = encoded.flatMap { Data(base64Encoded: $0) }.flatMap { data -> [String: Any]? in
+            guard data.count <= 32768 else { return nil }
+            return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        }
+        let product = ledger?["product"] as? [String: Any]
+        let summary: [String: Any] = ["stage": stage, "source": "one-public-app.snapshot",
+            "runnerNamespace": runID, "attentionNodeCount": attention.count, "attentionCapped": attention.count > 16,
+            "attention": attention.prefix(16).map(describe), "contextNodeCount": context.count,
+            "contextCapped": context.count > 16, "context": context.prefix(16).map(describe),
+            "businessSummaryObserved": nodes.contains { $0.identifier == "options.sync-business-summary" },
+            "businessSummaryUnavailableObserved": nodes.contains { $0.identifier == "options.business-summary-unavailable" },
+            "runtimeReadback": runtime.map { bounded($0, utf8Limit: 2048) } ?? "unavailable",
+            "runtimeReadbackTruncated": (runtime?.utf8.count ?? 0) > 2048,
+            "ledgerEncodedOverCap": (source?.utf8.count ?? 0) > 43692,
+            "ledgerRun": ledger?["runID"] as? String ?? "unavailable",
+            "generation": ledger?["generationID"] as? String ?? "unavailable",
+            "productID": product?["id"] as? String ?? "unavailable",
+            "productTitle": product?["product_name"] as? String ?? "unavailable"]
+        let data = (try? JSONSerialization.data(withJSONObject: summary, options: [.sortedKeys]))
+            ?? Data("R4 snapshot diagnostic serialization unavailable".utf8)
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+        attachment.name = "R4 coherent Options \(stage)"; attachment.lifetime = .keepAlways; add(attachment)
     }
     private func r4Await(_ suffix: String, timeout: TimeInterval) throws {
         let seen = app.staticTexts["task145.r4." + suffix].waitForExistence(timeout: timeout)
@@ -4680,6 +4779,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let label: String
         let frame: CGRect
         let rawValue: Any?
+        let isSelected: Bool
         var value: String? { rawValue as? String }
     }
     private func c3OptionsSnapshotNodes(_ root: XCUIElementSnapshot, stage: String,
@@ -4694,7 +4794,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 stage: stage + "-snapshot-overflow-NOT_QUALIFIED", downstream: downstream)
             nodes.append(C3OptionsSnapshotNode(path: path, elementType: node.elementType,
                 identifier: node.identifier, label: node.label, frame: node.frame,
-                rawValue: node.value))
+                rawValue: node.value, isSelected: node.isSelected))
             for (index, child) in children.enumerated().reversed() {
                 pending.append((child, path + [index]))
             }
@@ -4738,7 +4838,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let rootSubtree = formNodes.filter { $0.path.starts(with: root.path) }.map { node in
             C3OptionsSnapshotNode(path: Array(node.path.dropFirst(root.path.count)),
                 elementType: node.elementType, identifier: node.identifier, label: node.label,
-                frame: node.frame, rawValue: node.rawValue)
+                frame: node.frame, rawValue: node.rawValue, isSelected: node.isSelected)
         }
         guard c3OptionRowSnapshotIsExact(rootSubtree, title: title, subtitle: subtitle) else { return nil }
         return root
@@ -4750,7 +4850,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         func node(_ path: [Int], _ type: XCUIElement.ElementType, _ label: String,
                   identifier: String = "", rawValue: Any? = nil) -> C3OptionsSnapshotNode {
             C3OptionsSnapshotNode(path: path, elementType: type, identifier: identifier,
-                label: label, frame: .zero, rawValue: rawValue)
+                label: label, frame: .zero, rawValue: rawValue, isSelected: false)
         }
         let plain = [node([], .button, title + ", " + subtitle), node([0], .staticText, title),
             node([1], .staticText, subtitle), node([2], .image, "circle", identifier: "circle")]
@@ -5256,12 +5356,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     let sameShape = abs(previous.frame.minX - current.frame.minX) <= 1
                         && abs(previous.frame.width - current.frame.width) <= 1
                         && abs(previous.frame.height - current.frame.height) <= 1
-                    let sameViewport = abs(previous.viewport.minX - current.viewport.minX) <= 1
-                        && abs(previous.viewport.minY - current.viewport.minY) <= 1
+                    let sameViewportBounds = abs(previous.viewport.minX - current.viewport.minX) <= 1
                         && abs(previous.viewport.width - current.viewport.width) <= 1
-                        && abs(previous.viewport.height - current.viewport.height) <= 1
+                        && abs(previous.viewport.maxY - current.viewport.maxY) <= 1
+                    // Each viewport already excludes its fresh native occluders.
+                    // A collapsing navigation bar may change its top edge.
+                    let commonViewport = previous.viewport.intersection(current.viewport)
                     let commonVisibleContent = previous.visibleContent.intersection(current.visibleContent)
-                    return sameShape && sameViewport && displacement.isFinite && displacement > 1
+                    return sameShape && sameViewportBounds && displacement.isFinite && displacement > 1
+                        && !commonViewport.isNull && commonViewport.width > 1 && commonViewport.height > 1
                         && !commonVisibleContent.isNull && commonVisibleContent.width > 1 && commonVisibleContent.height > 1
                 }
                 try scopeRequire(hasContentOverlap,
@@ -5392,8 +5495,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     let search = app.textFields.matching(identifier: "task140.database.root").firstMatch
                     try t18Require(search.waitForExistence(timeout: 5) && search.isHittable, "database-search-not-reachable")
                     search.tap()
-                    let inputDeadline = ProcessInfo.processInfo.systemUptime + 5
                     search.typeText("LOCAL-ROOT")
+                    let inputDeadline = ProcessInfo.processInfo.systemUptime + 5
                     let inputPublished = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
                         guard ProcessInfo.processInfo.systemUptime < inputDeadline else { return false }
                         let complete = search.value as? String == "LOCAL-ROOT"
