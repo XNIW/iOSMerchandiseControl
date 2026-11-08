@@ -435,6 +435,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let unsupported = NSError(domain: "Task146AnimationIdleDriver", code: 1, userInfo: [
             NSLocalizedDescriptionKey: "Unsupported private XCTest animation-idle ABI or KVC behavior; witness not admitted."])
         guard let application = app else { throw unsupported }
+        if task146OriginalAnimationIdleWait != nil {
+            guard (application.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue == false else {
+                throw unsupported
+            }
+            return // This same test already owns the admitted setting and teardown restoration.
+        }
         let getter = NSSelectorFromString("isIdleAnimationWaitEnabled")
         let setter = NSSelectorFromString("setIdleAnimationWaitEnabled:")
         let valueForKey = NSSelectorFromString("valueForKey:")
@@ -962,9 +968,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 // TASK145_T14_INSERT_END native-long-use-witness
 
     func testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld() throws {
+        try task146ConfigureAnimationIdleDriver()
         func launch(_ phase: String) {
             app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = phase
             app.launch()
+            XCTAssertEqual((app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue, false)
         }
 
         launch("seed")
@@ -1010,6 +1018,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let cacheLaunchStarted = ProcessInfo.processInfo.systemUptime
         app.launchEnvironment["TASK146_B2_LAUNCH_REQUEST_UPTIME"] = String(cacheLaunchStarted)
         app.launch()
+        XCTAssertEqual((app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue, false)
         let catalogRowAppeared = catalogRow.waitForExistence(timeout: 5)
         let automationElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
         let render = app.descendants(matching: .any).matching(identifier: "task146.b2.catalog-render").firstMatch
@@ -1043,6 +1052,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(catalogRowAppeared)
         XCTAssertTrue(app.tabBars.buttons["Database"].isSelected)
         XCTAssertTrue(memoObserved)
+        XCTAssertTrue(validCacheHit, "A missing or missed physical memo cannot qualify valid-cache startup")
         if validCacheHit { XCTAssertLessThanOrEqual(catalogElapsed, 5) }
     }
 
@@ -1280,6 +1290,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     func testR23RealSavedConflictNoOpAdoptionSurvivesReopenAndOrdinarySaveBWithIndependentPriceACK() throws {
+        try task146ConfigureAnimationIdleDriver()
         app.launchEnvironment["TASK145_R4_REVIEW_UI"] = "noop-price"
         app.launchEnvironment["TASK144_LOCAL_AVAILABILITY_OBSERVE_NATIVE_NAME"] = "1"
         app.launch()
@@ -1476,11 +1487,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
                 let upward = target.map { $0.midY > (top + bottom) / 2 } ?? true
                 let distance = min(360, (bottom - top) * 0.6)
-                let y = upward ? bottom - 8 : top + 8
+                // Keep both endpoints in the middle of the current sheet.
+                // The former y820 start was only 24pt from the edge of the
+                // observed 844pt window; the Form also includes that bottom inset.
+                let y = (top + bottom) / 2 + (upward ? distance / 2 : -distance / 2)
                 let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                     dx: frame.midX - window.minX, dy: y - window.minY))
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .slow, thenHoldForDuration: 0.2)
             }
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
             return
@@ -2748,6 +2762,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func runSavedNameRestartScenario(_ scenario: String) throws {
+        if scenario == "post-commit" { try task146ConfigureAnimationIdleDriver() }
         app.launchEnvironment["TASK145_RESTART_UI"] = scenario
         app.launch()
         if task146OriginalAnimationIdleWait != nil {
@@ -3347,6 +3362,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func assertIsolationVisible(_ scenario: String, pending: String, failedUI: Bool) throws {
+        try task146ConfigureAnimationIdleDriver()
         app.tabBars.buttons["Options"].tap()
         var observations: [String] = []
         func require(_ condition: Bool, _ stage: String) throws {
@@ -4917,6 +4933,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     // Adjacent privacy witness uses the same bounded explicit Review reveal.
     func testOptionsWithdrawsQualifiedASummaryWhileBSelectedAndRestoresItOnlyAfterExplicitReturn() throws {
+        try task146ConfigureAnimationIdleDriver()
         app.launchEnvironment["TASK145_SCOPE_SWITCH_UI"] = "cancel-explicit-return"
         app.launch()
         try scopeRequire(app.staticTexts["task145.scope.root-startup-completed"].waitForExistence(timeout: 30),
@@ -6056,7 +6073,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
          "zh": ["库存", "历史", "数据库", "选项"]][language]!
     }
     private func t18Seek(_ element: XCUIElement, stage: String, requiresFullVisibility: Bool = false) throws {
+        var observations: [String] = []
+        defer {
+            let evidence = XCTAttachment(string: observations.joined(separator: "\n"))
+            evidence.name = "T18 bounded native seek geometry " + stage
+            evidence.lifetime = .keepAlways; add(evidence)
+        }
         let fullyVisible = {
+            let captureStarted = ProcessInfo.processInfo.systemUptime
             guard element.exists else { return false }
             let frame = element.frame, window = self.app.frame
             guard [frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy({ $0.isFinite }),
@@ -6066,10 +6090,14 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             if !requiresFullVisibility { return window.intersects(frame) && element.isHittable }
             let top = max(window.minY, self.app.navigationBars.firstMatch.frame.maxY)
             let bottom = min(window.maxY, self.app.tabBars.firstMatch.frame.minY)
-            return window.contains(frame) && frame.minY >= top && frame.maxY <= bottom
-                && element.isHittable
+            let geometry = window.contains(frame) && frame.minY >= top && frame.maxY <= bottom
+            let hit = geometry ? element.isHittable : false
+            if observations.count < 24 {
+                observations.append("capture-start=\(captureStarted); capture-end=\(ProcessInfo.processInfo.systemUptime); target=\(frame); window=\(window); top=\(top); bottom=\(bottom); geometry=\(geometry); hit-queried=\(geometry); hittable=\(hit)")
+            }
+            return geometry && hit
         }
-        for _ in 0..<8 {
+        for gesture in 0..<8 {
             if fullyVisible() { return }
             let window = app.frame
             let top = max(window.minY, app.navigationBars.firstMatch.frame.maxY) + 8
@@ -6097,6 +6125,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
                 .withOffset(CGVector(dx: 0, dy: (top + bottom) / 2))
+            if observations.count < 24 {
+                observations.append("gesture=\(gesture); requested-dy=\(movement); viewport-top=\(top); viewport-bottom=\(bottom); midpoint=\((top + bottom) / 2)")
+            }
             start.press(forDuration: 0.05,
                         thenDragTo: start.withOffset(CGVector(dx: 0, dy: movement)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)

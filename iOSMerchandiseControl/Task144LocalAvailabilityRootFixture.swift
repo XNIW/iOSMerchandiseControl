@@ -1461,11 +1461,17 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                         if independentDomainPhase == .cache {
                             let hits = controller.localBodyPhysicalReuseCountForTesting
                             let reads = controller.localBodyFullReadbackCountForTesting
-                            guard (hits == 1 && reads == 0 && memoWasPresent) || (hits == 0 && reads > 0) else {
+                            // A superseded ownerless worker can finish a physical
+                            // metadata reuse before its cancellation is observed.
+                            // Count only the contract: one or more reuses, no full
+                            // scan, with current owner/generation proof above.
+                            facts.formUnion(["task146.b2.physical-hits.\(hits)",
+                                "task146.b2.full-readbacks.\(reads)",
+                                "task146.b2.memo.present.\(memoWasPresent)"])
+                            guard (hits > 0 && reads == 0 && memoWasPresent) || (hits == 0 && reads > 0) else {
                                 throw SyncStoreGenerationError.activationReadBackFailed
                             }
-                            facts.insert("task146.b2.memo.\(hits == 1 ? "hit" : "miss")")
-                            facts.insert("task146.b2.memo.present.\(memoWasPresent)")
+                            facts.insert("task146.b2.memo.\(hits > 0 ? "hit" : "miss")")
                         } else {
                             facts.insert("task146.b2.\(independentDomainPhase.rawValue).qualified")
                         }
