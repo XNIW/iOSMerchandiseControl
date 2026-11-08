@@ -305,12 +305,14 @@ struct ContentView: View {
         .onAppear {
             #if DEBUG
             if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task144RootObservation.recordCachedCatalogPhase("content-on-appear-entry")
                 NSLog("TASK146_B2_COST39 phase.content-on-appear-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
             }
             #endif
             restoreLocalPresentation()
             #if DEBUG
             if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task144RootObservation.recordCachedCatalogPhase("content-on-appear-return")
                 NSLog("TASK146_B2_COST39 phase.content-on-appear-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
             }
             #endif

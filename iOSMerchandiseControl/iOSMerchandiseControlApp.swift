@@ -25,6 +25,7 @@ struct iOSMerchandiseControlApp: App {
         #if DEBUG
         Task144RootObservation.performanceEntry() // TASK145_PERF first measurable app entry
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("app-init-entry")
             NSLog("TASK146_B2_COST39 phase.app-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         if Self.task141ResetUIStateRequested {
@@ -32,6 +33,7 @@ struct iOSMerchandiseControlApp: App {
         }
         let controlledRoot = Task144LocalAvailabilityRootFixture.current
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("fixture-return")
             NSLog("TASK146_B2_COST39 phase.fixture-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
@@ -104,6 +106,9 @@ struct iOSMerchandiseControlApp: App {
                 localPresentation?.advanceStoreGeneration(presentationID: presentationID)
                 productImageStore?.advanceStoreGeneration(presentationID: presentationID)
             }
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("store-opened")
+            #endif
             // A cached SDK owner is already available before the first SwiftUI
             // appearance. Start the existing guarded reader while that UI lays
             // out; later root requests coalesce or see the same completed proof.
@@ -113,9 +118,15 @@ struct iOSMerchandiseControlApp: App {
                manifest.accountHash == AccountBindingStore.accountHash(for: owner),
                let shop = SelectedShopStore().selectedShop(accountHash: manifest.accountHash),
                shop.shopID == manifest.shopID, shop.localStoreIdentity == manifest.storeIdentity {
+                #if DEBUG
+                Task144RootObservation.recordCachedCatalogPhase("early-cache-start")
+                #endif
                 controller.preferLocalReadDomain(initialTab == 2 ? .sessions : .catalog)
                 controller.startLocalBodyQualification(ownerUserID: owner)
             }
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("early-cache-return")
+            #endif
             if ordinaryRoot, controller.loadFailureCode == nil {
                 SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
             }
@@ -128,6 +139,7 @@ struct iOSMerchandiseControlApp: App {
         #if DEBUG
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             controlledRoot?.prepareIfNeeded()
+            Task144RootObservation.recordCachedCatalogPhase("app-init-return")
             NSLog("TASK146_B2_COST39 phase.app-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         if controlledRoot != nil { return }

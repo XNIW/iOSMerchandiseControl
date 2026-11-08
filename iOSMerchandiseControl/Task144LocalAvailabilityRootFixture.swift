@@ -59,6 +59,17 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private var lastByKind: [String: String] = [:]
     private var dropped = 0
     private var cachedCatalogRenderedAt: TimeInterval?
+    private var cachedCatalogPhases: [String: TimeInterval] = [:]
+
+    /// B2-only RAM facts, carried by its existing render sample. No publication,
+    /// model access or file/log dependency is needed to preserve these phases.
+    static func recordCachedCatalogPhase(_ phase: String) {
+        guard ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        shared.lock.lock(); defer { shared.lock.unlock() }
+        guard shared.cachedCatalogPhases.count < 32, shared.cachedCatalogPhases[phase] == nil else { return }
+        shared.cachedCatalogPhases[phase] = now
+    }
 
     static func recordCachedCatalogRender() {
         guard ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" else { return }
@@ -76,7 +87,8 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
               rendered >= start, start > 0,
               let namespace = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"] else { return "{}" }
         let value: [String: Any] = ["requestUptime": start, "renderUptime": rendered,
-            "namespace": namespace, "pid": ProcessInfo.processInfo.processIdentifier]
+            "namespace": namespace, "pid": ProcessInfo.processInfo.processIdentifier,
+            "phases": shared.cachedCatalogPhases]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
         return String(decoding: data, as: UTF8.self)
     }
@@ -627,6 +639,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
 
     private init(runID: UUID) throws {
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("fixture-init-entry")
             NSLog("TASK146_B2_COST39 phase.fixture-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         namespace = runID
@@ -878,6 +891,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             storeGenerationController: controller)
 
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("auth-setup-entry")
             NSLog("TASK146_B2_COST39 phase.auth-setup-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         let storage = Task144ControlledAuthStorage()
@@ -899,6 +913,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let authService = SupabaseAuthService(provider: provider)
         authViewModel = SupabaseAuthViewModel(authService: authService)
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("auth-setup-return")
             NSLog("TASK146_B2_COST39 phase.auth-setup-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         if provesTransientAuthStorageFailure {
@@ -1129,6 +1144,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         }
 // TASK145_SCOPE_SWITCH_INSERT_END configure-C-only
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("fixture-init-return")
             NSLog("TASK146_B2_COST39 phase.fixture-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
     }
@@ -1330,6 +1346,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let cacheMemoWasPresent = independentDomainPhase == .cache
             && FileManager.default.fileExists(atPath: ownedRepository.physicalBodyProofURL.path)
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("prepare-admission")
             NSLog("TASK146_B2_COST39 phase.prepare-admission uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         let actualCategory = UIApplication.shared.preferredContentSizeCategory
@@ -1363,6 +1380,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             hasStarted = true
             isPreparedForRoot = true
             if independentDomainPhase == .cache {
+                Task144RootObservation.recordCachedCatalogPhase("root-admitted")
                 NSLog("TASK146_B2_COST39 phase.root-admitted uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
             } else {
                 facts.insert("task144.r23.persisted-root-mounted")
@@ -1371,6 +1389,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         // Establish the fixture's real persisted baseline before mounting the
         // business root. Its normal startup must not race this setup recovery.
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("prepare-task-submit")
             NSLog("TASK146_B2_COST39 phase.prepare-task-submit uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         // Preparation admits the foreground root, including cache reopen from
@@ -1378,16 +1397,19 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         preparationTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task144RootObservation.recordCachedCatalogPhase("prepare-task-entry")
                 NSLog("TASK146_B2_COST39 phase.prepare-task-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
             }
             defer {
                 if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    Task144RootObservation.recordCachedCatalogPhase("prepare-task-return")
                     NSLog("TASK146_B2_COST39 phase.prepare-task-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
                 }
             }
             var setupStage = SetupStage.shopDiscovery
             do {
                 if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    Task144RootObservation.recordCachedCatalogPhase("auth-wait-entry")
                     NSLog("TASK146_B2_COST39 phase.auth-wait-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
                 }
                 for _ in 0..<200 {
@@ -1398,6 +1420,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 guard authViewModel.isSignedIn,
                       authViewModel.localMutationOwnerUserID == owner else { throw URLError(.timedOut) }
                 if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                    Task144RootObservation.recordCachedCatalogPhase("auth-wait-ready")
                     NSLog("TASK146_B2_COST39 phase.auth-wait-ready uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
                 }
                 if independentDomainPhase != .cache {
@@ -1442,6 +1465,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                                 }
                                 try await Task.sleep(for: .milliseconds(50))
                             }
+                            Task144RootObservation.recordCachedCatalogPhase("owner-qualification-observed")
                             NSLog("TASK146_B2_COST39 phase.owner-qualification-observed uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
                         } else {
                             controller.startLocalBodyQualification(ownerUserID: owner)

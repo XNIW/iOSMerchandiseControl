@@ -1509,13 +1509,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 if inside, hit, ProcessInfo.processInfo.systemUptime < deadline { return }
                 guard drags < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
                 let upward = target.map { $0.midY > (top + bottom) / 2 } ?? true
-                let distance = min(360, (bottom - top) * 0.6)
+                let distance = (bottom - top) * 0.85
                 let y = (top + bottom) / 2 + (upward ? distance / 2 : -distance / 2)
                 let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                     dx: frame.midX - window.minX, dy: y - window.minY))
                 drags += 1
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .slow, thenHoldForDuration: 0.2)
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
             }
             emit()
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
@@ -3486,10 +3486,18 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let tab = app.tabBars.buttons[title]
             tab.tap()
             let deadline = ProcessInfo.processInfo.systemUptime + 5
-            let selected = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                self.isolationTabIsSelected(title) && ProcessInfo.processInfo.systemUptime <= deadline
-            }, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed)
+            var selected = false
+            // The same direct bounded admission used above avoids spending a
+            // predicate polling interval before the first native observation.
+            while ProcessInfo.processInfo.systemUptime < deadline {
+                if isolationTabIsSelected(title, observe: {
+                    if observations.count < 32 { observations.append("return-tab=\(title); " + $0) }
+                }) {
+                    selected = ProcessInfo.processInfo.systemUptime <= deadline
+                    break
+                }
+            }
+            XCTAssertTrue(selected, "T11 return tab must be natively selected within the original5s")
         }
         let search = app.textFields.matching(NSPredicate(format: "identifier == %@ AND label == %@",
             "task140.database.root", "Search by barcode, name, or code")).firstMatch
@@ -4776,6 +4784,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 let decisionDeadline = ProcessInfo.processInfo.systemUptime + 10
                 var reviewTapped = false
                 var drags = 0
+                var decisionGeometry: [String] = []
+                defer {
+                    let attachment = XCTAttachment(string: decisionGeometry.joined(separator: "\n"))
+                    attachment.name = "C3 bounded real-decision geometry"
+                    attachment.lifetime = .keepAlways; add(attachment)
+                }
                 func checked<T>(_ operation: () -> T) throws -> T {
                     let failureStage = stage + (reviewTapped ? "-real-dialog" : "-Review-reachable")
                     try scopeRequire(ProcessInfo.processInfo.systemUptime < decisionDeadline,
@@ -4808,6 +4822,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             deadline: decisionDeadline, collectContentAnchors: false, downstream: downstream)
                         let viewport = observation.viewport
                         let reviewFrame = observation.decisionReviewFrame
+                        if decisionGeometry.count < 16 {
+                            decisionGeometry.append("uptime=\(ProcessInfo.processInfo.systemUptime); deadline=\(decisionDeadline); drags=\(drags); viewport=\(viewport); review=\(String(describing: reviewFrame))")
+                        }
                         if let frame = reviewFrame {
                             try scopeRequire([frame.minX, frame.minY, frame.maxX, frame.maxY].allSatisfy { $0.isFinite }
                                 && !frame.isNull && !frame.isInfinite && frame.width > 0 && frame.height > 0,
@@ -4835,8 +4852,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                                 upward = offsets[0] == "0%"
                             }
                             drags += 1
+                            // Decision reveal has no consecutive-content overlap
+                            // requirement. A longer in-viewport pan reaches the
+                            // retained Cloud offset before the same10s deadline.
+                            let halfStep: CGFloat
+                            if let frame = reviewFrame {
+                                halfStep = min(0.45, max(12 / viewport.height,
+                                    abs(viewport.midY - frame.midY) / viewport.height / 2))
+                            } else { halfStep = 0.45 }
                             try checked({ c3OptionsDrag(form, viewport: viewport,
-                                applicationOrigin: observation.applicationOrigin, upward: upward, velocity: .fast) })
+                                applicationOrigin: observation.applicationOrigin, upward: upward,
+                                halfStepFraction: halfStep, velocity: .fast) })
                         }
                     }
                 }
@@ -5360,17 +5386,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
-        // Preserve global cardinality and one owning window, then capture that
-        // window once. Application-level metadata and unrelated windows are not
-        // part of the Options viewport whose coherent frames are required below.
-        try scopeRequire(app.collectionViews.count == 1 && app.navigationBars.count <= 1 && app.tabBars.count <= 1,
-            stage: stage + "-native-viewport-cardinality", downstream: downstream)
-        let owners = app.windows.containing(.navigationBar, identifier: "Options")
-            .containing(.collectionView, identifier: nil).containing(.tabBar, identifier: nil)
-        try scopeRequire(owners.count == 1 && ProcessInfo.processInfo.systemUptime < deadline,
-            stage: stage + "-unique-native-Options-window", downstream: downstream)
+        // One coherent global capture preserves the original cardinality gates.
+        // Separate global counts plus owning-window queries added native round
+        // trips to every decision viewport without reducing that window's data.
         let captureStarted = ProcessInfo.processInfo.systemUptime
-        let captureResult = Result(catching: { try owners.element(boundBy: 0).snapshot() })
+        let captureResult = Result(catching: { try app.snapshot() })
         let captureFinished = ProcessInfo.processInfo.systemUptime
         let root: XCUIElementSnapshot
         switch captureResult {
