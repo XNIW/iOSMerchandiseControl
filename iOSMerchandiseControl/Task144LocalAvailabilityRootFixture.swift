@@ -4021,7 +4021,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     lazy var catalogConflictResolutionService = CatalogConflictResolutionService(remote: catalogRemote)
     var r4Ledger: String { r4Control?.ledger ?? "" }
     private var r4WriterObservation: (scope: Task126VerifiedOwnerStoreScope,
-        generation: UUID, presentation: UUID, started: TimeInterval, sampled: TimeInterval,
+        generation: UUID, presentation: String, started: TimeInterval, sampled: TimeInterval,
         running: Bool, suspended: Bool)?
 
     // The existing UIKit AX getter calls this on demand. No ObservableObject
@@ -4036,7 +4036,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let observation: [String: Any] = [
             "namespace": namespace.uuidString.lowercased(), "pid": ProcessInfo.processInfo.processIdentifier,
             "generationID": sample.generation.uuidString.lowercased(),
-            "presentationID": sample.presentation.uuidString.lowercased(),
+            "presentationID": sample.presentation,
             "leaseGeneration": String(sample.scope.leaseGeneration), "scopeCurrentAtRead": current,
             "startedUptime": sample.started, "sampledUptime": sample.sampled,
             "isRunning": sample.running, "isSuspended": sample.suspended]
