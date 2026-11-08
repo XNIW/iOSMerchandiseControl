@@ -713,7 +713,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try t14Require(matches.count == 1, stage + "-unique-passive-" + context + "-observer")
         // Read the JSON through the native getter. The hierarchy snapshot supplies
         // observer uniqueness, keyboard geometry and modal presence.
-        let text = try XCTUnwrap(app.otherElements[observerIdentifier].element.value as? String)
+        let observer = app.otherElements.matching(NSPredicate(format: "identifier == %@", observerIdentifier)).element
+        let text = try XCTUnwrap(observer.value as? String)
         try t14Require(text.utf8.count <= 8192, stage + "-observer-byte-cap")
         let keyboardFrame: [Double]
         if let frame = nodes.first(where: { $0.elementType == .keyboard })?.frame {

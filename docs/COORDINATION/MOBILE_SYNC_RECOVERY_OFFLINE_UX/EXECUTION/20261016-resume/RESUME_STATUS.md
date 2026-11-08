@@ -1,5 +1,15 @@
 # TASK-146 — Registro corrente pubblicato
 
+## Checkpoint operativo TASK-146 — 2026-11-08T04:49Z
+
+### Execution — errore API T14 corretto e cancellazione controllata87d8 — 2026-11-08T04:49Z
+
+- **✅ BUILD ESEGUITA, FAIL87d8.** Run42447514533, Core job128629457139. La query T14 usava .element dopo un subscript che restituisce già XCUIElement. Ho introdotto questo errore nel lettore, e parse e review statiche precedenti non lo avevano rilevato. Primo log conservato, errore alla riga716 e successiva inferenza keepAlways a cascata. Il coverage Core osserva0 dei32 test, tutti NOT_RUN. ROOT ha cancellato la run non compilabile per liberare i runner, conclusione CANCELLED con tre job build FAIL e cinque CANCELLED. Gli esiti41c9 restano separati. [Errore e metadata](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-current-87d8-hosted.ROOT/core.ROOT/BUILD-FAIL-SHARD-ACQUISITION.ROOT.json).
+- **✅ STATIC/API ESEGUITI, PASS circoscritto.** Il lettore ora crea una XCUIElementQuery con predicato identifier esatto, usa .element su quella query e legge .value dal singolo elemento. Proiezione univoca della snapshot, JSON completo, tre round-trip stimati, tutte deadline e guardie conservate. UI postimage7be5d2796e58a78b51eb2cb8928e64b481cd84a2d2a37eacde8dc9c26c474452. Peer review esatta PASS. Un micro-probe SDK27.2 qualifica semanticamente Query/Element con exit0 e respinge la vecchia API con exit1. Il primo probe con XCTUnwrap manca dell'overlay di progetto e conserva il proprio FAIL di configurazione. La prova corretta usa un ritorno opzionale diretto e qualifica soltanto le API Query/Element. Build del progetto e runtime successivi restano NOT_RUN. [Probe e limiti](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-current-87d8-hosted.ROOT/T14-QUERY-API.ROOT/RESULT.ROOT.json) · [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-current-87d8-hosted.ROOT/continuation.ROOT_DELEGATED/T14-QUERY-API.REVIEW.ROOT_DELEGATED.json).
+- **Postflight e prossimo batch.** Tutti job remoti87d8 terminali, micro-probe reaped, cache moduli riusata, nessuna codegen, build completa o avvio Simulator locale. Preflight probe30933540864B, forecast300MB più150MB concorrenti e riserva30,3GB rispettati, postflight30933311488B. Prodotti canonici e dati offline mantenuti. Il successore cambia soltanto il lettore e questo tracking rispetto87d8, tutte altre correzioni e fonti restano pinnate. Nuovi SDK voluminosi ancora non ammessi, qualifica cleanup confinata ai due archivi già nominati, senza rimozioni autonome dei delegati.
+
+**Handoff operativo — ACTIVE / EXECUTION.** ROOT pubblica la correzione API sul ramo PR29 esistente e qualifica nuova CI/runtime. Poi integra iOS e verifica main prima del raccordo REVIEW. Offline OS iOS DEFERRED_USER e campagne estese DIFFERITE, DONE riservato all'utente.
+
 ## Checkpoint operativo TASK-146 — 2026-11-08T04:35Z
 
 ### Execution — esito41c9 completo e successore corretto pronto alla CI — 2026-11-08T04:35Z
