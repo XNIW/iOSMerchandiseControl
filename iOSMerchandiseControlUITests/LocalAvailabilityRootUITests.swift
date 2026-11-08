@@ -718,14 +718,30 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         t14ReadCount += 1
         let context = t14EditorOpen ? "editor" : "root"
         let observerIdentifier = "task145.t14.native-observation." + context
-        let nodes = try c3OptionsSnapshotNodes(try app.snapshot(), stage: "T14-" + stage, downstream: [])
+        let captureStarted = ProcessInfo.processInfo.systemUptime
+        let snapshot = try app.snapshot()
+        let captureFinished = ProcessInfo.processInfo.systemUptime
+        let nodes = try c3OptionsSnapshotNodes(snapshot, stage: "T14-" + stage, downstream: [])
         let matches = nodes.filter { $0.elementType == .other
             && $0.identifier == observerIdentifier }
         try t14Require(matches.count == 1, stage + "-unique-passive-" + context + "-observer")
-        // Read the JSON through the native getter. The hierarchy snapshot supplies
-        // observer uniqueness, keyboard geometry and modal presence.
-        let observer = app.otherElements.matching(NSPredicate(format: "identifier == %@", observerIdentifier)).element
-        let text = try XCTUnwrap(observer.value as? String)
+        // A complete SDK snapshot evaluates the actual native AX getter. Reuse
+        // its value only when the producer clock proves it was made DURING this
+        // capture, with the unique observer and keyboard in the same hierarchy.
+        // A cached or unqualified value retains the original direct getter path.
+        let text: String
+        let valueSource: String
+        if let capturedText = matches[0].rawValue as? String, capturedText.utf8.count <= 8192,
+           let captured = (try? JSONSerialization.jsonObject(with: Data(capturedText.utf8))) as? [String: Any],
+           let produced = (captured["uptime"] as? NSNumber)?.doubleValue,
+           produced.isFinite, produced >= captureStarted, produced <= captureFinished {
+            text = capturedText
+            valueSource = "native-getter-during-current-snapshot"
+        } else {
+            let observer = app.otherElements.matching(NSPredicate(format: "identifier == %@", observerIdentifier)).element
+            text = try XCTUnwrap(observer.value as? String)
+            valueSource = "direct-native-getter"
+        }
         try t14Require(text.utf8.count <= 8192, stage + "-observer-byte-cap")
         let keyboardFrame: [Double]
         if let frame = nodes.first(where: { $0.elementType == .keyboard })?.frame {
@@ -733,7 +749,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         } else {
             keyboardFrame = []
         }
-        let attachment = XCTAttachment(string: "stage=\(stage); runner-uptime=\(ProcessInfo.processInfo.systemUptime); runner-UTC=\(Date().timeIntervalSince1970); runner-pid=\(ProcessInfo.processInfo.processIdentifier); keyboard-frame-from-public-snapshot=\(keyboardFrame); \(text)")
+        let attachment = XCTAttachment(string: "stage=\(stage); capture-start=\(captureStarted); capture-end=\(captureFinished); value-source=\(valueSource); runner-uptime=\(ProcessInfo.processInfo.systemUptime); runner-UTC=\(Date().timeIntervalSince1970); runner-pid=\(ProcessInfo.processInfo.processIdentifier); keyboard-frame-from-public-snapshot=\(keyboardFrame); \(text)")
         attachment.name = "T14 passive observation \(t14ReadCount) \(stage)"
         attachment.lifetime = .keepAlways
         add(attachment)
@@ -4086,12 +4102,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let tapAdmission = ProcessInfo.processInfo.systemUptime
             guard tapAdmission < deadline else { return false }
             tapStarted = tapAdmission
-            // The two coherent snapshots and current live hit check already
-            // admit this unique label. Use its qualified center for the sole
-            // native gesture, without a second element lookup or implicit scroll.
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
-                .withOffset(CGVector(dx: title.midX - root.frame.minX,
-                                     dy: title.midY - root.frame.minY)).tap()
+            // Keep the same unique, stable and currently hittable native label
+            // as the SDK gesture target. Reconstructing an application-relative
+            // coordinate did not deliver the editor action on the hosted target.
+            // This remains one real tap; the actual Name field must still appear.
+            row.tap()
             let finished = ProcessInfo.processInfo.systemUptime
             tapFinished = finished
             // Five seconds bound admission through the last pre-tap guard.

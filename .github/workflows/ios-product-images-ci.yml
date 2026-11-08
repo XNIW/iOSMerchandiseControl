@@ -240,6 +240,7 @@ jobs:
         timeout-minutes: 5
         env:
           XCTEST_OUTCOME: ${{ steps.xctest.outcome }}
+          TASK146_CI_SHARD: ${{ matrix.shard }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, selectors, signal, subprocess, sys, time
@@ -366,7 +367,7 @@ jobs:
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
           export('toolchain.txt', ['xcodebuild', '-version'])
-          if os.environ.get('TASK146_FOCUSED_TESTS'):
+          if os.environ.get('TASK146_FOCUSED_TESTS') or os.environ.get('TASK146_CI_SHARD') == 'ui-core':
               # Diagnostic only, inside the existing byte/time-limited exporter.
               # These public fields are closed qualification timings, not Auth/body logs.
               export('runtime-cost.log', ['xcrun', 'simctl', 'spawn', os.environ['DEVICE_ID'],
