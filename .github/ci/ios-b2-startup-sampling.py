@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One early MainActor CPU observation of B2; diagnostic only, never acceptance."""
+"""Owned kernel stackshots with deferred offline processing; diagnostic only."""
 import datetime
 import hashlib
 import json
@@ -19,10 +19,11 @@ SELECTOR = "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndepe
 assert os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
 assert json.loads(os.environ["TASK146_FOCUSED_TESTS"]) == [SELECTOR]
 assert os.environ.get("TASK144_A_CAMPAIGN", "false").lower() == "false"
-assert sys.argv[1] == "--" and len(sys.argv) > 2
+probe_only = sys.argv[1:] == ["--probe-only"]
+assert probe_only or (sys.argv[1] == "--" and len(sys.argv) > 2)
 root = Path(os.environ["RUNNER_TEMP"]).resolve()
 output = root / "task146-b2-sampling"
-output.mkdir(exist_ok=False)
+output.mkdir(exist_ok=not probe_only)
 device = os.environ["DEVICE_ID"]
 observations = {}
 lock = threading.Lock()
@@ -34,7 +35,7 @@ marker_rows = []
 errors = []
 # One bounded region avoids concurrent pre-symbolication of the same process.
 # Existing markers locate the requested queue/render intervals inside the trace.
-phases = {"app-init-return": ("mainactor-admission-region", 1)}
+phases = {"app-init-entry": ("mainactor-admission-region", 5)}
 # Reuse the existing kernel birth-identity helper, also used by local runner
 # custody. A unique constant in the log predicate identifies only this stream.
 birth = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")["birth"]
@@ -75,6 +76,52 @@ def stop_owned_marker_stream():
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+def record_command(pid, duration):
+    return ["sudo", "-n", "/usr/sbin/spindump", str(pid), str(duration), "10",
+            "-onlyTarget", "-noSymbolicate", "-noProcessingWhileSampling", "-noIPC",
+            "-noText", "-noFile", "-timelimit", str(duration + 10)]
+
+def offline_report(raw, destination):
+    # No inspectLiveSystem: the target is never queried for live symbol lookup.
+    with destination.with_suffix(".stderr.txt").open("xb") as error:
+        result = subprocess.run(["/usr/sbin/spindump", "-i", str(raw), "-o", str(destination),
+            "-noBinary", "-onlyTarget", "-noIPC", "-aggregateCallTreesByThread",
+            "-timestampsInCallTrees", "machabssec"], stdout=subprocess.DEVNULL,
+            stderr=error, timeout=90)
+    return result.returncode
+
+def self_probe():
+    probe = output / "self-probe"
+    probe.mkdir(exist_ok=False)
+    child = subprocess.Popen([sys.executable, "-c",
+        "import time\ndeadline=time.monotonic()+35\nx=1.0\nwhile time.monotonic()<deadline:x=(x+1.0001)**0.5"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    identity = birth(child.pid)
+    raw, report = probe / "self.raw.spindump", probe / "self.symbolicated.txt"
+    record_exit, reparse_exit = None, None
+    try:
+        assert child.poll() is None and identity is not None
+        with raw.open("xb") as out, (probe / "record.stderr.txt").open("xb") as error:
+            record_exit = subprocess.run(record_command(child.pid, 1), stdout=out,
+                stderr=error, timeout=20).returncode
+    finally:
+        if child.poll() is None:
+            child.terminate()
+        child.wait(timeout=5)
+    # Decoding after target death proves this path does not require live access.
+    if record_exit == 0 and 0 < raw.stat().st_size <= 16000000:
+        reparse_exit = offline_report(raw, report)
+    proof = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
+        "scriptSHA256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "pid": child.pid, "birth": identity, "targetExitedBeforeReparse": child.poll() is not None,
+        "recordExit": record_exit, "offlineExit": reparse_exit,
+        "rawBytes": raw.stat().st_size, "reportBytes": report.stat().st_size if report.exists() else 0,
+        "scope": "OWNED_PYTHON_PROBE_ONLY_NOT_APP_ACCEPTANCE"}
+    proof["status"] = "PASS" if record_exit == reparse_exit == 0 and proof["reportBytes"] > 0 else "FAIL"
+    (probe / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
+    print(json.dumps(proof), flush=True)
+    return 0 if proof["status"] == "PASS" else 87
+
 def cpu_observation(record):
     message = record.get("eventMessage", "")
     match = re.search(r"TASK146_B2_COST39 phase\.([a-z-]+) uptime_ns\.(\d+)", message)
@@ -94,23 +141,25 @@ def cpu_observation(record):
         if observations and any(row["pid"] != pid for row in observations.values()):
             errors.append("cache_process_changed_between_markers")
             return
-        command = subprocess.check_output(["ps", "-p", str(pid), "-o", "comm="], text=True, timeout=5).strip()
-        if Path(command).name != "iOSMerchandiseControl":
+        fields = subprocess.check_output(["ps", "-p", str(pid), "-o", "uid=,comm="], text=True, timeout=5).strip().split(None, 1)
+        target_birth = birth(pid)
+        if len(fields) != 2 or int(fields[0]) != os.getuid() or target_birth is None or Path(fields[1]).name != "iOSMerchandiseControl":
             errors.append("marker_process_identity_mismatch")
             return
         label, duration = phases[phase]
         stream_receipt = stop_owned_marker_stream()
         if stream_receipt is None:
             return
-        raw = output / (label + ".sample.txt")
+        raw = output / (label + ".raw.spindump")
         stderr = output / (label + ".stderr.txt")
+        assert birth(pid) == target_birth, "target birth changed before kernel sampler"
         started = time.monotonic_ns()
-        with stderr.open("xb") as err:
-            process = subprocess.Popen(
-                ["/usr/bin/sample", str(pid), str(duration), "1", "-file", str(raw)],
-                stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
+        # User-owned stdout file; root receives only this already-open descriptor.
+        with raw.open("xb") as data, stderr.open("xb") as err:
+            process = subprocess.Popen(record_command(pid, duration), stdout=data,
+                stderr=err, start_new_session=True)
         observations[phase] = {"pid": pid, "phase": phase, "label": label,
-            "durationSeconds": duration, "samplingIntervalMilliseconds": 1,
+            "durationSeconds": duration, "samplingIntervalMilliseconds": 10, "targetBirth": target_birth,
             "markerStream": stream_receipt,
             "markerUptimeNs": int(uptime), "requestedAtMonotonicNs": started,
             "deliveryDelayNs": started - int(uptime), "raw": raw, "stderr": stderr,
@@ -154,6 +203,14 @@ def stop_native(signum, frame):
 for sig in (signal.SIGINT, signal.SIGTERM):
     signal.signal(sig, stop_native)
 
+if probe_only:
+    raise SystemExit(self_probe())
+probe = json.loads((output / "self-probe/proof.json").read_text())
+assert probe["status"] == "PASS" and probe["head"] == os.environ["GITHUB_SHA"]
+assert probe["scriptSHA256"] == hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+assert probe["targetExitedBeforeReparse"]
+assert not (output / "report.json").exists(), "refuse mixed diagnostic executions"
+
 code = 97
 thread = None
 try:
@@ -194,15 +251,19 @@ finally:
         row.update(exitCode=result, finishedAtUTC=now(), rawPath=raw.name,
                    stderrPath=stderr.name, rawBytes=raw.stat().st_size if raw.exists() else 0)
         if raw.exists():
-            with raw.open("rb") as source:
-                data = source.read(16000001)
-            row["rawReadComplete"] = len(data) <= 16000000
-            text = data[:16000000].decode("utf-8", errors="replace")
+            row["rawReadComplete"] = 0 < raw.stat().st_size <= 16000000
+            row["rawSHA256"] = hashlib.sha256(raw.read_bytes()).hexdigest() if row["rawReadComplete"] else None
+            symbolic = output / (row["label"] + ".symbolicated.txt")
+            row["offlineExit"] = offline_report(raw, symbolic) if result == 0 and row["rawReadComplete"] else None
+            row["offlinePath"] = symbolic.name
+            data = symbolic.read_bytes() if symbolic.exists() and symbolic.stat().st_size <= 2000000 else b""
+            row["offlineComplete"] = bool(data) and row["offlineExit"] == 0
+            text = data.decode("utf-8", errors="replace")
             lines = text.splitlines()
             main = next((i for i, line in enumerate(lines) if "com.apple.main-thread" in line), None)
             if main is not None:
                 end = next((i for i in range(main + 1, len(lines))
-                            if re.match(r"^\s+\d+\s+Thread_", lines[i])), len(lines))
+                            if re.match(r"^\s*(?:\d+\s+Thread_|Thread(?:\s|_))", lines[i])), len(lines))
                 selected = "\n".join(lines[:min(main, 35)] + lines[main:end]) + "\n"
                 row["projectionScope"] = "HEADER_AND_MAIN_THREAD"
             else:
@@ -217,7 +278,8 @@ finally:
     report = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION",
         "nativeExit": code, "observations": rows, "markers": marker_rows, "errors": errors,
-        "symbolInformation": "sample reads symbols after the bounded sampling interval; mayDie omitted",
+        "symbolInformation": "Kernel onlyTarget stackshots, noSymbolicate/noProcessingWhileSampling/noIPC during capture; separate offline -i reparse after recorder exit, never inspectLiveSystem",
+        "selfProbe": probe,
         "collectorFinalizationLimitSeconds": 120,
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),
         "interpretation": "Samples include profiler/OS overhead. Compare marker and request clocks; do not replace the original5s verdict. The startup region is diagnostic only. Use actual sample timestamps and recorded markers; no exclusive interval attribution.",
@@ -225,7 +287,7 @@ finally:
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
         row["exitCode"] == 0 and row.get("markerStream", {}).get("terminatedBeforeSampling")
-        and row.get("rawReadComplete") and row.get("projectionComplete")
+        and row.get("rawReadComplete") and row.get("offlineComplete") and row.get("projectionComplete")
         and row.get("projectionScope") == "HEADER_AND_MAIN_THREAD" for row in rows)
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"samplingScope": report["scope"], "markers": len(rows),

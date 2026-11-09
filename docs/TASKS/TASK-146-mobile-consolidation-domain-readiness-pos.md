@@ -6,11 +6,11 @@
 |---|---|
 | Task ID / namespace | TASK-146 / iOSMerchandiseControl |
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
-| Stato globale / task | ACTIVE / BLOCKED |
-| Fase attuale | **EXECUTION** (ultima fase; gate CI esterno sospeso) |
-| Esito documentale | BLOCKED_EXTERNAL_CI — disservizio Actions; candidato93 non eseguito, Android integrato, offline OS iOS differito |
+| Stato globale / task | ACTIVE / ACTIVE |
+| Fase attuale | **EXECUTION** |
+| Esito documentale | EXECUTION_RIPRESA — Actions operativo, candidato93 in qualifica; integrazione iOS ancora aperta |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **GitHub Actions** ripristino del servizio; poi **CODEX ROOT** stesso candidato e gate, senza nuovo planning |
+| Responsabile della prossima azione | **CODEX ROOT**, stesso candidato B2, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
@@ -20,6 +20,20 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Inline respinto; stackshot kernel con elaborazione offline — 2026-11-09T20:10:21.350416+00:00
+
+**✅ BUILD/SIM ESEGUITI93ee/run42683489917: FAIL8,838019s**, memo/physicalreuse validi/zero scan. Appentry2,837769s; worker174,64ms, fine-worker→MainActor1,709016s, autorità288,85ms, pub→riga3,311134s, getterDatabase76,17ms. Intero B2 attraversato, soli5s finali FAIL. Nessun beneficio pertinente per inline: ContentView ripristinato byte-esattoe358/AppTree12645098. La prima query esplicita catalogo avviene DOPO il render fisico; non spiega questi intervalli. Il PID della precedente trace è sullo stessoUUID selezionato e UIparallelizableNO: nessuna variante clone/scheduling giustificata. [Causale/postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-database-title-mode-restored.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Shutdown/0booted,790435B acquisiti; solo41KB manifestSDK, nessun prodotto93 scaricato/installato. WarningSDK osservati stessi8distinti di e358 sul medesimo26.6ARM, nessun nuovo diagnostico; non è qualifica warning dell'intera matrice.
+
+**✅ STATIC ESEGUITO; meccanismo locale NON ESEGUIBILE, kernel/app NOT_RUN.** Probe42270c51 su un solo Python figlio proprio fermato da sudo-n prima del sampler (password richiesta), figlio terminato/0rawbyte. Non è una failure del kernel collector e non richiede nuova autorizzazione utente. Runner macOS hosted hanno sudo senza password secondo documentazione ufficiale. Stesso helperCI opt-in/exactsingletonB2, nessuna dipendenza: preflight primaSDK prova1s solo sul figlio proprio, poi decodifica DOPO la sua morte. L'app usa uno stackshot kernel5s/10ms sul SOLOPID con UID/birth e streamlog proprio già chiuso; noSymbolicate/noProcessingWhileSampling/noIPC durante raccolta; riparsing offline da file SENZAinspectLiveSystem. Serve a evitare l'interferenza di simbolicazione dyld osservata nei precedenti sample; nessuna latenza profilata è accettazione5s. Il preflight deve PASS prima di compilare; fallisce chiuso se ABI/formato/privilegi non disponibili. [Probe locale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-stackshot.ROOT/SELF.mechanism.json).
+
+Registro ipotesi scartate: yield fuori intervallo(e358), WMO timeoutSDK, toolbar senza beneficio(a770), hostIntel senza beneficio(290f), titoloinline senza beneficio(93). Nessuna ripetizione di quelle varianti. Cause CPU ancora da distinguere mediante questa sola raccolta kernel con elaborazione differita; niente patch applicativa indovinata. Compiler/test/T0/5s/cache/autorità e2101 selettori invariati; produzione ora esattae358. C3/T11, Android/atomicità/live/POS conservati nel loro scope, offlinefisico16/statistiche differiti. Handoff ACTIVE/EXECUTION: prova preflight/traccia, fix solo sulla causa osservata, B2 non profilato, ordinario con interazione utile, composizione/full8/review/PR29/main/PR28 fino alla chiusura.
+
+### Execution — Actions ripristinato; ripresa stesso candidato — 2026-11-09T19:27:14.968187+00:00
+
+Utente conferma ripresa dal checkpoint8511a45f fino a review/integrazione/DONE effettivi. Stato ufficiale verificato: Actions operativo da18:43:24UTC, ora nessun incidente aperto. Due run42671863132/42672399126 restano BUILD/SIM NOT_RUN; nessuna riattribuzione. Ripresa sullo STESSO93ee7d7a/tagcodex/task146-b2-database-title-mode, AppTreee1bb642f36f2100820cbfcd69a611930660eb6b1. [Ammissione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-database-title-mode-restored.ROOT/RESUMPTION-ADMISSION.ROOT.json). Un B2 intero con T0 prima lancio/5s/O/assertDebug/cache/autorità originali, CPUoff, export ordinario predisposto. Nessun altro esperimento yield/toolbar/Intel o nuova matrice prima dell'esito.
+
+TASK146 ACTIVE/EXECUTION, CODEX ROOT. L'ordinario finale comprende ora anche un'interazione utile reale, distinta dalle sole disponibilità visive e358. Successivi: regressioni pertinenti, composizione stabile/full2101(2042PASS/43skip/16differiti), review/PR29/mainCI, recupero e chiusuraPR28. Android/atomica/live/cancellazioni/POS acquisiti salvo impatto concreto; QCOW2 protetti e differimenti invariati. Nessun nuovo arresto al solo checkpoint documentale.
 
 ### Execution — Blocco esterno GitHub Actions; checkpoint pubblicato — 2026-11-09T18:26:27.106921+00:00
 
