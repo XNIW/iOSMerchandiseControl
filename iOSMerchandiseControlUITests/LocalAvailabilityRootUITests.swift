@@ -4856,16 +4856,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     return result
                 }
                 let review = app.buttons["Review"].firstMatch
-                let replace = app.alerts.buttons["Replace with cloud data"]
+                // A single native containment query proves both alternatives
+                // belong to the same real dialog. Keep still needs a live hit point.
+                let decisionDialogs = app.alerts
+                    .containing(.button, identifier: "Keep local data")
+                    .containing(.button, identifier: "Replace with cloud data")
                 let forms = app.collectionViews
                 try scopeRequire(try checked({ forms.count == 1 }),
                     stage: stage + "-unique-Options-Form", downstream: downstream)
                 let form = forms.element(boundBy: 0)
                 while ProcessInfo.processInfo.systemUptime < decisionDeadline {
-                    if try checked({ keep.exists }) {
+                    if try checked({ decisionDialogs.count == 1 }) {
                         let keepHittable = try checked({ keep.isHittable })
-                        let replaceExists = try checked({ replace.exists })
-                        if keepHittable && replaceExists {
+                        if keepHittable {
                             try scopeRequire(ProcessInfo.processInfo.systemUptime < decisionDeadline,
                                 stage: stage + "-real-dialog", downstream: downstream)
                             return
@@ -4898,7 +4901,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                             if let frame = reviewFrame {
                                 upward = frame.midY > viewport.midY
                             } else {
-                                let offsets = try checked({ c3OptionsScrollValues(form) })
+                                // No gesture occurred after this viewport capture.
+                                // Its native Form scrollbar values are the same
+                                // observation used to decide this reveal direction.
+                                let offsets = observation.scrollValues
                                 try scopeRequire(!offsets.isEmpty && Set(offsets).count == 1
                                     && offsets[0].range(of: "^(100|[0-9]{1,2})%$", options: .regularExpression) != nil,
                                     stage: stage + "-observed-Form-offset", downstream: downstream)

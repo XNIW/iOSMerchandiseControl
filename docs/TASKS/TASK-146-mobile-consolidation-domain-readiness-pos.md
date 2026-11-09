@@ -21,6 +21,12 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — C3 ammissione dialogo con meno query, stesso contratto — 2026-11-09T01:19:44.887945+00:00
+
+**✅ STATIC ESEGUITO PASS; SDK/SIM successori NOT_RUN.** e336/run42541797568 conferma Review reale tappato, Keep trovato e tappabile; l'ultima exists Replace finisce dopo la finestra assoluta10s. Solo il driver condiviso C1/C3 ora verifica entrambe le alternative nello stesso Alert con una query nativa di contenimento, poi conserva Keep.isHittable live. Prima del reveal usa i valori scrollbar della stessa snapshot Form appena catturata, senza gesture intermedia, invece di enumerarli nuovamente. Scadenze prima/dopo le query,10s/15s/cinquegesti, geometria/hit/privacy/oracolo14 invariati. ParseSwift e diffcheck PASS. SDK reale precede i tre discriminanti C1/C3/oracolo. File modificati: LocalAvailabilityRootUITests.swift e sole sezioni Execution del task/registro. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-dialog-admission.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** B2actual3035 e T11/R4efd in corso; ordinario corrente ancora NOT_RUN, SDKinput9e verificato ma non installato/autenticato. ROOT continua fino a gate/review/integrazione effettiva;16offline fisici/statistiche DIFFERITI. Nessun PASS dedotto o main promossa con FAIL attivi.
+
 ### Execution — T11 query filtrate e R4rilascio pan, gate invariati — 2026-11-09T01:11:40.051169+00:00
 
 **✅ STATIC ESEGUITO PASS; SDK/native successori NOT_RUN.** SoloUItest. a4c6 malformed/Corrupt avevano tutte le condizioni nativecorrette maprima snapshotglobale5,759s/8,228s; chiede anche ogni valorediagnostico, inutile percardinalità/window/selection. Ora unionetype globale con count2o3, unica finestra contenente almenounodei tipirichiesti, unicolabelTab dentrofinestraselezionato e ricontrollocountglobale finale. Almenounoeognitipo+totaletipi ugualenumero richiesto implica esattamenteunoglobale; finestre estranee non qualificano e i chiamanti verificano5s prima/dopo. GetterSelected resta reale. Nessuna gerarchia parziale o derivazione daframe. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-filtered-native-admission.ROOT/PRE-SDK-REVIEW.ROOT.json).
