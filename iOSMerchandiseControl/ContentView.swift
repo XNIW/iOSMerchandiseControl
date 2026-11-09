@@ -147,6 +147,7 @@ struct ContentView: View {
     @StateObject private var syncStateStore: SyncStateStore
     @StateObject private var shopContextStore: ShopContextStore
     @State private var currentSyncOrchestrator: SyncOrchestrator?
+    @State private var isSyncHostMounted = false
     @State private var runtimePresentationID: String?
     @State private var rootIndicatorState: SyncRootPresentationState = .hidden
     @State private var fallbackSelectedTab = Self.initialSelectedTab()
@@ -252,6 +253,10 @@ struct ContentView: View {
         let hidesBusinessData = hidesBusinessDataForPendingRecovery
         return ZStack {
             tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
+            // The first foreground UI turn owns the visible section. Construct
+            // the background runtime after yielding that turn, without waiting
+            // for a domain, network response or global qualification.
+            if isSyncHostMounted {
             AppSyncRootHost(
             modelContainer: runtimeModelContainer,
             presentationID: hostPresentationID,
@@ -275,6 +280,12 @@ struct ContentView: View {
         .id(hostPresentationID)
         .frame(width: 0, height: 0)
         .accessibilityHidden(true)
+            }
+        }
+        .task {
+            await Task.yield()
+            guard !Task.isCancelled, isCurrentModelGeneration else { return }
+            isSyncHostMounted = true
         }
         .accountSyncDecisionDialog(
             isPresented: $isCorruptJournalReviewPresented,

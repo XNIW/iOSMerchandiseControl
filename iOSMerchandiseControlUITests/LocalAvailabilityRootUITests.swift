@@ -5487,7 +5487,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // Reads only bounded aggregates, never XCUIElement/snapshot properties.
             var lines = ["stage=\(stage); ordinal=\(ordinal); clock=systemUptime; unit=seconds",
                 "public-call durations include XCTest internals; not IPC/network latency",
-                "button indexes are enumeration indexes for exists/hittable/elementSnapshot"]
+                "button indexes are the pinned eight-role order for native hittability; the shared post-getter snapshot has no index"]
             for site in Site.allCases {
                 for opcode in Opcode.allCases {
                     guard let value = aggregates[Key(site: site, opcode: opcode)] else { continue }
@@ -5639,47 +5639,56 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let rolePredicates: [NSPredicate] = optionRows.map { role in
             NSPredicate(format: "label BEGINSWITH %@", role.title + ",")
         }
-        let buttons = queryTiming.measure(.enumeration, site: .button) {
+        // Keep the complete native enumeration of all eight prefixes. Each
+        // role then uses its own native predicate, so a live hit is bound to
+        // that role without relying on accessibility-tree enumeration order.
+        _ = queryTiming.measure(.enumeration, site: .button) {
             form.buttons.matching(NSCompoundPredicate(orPredicateWithSubpredicates: rolePredicates))
                 .allElementsBoundByIndex
         }
-        var qualifiedButtons: [String: [C3OptionsSnapshotNode]] = [:]
-        for (buttonIndex, button) in buttons.enumerated() {
-            // The live hittability getter resolves this enumerated Button. Its
-            // fresh snapshot below still verifies complete content and ownership.
+        var liveRoles: Set<String> = []
+        for (roleIndex, role) in optionRows.enumerated() {
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-before", downstream: downstream)
-            // The extra per-Button snapshot/count witness consumed measured AX
-            // time in B12. Keep the same cached public-row evidence, both deadline
-            // guards, and the original live gates/fresh post-getter association.
+            let button = form.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", role.title + ",")).firstMatch
+            let hittable = queryTiming.measure(.hittable, site: .button, index: roleIndex) { button.isHittable }
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-after", downstream: downstream)
-            guard queryTiming.measure(.hittable, site: .button, index: buttonIndex, { button.isHittable }) else { continue }
-            // The existing fresh Button capture now supplies one coherent public
-            // type/id/label/complete-content observation after the same live gates.
-            let elementSnapshot: XCUIElementSnapshot
-            do {
-                elementSnapshot = try queryTiming.measure(.elementSnapshot, site: .button, index: buttonIndex) {
-                    try button.snapshot()
-                }
-            } catch {
-                let failure = error as NSError
-                let detail = XCTAttachment(string: "stage=\(stage); ordinal=\(ordinal); buttonIndex=\(buttonIndex); domain=\(failure.domain); code=\(failure.code); description=\(String(failure.localizedDescription.prefix(2_048)))")
-                detail.name = "TASK145 C3 live Button snapshot error"
-                detail.lifetime = .keepAlways; add(detail)
-                try scopeRequire(false,
-                    stage: stage + "-option-snapshot-live-capture-NOT_QUALIFIED", downstream: downstream)
-                throw ScopeSwitchUIStop.semanticGate
-            }
-            let freshNodes = try c3OptionsSnapshotNodes(elementSnapshot, stage: stage + "-option", downstream: downstream)
-            let owners = optionRows.filter { elementSnapshot.label.hasPrefix($0.title + ",") }
-            try scopeRequire(owners.count == 1,
+            if hittable { liveRoles.insert(role.role) }
+        }
+        // One complete, fresh capture AFTER every live getter supplies all
+        // role subtrees at the same instant. No role is pruned by geometry;
+        // the native getters above cover even currently offscreen roles.
+        let postGetterSnapshot: XCUIElementSnapshot
+        do {
+            postGetterSnapshot = try queryTiming.measure(.elementSnapshot, site: .button) { try form.snapshot() }
+        } catch {
+            let failure = error as NSError
+            let detail = XCTAttachment(string: "stage=\(stage); ordinal=\(ordinal); domain=\(failure.domain); code=\(failure.code); description=\(String(failure.localizedDescription.prefix(2_048)))")
+            detail.name = "TASK145 C3 complete post-getter Form snapshot error"
+            detail.lifetime = .keepAlways; add(detail)
+            try scopeRequire(false, stage: stage + "-option-snapshot-live-capture-NOT_QUALIFIED", downstream: downstream)
+            throw ScopeSwitchUIStop.semanticGate
+        }
+        try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline && postGetterSnapshot.elementType == .collectionView,
+            stage: stage + "-post-getter-complete-Form-within-deadline", downstream: downstream)
+        let postGetterNodes = try c3OptionsSnapshotNodes(postGetterSnapshot, stage: stage + "-all-options", downstream: downstream)
+        var qualifiedButtons: [String: [C3OptionsSnapshotNode]] = [:]
+        for role in optionRows where liveRoles.contains(role.role) {
+            let roots = postGetterNodes.filter { $0.elementType == .button && $0.label.hasPrefix(role.title + ",") }
+            try scopeRequire(roots.count == 1,
                 stage: stage + "-option-role-routing-NOT_QUALIFIED", downstream: downstream)
-            let role = owners[0]
-            guard let node = c3OptionRowRootAssociation(freshNodes, formNodes: formNodes,
-                title: role.title, subtitle: role.subtitle) else {
-                try scopeRequire(false,
-                    stage: stage + "-" + role.role + "-snapshot-content-and-association-NOT_QUALIFIED", downstream: downstream)
+            let root = roots[0]
+            let freshNodes = postGetterNodes.filter { $0.path.starts(with: root.path) }.map { node in
+                C3OptionsSnapshotNode(path: Array(node.path.dropFirst(root.path.count)),
+                    elementType: node.elementType, identifier: node.identifier, label: node.label,
+                    frame: node.frame, rawValue: node.rawValue, isSelected: node.isSelected)
+            }
+            guard c3OptionRowRootAssociation(freshNodes, formNodes: postGetterNodes,
+                    title: role.title, subtitle: role.subtitle) != nil,
+                  let node = c3OptionRowRootAssociation(freshNodes, formNodes: formNodes,
+                    title: role.title, subtitle: role.subtitle) else {
+                try scopeRequire(false, stage: stage + "-" + role.role + "-snapshot-content-and-association-NOT_QUALIFIED", downstream: downstream)
                 throw ScopeSwitchUIStop.semanticGate
             }
             qualifiedButtons[role.role, default: []].append(node)

@@ -157,25 +157,17 @@ jobs:
           cache_selector='iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'
           coverage=json.loads(Path('.github/ci/ios-xctest-coverage.json').read_text())
           cached_start_suite=next(row for row in coverage['shards']if row['id']=='ui-long-observation')
-          # Exact three-case diagnostic for the observed standard-Debug C3
-          # deadline. No full-shard adoption and no native gate changes.
-          c3_diagnostic=(os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
-              and os.environ['TASK146_BUILD_SHARD']=='focused'
-              and selected==[
-                  'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testCurrentProductACKWithIndependentHistorySurvivesImmutableCommittedResponseReplay',
-                  'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testOptionsWithdrawsQualifiedASummaryWhileBSelectedAndRestoresItOnlyAfterExplicitReturn',
-                  'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testC3OptionRowSnapshotOracleRejectsFourteenMalformedTrees'])
-          optimized=(c3_diagnostic or os.environ['TASK146_BUILD_SHARD']=='ui-long-observation'or(
+          optimized=(os.environ['TASK146_BUILD_SHARD']=='ui-long-observation'or(
               os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
               and os.environ['TASK146_BUILD_SHARD']=='focused'
               and cache_selector in selected and set(selected)<=set(cached_start_suite['expected'])))
           argv=['xcodebuild','-project','iOSMerchandiseControl.xcodeproj','-scheme','iOSMerchandiseControl',
               '-configuration','Debug','-destination','platform=iOS Simulator,id='+os.environ['DEVICE_ID'],
               'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
-          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_C3_DIAGNOSTIC'if c3_diagnostic else('DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START'if optimized else'DEBUG_STANDARD'),
+          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START'if optimized else'DEBUG_STANDARD',
               'optimization':'-O'if optimized else'-Onone(project Debug)',
               'assertConfiguration':'Debug(forced)'if optimized else'Debug(project default)',
-              'scope':'project Debug targets; exact three-case C3 diagnostic'if c3_diagnostic else('project Debug targets; first cached startup and long regressions'if optimized else'unchanged stock build'),
+              'scope':'project Debug targets; first cached startup and long regressions'if optimized else'unchanged stock build',
               'assertionProbe':{'status':'NOT_REQUESTED_ON_STANDARD'}}
           path=temporary/'task146-debug-build-profile.json'
           def save():path.write_text(json.dumps(profile,indent=2)+'\n')
