@@ -33,7 +33,7 @@ on:
         required: false
         default: false
       task146_b2_cpu_sampling:
-        description: "Focused B2 only: two short CPU samples at existing cache markers; diagnostic, not acceptance"
+        description: "Focused B2 only: one early MainActor sample after owned marker stream exit; diagnostic, not acceptance"
         type: boolean
         required: false
         default: false

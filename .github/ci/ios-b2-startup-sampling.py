@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Two bounded CPU observations of B2; diagnostic only, never final acceptance."""
+"""One early MainActor CPU observation of B2; diagnostic only, never acceptance."""
 import datetime
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import runpy
+import uuid
 import pty
 import signal
 import subprocess
@@ -32,7 +34,43 @@ marker_rows = []
 errors = []
 # One bounded region avoids concurrent pre-symbolication of the same process.
 # Existing markers locate the requested queue/render intervals inside the trace.
-phases = {"app-init-entry": ("startup-region", 6)}
+phases = {"app-init-return": ("mainactor-admission-region", 1)}
+# Reuse the existing kernel birth-identity helper, also used by local runner
+# custody. A unique constant in the log predicate identifies only this stream.
+birth = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")["birth"]
+stream_identity_tag = "TASK146_STREAM_" + uuid.uuid4().hex
+
+def stop_owned_marker_stream():
+    listing = subprocess.check_output(["ps", "-ww", "-axo", "pid=,uid=,args="], text=True, timeout=5)
+    matches = []
+    for line in listing.splitlines():
+        fields = line.strip().split(None, 2)
+        if len(fields) != 3 or stream_identity_tag not in fields[2]:
+            continue
+        pid, uid, command = fields
+        if Path(command.split()[0]).name == "log" and " stream " in command:
+            matches.append((int(pid), int(uid), command))
+    if len(matches) != 1 or matches[0][1] != os.getuid():
+        errors.append("owned_marker_stream_identity_not_unique")
+        return None
+    pid, uid, command = matches[0]
+    identity = birth(pid)
+    if identity is None or birth(pid) != identity:
+        errors.append("owned_marker_stream_birth_changed")
+        return None
+    # This exact random predicate was supplied only to our just-created stream.
+    # Never stop a stream from another consumer or rely on a reused numeric PID.
+    os.kill(pid, signal.SIGTERM)
+    stop_owned(log_process)
+    deadline = time.monotonic() + 5
+    while birth(pid) == identity and time.monotonic() < deadline:
+        time.sleep(0.025)
+    if birth(pid) == identity:
+        errors.append("owned_marker_stream_did_not_exit")
+        return None
+    return {"pid": pid, "uid": uid, "birthIdentity": identity,
+            "identityTag": stream_identity_tag, "terminatedBeforeSampling": True,
+            "stoppedAtMonotonicNs": time.monotonic_ns()}
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -61,6 +99,9 @@ def cpu_observation(record):
             errors.append("marker_process_identity_mismatch")
             return
         label, duration = phases[phase]
+        stream_receipt = stop_owned_marker_stream()
+        if stream_receipt is None:
+            return
         raw = output / (label + ".sample.txt")
         stderr = output / (label + ".stderr.txt")
         started = time.monotonic_ns()
@@ -70,6 +111,7 @@ def cpu_observation(record):
                 stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         observations[phase] = {"pid": pid, "phase": phase, "label": label,
             "durationSeconds": duration, "samplingIntervalMilliseconds": 1,
+            "markerStream": stream_receipt,
             "markerUptimeNs": int(uptime), "requestedAtMonotonicNs": started,
             "deliveryDelayNs": started - int(uptime), "raw": raw, "stderr": stderr,
             "process": process}
@@ -87,6 +129,8 @@ def read_markers():
                 continue
             if isinstance(record, dict):
                 cpu_observation(record)
+                if observations:
+                    return  # The one trigger is complete; the live log stream is closed.
     except Exception as error:
         if not stop.is_set():
             errors.append(type(error).__name__)
@@ -120,7 +164,8 @@ try:
     log_stream = os.fdopen(master, "r", encoding="utf-8", errors="replace", buffering=1)
     log_process = subprocess.Popen(
         ["xcrun", "simctl", "spawn", device, "log", "stream", "--style", "ndjson", "--level", "debug",
-         "--predicate", 'process == "iOSMerchandiseControl" AND eventMessage BEGINSWITH "TASK146_B2_COST39"'],
+         "--predicate", 'process == "iOSMerchandiseControl" AND eventMessage BEGINSWITH "TASK146_B2_COST39"'
+         + ' AND "' + stream_identity_tag + '" == "' + stream_identity_tag + '"'],
         stdout=slave, stderr=log_error, stdin=subprocess.DEVNULL, start_new_session=True)
     os.close(slave)
     thread = threading.Thread(target=read_markers, daemon=True)
@@ -179,7 +224,8 @@ finally:
         "applicationCompilerAndTestsChanged": False,
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
-        row["exitCode"] == 0 and row.get("rawReadComplete") and row.get("projectionComplete")
+        row["exitCode"] == 0 and row.get("markerStream", {}).get("terminatedBeforeSampling")
+        and row.get("rawReadComplete") and row.get("projectionComplete")
         and row.get("projectionScope") == "HEADER_AND_MAIN_THREAD" for row in rows)
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"samplingScope": report["scope"], "markers": len(rows),
