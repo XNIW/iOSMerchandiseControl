@@ -5991,10 +5991,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // The initial Cloud viewport exposes only a 39pt Theme sliver.
             // Use the helper's existing 42% pointer overlap for that first pan;
             // later, several body rows support the larger bounded step.
-            let distance = min(observation.viewport.height * (ordinal == 0 ? 0.58 : 0.9),
-                // The collapsing large title plus measured native overshoot
-                // consumed the previous44pt margin and lost all shared pixels.
-                max(24, anchorBottom - observation.viewport.minY - 88))
+            // The first pan must absorb large-title collapse and its measured
+            // overshoot. After it, the current native body anchor bounds the
+            // pan directly; carrying that extra88pt again forced a fourth
+            // viewport despite only85pt of footer overflow in the actual trace.
+            // Keep two points of intended shared body content; the ORIGINAL
+            // fresh/native overlap >1pt check above still decides every result.
+            let overlapReserve: CGFloat = ordinal == 0 ? 88 : 2
+            let distance = min(observation.viewport.height * (ordinal == 0 ? 0.58 : 0.95),
+                max(24, anchorBottom - observation.viewport.minY - overlapReserve))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
                 halfStepFraction: distance / observation.viewport.height / 2,
                 velocity: ordinal == 0 ? .slow : XCUIGestureVelocity(rawValue: 400))

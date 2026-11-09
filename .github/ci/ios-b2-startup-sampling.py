@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import pty
 import signal
 import subprocess
 import sys
@@ -26,16 +27,19 @@ lock = threading.Lock()
 stop = threading.Event()
 native = None
 log_process = None
+log_stream = None
+marker_rows = []
 errors = []
-phases = {"prepare-task-submit": ("mainactor-wait", 1),
-          "prepare-task-entry": ("publication-render", 2)}
+# One bounded region avoids concurrent pre-symbolication of the same process.
+# Existing markers locate the requested queue/render intervals inside the trace.
+phases = {"app-init-entry": ("startup-region", 6)}
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 def cpu_observation(record):
     message = record.get("eventMessage", "")
-    match = re.search(r"TASK146_B2_COST39 phase\.(prepare-task-submit|prepare-task-entry) uptime_ns\.(\d+)", message)
+    match = re.search(r"TASK146_B2_COST39 phase\.([a-z-]+) uptime_ns\.(\d+)", message)
     if not match:
         return
     phase, uptime = match.groups()
@@ -44,7 +48,10 @@ def cpu_observation(record):
         errors.append("marker_missing_process_id")
         return
     with lock:
-        if phase in observations or stop.is_set():
+        if len(marker_rows) < 32:
+            marker_rows.append({"phase": phase, "pid": pid, "markerUptimeNs": int(uptime),
+                                "deliveredAtMonotonicNs": time.monotonic_ns()})
+        if phase not in phases or phase in observations or stop.is_set():
             return
         if observations and any(row["pid"] != pid for row in observations.values()):
             errors.append("cache_process_changed_between_markers")
@@ -59,7 +66,7 @@ def cpu_observation(record):
         started = time.monotonic_ns()
         with stderr.open("xb") as err:
             process = subprocess.Popen(
-                ["/usr/bin/sample", str(pid), str(duration), "1", "-mayDie", "-file", str(raw)],
+                ["/usr/bin/sample", str(pid), str(duration), "1", "-file", str(raw)],
                 stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         observations[phase] = {"pid": pid, "phase": phase, "label": label,
             "durationSeconds": duration, "samplingIntervalMilliseconds": 1,
@@ -69,7 +76,7 @@ def cpu_observation(record):
 
 def read_markers():
     try:
-        for line in log_process.stdout:
+        for line in log_stream:
             if stop.is_set():
                 break
             if len(line) > 16384:
@@ -81,7 +88,8 @@ def read_markers():
             if isinstance(record, dict):
                 cpu_observation(record)
     except Exception as error:
-        errors.append(type(error).__name__)
+        if not stop.is_set():
+            errors.append(type(error).__name__)
 
 def stop_owned(process):
     if process is None or process.poll() is not None:
@@ -106,10 +114,15 @@ code = 97
 thread = None
 try:
     log_error = (output / "marker-stream.stderr.txt").open("xb")
+    # A PTY makes the existing log stream line-buffered. The first collector
+    # received markers2-3s late through a pipe, outside the intended intervals.
+    master, slave = pty.openpty()
+    log_stream = os.fdopen(master, "r", encoding="utf-8", errors="replace", buffering=1)
     log_process = subprocess.Popen(
         ["xcrun", "simctl", "spawn", device, "log", "stream", "--style", "ndjson", "--level", "debug",
          "--predicate", 'process == "iOSMerchandiseControl" AND eventMessage BEGINSWITH "TASK146_B2_COST39"'],
-        stdout=subprocess.PIPE, stderr=log_error, text=True, bufsize=1, start_new_session=True)
+        stdout=slave, stderr=log_error, stdin=subprocess.DEVNULL, start_new_session=True)
+    os.close(slave)
     thread = threading.Thread(target=read_markers, daemon=True)
     thread.start()
     native = subprocess.Popen(sys.argv[2:])
@@ -121,11 +134,13 @@ finally:
         log_error.close()
     if thread is not None:
         thread.join(timeout=6)
+    if log_stream is not None:
+        log_stream.close()
     rows = []
     for phase, row in observations.items():
         process = row.pop("process")
         try:
-            result = process.wait(timeout=20)
+            result = process.wait(timeout=120)
         except subprocess.TimeoutExpired:
             stop_owned(process)
             result = process.returncode
@@ -156,9 +171,11 @@ finally:
         rows.append(row)
     report = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION",
-        "nativeExit": code, "observations": rows, "errors": errors,
+        "nativeExit": code, "observations": rows, "markers": marker_rows, "errors": errors,
+        "symbolInformation": "sample reads symbols after the bounded sampling interval; mayDie omitted",
+        "collectorFinalizationLimitSeconds": 120,
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),
-        "interpretation": "Samples include profiler/OS overhead. Compare marker and request clocks; do not replace the original5s verdict. Window names describe requested regions, not exclusive call attribution.",
+        "interpretation": "Samples include profiler/OS overhead. Compare marker and request clocks; do not replace the original5s verdict. The startup region is diagnostic only. Use actual sample timestamps and recorded markers; no exclusive interval attribution.",
         "applicationCompilerAndTestsChanged": False,
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
