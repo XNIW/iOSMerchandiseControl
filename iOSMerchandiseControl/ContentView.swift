@@ -599,64 +599,72 @@ struct ContentView: View {
         let catalogAvailable = !hidesBusinessData || canReadLocalDomain(.catalog)
         let sessionsAvailable = !hidesBusinessData || canReadLocalDomain(.sessions)
         TabView(selection: selectedTabBinding) {
-            NavigationStack {
+            Group {
                 if selectedTab == 0 || openedTabs.contains(0) {
-                    InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
-                        businessContentIsCurrent: { canReadLocalDomain(.catalog) },
-                        unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
-                        openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
-                        .environmentObject(excelSession)
-                        .environmentObject(shopContextStore)
-                        .id(presentationID)
-                        .toolbar { syncToolbar }
-                }
+                    NavigationStack {
+                        InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
+                            businessContentIsCurrent: { canReadLocalDomain(.catalog) },
+                            unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
+                            openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
+                            .environmentObject(excelSession)
+                            .environmentObject(shopContextStore)
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
+                    }
+                } else { Color.clear }
             }
             .tabItem { Label(L("tab.inventory"), systemImage: "doc.on.doc") }
             .tag(0)
 
-            NavigationStack {
-                Group {
-                    if selectedTab == 1 || openedTabs.contains(1) {
-                        if !catalogAvailable {
-                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                .navigationTitle(L("tab.database"))
-                        } else {
-                            DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+            Group {
+                if selectedTab == 1 || openedTabs.contains(1) {
+                    NavigationStack {
+                        Group {
+                            if !catalogAvailable {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                    .navigationTitle(L("tab.database"))
+                            } else {
+                                DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                            }
                         }
+                        .id(presentationID)
+                        .toolbar { syncToolbar }
                     }
-                }
-                .id(presentationID)
-                .toolbar { syncToolbar }
+                } else { Color.clear }
             }
             .tabItem { Label(L("tab.database"), systemImage: "shippingbox") }
             .tag(1)
 
-            NavigationStack {
-                Group {
-                    if selectedTab == 2 || openedTabs.contains(2) {
-                        if !sessionsAvailable {
-                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                .navigationTitle(L("tab.history"))
-                        } else {
-                            HistoryView(historySessionSyncService: historySessionSyncService)
+            Group {
+                if selectedTab == 2 || openedTabs.contains(2) {
+                    NavigationStack {
+                        Group {
+                            if !sessionsAvailable {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                    .navigationTitle(L("tab.history"))
+                            } else {
+                                HistoryView(historySessionSyncService: historySessionSyncService)
+                            }
                         }
+                        .id(presentationID)
+                        .toolbar { syncToolbar }
                     }
-                }
-                .id(presentationID)
-                .toolbar { syncToolbar }
+                } else { Color.clear }
             }
             .tabItem { Label(L("tab.history"), systemImage: "clock.arrow.circlepath") }
             .tag(2)
 
-            NavigationStack {
+            Group {
                 if selectedTab == 3 || openedTabs.contains(3) {
-                    OptionsView(remoteCountFetcher: remoteCountFetcher,
-                        supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
-                        syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                        deviceAuthorization: shopDeviceRegistrationService,
-                        accountStoreReplacementRuntime: syncOrchestrator)
-                }
+                    NavigationStack {
+                        OptionsView(remoteCountFetcher: remoteCountFetcher,
+                            supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
+                            syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                            deviceAuthorization: shopDeviceRegistrationService,
+                            accountStoreReplacementRuntime: syncOrchestrator)
+                    }
+                } else { Color.clear }
             }
             .tabItem { Label(L("tab.options"), systemImage: "gearshape") }
             .tag(3)

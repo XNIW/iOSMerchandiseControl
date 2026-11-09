@@ -3450,17 +3450,23 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let owners = app.windows.containing(.tabBar, identifier: nil)
             .containing(.navigationBar, identifier: title)
         let windows = requiresForm ? owners.containing(.collectionView, identifier: nil) : owners
-        let windowCount = windows.count
-        guard windowCount == 1 else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount)")
+        // The public selected attribute is available during query matching
+        // (XCUIElementAttributes). One native filtered count establishes the
+        // selected title under its actual owning TabBar/window and all required
+        // structures, without separate window-count and selected RPCs.
+        let selectedButtons = windows.tabBars.buttons.matching(NSPredicate(
+            format: "label == %@ AND selected == YES", title))
+        let selectedCount = selectedButtons.count
+        guard selectedCount == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); owned-native-selected-count=\(selectedCount)")
             return false
         }
-        let button = windows.element(boundBy: 0).tabBars.buttons.matching(NSPredicate(format: "label == %@", title)).firstMatch
-        let selected = button.isSelected
-        // A changing structure count cannot borrow the earlier topology.
+        // At least one of every role exists in that owning window. The same
+        // global total before/after forces EXACTLY one of each role/title, hence
+        // one owning window. Duplicate unselected titles still fail the total.
         let afterCount = structures.count
-        let admitted = selected && afterCount == expectedCount
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-before=\(beforeCount); global-after=\(afterCount); expected=\(expectedCount); windows=\(windowCount); selected=\(selected); native-filtered-admission=\(admitted)")
+        let admitted = afterCount == expectedCount
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-before=\(beforeCount); global-after=\(afterCount); expected=\(expectedCount); owned-native-selected-count=\(selectedCount); native-filtered-admission=\(admitted)")
         return admitted
     }
 
