@@ -4167,36 +4167,38 @@ struct DatabaseView: View {
         .toolbarBackground(Color(.systemGroupedBackground), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbar {
-            // Let the toolbar lay out each action as an individual item.
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button {
-                    // Mostra dialog per scegliere Excel vs CSV
-                    showingImportOptions = true
-                } label: {
-                    Label(L("database.import.title"), systemImage: "tray.and.arrow.down")
-                        .labelStyle(.iconOnly)
-                }
-                .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localWriteIsAllowed())
-                .accessibilityLabel(L("database.import.title"))
-                .accessibilityIdentifier("task140.database.import")
+            // import / export + nuovo prodotto
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    Button {
+                        // Mostra dialog per scegliere Excel vs CSV
+                        showingImportOptions = true
+                    } label: {
+                        Label(L("database.import.title"), systemImage: "tray.and.arrow.down")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localWriteIsAllowed())
+                    .accessibilityLabel(L("database.import.title"))
+                    .accessibilityIdentifier("task140.database.import")
 
-                Button {
-                    showingExportOptions = true
-                } label: {
-                    Label(L("database.export.title"), systemImage: "square.and.arrow.up")
-                        .labelStyle(.iconOnly)
-                }
-                .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localReadIsAllowed(.priceHistory))
-                .accessibilityLabel(L("database.export.title"))
+                    Button {
+                        showingExportOptions = true
+                    } label: {
+                        Label(L("database.export.title"), systemImage: "square.and.arrow.up")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localReadIsAllowed(.priceHistory))
+                    .accessibilityLabel(L("database.export.title"))
 
-                Button {
-                    presentAddForSelectedSection()
-                } label: {
-                    Label(selectedDatabaseSection.addTitle, systemImage: "plus")
-                        .labelStyle(.iconOnly)
+                    Button {
+                        presentAddForSelectedSection()
+                    } label: {
+                        Label(selectedDatabaseSection.addTitle, systemImage: "plus")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localWriteIsAllowed())
+                    .accessibilityLabel(selectedDatabaseSection.addTitle)
                 }
-                .disabled(importProgress.isRunning || isFirstSnapshotPreparing || !localWriteIsAllowed())
-                .accessibilityLabel(selectedDatabaseSection.addTitle)
             }
         }
         // Sheet per NUOVO prodotto
