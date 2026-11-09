@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto, a398 FAILprima cache; hostprivati pertab in qualifica, integrazione iOS aperta |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; host4ca respinto e ripristinato e358, causa degli intervalli lenti in diagnosi mirata |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Host tab respinto; intervalli persistenti e raccolta mirata — 2026-11-09T22:24:51.306966+00:00
+
+**✅ BUILD/SIM 4ca ESEGUITI: B2 intero FAIL7,040817s**, run42707133926/job129466791617. Memo/riuso fisico/autorità validi, zero scan sul PID27256, O/assertDebug reali. Worker119,831ms, fineworker→Main1,606996s, autorità188,431ms, pubblicazione→riga2,419213s. Nessun beneficio pertinente rispetto e358: hosttipoconcreto ritirato, ContentView ripristinato byte-esattoe358 (SHA256999441761c47dce3dbba9026ede41eaa09033a7e5d762e645330e3c417e9f66a). Nessun prodotto4ca scaricato/installato, full finale NOT_RUN. [Causale/postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-root-tab-type-host.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Run conclusa/Shutdown, dati/binari/QCOW2 conservati.
+
+Crash preparazionea398: testmanagerd segnala raccolta del file213555.ips, ma non compare negli attachment né nelle directorydiagnostiche qualificate del risultato; causa/PID/stack ancora UNKNOWN. Non attribuire a warningDebuggerVersionStore, collector o app. Metadati e letturebounded conservati; non è FAILlatency/cache. La SUCCESSIVA4ca ha attraversato integralmente seed/hold-prices/hold-sessions/cache: nuova evidenza di attraversabilità della stessa preparazione, senza timeout aumentati.
+
+Nessuna nuova patchapp indovinata. Una raccolta mirata sul codice applicativo e358 ripristinato attraversa l'agganciokernelallanasci­ta già ammesso, con guardiamarker>=T0 inclusa4ca; nessun liveIPC/simbolicazione durante raccolta. L'ultimaa398 non raggiunse questo tratto: NOT_TRAVERSED, non una raccolta già fallita su cache. Se non attraversato o incompleto si classifica esplicitamente; nessuna matrice completa prima di causa e B2originalePASS. Tempi profilati non sono qualifica5s. Registro scarti ora comprende anche host4ca oltre yield/WMO/toolbar/Intel/inline. File toccati: soloContentView(ripristino), TaskExecution eResume; helperCI già presente invariato. Handoff ACTIVE/EXECUTION fino a regressioni pertinenti/ordinario utile/final2101/review/PR29/mainCI/PR28/ritiro2920/cleanup; differimenti autorizzati invariati.
 
 ### Execution — Arresto a398 prima cache; host concreti per i tab — 2026-11-09T21:54:59.799146+00:00
 
