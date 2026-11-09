@@ -8,9 +8,9 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_RIPRESA — Actions operativo, candidato93 in qualifica; integrazione iOS ancora aperta |
+| Esito documentale | EXECUTION_ATTIVA — B2 FAIL; collector ps fermo prima target, successore kernel in qualifica; integrazione iOS aperta |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **CODEX ROOT**, stesso candidato B2, composizione stabile e integrazione finale |
+| Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Collector fermo prima del target, enumerazione kernel qualificata — 2026-11-09T21:11:52.655181+00:00
+
+**✅ BUILD/SIM f123 ESEGUITI, diagnostica FAIL_COLLECTOR_PREPARATION.** Run42696071463 SDKPASS, interoB2FAIL8,041639s. Collectoroptin maZERO sampler agganciati: observationsvuote, TimeoutExpired nel read_cache_process, la cui unica chiamata temporizzata è ps5s. Nessun campione e nessuna causa app dimostrata. Il precedente riferimento a prova sotto profiler indica il workflow diagnostico, NON un attachment effettivo. GuardB2originali e parti funzionali attraversate conservate; non è una nuova qualifica ordinaria. Metadata/report/selfprobe/runtime e failure preservati; postflight terminale/Shutdown. [Report](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-prelaunch-kernel.ROOT/causal-bundle.ROOT/report.json).
+
+**✅ STATIC e probe nativo sintetico ESEGUITI PASS; successivo SDK/SIM NOT_RUN.** Non aumentato il timeout: helper sostituisce ps con PROC_UID_ONLY/libproc, enumera percorsi dell'UID corrente e ammette soltanto pathesattoApp/DeviceUUID + BSDuid/pid/nascita + trechiavienv cache/request/namespace. Il preflight attraversa l'INTERA stessa ammissione su copia usa-e-getta Apple/bin/sleep nel percorso sintetico, verifica rifiuto altrodevice e termina/raccogliefiglio/rimuovetemporaneo primaSDK; poi kernelprobeobbligatorio. ProbeLocalePASS; copy2primaFAILpreparazione perflagSIP, nessunfiglio avviato, corretta copia soli byte/permessi700 e temporaneo byte-esatto ritirato. NessunApp/test/compiler/workflow/API/rpcdelta, runtimeesatto12645/e358; kernel5s e risoluzione solo dopo render invariati. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-owned-census.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Handoff ACTIVE/EXECUTION: classificare traccia davvero attraversata, fix sulla causa osservata, B2nonprofilato e composizione finale come mandato. Nessuna nuova matrice o ipotesi app finché manca quella causa. InterazioneInventario/C3/T11/Android/atomica/live/POS restano nei loro scope. PR29bodyaggiornata mahead082/main94 invariati. Due soli editor temporanei propri conclusi rimossi dopo pubblicazione f123:10.757Blogici/12.288allocati, receiptTEMP-POSTFLIGHT; nessun dato/binario/QCOW2 rimosso.
 
 ### Execution — Kernel raccolto, copertura iniziale insufficiente; aggancio alla nascita — 2026-11-09T20:45:29.472206+00:00
 

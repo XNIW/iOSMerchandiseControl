@@ -10,6 +10,7 @@ import runpy
 import uuid
 import ctypes
 import struct
+import shutil
 import signal
 import subprocess
 import sys
@@ -37,7 +38,8 @@ errors = []
 phases = {"cache-process-start": ("mainactor-admission-region", 5)}
 # Reuse the existing kernel birth-identity helper, also used by local runner
 # custody. A unique constant in the log predicate identifies only this stream.
-birth = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")["birth"]
+lifecycle = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")
+birth, BsdInfo = lifecycle["birth"], lifecycle["BsdInfo"]
 def selected_process_environment(pid, keys):
     # KERN_PROCARGS2 is read only for an already verified owned target. Never
     # persist or print its other environment fields, including inherited secrets.
@@ -78,6 +80,79 @@ def selected_process_environment(pid, keys):
     return result
 
 
+def owned_process_paths():
+    # PROC_UID_ONLY is a single kernel query, with no ps child or foreign-UID
+    # command inspection. Read executable paths only; environments stay private.
+    lib = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+    lib.proc_listpids.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_int]
+    lib.proc_listpids.restype = ctypes.c_int
+    lib.proc_pidpath.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32]
+    lib.proc_pidpath.restype = ctypes.c_int
+    pids = (ctypes.c_int * 8192)()
+    count = lib.proc_listpids(4, os.getuid(), pids, ctypes.sizeof(pids))
+    assert 0 < count < ctypes.sizeof(pids) and count % ctypes.sizeof(ctypes.c_int) == 0
+    for pid in pids[:count // ctypes.sizeof(ctypes.c_int)]:
+        if pid <= 0:
+            continue
+        path = ctypes.create_string_buffer(4096)
+        size = lib.proc_pidpath(pid, path, len(path))
+        if 0 < size < len(path):
+            yield pid, os.fsdecode(path.value)
+
+def cache_process_identity(pid, command, selected_device):
+    if (Path(command).name != "iOSMerchandiseControl" or selected_device not in Path(command).parts
+        or not command.endswith("/iOSMerchandiseControl.app/iOSMerchandiseControl")):
+        return None
+    lib = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+    info = BsdInfo()
+    if lib.proc_pidinfo(pid, 3, 0, ctypes.byref(info), ctypes.sizeof(info)) != ctypes.sizeof(info):
+        return None
+    if info.pid != pid or info.uid != os.getuid():
+        return None
+    identity = {"pid": pid, "sec": info.start_sec, "usec": info.start_usec}
+    environment = selected_process_environment(pid, {b"TASK146_B2_DOMAIN_UI",
+        b"TASK146_B2_LAUNCH_REQUEST_UPTIME", b"TASK144_LOCAL_AVAILABILITY_FIXTURE"})
+    if environment is None or environment.get(b"TASK146_B2_DOMAIN_UI") != "cache":
+        return None
+    request = float(environment[b"TASK146_B2_LAUNCH_REQUEST_UPTIME"])
+    namespace = str(uuid.UUID(environment[b"TASK144_LOCAL_AVAILABILITY_FIXTURE"]))
+    if not 0 < request <= time.monotonic() or time.monotonic() - request >= 10 or birth(pid) != identity:
+        return None
+    return {"pid": pid, "targetBirth": identity, "targetUID": info.uid,
+            "namespace": namespace, "requestUptime": request}
+
+def probe_target_admission(probe):
+    selected = str(uuid.uuid4())
+    folder = probe / selected / "iOSMerchandiseControl.app"
+    folder.mkdir(parents=True)
+    executable = folder / "iOSMerchandiseControl"
+    shutil.copyfile("/bin/sleep", executable)
+    executable.chmod(0o700)
+    expected_hash = hashlib.sha256(executable.read_bytes()).hexdigest()
+    namespace = str(uuid.uuid4())
+    child = subprocess.Popen([str(executable), "15"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env={**os.environ, "TASK146_B2_DOMAIN_UI": "cache", "TASK146_B2_LAUNCH_REQUEST_UPTIME": str(time.monotonic()),
+             "TASK144_LOCAL_AVAILABILITY_FIXTURE": namespace})
+    try:
+        paths = dict(owned_process_paths())
+        assert paths.get(child.pid) == str(executable)
+        admitted = cache_process_identity(child.pid, paths[child.pid], selected)
+        assert admitted and admitted["namespace"] == namespace and admitted["targetUID"] == os.getuid()
+        assert cache_process_identity(child.pid, paths[child.pid], "wrong-device") is None
+        result = {"status": "PASS", "pid": child.pid, "targetUID": os.getuid(),
+                  "kernelBirth": admitted["targetBirth"], "pathUIDBirthEnvironmentAndNamespace": True,
+                  "wrongDeviceRejected": True, "onlySyntheticChild": True,
+                  "temporaryExecutableBytes": executable.stat().st_size, "executableSHA256": expected_hash}
+    finally:
+        if child.poll() is None:
+            child.terminate()
+        child.wait(timeout=5)
+        assert hashlib.sha256(executable.read_bytes()).hexdigest() == expected_hash
+        executable.unlink();folder.rmdir();folder.parent.rmdir()
+    result["childTerminatedAndTemporaryRemoved"] = True
+    return result
+
+
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -100,6 +175,7 @@ def offline_report(raw, destination, inspect_after_render=False):
 def self_probe():
     probe = output / "self-probe"
     probe.mkdir(exist_ok=False)
+    admission_probe = probe_target_admission(probe)
     child = subprocess.Popen([sys.executable, "-c",
         "import time\ndeadline=time.monotonic()+35\nx=1.0\nwhile time.monotonic()<deadline:x=(x+1.0001)**0.5"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
@@ -123,7 +199,7 @@ def self_probe():
     proof = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scriptSHA256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "pid": child.pid, "birth": identity, "targetExitedBeforeReparse": child.poll() is not None,
-        "recordExit": record_exit, "offlineExit": reparse_exit, "processEnvironmentProbe": "PASS",
+        "recordExit": record_exit, "offlineExit": reparse_exit, "processEnvironmentProbe": "PASS", "targetAdmissionProbe": admission_probe,
         "rawBytes": raw.stat().st_size, "reportBytes": report.stat().st_size if report.exists() else 0,
         "scope": "OWNED_PYTHON_PROBE_ONLY_NOT_APP_ACCEPTANCE"}
     proof["status"] = "PASS" if record_exit == reparse_exit == 0 and proof["reportBytes"] > 0 else "FAIL"
@@ -167,33 +243,13 @@ def read_cache_process():
     # The measured log/stream closure admitted the previous sampler4.7s after
     # App.init. Detect this exact test launch at process birth instead. No stream
     # or live symbolication is attached to the application.
-    seen = set()
     try:
         while not stop.is_set():
-            listing = subprocess.check_output(["ps", "-ww", "-axo", "pid=,uid=,comm="],
-                text=True, timeout=5)
-            for line in listing.splitlines():
-                fields = line.strip().split(None, 2)
-                if len(fields) != 3 or int(fields[1]) != os.getuid():
+            for pid, command in owned_process_paths():
+                admitted = cache_process_identity(pid, command, device)
+                if admitted is None:
                     continue
-                pid, command = int(fields[0]), fields[2]
-                if Path(command).name != "iOSMerchandiseControl" or device not in Path(command).parts:
-                    continue
-                if not command.endswith("/iOSMerchandiseControl.app/iOSMerchandiseControl"):
-                    continue
-                identity = birth(pid)
-                if identity is None or (pid, identity["sec"], identity["usec"]) in seen:
-                    continue
-                environment = selected_process_environment(pid, {b"TASK146_B2_DOMAIN_UI",
-                    b"TASK146_B2_LAUNCH_REQUEST_UPTIME", b"TASK144_LOCAL_AVAILABILITY_FIXTURE"})
-                if environment is None or b"TASK146_B2_DOMAIN_UI" not in environment:
-                    continue  # Retry only while launch environment is not available.
-                seen.add((pid, identity["sec"], identity["usec"]))
-                if environment[b"TASK146_B2_DOMAIN_UI"] != "cache":
-                    continue
-                request = float(environment[b"TASK146_B2_LAUNCH_REQUEST_UPTIME"])
-                namespace = str(uuid.UUID(environment[b"TASK144_LOCAL_AVAILABILITY_FIXTURE"]))
-                assert 0 < request <= time.monotonic() and time.monotonic() - request < 10
+                identity, request, namespace = admitted["targetBirth"], admitted["requestUptime"], admitted["namespace"]
                 assert birth(pid) == identity and not observations
                 phase = "cache-process-start"
                 label, duration = phases[phase]
