@@ -5823,7 +5823,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let distance = min(observation.viewport.height * 0.58,
                 max(24, anchorBottom - observation.viewport.minY - 44))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
-                halfStepFraction: distance / observation.viewport.height / 2, velocity: .slow)
+                halfStepFraction: distance / observation.viewport.height / 2, velocity: .default)
         }
     }
 
