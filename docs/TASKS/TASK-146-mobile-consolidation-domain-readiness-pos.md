@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; traccia0c risolta offline, hostSync background in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; background09 ritirato, costi RAM e boundarypreparazione in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Background non qualificato ritirato; costi sincroni RAM mirati — 2026-11-09T23:24:30.097797+00:00
+
+**✅ BUILD/SIM09d ESEGUITI: FAILpreparazione**, run42716952309/job129500851173, caso38,707s: seedattraversato, primohold-prices.held nonammesso entro10soriginali. WorkerPID24500validazioneancoraattiva; log nonidentificaquale predicato abbiaimpedito il fatto. Non inferire crash ocausa esclusivadelbackground. Cachelaunch/T0/memo/render **NOT_TRAVERSED**, nessun risultato temporale. Composizionebackgroundritirata, rootritornato byte-esattoe358 prima delle soleosservazioni. SDK13719635771 acquisiti41.009Bsolometadata, mai prodotto/install; native13718343765 letti486.821B/4MB. Shutdown/0bootedconfermato, binari/dati/QCOW2preservati. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-sync-host-background.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/SIM NOT_RUN.** Tre file: ContentView(6costi), Task126SyncPolicy(2costi) e fixture/osservazioneesistente(buffer+logpreparazione). SoloB2.cache/Mainthread, RAM≤16nomi/2048campioni, costiinclusivi nonadditivi congelati alrenderfisicooriginale; nessunapubblicazione/query/fileI/O/scheduling/lognelmetodomisurato. CorpooriginaleContent/policy ricostruito byte-esatto eliminandoipro­loghi DEBUG e gli explicitreturnequivalenti. Markerpreparazione solofasiB2 allowlisted: ctorerrorCategory; ingressodominio/guardrequired/guardtargetseparati mantenendo shortcircuit/throw/holdoriginali. Nessunpredicato/bound10s/T0/5s/profilo/assert/selector oattesa cambiati. Nonè nuovaipotesigeometrica: serve a quantificareil lavorosincronodell'app che latracciaparzialenonattribuisce completamente, prima d'altra patch. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-main-synchronous-costs.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Prossimaunicarun: B2interoCPUoff/exportSDK; diagnosticaRAMparte delverdetto originale, nonanticipo di timestamp oautorizzazione. SeFAIlpreparazione leggere ilprimomarker; searrivaaCache usarei costi prima d'altra correzione. Scartiaggiornati: anchebackground09 nonqualificato, nessunretryidentico. C3/T11/settePASS restano nel proprioperimetro; Android/atomica/live/POSnonriaperti. Full2101/ordinarioutilereale/review/PR29/mainCI/PR28/ritiro2920/cleanup/DONErimangonoaperti. ACTIVE/EXECUTION, primariaindice5202e036/WIPdati protetti.
 
 ### Execution — Traccia attuale risolta offline; host senza contenuto nel background — 2026-11-09T23:01:05.248814+00:00
 

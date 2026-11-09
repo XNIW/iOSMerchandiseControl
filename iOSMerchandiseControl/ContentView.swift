@@ -247,14 +247,16 @@ struct ContentView: View {
     }
 
     private var activeRoot: some View {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-active-root", startedAt: cachedCost) }
+        #endif
         let presentationID = syncStoreGenerationController.presentationID
         let hostPresentationID = currentSyncOrchestrator?.retainedSameScopeRecoveryHostPresentationID ?? presentationID
         let runtimeModelContainer = syncStoreGenerationController.modelContainer
         let hidesBusinessData = hidesBusinessDataForPendingRecovery
-        // The sync host owns lifecycle only; it must not participate in the
-        // foreground TabView's size negotiation during first local readiness.
-        return tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
-        .background {
+        return ZStack {
+            tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
             AppSyncRootHost(
             modelContainer: runtimeModelContainer,
             presentationID: hostPresentationID,
@@ -351,6 +353,10 @@ struct ContentView: View {
     }
 
     private func canReadLocalDomain(_ domain: Task126LocalReadDomain) -> Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-can-read", startedAt: cachedCost) }
+        #endif
         guard isCurrentModelGeneration else { return false }
         let owner = supabaseAuthViewModel.localMutationOwnerUserID
         if domain != .priceHistory, syncStoreGenerationController.permitsScopedEmptyRoot(ownerUserID: owner) {
@@ -361,6 +367,10 @@ struct ContentView: View {
     }
 
     private func canWriteLocalStore() -> Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-can-write", startedAt: cachedCost) }
+        #endif
         guard isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery else { return false }
         guard syncStoreGenerationController.activeManifest != nil else { return true }
         guard let owner = supabaseAuthViewModel.localMutationOwnerUserID else { return false }
@@ -368,6 +378,10 @@ struct ContentView: View {
     }
 
     private func restoreLocalPresentation() {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-restore-presentation", startedAt: cachedCost) }
+        #endif
         guard isCurrentModelGeneration else { return }
         mountedPresentationID = syncStoreGenerationController.presentationID
         let values = localPresentation?.admit(
@@ -383,6 +397,10 @@ struct ContentView: View {
     }
 
     private var hidesBusinessDataForPendingRecovery: Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-privacy-choice", startedAt: cachedCost) }
+        #endif
         #if DEBUG
         if Task144RootObservation.enabled { return observeTask144RootPrivacyChoice() }
         #endif
@@ -571,7 +589,11 @@ struct ContentView: View {
     }
 
     private func businessPrivacyGate(syncOrchestrator: SyncOrchestrator?) -> some View {
-        SyncReplacementPrivacyGate(
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-privacy-view", startedAt: cachedCost) }
+        #endif
+        return SyncReplacementPrivacyGate(
             reason: unavailableReason,
             state: syncStateStore.state,
             isBusy: syncOrchestrator?.hasCurrentPresentationInvocation == true

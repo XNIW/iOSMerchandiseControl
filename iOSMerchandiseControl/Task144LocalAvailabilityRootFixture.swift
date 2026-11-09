@@ -77,6 +77,33 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private var dropped = 0
     private var cachedCatalogRenderedAt: TimeInterval?
     private var cachedCatalogPhases: [String: TimeInterval] = [:]
+    // B2 diagnostic only: inclusive synchronous MainActor costs, frozen at the
+    // unchanged real ProductRow render. Nested costs are not additive.
+    private static let observesCachedCatalogCosts = ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache"
+    private var cachedCatalogSynchronousCosts: [String: [String: UInt64]] = [:]
+
+    static func beginCachedCatalogSynchronousCost() -> UInt64? {
+        guard observesCachedCatalogCosts, Thread.isMainThread else { return nil }
+        return DispatchTime.now().uptimeNanoseconds
+    }
+
+    static func finishCachedCatalogSynchronousCost(_ name: String, startedAt: UInt64?) {
+        guard let startedAt else { return }
+        let elapsed = DispatchTime.now().uptimeNanoseconds &- startedAt
+        shared.lock.lock(); defer { shared.lock.unlock() }
+        guard shared.cachedCatalogRenderedAt == nil,
+              shared.cachedCatalogSynchronousCosts[name] != nil || shared.cachedCatalogSynchronousCosts.count < 16 else { return }
+        var value = shared.cachedCatalogSynchronousCosts[name] ?? ["count": 0, "totalNS": 0, "maxNS": 0, "dropped": 0]
+        guard value["count", default: 0] < 2048 else {
+            value["dropped", default: 0] += 1
+            shared.cachedCatalogSynchronousCosts[name] = value
+            return
+        }
+        value["count", default: 0] += 1
+        value["totalNS", default: 0] += elapsed
+        value["maxNS"] = max(value["maxNS", default: 0], elapsed)
+        shared.cachedCatalogSynchronousCosts[name] = value
+    }
 
     /// B2-only RAM facts, carried by its existing render sample. No publication,
     /// model access or file/log dependency is needed to preserve these phases.
@@ -112,7 +139,8 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
             "namespace": namespace, "pid": ProcessInfo.processInfo.processIdentifier,
             "debugAssertionsEnabled": _isDebugAssertConfiguration(),
             "optimizedNativeProfile": optimizedNativeProfile,
-            "phases": shared.cachedCatalogPhases]
+            "phases": shared.cachedCatalogPhases,
+            "mainSynchronousCostsInclusive": shared.cachedCatalogSynchronousCosts]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
         return String(decoding: data, as: UTF8.self)
     }
@@ -482,6 +510,11 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard let runID = UUID(uuidString: raw) else { preconditionFailure("Invalid controlled fixture namespace") }
         do { return try Task144LocalAvailabilityRootFixture(runID: runID) }
         catch {
+            if let phase = ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"],
+               ["seed", "hold-prices", "hold-sessions", "cache"].contains(phase) {
+                NSLog("TASK146_B2_PREP_FAILURE phase.%@ stage.fixture-init category.%@",
+                    phase, Task144RootObservation.errorCategory(error))
+            }
             if ProcessInfo.processInfo.environment["TASK145_R4_REVIEW_UI"] == "noop-price" {
                 NSLog("TASK146_R4_INIT stage.fixture-init category.%@",
                     Task144RootObservation.errorCategory(error))
@@ -1025,12 +1058,24 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                     try Task.checkCancellation()
                     let required: Task126LocalReadDomain = domain == .priceHistory ? .sessions : .catalog
                     let container = self.controller.modelContainer
-                    guard Task126OwnerStoreGate.permitsSameScopeLocalRead(required,
-                              modelContainer: container, ownerUserID: self.owner),
-                          !Task126OwnerStoreGate.permitsSameScopeLocalRead(domain,
-                              modelContainer: container, ownerUserID: self.owner) else {
+                    NSLog("TASK146_B2_PREP_BOUNDARY phase.%@ stage.held-domain-entry uptime_ns.%llu",
+                        independentDomainPhase.rawValue, DispatchTime.now().uptimeNanoseconds)
+                    let requiredAllowed = Task126OwnerStoreGate.permitsSameScopeLocalRead(required,
+                        modelContainer: container, ownerUserID: self.owner)
+                    guard requiredAllowed else {
+                        NSLog("TASK146_B2_PREP_FAILURE phase.%@ stage.held-domain-guard required_read.false target_read.NOT_EVALUATED",
+                            independentDomainPhase.rawValue)
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
+                    let targetAllowed = Task126OwnerStoreGate.permitsSameScopeLocalRead(domain,
+                        modelContainer: container, ownerUserID: self.owner)
+                    guard !targetAllowed else {
+                        NSLog("TASK146_B2_PREP_FAILURE phase.%@ stage.held-domain-guard required_read.true target_read.true",
+                            independentDomainPhase.rawValue)
+                        throw SyncStoreGenerationError.activationReadBackFailed
+                    }
+                    NSLog("TASK146_B2_PREP_BOUNDARY phase.%@ stage.held-domain-guard-passed uptime_ns.%llu",
+                        independentDomainPhase.rawValue, DispatchTime.now().uptimeNanoseconds)
                     self.facts.insert("task146.b2.\(independentDomainPhase.rawValue).held")
                     await withTaskCancellationHandler {
                         await withCheckedContinuation { self.r23QualificationWaiters.append($0) }

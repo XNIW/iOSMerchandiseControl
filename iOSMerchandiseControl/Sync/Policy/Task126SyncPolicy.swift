@@ -606,7 +606,11 @@ nonisolated enum Task126OwnerStoreGate {
     static func permitsSameScopeLocalAccess(
         modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults = .standard
     ) -> Bool {
-        leaseStore.withCurrentLease { _ in
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("gate-access", startedAt: cachedCost) }
+        #endif
+        return leaseStore.withCurrentLease { _ in
             permitsSameScopeLocalAccessWithLeaseHeld(
                 modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults
             )
@@ -625,7 +629,11 @@ nonisolated enum Task126OwnerStoreGate {
         _ domain: Task126LocalReadDomain, modelContainer: ModelContainer,
         ownerUserID: UUID?, defaults: UserDefaults = .standard
     ) -> Bool {
-        leaseStore.withCurrentLease { generation in
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("gate-read", startedAt: cachedCost) }
+        #endif
+        return leaseStore.withCurrentLease { generation in
             guard permitsSameScopeLocalAuthorityWithLeaseHeld(
                 modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults) else { return false }
             return leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer)
