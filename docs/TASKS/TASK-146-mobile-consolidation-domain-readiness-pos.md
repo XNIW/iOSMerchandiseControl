@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 FAIL; collector ps fermo prima target, successore kernel in qualifica; integrazione iOS aperta |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto, a398 FAILprima cache; hostprivati pertab in qualifica, integrazione iOS aperta |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,22 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Arresto a398 prima cache; host concreti per i tab — 2026-11-09T21:54:59.799146+00:00
+
+**✅ BUILD/SIM a398 ESEGUITI con FAILpreparazione**, run42700301893/job129442937958: seed ehold-prices attraversati, rilascio/qualificaPASS; terzolancio si ferma a hold-sessions.held (LocalAvailabilityRootUITests.swift1008). Settingupautomationsession dura60,09s, poi query10s senzafatto e teardownPID0. Questo non prova crashapp o causa esterna; warningDebuggerVersionStore è presente anche nei due lanci riusciti, non causa esclusiva. Cachelaunch/T0/render/sampler **NOT_TRAVERSED**, observations0/errors0; preflightammissione/kernel PASS ma nessun campione app. Nessun retry immutato o nuovo collector. [Log nativo](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-owned-census.ROOT/preparation-failure.ROOT/xcodebuild.log). Metadatadiagnostici in lettura entro4MB, postflightShutdownconfermato. ProbeAPI sul soloSimulatorlocale6E con installazione53pin: pathkernel/UID/PID/birth corrispondono all'app reale, nessun testlatency/save; consumer8e3c996c chiuso/Shutdown/lease rilascio.
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/SIM NOT_RUN.** Unico fileappContentView: tipi dellequattroNavigationStack ancora nel tipo genérico TabView anche quando branchesColor.clear. Nuovo hostprivato concreto conclosureMainActor→AnyView; costruzione generica è DENTROclosure, eseguita solo pertabselezionati/visitati. Vecchi rami, callback/read/writeguards, presentationID, disponibilitàseparata, latch, navigationcontent, tag/label/state/bozze sono token-equivalenti dopo rimozione delle sole4coperture; ricostruzione preimagebyte-esatta verificata. Nessunyield/toolbar/title/renderer/compilatore/DB/API/dependencydelta. È ipotesi strutturale sul lavoro SwiftUI/navigation/hosting osservato e sugli intervalli persistenti, non causaCPU esclusiva dimostrata dalletracceincomplete. Si mantiene solo dopo beneficio pertinente e gateoriginalePASS; altrimenti si ritira. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-root-tab-type-host.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Prossima run: B2INTERO su-O/assertDebug preesistente, T0/5s/memo/autorità originali, **CPUoff**, exportSDK per ordinario successivo se qualificato. Include la singolaguardiamarker>=T0 già rivista, soloCI/defaultoff. Nessun'altra matrice prima dell'esito. Se beneficio ePASS: regressioni root pertinenti/ordinario delSUO prodotto, full2101/review/PR29/mainCI/PR28/ritiro2920/cleanup/DONE autorizzato solo acriteri soddisfatti. C3/T11/Android/atomic/live/POS restano acquisiti nel proprio scope, impatto root ricontrollato nella composizione effettiva. ACTIVE/EXECUTION, non consegna alcheckpoint.
+
+### Execution — Candidato census pubblicato, preflight ospitato PASS — 2026-11-09T21:22:57.816266+00:00
+
+Tagcodex/task146-b2-kernel-owned-census = a39885bfe9986673bb0e7a7a5a401e21e891a650 remotoverificato, AppTree1264509821b84861470b1deefa3f0bccf356dff3. Run42700301893/job129442937958: stepVerifyownedkernelsampler PASS21:13:41UTC, includeINTERAammissionePID/path/UID/birth/3env eprobeKernel; SDKDebug in corso, SIMNOT_RUNfinché non attraversato. Monitorlocale session98652, O=ios-b2-kernel-owned-census.ROOT. Nessunretryworkflowidentico; pubblicata nuova correzione della causa psTimeout confermata. Livestream joblogAzureBlobNotFound(2letture), nessuna nuova run; jobAPI è operativo, logfinale da leggere quando disponibile.
+
+f123/postflight finale: B2FAIL8,041639s, cachehit/physicalreuse/autoritàvalidi/0scan; worker778ms, attesaMain1,646284s, pub→riga2,365239s. Zero sampleragganciati, diagnosiappNOT_RUN;971.418B/4MB acquisiti. [Receipt](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-prelaunch-kernel.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Reviewincrementaleaggiunge SOLOCIguardiamarker>=T0, localeuncommitted per prossimo commit, app/tests/workflow invariati. Runimmutataa398 si valuta sul SUOhelper e markerattuali>=T0/render; non riavviarla per questa guardia se dati già coerenti. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-owned-census.ROOT/INCREMENTAL-COLLECTOR-REVIEW.ROOT.json).
+
+Handoff operativo: completarequesta run, acquisirebundlecausale conreaderpreparato cap4MB, verificarecoperturadeidueintervalli prima di patchapp. Poi B2nonprofilato/exportSDK, regressioni pertinenti/ordinario reale corrente, full2101(2042P/43skip/16differiti)/review/PR29/mainCI/PR28/ritiro2920/cleanup. ACTIVE/EXECUTION fino a criteri reali; nessun arresto al checkpoint. Primaryindex5202e036 invariato, QCOW2/dati/binari protetti.
 
 ### Execution — Collector fermo prima del target, enumerazione kernel qualificata — 2026-11-09T21:11:52.655181+00:00
 

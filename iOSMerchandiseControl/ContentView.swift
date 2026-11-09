@@ -122,6 +122,14 @@ extension View {
     }
 }
 
+// Keep each navigation tree's generic metadata inside its selected or visited
+// host. The root TabView itself carries only this concrete view and Color.
+private struct RootTabContent: View {
+    let content: @MainActor () -> AnyView
+
+    var body: some View { content() }
+}
+
 struct ContentView: View {
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
@@ -602,15 +610,19 @@ struct ContentView: View {
         TabView(selection: selectedTabBinding) {
             Group {
                 if selectedTab == 0 || openedTabs.contains(0) {
-                    NavigationStack {
-                        InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
-                            businessContentIsCurrent: { canReadLocalDomain(.catalog) },
-                            unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
-                            openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
-                            .environmentObject(excelSession)
-                            .environmentObject(shopContextStore)
-                            .id(presentationID)
-                            .toolbar { syncToolbar }
+                    RootTabContent {
+                        AnyView(
+                            NavigationStack {
+                                InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
+                                    businessContentIsCurrent: { canReadLocalDomain(.catalog) },
+                                    unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
+                                    openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
+                                    .environmentObject(excelSession)
+                                    .environmentObject(shopContextStore)
+                                    .id(presentationID)
+                                    .toolbar { syncToolbar }
+                            }
+                        )
                     }
                 } else { Color.clear }
             }
@@ -619,25 +631,29 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 1 || openedTabs.contains(1) {
-                    if catalogAvailable || hasAdmittedBusinessNavigation {
-                        NavigationStack {
-                            Group {
-                                #if DEBUG
-                                let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
-                                #endif
-                                if !catalogAvailable {
-                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                        .navigationTitle(L("tab.database"))
-                                } else {
-                                    DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                                        ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                    RootTabContent {
+                        AnyView(Group {
+                            if catalogAvailable || hasAdmittedBusinessNavigation {
+                                NavigationStack {
+                                    Group {
+                                        #if DEBUG
+                                        let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
+                                        #endif
+                                        if !catalogAvailable {
+                                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                                .navigationTitle(L("tab.database"))
+                                        } else {
+                                            DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                                        }
+                                    }
+                                    .id(presentationID)
+                                    .toolbar { syncToolbar }
                                 }
+                            } else {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
                             }
-                            .id(presentationID)
-                            .toolbar { syncToolbar }
-                        }
-                    } else {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                        })
                     }
                 } else { Color.clear }
             }
@@ -646,21 +662,25 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 2 || openedTabs.contains(2) {
-                    if sessionsAvailable || hasAdmittedBusinessNavigation {
-                        NavigationStack {
-                            Group {
-                                if !sessionsAvailable {
-                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                        .navigationTitle(L("tab.history"))
-                                } else {
-                                    HistoryView(historySessionSyncService: historySessionSyncService)
+                    RootTabContent {
+                        AnyView(Group {
+                            if sessionsAvailable || hasAdmittedBusinessNavigation {
+                                NavigationStack {
+                                    Group {
+                                        if !sessionsAvailable {
+                                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                                .navigationTitle(L("tab.history"))
+                                        } else {
+                                            HistoryView(historySessionSyncService: historySessionSyncService)
+                                        }
+                                    }
+                                    .id(presentationID)
+                                    .toolbar { syncToolbar }
                                 }
+                            } else {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
                             }
-                            .id(presentationID)
-                            .toolbar { syncToolbar }
-                        }
-                    } else {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                        })
                     }
                 } else { Color.clear }
             }
@@ -669,12 +689,16 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 3 || openedTabs.contains(3) {
-                    NavigationStack {
-                        OptionsView(remoteCountFetcher: remoteCountFetcher,
-                            supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
-                            syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                            deviceAuthorization: shopDeviceRegistrationService,
-                            accountStoreReplacementRuntime: syncOrchestrator)
+                    RootTabContent {
+                        AnyView(
+                            NavigationStack {
+                                OptionsView(remoteCountFetcher: remoteCountFetcher,
+                                    supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
+                                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                                    deviceAuthorization: shopDeviceRegistrationService,
+                                    accountStoreReplacementRuntime: syncOrchestrator)
+                            }
+                        )
                     }
                 } else { Color.clear }
             }

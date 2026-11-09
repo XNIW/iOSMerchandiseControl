@@ -227,7 +227,9 @@ def after_render_symbol_information(row):
             if len(result.stdout) > 65536:
                 return
             matched = re.search(rb'phase\.owner-qualification-observed uptime_ns\.(\d+)', result.stdout)
-            if result.returncode == 0 and matched and birth(row["pid"]) == row["targetBirth"]:
+            if (result.returncode == 0 and matched
+                and int(matched[1]) >= int(row["requestUptime"] * 1e9)
+                and birth(row["pid"]) == row["targetBirth"]):
                 row["afterRenderAuthorityMarkerUptimeNs"] = int(matched[1])
                 row["symbolLookupStartedAtMonotonicNs"] = time.monotonic_ns()
                 symbolic = output / (row["label"] + ".symbolicated.txt")
