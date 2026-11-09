@@ -1427,8 +1427,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let row = app.staticTexts["R23 saved catalog A"]
         XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
         let item = app.textFields[Self.r23ItemCodeFieldLabel]
-        r4Reveal(item)
-        replaceText(in: item, with: "R23 ordinary item B", readinessTarget: .label(Self.r23ItemCodeFieldLabel))
+        r4Reveal(item, focusInVisibleEditor: true)
+        replaceText(in: item, with: "R23 ordinary item B", readinessTarget: .label(Self.r23ItemCodeFieldLabel),
+            focusAlreadyPositioned: true)
         app.buttons["Save"].tap()
         try r4Await("b-and-price-own-ack", timeout: 15)
         let terminal = try r4Ledger("Ordinary Save B uses R and only itemNumber; price receives its own exact ACK", inEditor: false)
@@ -1454,7 +1455,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func r4Reveal(_ element: XCUIElement, optionsIdentifier: String? = nil,
-                          optionsTitle: String? = nil, resolution: Bool = false) {
+                          optionsTitle: String? = nil, resolution: Bool = false,
+                          focusInVisibleEditor: Bool = false) {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         if resolution {
             // Capture only the real resolution sheet. Its editor and Database
@@ -1590,6 +1592,53 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
             }
             XCTFail("R4 control not reachable within 15 seconds and 5 drags")
+            return
+        }
+        if focusInVisibleEditor {
+            // SaveB's Item Code can move underneath the keyboard after focus.
+            // Own the focus and its reveal in ONE15s/five-drag window. The
+            // original5s coherent readiness/native hit/Select All follows below.
+            var focused = false
+            for drag in 0...5 {
+                guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let keyboard = app.keyboards.firstMatch
+                if !focused && element.exists && element.isHittable {
+                    element.tap()
+                    focused = true
+                    let remaining = min(5, deadline - ProcessInfo.processInfo.systemUptime)
+                    guard remaining > 0 && keyboard.waitForExistence(timeout: remaining) else { break }
+                }
+                let editor = app.navigationBars["Edit product"]
+                if focused && keyboard.exists && editor.exists {
+                    let viewport = app.frame.intersection(app.windows.firstMatch.frame)
+                    var upper = max(viewport.minY + 12, editor.frame.maxY + 12)
+                    let band = app.otherElements["task144.controlled.editor.band"]
+                    if band.exists { upper = max(upper, band.frame.maxY + 12) }
+                    var lower = min(viewport.maxY, keyboard.frame.minY) - 12
+                    let assistant = app.otherElements["SystemInputAssistantView"]
+                    if assistant.exists {
+                        let covered = assistant.frame.intersection(viewport)
+                        if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
+                    }
+                    let frame = element.frame
+                    guard [frame.minX, frame.minY, frame.maxX, frame.maxY, upper, lower].allSatisfy({ $0.isFinite }),
+                          frame.width > 0, frame.height > 0, lower > upper + 16 else { break }
+                    if viewport.contains(frame), frame.minY >= upper, frame.maxY <= lower,
+                       element.isHittable, ProcessInfo.processInfo.systemUptime < deadline { return }
+                    guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                    let upward = frame.midY > (upper + lower) / 2
+                    let startY = upward ? lower : upper
+                    let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                        dx: viewport.minX + 24 - app.frame.minX, dy: startY - app.frame.minY))
+                    start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
+                        dx: 0, dy: (upward ? -1 : 1) * min(200, lower - upper))),
+                        withVelocity: .slow, thenHoldForDuration: 0.2)
+                } else {
+                    guard drag < 5, !focused, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                    app.swipeUp()
+                }
+            }
+            XCTFail("R4 focused field not visible above keyboard within 15 seconds and 5 drags")
             return
         }
         for drag in 0...5 {
@@ -4363,8 +4412,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     private func replaceText(in field: XCUIElement, with value: String,
                              readinessTarget: TextFieldReadinessTarget = .identifier("task144.product.name"),
-                             positionViewportAfterFocus: Bool = false) {
-        field.tap()
+                             positionViewportAfterFocus: Bool = false,
+                             focusAlreadyPositioned: Bool = false) {
+        if !focusAlreadyPositioned { field.tap() }
         let current = field.value as? String ?? ""
         let hasCurrentText = !current.isEmpty && current != field.placeholderValue
         let keyboard = app.keyboards.firstMatch
