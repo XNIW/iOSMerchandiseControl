@@ -8,7 +8,8 @@ from pathlib import Path
 import re
 import runpy
 import uuid
-import pty
+import ctypes
+import struct
 import signal
 import subprocess
 import sys
@@ -29,49 +30,53 @@ observations = {}
 lock = threading.Lock()
 stop = threading.Event()
 native = None
-log_process = None
-log_stream = None
 marker_rows = []
 errors = []
 # One bounded region avoids concurrent pre-symbolication of the same process.
 # Existing markers locate the requested queue/render intervals inside the trace.
-phases = {"app-init-entry": ("mainactor-admission-region", 5)}
+phases = {"cache-process-start": ("mainactor-admission-region", 5)}
 # Reuse the existing kernel birth-identity helper, also used by local runner
 # custody. A unique constant in the log predicate identifies only this stream.
 birth = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")["birth"]
-stream_identity_tag = "TASK146_STREAM_" + uuid.uuid4().hex
+def selected_process_environment(pid, keys):
+    # KERN_PROCARGS2 is read only for an already verified owned target. Never
+    # persist or print its other environment fields, including inherited secrets.
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.sysctl.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_uint,
+        ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_void_p, ctypes.c_size_t]
+    libc.sysctl.restype = ctypes.c_int
+    mib = (ctypes.c_int * 3)(1, 49, pid)  # CTL_KERN, KERN_PROCARGS2
+    size = ctypes.c_size_t()
+    if libc.sysctl(mib, 3, None, ctypes.byref(size), None, 0) != 0:
+        return None
+    if not 4 < size.value <= 1048576:
+        return None
+    buffer = ctypes.create_string_buffer(size.value)
+    if libc.sysctl(mib, 3, buffer, ctypes.byref(size), None, 0) != 0:
+        return None
+    raw = buffer.raw[:size.value]
+    argc = struct.unpack_from("i", raw)[0]
+    if not 0 < argc <= 1024:
+        return None
+    index = raw.find(b"\0", 4)
+    if index < 0:
+        return None
+    while index < len(raw) and raw[index] == 0:
+        index += 1
+    for _ in range(argc):
+        end = raw.find(b"\0", index)
+        if end < 0:
+            return None
+        index = end + 1
+    result = {}
+    for field in raw[index:].split(b"\0"):
+        key, separator, value = field.partition(b"=")
+        if separator and key in keys:
+            if key in result:
+                return None
+            result[key] = value.decode("ascii", errors="strict")
+    return result
 
-def stop_owned_marker_stream():
-    listing = subprocess.check_output(["ps", "-ww", "-axo", "pid=,uid=,args="], text=True, timeout=5)
-    matches = []
-    for line in listing.splitlines():
-        fields = line.strip().split(None, 2)
-        if len(fields) != 3 or stream_identity_tag not in fields[2]:
-            continue
-        pid, uid, command = fields
-        if Path(command.split()[0]).name == "log" and " stream " in command:
-            matches.append((int(pid), int(uid), command))
-    if len(matches) != 1 or matches[0][1] != os.getuid():
-        errors.append("owned_marker_stream_identity_not_unique")
-        return None
-    pid, uid, command = matches[0]
-    identity = birth(pid)
-    if identity is None or birth(pid) != identity:
-        errors.append("owned_marker_stream_birth_changed")
-        return None
-    # This exact random predicate was supplied only to our just-created stream.
-    # Never stop a stream from another consumer or rely on a reused numeric PID.
-    os.kill(pid, signal.SIGTERM)
-    stop_owned(log_process)
-    deadline = time.monotonic() + 5
-    while birth(pid) == identity and time.monotonic() < deadline:
-        time.sleep(0.025)
-    if birth(pid) == identity:
-        errors.append("owned_marker_stream_did_not_exit")
-        return None
-    return {"pid": pid, "uid": uid, "birthIdentity": identity,
-            "identityTag": stream_identity_tag, "terminatedBeforeSampling": True,
-            "stoppedAtMonotonicNs": time.monotonic_ns()}
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -81,12 +86,14 @@ def record_command(pid, duration):
             "-onlyTarget", "-noSymbolicate", "-noProcessingWhileSampling", "-noIPC",
             "-noText", "-noFile", "-timelimit", str(duration + 10)]
 
-def offline_report(raw, destination):
-    # No inspectLiveSystem: the target is never queried for live symbol lookup.
+def offline_report(raw, destination, inspect_after_render=False):
+    # Live image lookup is allowed only after recording AND the existing physical
+    # row-render marker. It cannot perturb a captured stack or its render time.
     with destination.with_suffix(".stderr.txt").open("xb") as error:
         result = subprocess.run(["/usr/sbin/spindump", "-i", str(raw), "-o", str(destination),
             "-noBinary", "-onlyTarget", "-noIPC", "-aggregateCallTreesByThread",
-            "-timestampsInCallTrees", "machabssec"], stdout=subprocess.DEVNULL,
+            "-timestampsInCallTrees", "machabssec"]
+            + (["-inspectLiveSystem"] if inspect_after_render else []), stdout=subprocess.DEVNULL,
             stderr=error, timeout=90)
     return result.returncode
 
@@ -95,12 +102,14 @@ def self_probe():
     probe.mkdir(exist_ok=False)
     child = subprocess.Popen([sys.executable, "-c",
         "import time\ndeadline=time.monotonic()+35\nx=1.0\nwhile time.monotonic()<deadline:x=(x+1.0001)**0.5"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+        env={**os.environ, "TASK146_IDENTITY_PROBE": "synthetic-kernel-args-v1"})
     identity = birth(child.pid)
     raw, report = probe / "self.raw.spindump", probe / "self.symbolicated.txt"
     record_exit, reparse_exit = None, None
     try:
         assert child.poll() is None and identity is not None
+        assert selected_process_environment(child.pid, {b"TASK146_IDENTITY_PROBE"}) == {b"TASK146_IDENTITY_PROBE": "synthetic-kernel-args-v1"}
         with raw.open("xb") as out, (probe / "record.stderr.txt").open("xb") as error:
             record_exit = subprocess.run(record_command(child.pid, 1), stdout=out,
                 stderr=error, timeout=20).returncode
@@ -114,7 +123,7 @@ def self_probe():
     proof = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scriptSHA256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "pid": child.pid, "birth": identity, "targetExitedBeforeReparse": child.poll() is not None,
-        "recordExit": record_exit, "offlineExit": reparse_exit,
+        "recordExit": record_exit, "offlineExit": reparse_exit, "processEnvironmentProbe": "PASS",
         "rawBytes": raw.stat().st_size, "reportBytes": report.stat().st_size if report.exists() else 0,
         "scope": "OWNED_PYTHON_PROBE_ONLY_NOT_APP_ACCEPTANCE"}
     proof["status"] = "PASS" if record_exit == reparse_exit == 0 and proof["reportBytes"] > 0 else "FAIL"
@@ -122,67 +131,91 @@ def self_probe():
     print(json.dumps(proof), flush=True)
     return 0 if proof["status"] == "PASS" else 87
 
-def cpu_observation(record):
-    message = record.get("eventMessage", "")
-    match = re.search(r"TASK146_B2_COST39 phase\.([a-z-]+) uptime_ns\.(\d+)", message)
-    if not match:
-        return
-    phase, uptime = match.groups()
-    pid = int(record.get("processID", record.get("processIdentifier", 0)))
-    if pid <= 0:
-        errors.append("marker_missing_process_id")
-        return
-    with lock:
-        if len(marker_rows) < 32:
-            marker_rows.append({"phase": phase, "pid": pid, "markerUptimeNs": int(uptime),
-                                "deliveredAtMonotonicNs": time.monotonic_ns()})
-        if phase not in phases or phase in observations or stop.is_set():
-            return
-        if observations and any(row["pid"] != pid for row in observations.values()):
-            errors.append("cache_process_changed_between_markers")
-            return
-        fields = subprocess.check_output(["ps", "-p", str(pid), "-o", "uid=,comm="], text=True, timeout=5).strip().split(None, 1)
-        target_birth = birth(pid)
-        if len(fields) != 2 or int(fields[0]) != os.getuid() or target_birth is None or Path(fields[1]).name != "iOSMerchandiseControl":
-            errors.append("marker_process_identity_mismatch")
-            return
-        label, duration = phases[phase]
-        stream_receipt = stop_owned_marker_stream()
-        if stream_receipt is None:
-            return
-        raw = output / (label + ".raw.spindump")
-        stderr = output / (label + ".stderr.txt")
-        assert birth(pid) == target_birth, "target birth changed before kernel sampler"
-        started = time.monotonic_ns()
-        # User-owned stdout file; root receives only this already-open descriptor.
-        with raw.open("xb") as data, stderr.open("xb") as err:
-            process = subprocess.Popen(record_command(pid, duration), stdout=data,
-                stderr=err, start_new_session=True)
-        observations[phase] = {"pid": pid, "phase": phase, "label": label,
-            "durationSeconds": duration, "samplingIntervalMilliseconds": 10, "targetBirth": target_birth,
-            "markerStream": stream_receipt,
-            "markerUptimeNs": int(uptime), "requestedAtMonotonicNs": started,
-            "deliveryDelayNs": started - int(uptime), "raw": raw, "stderr": stderr,
-            "process": process}
-
-def read_markers():
+def after_render_symbol_information(row):
+    # This fixture emits owner-qualification-observed only AFTER the unchanged
+    # ProductRow render boundary. Never query live images before that fact.
+    process = row["process"]
     try:
-        for line in log_stream:
-            if stop.is_set():
-                break
-            if len(line) > 16384:
-                continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(record, dict):
-                cpu_observation(record)
-                if observations:
-                    return  # The one trigger is complete; the live log stream is closed.
+        code = process.wait(timeout=25)
+        row["recordFinishedAtMonotonicNs"] = time.monotonic_ns()
+        if code != 0:
+            return
+        deadline = time.monotonic() + 15
+        while not stop.is_set() and time.monotonic() < deadline:
+            if birth(row["pid"]) != row["targetBirth"]:
+                return
+            predicate = 'processID == ' + str(row["pid"]) + ' AND eventMessage BEGINSWITH "TASK146_B2_COST39 phase.owner-qualification-observed"'
+            result = subprocess.run(["xcrun", "simctl", "spawn", device, "log", "show",
+                "--last", "20s", "--style", "ndjson", "--predicate", predicate],
+                capture_output=True, timeout=8)
+            if len(result.stdout) > 65536:
+                return
+            matched = re.search(rb'phase\.owner-qualification-observed uptime_ns\.(\d+)', result.stdout)
+            if result.returncode == 0 and matched and birth(row["pid"]) == row["targetBirth"]:
+                row["afterRenderAuthorityMarkerUptimeNs"] = int(matched[1])
+                row["symbolLookupStartedAtMonotonicNs"] = time.monotonic_ns()
+                symbolic = output / (row["label"] + ".symbolicated.txt")
+                row["afterRenderOfflineExit"] = offline_report(row["raw"], symbolic, inspect_after_render=True)
+                row["liveImageLookupScope"] = "AFTER_KERNEL_RECORDING_AND_PHYSICAL_RENDER_ONLY_SAME_PID_BIRTH"
+                return
+            stop.wait(0.2)
+    except Exception as error:
+        row["afterRenderSymbolError"] = type(error).__name__
+
+
+def read_cache_process():
+    # The measured log/stream closure admitted the previous sampler4.7s after
+    # App.init. Detect this exact test launch at process birth instead. No stream
+    # or live symbolication is attached to the application.
+    seen = set()
+    try:
+        while not stop.is_set():
+            listing = subprocess.check_output(["ps", "-ww", "-axo", "pid=,uid=,comm="],
+                text=True, timeout=5)
+            for line in listing.splitlines():
+                fields = line.strip().split(None, 2)
+                if len(fields) != 3 or int(fields[1]) != os.getuid():
+                    continue
+                pid, command = int(fields[0]), fields[2]
+                if Path(command).name != "iOSMerchandiseControl" or device not in Path(command).parts:
+                    continue
+                if not command.endswith("/iOSMerchandiseControl.app/iOSMerchandiseControl"):
+                    continue
+                identity = birth(pid)
+                if identity is None or (pid, identity["sec"], identity["usec"]) in seen:
+                    continue
+                environment = selected_process_environment(pid, {b"TASK146_B2_DOMAIN_UI",
+                    b"TASK146_B2_LAUNCH_REQUEST_UPTIME", b"TASK144_LOCAL_AVAILABILITY_FIXTURE"})
+                if environment is None or b"TASK146_B2_DOMAIN_UI" not in environment:
+                    continue  # Retry only while launch environment is not available.
+                seen.add((pid, identity["sec"], identity["usec"]))
+                if environment[b"TASK146_B2_DOMAIN_UI"] != "cache":
+                    continue
+                request = float(environment[b"TASK146_B2_LAUNCH_REQUEST_UPTIME"])
+                namespace = str(uuid.UUID(environment[b"TASK144_LOCAL_AVAILABILITY_FIXTURE"]))
+                assert 0 < request <= time.monotonic() and time.monotonic() - request < 10
+                assert birth(pid) == identity and not observations
+                phase = "cache-process-start"
+                label, duration = phases[phase]
+                raw, stderr = output / (label + ".raw.spindump"), output / (label + ".stderr.txt")
+                started = time.monotonic_ns()
+                with raw.open("xb") as data, stderr.open("xb") as err:
+                    process = subprocess.Popen(record_command(pid, duration), stdout=data,
+                        stderr=err, start_new_session=True)
+                observations[phase] = {"pid": pid, "phase": phase, "label": label,
+                    "durationSeconds": duration, "samplingIntervalMilliseconds": 10,
+                    "targetBirth": identity, "targetUID": os.getuid(), "namespace": namespace,
+                    "requestUptime": request, "requestedAtMonotonicNs": started,
+                    "requestToCollectorSeconds": started / 1e9 - request,
+                    "targetIdentityVerified": True, "liveMarkerStreamCreated": False,
+                    "raw": raw, "stderr": stderr, "process": process}
+                after_render_symbol_information(observations[phase])
+                return
+            stop.wait(0.1)
     except Exception as error:
         if not stop.is_set():
             errors.append(type(error).__name__)
+
 
 def stop_owned(process):
     if process is None or process.poll() is not None:
@@ -214,30 +247,16 @@ assert not (output / "report.json").exists(), "refuse mixed diagnostic execution
 code = 97
 thread = None
 try:
-    log_error = (output / "marker-stream.stderr.txt").open("xb")
-    # A PTY makes the existing log stream line-buffered. The first collector
-    # received markers2-3s late through a pipe, outside the intended intervals.
-    master, slave = pty.openpty()
-    log_stream = os.fdopen(master, "r", encoding="utf-8", errors="replace", buffering=1)
-    log_process = subprocess.Popen(
-        ["xcrun", "simctl", "spawn", device, "log", "stream", "--style", "ndjson", "--level", "debug",
-         "--predicate", 'process == "iOSMerchandiseControl" AND eventMessage BEGINSWITH "TASK146_B2_COST39"'
-         + ' AND "' + stream_identity_tag + '" == "' + stream_identity_tag + '"'],
-        stdout=slave, stderr=log_error, stdin=subprocess.DEVNULL, start_new_session=True)
-    os.close(slave)
-    thread = threading.Thread(target=read_markers, daemon=True)
+    thread = threading.Thread(target=read_cache_process, daemon=True)
     thread.start()
     native = subprocess.Popen(sys.argv[2:])
     code = native.wait()
 finally:
     stop.set()
-    stop_owned(log_process)
-    if "log_error" in globals():
-        log_error.close()
     if thread is not None:
-        thread.join(timeout=6)
-    if log_stream is not None:
-        log_stream.close()
+        thread.join(timeout=100)
+        if thread.is_alive():
+            errors.append("owned_process_observer_not_finalized")
     rows = []
     for phase, row in observations.items():
         process = row.pop("process")
@@ -254,7 +273,9 @@ finally:
             row["rawReadComplete"] = 0 < raw.stat().st_size <= 16000000
             row["rawSHA256"] = hashlib.sha256(raw.read_bytes()).hexdigest() if row["rawReadComplete"] else None
             symbolic = output / (row["label"] + ".symbolicated.txt")
-            row["offlineExit"] = offline_report(raw, symbolic) if result == 0 and row["rawReadComplete"] else None
+            row["offlineExit"] = row.get("afterRenderOfflineExit")
+            if row["offlineExit"] is None and result == 0 and row["rawReadComplete"]:
+                row["offlineExit"] = offline_report(raw, symbolic)
             row["offlinePath"] = symbolic.name
             data = symbolic.read_bytes() if symbolic.exists() and symbolic.stat().st_size <= 2000000 else b""
             row["offlineComplete"] = bool(data) and row["offlineExit"] == 0
@@ -278,15 +299,15 @@ finally:
     report = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION",
         "nativeExit": code, "observations": rows, "markers": marker_rows, "errors": errors,
-        "symbolInformation": "Kernel onlyTarget stackshots, noSymbolicate/noProcessingWhileSampling/noIPC during capture; separate offline -i reparse after recorder exit, never inspectLiveSystem",
+        "symbolInformation": "Kernel onlyTarget stackshots, noSymbolicate/noProcessingWhileSampling/noIPC during capture; separate -i reparse after recorder exit; live image lookup ONLY after existing physical-render/authority marker with same PID/birth",
         "selfProbe": probe,
         "collectorFinalizationLimitSeconds": 120,
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),
-        "interpretation": "Samples include profiler/OS overhead. Compare marker and request clocks; do not replace the original5s verdict. The startup region is diagnostic only. Use actual sample timestamps and recorded markers; no exclusive interval attribution.",
+        "interpretation": "Samples include profiler/OS overhead. Compare request, collector and actual first stackshot clocks; do not replace the original5s verdict. The startup region is diagnostic only. Use actual sample timestamps and recorded markers; no exclusive interval attribution.",
         "applicationCompilerAndTestsChanged": False,
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
-        row["exitCode"] == 0 and row.get("markerStream", {}).get("terminatedBeforeSampling")
+        row["exitCode"] == 0 and row.get("targetIdentityVerified") and row.get("liveMarkerStreamCreated") is False
         and row.get("rawReadComplete") and row.get("offlineComplete") and row.get("projectionComplete")
         and row.get("projectionScope") == "HEADER_AND_MAIN_THREAD" for row in rows)
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
