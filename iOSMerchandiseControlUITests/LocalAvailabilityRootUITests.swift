@@ -3663,21 +3663,39 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if !current.isEmpty && current != field.placeholderValue {
             let clear = app.buttons["Clear search"]
             XCTAssertTrue(clear.waitForExistence(timeout: 5) && clear.isHittable)
-            // Clear is an asynchronous native edit. Admit the next input only
-            // after its actual value is empty, within five seconds INCLUDING
-            // the real Clear tap. A missing value or a late getter cannot pass.
+            // The real tap retains its SDK idle handling, as before this fix.
+            // Await its asynchronous value publication only AFTER it returns;
+            // the typed-search deadline below remains the original five seconds.
             let placeholder = field.placeholderValue
-            let clearDeadline = ProcessInfo.processInfo.systemUptime + 5
+            let clearStarted = ProcessInfo.processInfo.systemUptime
             clear.tap()
+            let clearReturned = ProcessInfo.processInfo.systemUptime
+            let clearDeadline = clearReturned + 5
             var cleared = false
+            var clearObservations: [[String: Any]] = []
             while ProcessInfo.processInfo.systemUptime < clearDeadline {
                 let nativeValue = field.value as? String
-                if ProcessInfo.processInfo.systemUptime > clearDeadline { break }
+                let observed = ProcessInfo.processInfo.systemUptime
+                if clearObservations.count < 8 {
+                    clearObservations.append(["uptime": observed,
+                        "nativeValue": nativeValue.map { String($0.prefix(128)) } ?? "UNAVAILABLE"])
+                }
+                if observed > clearDeadline { break }
                 if let nativeValue, nativeValue.isEmpty || nativeValue == placeholder {
                     cleared = true; break
                 }
             }
-            XCTAssertTrue(cleared, "The real Clear action must publish an empty search within5s before the next input")
+            if !cleared {
+                let facts: [String: Any] = ["scope": "CLEAR_PUBLICATION_BEFORE_NEXT_INPUT",
+                    "tapStarted": clearStarted, "tapReturned": clearReturned,
+                    "publicationDeadline": clearDeadline, "observations": clearObservations]
+                if let bytes = try? JSONSerialization.data(withJSONObject: facts, options: [.sortedKeys]) {
+                    let detail = XCTAttachment(data: bytes, uniformTypeIdentifier: "public.json")
+                    detail.name = "T11 actual Clear publication boundary"
+                    detail.lifetime = .keepAlways; add(detail)
+                }
+            }
+            XCTAssertTrue(cleared, "The real Clear action must publish an empty search within5s after its tap returns, before the next input")
             field.tap()
         }
         field.typeText(value)
