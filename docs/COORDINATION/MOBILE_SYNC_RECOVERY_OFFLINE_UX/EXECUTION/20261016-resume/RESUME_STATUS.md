@@ -1,5 +1,25 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — Blocco esterno GitHub Actions; checkpoint pubblicato — 2026-11-09T18:26:27.106921+00:00
+
+**CI BLOCKED_EXTERNAL, candidato93 BUILD/SIM NOT_RUN.** Run42671863132 e UNICO retry invariato42672399126 terminano prima del job applicativo, con errori interni GitHub/correlationID distinti f22e63f7-4917-416d-a498-eea5a58a156d e c1415d67-baf2-4cfc-9781-08c072b92f85. Zero SDK, test, consumer o artefatti nativi: non sono FAIL applicativi. GitHubStatus conferma incidente Actions tp8cghg7tlc4 dalle18:12UTC, ora major_outage/investigating. [Ricevuta e stato ufficiale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-database-title-mode-retry01.ROOT/EXTERNAL-STARTUP-FAILURE.ROOT.json). L'azione esterna mancante è il ripristino dell'orchestrazione Actions da parte di GitHub; nessuna nuova credenziale, conferma o periferica richiesta all'utente. Nessun altro retry cieco finché quello stato esterno non cambia.
+
+**✅ STATIC ESEGUITO PASS; indipendenti completati.**93ee7d7a4084b5fe56856c94cb1a2d8ee3751bdc/tagcodex/task146-b2-database-title-mode, AppTreee1bb642f36f2100820cbfcd69a611930660eb6b1. Unico delta applicativo: titolo Database inline attraverso gate/pronto; ipotesi NON qualificata, nessun beneficio presunto. Workflow ARM ripristinato byte-esatto530, originaliT0/5s/memo/autorità/assertion invariati. Swiftparse/YAML/diff PASS, nessuna nuova modifica dopo lo startup failure. Prodotto locale425a marcato requiresRebuild/partial restore, Xcode27.2/27B52 contro26.6/17F113 ospitato: non è un riuso valido per93 e una ricostruzione differente non sostituirebbe la CI richiesta. Nessun avvio SDK locale o download nuovo. Indice checkout principaleSHA5202e036… invariato. PR29body aggiornata/verificata, head ancora08294ec2 e main94fb03a5: nessun merge anticipato.
+
+| Gate | Tipo | Stato e perimetro |
+|---|---|---|
+| B2 ultimo AppTree qualificabile e358 | BUILD/SIM | FAIL5,844223s, memo/riuso validi/zero scan; yield rimosso |
+| Toolbar e hostIntel | BUILD/SIM | FAIL11,355s/10,836920s; ipotesi ritirate, non altre prove da ripetere |
+| Nuovo titolo93 | STATIC/BUILD/SIM | STATIC PASS; BUILD/SIM NOT_RUN per CI esterna |
+| Ordinario Inventory e358 | BUILD/SIM | PASS disponibilità1,839s/1,807s, seconda cache-valida0scan; NON trasferito automaticamente a93 |
+| C3/oracolo14 e treT11 | SIM | PASS interi già qualificati su3f/349e/de619, rispettivi perimetri conservati; composizione93 NOT_RUN |
+| Android main5b4d2155 | CI/BUILD/SIM | Main e CI42382508251 esatta riconfermate; nessun impatto dal delta iOS |
+| Matrice finale2101/8shard, Release/Analyze/scan93 | CI/BUILD/SIM | NOT_RUN/BLOCKED_EXTERNAL, nessuna aggregazione di migliori binari precedenti |
+
+Dati locali, atomica/B1a, incrementale/cancellazioni/live e POS mantengono le precedenti qualifiche soltanto nei percorsi invariati. Offline fisicoiOS16 e statistiche restano DIFFERITI dall'utente. TreQCOW2 richiesti conservati: stato offline/sessioni o recupero non qualificati come superflui; nessun erase. Postflight dei due startupfailure chiuso senza allocazioni native; prove e prodotti necessari conservati. Cumulativo cleanup obsoleti6.880.052.648Blogici/6.970.589.184allocati, fisicoesclusivoUNKNOWN_APFS_AND_CONCURRENT_ACTIVITY. Libero rilevato38123003904B, da rimisurare prima di acquisizione/installazione finale.
+
+**Handoff post-execution sospesa.** TASK146 BLOCKED, ultima fase EXECUTION; non REVIEW/DONE. Al ripristino Actions, riprendere lo STESSO candidato93/tag e singleton B2 con i guard originali, senza A0/planning/altro esperimento. Se il beneficio è qualificato: prove pertinenti e ordinario reale della nuova composizione, full8/review, PR29/main/CI esatta e riconciliazione/chiusuraPR28 soltanto dopo prova del recupero utile. Se non lo è, rifiutare l'ipotesi dal suo esito e causa osservata. Android/atomicità/live/POS non vanno riaperti senza impatto concreto. Ritiro fixture2920 e cleanup finali restano dopo l'ultimo consumer utile; nessuna chiusura PR28 o cancellazione di dati/binari oggi.
+
 ### Execution — RunnerIntel ritirato; titolo Database coerente — 2026-11-09T18:11:35.290288+00:00
 
 **✅ BUILD/SIM ESEGUITI290f/run42667617636: B2 intero FAIL10,836920s**, memo/physicalreuse validi,zero scan. Intel4CPU/15.032.385.536B reali/iOS26.2; worker121,44ms, fine-worker→MainActor1,931676s, autorità566,50ms, pub→riga5,234206s. Nessun beneficio pertinente contro lo stesso AppTree e358 ARM; risorsa/architettura/ipotesi ritirate, workflow ripristinato byte-esatto530. Nessuna causa esclusiva della memoria dedotta. TargetShutdown/0booted,867325B su4MB acquisiti, nessun SDK locale. [Causale/postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-hosted-memory-admission.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). QualifierIntel preparato mai avviato marcatoSUPERSEDED/NOT_RUN.
