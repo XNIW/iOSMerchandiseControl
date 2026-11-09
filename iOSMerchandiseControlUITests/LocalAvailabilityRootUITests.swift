@@ -3440,48 +3440,41 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false,
                                         observe: ((String) -> Void)? = nil) -> Bool {
         let started = ProcessInfo.processInfo.systemUptime
-        // One coherent public hierarchy carries every original uniqueness,
-        // owning-window and actual native selected attribute at the same instant.
-        // Three separate RPCs crossed5s after selection was already positive.
-        guard let root = try? app.snapshot() else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-error=true")
+        // Avoid requesting every diagnostic accessibilityValue in app.snapshot().
+        // One owning window proves AT LEAST one of each required structure;
+        // the global union count proves EXACTLY one of each, not just a match.
+        let types = [XCUIElement.ElementType.tabBar.rawValue, XCUIElement.ElementType.navigationBar.rawValue]
+            + (requiresForm ? [XCUIElement.ElementType.collectionView.rawValue] : [])
+        // Include the target title in the same global union. The owning window
+        // and actual selected getter below establish at least one of EVERY role;
+        // this total proves exactly one of each, including the selected title.
+        let structures = app.descendants(matching: .any).matching(NSCompoundPredicate(orPredicateWithSubpredicates: [
+            NSPredicate(format: "elementType IN %@", types),
+            NSPredicate(format: "elementType == %d AND label == %@", XCUIElement.ElementType.button.rawValue, title)
+        ]))
+        let expectedCount = types.count + 1
+        let owners = app.windows.containing(.tabBar, identifier: nil)
+            .containing(.navigationBar, identifier: title)
+        let windows = requiresForm ? owners.containing(.collectionView, identifier: nil) : owners
+        // The public selected attribute is available during query matching
+        // (XCUIElementAttributes). One native filtered count establishes the
+        // selected title under its actual owning TabBar/window and all required
+        // structures, without separate window-count and selected RPCs.
+        let selectedButtons = windows.tabBars.buttons.matching(NSPredicate(
+            format: "label == %@ AND selected == YES", title))
+        let selectedCount = selectedButtons.count
+        guard selectedCount == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); owned-native-selected-count=\(selectedCount)")
             return false
         }
-        typealias Entry = (node: XCUIElementSnapshot, path: [Int], window: [Int]?, tab: [Int]?)
-        var pending: [Entry] = [(root, [], nil, nil)]
-        var bars: [Entry] = [], navigation: [Entry] = [], forms: [Entry] = [], titles: [Entry] = []
-        var visited = 0
-        while let current = pending.popLast() {
-            visited += 1
-            guard visited <= 1_024 else {
-                observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-complete=false; visited=\(visited)")
-                return false
-            }
-            let node = current.node
-            let window = node.elementType == .window ? current.path : current.window
-            let tab = node.elementType == .tabBar ? current.path : current.tab
-            let entry: Entry = (node, current.path, window, tab)
-            if node.elementType == .tabBar { bars.append(entry) }
-            if node.elementType == .navigationBar { navigation.append(entry) }
-            if requiresForm && node.elementType == .collectionView { forms.append(entry) }
-            if node.elementType == .button && node.label == title { titles.append(entry) }
-            for (index, child) in node.children.enumerated() {
-                pending.append((child, current.path + [index], window, tab))
-            }
-        }
-        let expected = requiresForm ? 4 : 3
-        let total = bars.count + navigation.count + forms.count + titles.count
-        guard bars.count == 1, navigation.count == 1, titles.count == 1,
-              !requiresForm || forms.count == 1,
-              let owner = bars[0].window else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-complete=true; global-structures-and-title=\(total); expected=\(expected); bars=\(bars.count); navigation=\(navigation.count); forms=\(forms.count); titles=\(titles.count)")
-            return false
-        }
-        let navigationMatches = navigation[0].node.identifier == title
-        let admitted = total == expected && navigationMatches && titles[0].node.isSelected
-            && navigation[0].window == owner && titles[0].window == owner
-            && titles[0].tab == bars[0].path && (!requiresForm || forms[0].window == owner)
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot-complete=true; visited=\(visited); global-structures-and-title=\(total); expected=\(expected); owned-native-selected=\(titles[0].node.isSelected); coherent-native-admission=\(admitted)")
+        // The native owned-selected query proves at least one of EVERY role.
+        // The subsequent global total proves exactly one of each role/title,
+        // including unselected duplicates elsewhere. A separate earlier global
+        // count adds no missing role/uniqueness condition; avoid that third RPC.
+        // Both native results must still finish in the caller's original5s.
+        let afterCount = structures.count
+        let admitted = afterCount == expectedCount
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-after=\(afterCount); expected=\(expectedCount); owned-native-selected-count=\(selectedCount); native-filtered-admission=\(admitted)")
         return admitted
     }
 

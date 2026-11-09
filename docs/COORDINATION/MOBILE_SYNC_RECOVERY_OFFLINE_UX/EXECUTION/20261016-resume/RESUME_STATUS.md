@@ -1,5 +1,13 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — BaseRootPASS, snapshotT11 respinta e query native minime — 2026-11-09T10:53:02.793011+00:00
+
+**✅ BUILD/SIM ESEGUITI,1PASS/4FAIL.**c800/run42601134493 SDK standard e BaseRoot intero PASS. TreT11 FAIL all'ammissioneOptions: topologia globale4/4, selectednativetrue e admissiontrue, ma catture6,525/6,555/5,487s superano5s. C3fallisce prima all'actualswitcher, non è una nuova misura della traversata15s. Snapshot completa respinta sul costo; nessun errore di conteggi/selected inventato. I rami ricerca T11 restano NOT_TRAVERSED. Originali/payload928230B/4MB conservati. [Causali](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-continuation-native-admission.ROOT/current-failures.ROOT/CURRENT-CAUSAL-RANGE.ROOT_DELEGATED.json).
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/native NOT_RUN.** Sostituito soltanto isolationTabIsSelected: due query native, prima selectedtitle univoco sottoTabBar diWindowconNavbar/Form, poi conteggio globale esatto dell'unione ruoli+titoli. La prima prova almeno uno di ogni ruolo, la seconda prova esattamente uno globale; titoli non selezionati duplicati sono ancora rifiutati. Eliminata soltanto la duplicazione temporale del count iniziale della precedente sequenza3RPC, non un requisito di unicità/ownership/selected. Entrambe risposte entro il medesimo5s del caller. Nessun uso della snapshot completa costosa. BaseRootpan PASS preservato; ricerca5s ancora da attraversare. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-native-topology-query.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** DopoSDK standard ripetere BaseRoot/treT11/C3 interi (helpercondiviso). Profilo-O diagnostico fc235 già in corso su helper precedente: attribuzione propria, nessun risultato anticipato o adozione automatica. Long3-O ancora in corso, nessuna nuova matrice. AppTree/atomicità/B1a/manuale/outbox/POS/API invariati,16offlineOS/statistiche DIFFERITI, nessunmerge conFAILcritici.
+
 ### Execution — C3standard2PASS/1FAIL, profilo diagnostico circoscritto — 2026-11-09T10:48:12.096372+00:00
 
 **✅ BUILD/SIM ESEGUITI con attribuzione.**4a707/run42599314027 SDK standard PASS; Name/replayACK e oracolo14 PASS, C3 FAIL15s prima dell'ultimo getter. Primo pan313pt conserva overlap; viewport0 costa2,049s, viewport1 costa4,975s e43percento, terza snapshot lascia1,299s per sei righe native. Nessun rilassamento15s/gesti/privacy/associazioni o promozione del FAIL. TargetShutdown/0booted, payload864361B/4MB, originali conservati. Gruppi long3-O e continuation5standard ancora in corso, nessuna cancellazione/matrice nuova.
