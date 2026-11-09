@@ -2168,12 +2168,16 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 }
                 do {
                     let readback = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("readback-resumed")
+                    #endif
                     let fence = readback.fence
                     reusedPhysicalProof = readback.reusedPhysicalProof
                     #if DEBUG
                     if readback.reusedPhysicalProof { self?.localBodyPhysicalReuseCountForTesting += 1 }
                     else { self?.localBodyFullReadbackCountForTesting += 1 }
                     await self?.localBodyQualificationBeforePublicationForTesting?()
+                    Task144RootObservation.recordCachedCatalogPhase("publication-hook-return")
                     #endif
                     guard let self,
                           observeAuthority(!Task.isCancelled, "cancelled"),
@@ -2188,6 +2192,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     authorityClosureEntered = false
                     authorityClosurePassed = false
                     var cachedReadsPublished = false
+                    #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("publication-authority-entry")
+                    #endif
                     published = LocalCatalogPhysicalProofStore.withLatestBinding(readback.reuseToken) {
                         var canPublishCachedReads = false
                         let acceptedBody = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence, didAcceptProof: {
@@ -2270,6 +2277,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                         }
                         return acceptedBody
                     }
+                    #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("publication-authority-return")
+                    #endif
                     if published { return true }
                     if readback.reuseToken != nil && !authorityClosureEntered && firstPublicationFailure == "none" {
                         _ = observeAuthority(false, "physical-proof-latest-binding-changed")

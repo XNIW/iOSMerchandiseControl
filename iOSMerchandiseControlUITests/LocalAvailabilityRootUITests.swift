@@ -2366,7 +2366,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         // Use the existing single real Form pan before this first focus too.
         // The Photo row can otherwise leave Name below the visible keyboard.
-        positionNameInEditorViewport(name)
+        positionNameInEditorViewport(name, nativeSelectionReadinessFollows: true)
         replaceText(in: name, with: "Saved before network release")
         assertHeldBoundary()
         app.buttons["Save"].tap()
@@ -3590,6 +3590,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     selected = ProcessInfo.processInfo.systemUptime <= deadline
                     break
                 }
+                // Give the UI a turn after a negative observation, matching
+                // the existing switcher cadence inside the SAME absolute5s.
+                let remaining = deadline - ProcessInfo.processInfo.systemUptime
+                if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
             }
             if !selected {
                 let timing = XCTAttachment(string: observations.joined(separator: "\n"))
@@ -4295,7 +4299,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         return false
     }
 
-    private func positionNameInEditorViewport(_ field: XCUIElement) {
+    private func positionNameInEditorViewport(_ field: XCUIElement, nativeSelectionReadinessFollows: Bool = false) {
         let form = app.collectionViews.containing(.textField, identifier: "task144.product.name").firstMatch
         let padding: CGFloat = 16
         func observeNameViewport() -> (viewport: CGRect, formFrame: CGRect, visibleForm: CGRect,
@@ -4387,7 +4391,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         var panStripRight: CGFloat?
         var panExecuted = false
         func captureGeometry() {
-            let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel); rowExists=\(String(describing: rowExists)); row=\(String(describing: measuredRowFrame)); start=\(String(describing: panStart)); end=\(String(describing: panEnd)); panExecuted=\(panExecuted); keyboard=\(String(describing: measuredKeyboardFrame)); scrollBottom=\(scrollBottom); panTop=\(String(describing: panTop)); panBottom=\(String(describing: panBottom)); panStripLeft=\(String(describing: panStripLeft)); panStripRight=\(String(describing: panStripRight)); postPan=\(String(describing: postPanGeometry))")
+            let geometry = XCTAttachment(string: "form=\(visibleForm); toolbar=\(toolbar); controls=\(controls); band=\(upper)...\(lower); before=\(before); after=\(positioned); pan=\(!inside); requestedTravel=\(requestedTravel); rowExists=\(String(describing: rowExists)); row=\(String(describing: measuredRowFrame)); start=\(String(describing: panStart)); end=\(String(describing: panEnd)); panExecuted=\(panExecuted); admittedBand=\(finalUpper)...\(finalLower); nativeSelectionReadinessFollows=\(nativeSelectionReadinessFollows); keyboard=\(String(describing: measuredKeyboardFrame)); scrollBottom=\(scrollBottom); panTop=\(String(describing: panTop)); panBottom=\(String(describing: panBottom)); panStripLeft=\(String(describing: panStripLeft)); panStripRight=\(String(describing: panStripRight)); postPan=\(String(describing: postPanGeometry))")
             geometry.name = "Task144 actual Name viewport before the sole focus tap"
             geometry.lifetime = .keepAlways
             add(geometry)
@@ -4456,6 +4460,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             positioned = current.field
             finalUpper = current.upper
             finalLower = current.lower
+            if nativeSelectionReadinessFollows && current.keyboard == nil {
+                // This existing nonempty Name is immediately followed by the
+                // original5s, two-snapshot native keyboard/selection readiness.
+                // Before focus, the current visible Form is the actual boundary;
+                // the upper-half reserve predicts a keyboard not yet present.
+                XCTAssertFalse((field.value as? String ?? "").isEmpty,
+                    "The unchanged native selection readiness must follow this nonempty Name")
+                finalLower = current.scrollBottom - padding
+            }
             finalVisibleForm = current.visibleForm
             postPanGeometry = "form=\(current.visibleForm); toolbar=\(current.toolbar); controls=\(current.controls); band=\(current.upper)...\(current.lower); keyboard=\(String(describing: current.keyboard))"
         }
@@ -5149,7 +5162,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable,
             stage: "C3-actual-qualified-A-cloud-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         let admittedSyncAX = sync.debugDescription
-        try c3OptionsReveal(summary, form: form, stage: "C3-A-local", downstream: ["select-B", "administrative-privacy", "explicit-return-A"], velocity: .fast)
+        try c3OptionsReveal(summary, form: form, stage: "C3-A-local", downstream: ["select-B", "administrative-privacy", "explicit-return-A"], velocity: .slow, halfStepFraction: 0.45)
         try scopeRequire(summary.waitForExistence(timeout: 10) && summaryRows.count == 1 && summary.isHittable,
             stage: "C3-actual-qualified-A-summary-loaded", downstream: ["select-B", "administrative-privacy", "explicit-return-A"])
         try c3RequireLocalSummaryValues(form,
@@ -5225,7 +5238,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         try c3OptionsReveal(sync, form: returnedForm, stage: "C3-return-A-cloud", downstream: ["qualified-summary-return"], velocity: .fast)
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable && !unavailable.exists,
             stage: "C3-current-A-cloud-return", downstream: ["qualified-summary-return"])
-        try c3OptionsReveal(summary, form: returnedForm, stage: "C3-return-A-local", downstream: ["qualified-summary-return"], velocity: .fast)
+        try c3OptionsReveal(summary, form: returnedForm, stage: "C3-return-A-local", downstream: ["qualified-summary-return"], velocity: .slow, halfStepFraction: 0.45)
         try scopeRequire(summary.waitForExistence(timeout: 10) && summary.isHittable && !unavailable.exists,
             stage: "C3-current-A-summary-return", downstream: ["qualified-summary-return"])
         try c3RequireLocalSummaryValues(returnedForm,
@@ -5848,7 +5861,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
     }
     private func c3OptionsReveal(_ target: XCUIElement, form: XCUIElement, stage: String,
-                                downstream: [String], velocity: XCUIGestureVelocity = .slow) throws {
+                                downstream: [String], velocity: XCUIGestureVelocity = .slow,
+                                halfStepFraction: CGFloat = 0.29) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
             if target.exists && target.isHittable {
@@ -5861,7 +5875,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
                 deadline: deadline, collectContentAnchors: false, downstream: downstream)
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
-                velocity: velocity)
+                halfStepFraction: halfStepFraction, velocity: velocity)
         }
     }
     private func c3OptionsTraverseAdministrativeForm(_ form: XCUIElement) throws {
