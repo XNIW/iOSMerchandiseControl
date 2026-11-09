@@ -2021,6 +2021,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             #endif
             for _ in 0..<2 {
                 guard !Task.isCancelled else { noteFailure("capture-before", "cancelled"); return false }
+                // A synchronous observer can replace an immediate launch before
+                // its handle is assigned. Its identity must still be current
+                // before it submits any physical worker.
+                guard self?.manifestQualificationID == identity else {
+                    noteFailure("capture-before", "qualification-replaced"); return false
+                }
 // TASK145_COST39_BEGIN worker-attempt-ordinal
 #if DEBUG
                 qualificationCostAttempts &+= 1

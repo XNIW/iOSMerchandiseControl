@@ -3781,6 +3781,32 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertEqual(binding.currentBinding, bindingBefore)
         XCTAssertNil(binding.pendingRecoveryJournal)
         XCTAssertEqual(try completedRecoveryBusinessSnapshot(fixture), bodyBefore)
+
+        // Replace an immediate launch synchronously, before its returned Task
+        // handle can be assigned. Only the foreign successor may submit work;
+        // the displaced launch must stop before making another physical read.
+        let reentrant = try reopenFixture(fixture)
+        let reentrantController = reentrant.controller
+        var replacedDuringEntry = false
+        var reentrantReadbacks = 0
+        reentrantController.localBodyQualificationDidEnterForTesting = {
+            guard !replacedDuringEntry else { return }
+            replacedDuringEntry = true
+            reentrantController.startLocalBodyQualification(ownerUserID: foreignOwner)
+        }
+        reentrantController.localBodyQualificationBeforePublicationForTesting = { reentrantReadbacks += 1 }
+        defer {
+            reentrantController.localBodyQualificationDidEnterForTesting = nil
+            reentrantController.localBodyQualificationBeforePublicationForTesting = nil
+        }
+        reentrantController.startLocalBodyQualification(ownerUserID: fixture.ownerUserID)
+        let reentrantQualified = await reentrantController.awaitLocalBodyQualification()
+        XCTAssertTrue(replacedDuringEntry)
+        XCTAssertFalse(reentrantQualified)
+        XCTAssertEqual(reentrantReadbacks, 2, "Only the foreign successor's original two attempts may read the body")
+        XCTAssertFalse(Task126OwnerStoreGate.hasCurrentLocalBodyProof(reentrantController.modelContainer))
+        XCTAssertEqual(try completedRecoveryBusinessSnapshot(reentrant), bodyBefore)
+
     }
 
     func testPopulatedManifestQualificationSurvivesNormalSameShopRefreshWithoutManualRestart() async throws {

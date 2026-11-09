@@ -187,7 +187,14 @@ struct iOSMerchandiseControlApp: App {
         Group {
             #if DEBUG
             if let controlledRoot = Task144LocalAvailabilityRootFixture.current {
-                Task144ControlledRootAdmission(fixture: controlledRoot) { standardRootView(controller) }
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache",
+                   controlledRoot.isPreparedForRoot {
+                    // Cache App.init already admitted this persisted fixture.
+                    // Ordinary root has no fixture-wide facts observer.
+                    standardRootView(controller)
+                } else {
+                    Task144ControlledRootAdmission(fixture: controlledRoot) { standardRootView(controller) }
+                }
             } else if let task138VisualState = Self.task138ProductImageVisualState {
                 Task138ProductImageVisualHarness(state: task138VisualState)
             } else if Self.task139AtomicCrashHarnessRequested || Self.task139PreboundHarnessRequested {

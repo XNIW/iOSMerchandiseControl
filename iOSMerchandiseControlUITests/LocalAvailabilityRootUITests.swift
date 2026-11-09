@@ -5898,7 +5898,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // consumed the previous44pt margin and lost all shared pixels.
                 max(24, anchorBottom - observation.viewport.minY - 88))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
-                halfStepFraction: distance / observation.viewport.height / 2, velocity: .default)
+                halfStepFraction: distance / observation.viewport.height / 2, velocity: XCUIGestureVelocity(rawValue: 400))
         }
     }
 

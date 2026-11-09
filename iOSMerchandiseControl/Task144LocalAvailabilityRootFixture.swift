@@ -547,6 +547,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     private var emptyFenceInitialRequestWasStarted = false
     private var task: Task<Void, Never>?
     private var preparationTask: Task<Void, Never>?
+    private var cachedCatalogRenderWaiters: [CheckedContinuation<Void, Never>] = []
     private enum IndependentDomainPhase: String {
         case seed, holdPrices = "hold-prices", holdSessions = "hold-sessions", cache
 
@@ -1366,6 +1367,14 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         guard independentDomainPhase == .cache, !cachedCatalogDiagnosticsReady else { return }
         Task144RootObservation.recordCachedCatalogPhase("diagnostics-after-render")
         cachedCatalogDiagnosticsReady = true
+        let waiters = cachedCatalogRenderWaiters
+        cachedCatalogRenderWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
+    }
+
+    private func awaitCachedCatalogRender() async {
+        guard !cachedCatalogDiagnosticsReady else { return }
+        await withCheckedContinuation { cachedCatalogRenderWaiters.append($0) }
     }
 
     func prepareIfNeeded() {
@@ -1481,7 +1490,11 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                             // Observe the production root's current capability, not one
                             // qualification task that its lifecycle may have superseded.
                             transport.release()
+                            // The ordinary app has no technical proof poller.
+                            // Start this observer only after the real ProductRow
+                            // records its unchanged physical render timestamp.
                             let deadline = ProcessInfo.processInfo.systemUptime + 10
+                            await awaitCachedCatalogRender()
                             while ProcessInfo.processInfo.systemUptime < deadline {
                                 guard sameOwnerAndGeneration() else {
                                     throw SyncStoreGenerationError.activationReadBackFailed
