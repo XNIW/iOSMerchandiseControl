@@ -1,5 +1,15 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — T11 due interi PASS; ammissione iniziale e dischi AVD — 2026-11-09T15:54:09.669453+00:00
+
+**✅ BUILD/SIM ESEGUITI 349e, run42643091789: due PASS interi e un FAIL.** CorruptSeal e StableSupplier attraversano ricerca, diagnosi, riavvio, autorità e no-resend. MalformedHead fallisce nel PRIMO marker observed, prima delle ammissioni modificate. Readback corrente: head blockedContract e byte identici, sibling sent, un evento/business RPC, pending1; gerarchia di failure contiene observed. Il limite40s non è superato con PASS tardivo. Causa esclusiva del ritardo non dimostrata; non è un difetto dei dati provato. [Esito/postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-t11-shortcircuit-native-admission.ROOT/POSTFLIGHT.CLOSED.ROOT.json). Shutdown/zero booted verificati; acquisizione causale940903B su4MB.
+
+**✅ STATIC ESEGUITO PASS; successore SIM NOT_RUN.** Solo LocalAvailabilityRootUITests: sposta la stessa configurazione privata XCTest già ammessa per T11 dall'ingresso Options all'inizio del caso, coprendo anche i marker iniziali. ABI/KVC guard e ripristino teardown, animazioni app, attesa main-loop,40s/5s e controlli dati invariati. Beneficio da provare su un SOLO MalformedHead intero. B2 RAM-marker04/run42646262812 resta in corso; nessuna nuova matrice o patch applicativa speculativa.
+
+**✅ FILE ESEGUITO: tre dischi della schermata identificati, nessuna rimozione qualificata.**9,795GB è AVD storico performance/runtime;8,587GB è backup completo pre-upgrade del normale;5,291GB è target sintetico effettivamente usato per offline/live/POS, non solo provisionato. Nessun handle aperto, ma stato applicativo/offline/sessioni non qualificato come duplicato o ritirato. Owner e condizioni di rilascio registrati nel [manifest](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-qcow2-user-review.ROOT/RESULT.ROOT.json); dati protetti conservati.0byte eliminati in questo lotto; libero36.336.128.000B. Risorsa utente disponibile: precedente richiesta4GB risolta. Budget da rimisurare prima del prodotto ordinario finale su Inventario/default, senza override Database.
+
+Handoff ACTIVE/EXECUTION: esiti B2 e ammissione iniziale, composizione stabile, review/full CI, PR29/main e riconciliazione PR28.16offline OS iOS e statistiche DIFFERITI. Nessun merge con gate attivi FAIL.
+
 ### Execution — B2: controllo non profilato FAIL, confini di costruzione — 2026-11-09T15:35:44.817017+00:00
 
 **✅ SDK/SIM ESEGUITI 0af, run42640488883 FAIL6,303622s**, memo valido/riuso fisico/frontier completo/zero full scan. Worker147,58ms; fine worker→MainActor1,494720s; autorità174,97ms; pubblicazione→riga1,948678s. Il costo rimane nei due intervalli richiesti: non basta eliminare il profiler. Nessuna scansione introdotta, nessun PASS dedotto da altri binari. SDK ordinario0af disponibile remoto, non scaricato senza budget.
