@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; host4ca respinto e ripristinato e358, causa degli intervalli lenti in diagnosi mirata |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; traccia0c risolta offline, hostSync background in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Traccia attuale risolta offline; host senza contenuto nel background — 2026-11-09T23:01:05.248814+00:00
+
+**✅ BUILD/SIM0c ESEGUITI, B2 intero FAIL5,578409s nel workflow diagnostico**, run42711731908/job129482739215. Preparazione intera attraversata, memo.hit/owner/generation e guardfullreadbacks0 attraversati; runtime-cost.log è vuoto, NON inventare contatori log o durata fineworker→Main. App.initreturn→readbackMain1,300921s (intervallo più ampio), pubblicazione→riga1,607773s, profiloO/assertDebug reale. Kernel realmente agganciatoPID29387/UID/birth/namespace aT0+0,766s, raw1,534MB/exit0. Lookup dopo recordTimeoutExpired; fallbacktesto3,554MB supera ilcap2MBdella proiezione, helperdiagnosticCompletefalse. Nessuna nuova runprofiler: lette dueporzioniesatte2,85MBdeltestogiàprodotto, totale3.578.158B/4MB, mainsectionparziale esplicita/CRCinterononverificato. Risolti2388indirizzi conruntime26.2/23C54giàinstallato, UUIDdiogniimmagine e confiniTEXT esatti dallamappasimboli530conservata; nessuntempo/PASS530trasferito. Parser usa colonnasimbolografica, non whitespace prima delconteggio ad ampiezza variabile; precedenteanalisi derivata conservata comeSUPERSEDED. Campioniattuali attraversano1175,324..1180,308 e mostrano layout/Graph/conformanceSwiftUI/inizializzazioneaccessibilità; **nessuna causaCPUesclusiva o percentuale esclusiva** dalla parte mancante. [Causale/postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-census-guard.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Shutdown/0bootedconfermato, nessun prodottoinstallato o dati/QCOW2 rimossi.
+
+**✅ STATIC ESEGUITO PASS; nuovoBUILD/SIM NOT_RUN.** UnicodeltaappContentView: hostSyncsenzaUI, già0x0/AXhidden, trasferito dafiglioZStack a background delTabView. Stessiargomenti/id/callback/environment/lifecycle; vecchiofile ricostruibile byteesatto. Evita che l'hostnongrafico partecipi alladimensione delroot, in risposta al lavorolayout osservato; è **ipotesi di beneficio NOT_MEASURED**, non causadominantedimostrata. TabView, latchimmediato senzaawait, sezionivisitate/bozze/privacy/autorità, contenuti e disponibilitàdistinti invariati. Nessunyield/toolbar/title/profilecompiler/runner/DB/protocollodelta. [Review minima](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-sync-host-background.ROOT/PRE-SDK-REVIEW.ROOT.json). B2INTERO nonprofilato suprofilooriginale, exportSDK perordinario sequalificato; conservaresolosebeneficio ePASS. Nessunafullmatrice prima di stabilizzazione.
+
+Handoff ACTIVE/EXECUTION: originalT0/5s/cache/autorità, poi rootregressions/ordinarioconinterazioneutile/final2101(2042P43skip16differiti)/review/PR29/mainCI/PR28/ritiro2920/cleanup/DONEsolosecriteri. Android/atomica/live/POS/C3/T11 conservati nel proprioperimetro, ultimoimpatto root daqualificaresulla composizione effettiva. Primaryindex/WIP/QCOW2/dati protetti. Fixturefatalpreparazionea398 confermato nelPID29887 prima cache; sottostanteerrorethrowUNKNOWN, non fallimentoappordinaria.
 
 ### Execution — Host tab respinto; intervalli persistenti e raccolta mirata — 2026-11-09T22:24:51.306966+00:00
 
