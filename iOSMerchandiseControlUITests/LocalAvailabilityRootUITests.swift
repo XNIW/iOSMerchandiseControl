@@ -5647,31 +5647,40 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             uniformTypeIdentifier: "public.json")
         preGetterRoot.name = "TASK145 C3 PRE-GETTER eight public OptionRows " + stage + " #\(ordinal)"
         preGetterRoot.lifetime = .keepAlways; add(preGetterRoot)
-        // Enumerate all eight prefixes together. Snapshot geometry never removes a
-        // live role: association must still fail for a missing or changed snapshot row.
+        // Enumerate the complete union and every role natively. An absent
+        // virtualized row is an empty result, never an unresolved firstMatch
+        // whose implicit retries consume the traversal window. No snapshot
+        // geometry prunes candidates or supplies their native hittability.
         let rolePredicates: [NSPredicate] = optionRows.map { role in
             NSPredicate(format: "label BEGINSWITH %@", role.title + ",")
         }
-        // Keep the complete native enumeration of all eight prefixes. Each
-        // role then uses its own native predicate, so a live hit is bound to
-        // that role without relying on accessibility-tree enumeration order.
-        _ = queryTiming.measure(.enumeration, site: .button) {
+        let unionCount = queryTiming.measure(.enumeration, site: .button) {
             form.buttons.matching(NSCompoundPredicate(orPredicateWithSubpredicates: rolePredicates))
-                .allElementsBoundByIndex
+                .allElementsBoundByIndex.count
         }
+        var enumeratedCount = 0
         var liveRoles: Set<String> = []
         for (roleIndex, role) in optionRows.enumerated() {
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-before", downstream: downstream)
-            let button = form.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", role.title + ",")).firstMatch
-            let hittable = queryTiming.measure(.hittable, site: .button, index: roleIndex) { button.isHittable }
+            let buttons = queryTiming.measure(.enumeration, site: .button, index: roleIndex) {
+                form.buttons.matching(rolePredicates[roleIndex]).allElementsBoundByIndex
+            }
+            enumeratedCount += buttons.count
+            try scopeRequire(buttons.count <= 1,
+                stage: stage + "-native-option-role-not-unique", downstream: downstream)
+            for button in buttons {
+                let hittable = queryTiming.measure(.hittable, site: .button, index: roleIndex) { button.isHittable }
+                if hittable { liveRoles.insert(role.role) }
+            }
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-after", downstream: downstream)
-            if hittable { liveRoles.insert(role.role) }
         }
+        try scopeRequire(enumeratedCount == unionCount,
+            stage: stage + "-complete-native-option-role-enumeration", downstream: downstream)
         // One complete, fresh capture AFTER every live getter supplies all
         // role subtrees at the same instant. No role is pruned by geometry;
-        // the native getters above cover even currently offscreen roles.
+        // the native getters above cover every enumerated row, including offscreen rows.
         let postGetterSnapshot: XCUIElementSnapshot
         do {
             postGetterSnapshot = try queryTiming.measure(.elementSnapshot, site: .button) { try form.snapshot() }

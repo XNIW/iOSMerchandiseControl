@@ -1,5 +1,13 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — Sette regressioni PASS, retry C3 assenti e discriminante whole-module — 2026-11-09T12:42:05.121748+00:00
+
+**✅ BUILD/SIM ESEGUITI con attribuzione31a.** Run42614501852 SDKstandardPASS,7PASS/1FAIL: BaseRoot, ACK, treT11, oracolo14 e T19 interi PASS; C3FAIL al topB dopo queryfirstMatch su righe non realizzate con ripetuti retry nativi12:25:27..41. Il batchpostgetter non è raggiunto. Run42614506500 SDK-O/assertDebugPASS, B2FAIL7,697038708s; worker178ms, workerfinish→resumeMainActor1,908s, authority120ms, authorityreturn→render2,521s. Pubblicazione/keyguard non è il maggiore costo. Risorse terminali/targetShutdown, metadata e payload entro4MB/artifact, nessun SDK locale scaricato.
+
+**✅ STATIC ESEGUITO PASS; SDK/native successori NOT_RUN.** Solo queryC3: enumerazione nativa completa unioneotto prefissi e perogniruolo, hit nativo su ogni candidato presente ancheoffscreen, zero risoluzioni firstMatchassente, unicità e totaleunionecorrispondente. Nessuna geometria decide presenza/hit; stessa snapshotFormcompleta postgetter e doppiaassociazione/oracolo14/15s/cinquegesti/privacy/footer. PerB2 discriminante compilazione project-onlywholemodule sul profilo già-O/assertDebug: witnessWMO di tutti3target e SPMstock, probeassert positivo/negativo obbligatori. Nessun cambio applicativo/owner/generation/fence/admission/T0/5s, nessuna adozione prima dell'esito. Swiftparse/pbx/diffcheck,10embeddedPython e membership2PASS. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-native-enumeration-wholemodule.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** Due SDK ospitati prima dei rispettivi discriminanti B2 e C3+oracolo14; non matrice, non retry invariato. SettePASS31a mantengono versione propria. Segue composizione stabile/matrice8/review/PR29/mainCI/ritiro2920/PR28.16offlineOS/statistiche DIFFERITI. Nessunmerge conFAILcritici, primariWIP/indice/dati conservati.
+
 ### Execution — Ritiro esperimento root, ammissioni native e diagnosi B2 circoscritta — 2026-11-09T12:07:04.898423+00:00
 
 **✅ BUILD/SIM ESEGUITI FAIL488.** SDK-O/cache run42609619927: B2FAIL6,956103333s, nessun beneficio dimostrato del mountdifferito, esperimentoContentView ritirato byte-esatto b51. SDKstandard/C3run42609623857: oracolo14PASS, C3FAILA-local15s PRIMA del nuovo batchB; batch8getter NON ATTRAVERSATO, non giudicatoPASS/FAIL. Tutti5batchprecedenti postflight chiuso, targetShutdown/0booted e reportprofilerisorse conservati, nessun SDKbinario488 acquisito localmente.
