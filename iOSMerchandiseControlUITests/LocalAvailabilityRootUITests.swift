@@ -969,6 +969,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld() throws {
         try task146ConfigureAnimationIdleDriver()
+        XCTAssertTrue(_isDebugAssertConfiguration(), "B2 runner must retain Debug assertions")
         func launch(_ phase: String) {
             app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = phase
             app.launch()
@@ -1025,6 +1026,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(render.waitForExistence(timeout: 5))
         let renderData = try XCTUnwrap((render.value as? String)?.data(using: .utf8))
         let observation = try XCTUnwrap(JSONSerialization.jsonObject(with: renderData) as? [String: Any])
+        XCTAssertEqual(observation["debugAssertionsEnabled"] as? Bool, true,
+                       "The real app must retain Debug assertions in every build profile")
+        #if TASK146_NATIVE_OPTIMIZED_ASSERTS
+        XCTAssertEqual(observation["optimizedNativeProfile"] as? Bool, true)
+        #else
+        XCTAssertEqual(observation["optimizedNativeProfile"] as? Bool, false)
+        #endif
         XCTAssertEqual(observation["namespace"] as? String, runID)
         XCTAssertEqual(try XCTUnwrap(observation["requestUptime"] as? Double), cacheLaunchStarted, accuracy: 0.000001)
         let renderedAt = try XCTUnwrap(observation["renderUptime"] as? Double)

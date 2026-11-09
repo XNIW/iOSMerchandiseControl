@@ -86,8 +86,15 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
               let start = environment["TASK146_B2_LAUNCH_REQUEST_UPTIME"].flatMap(Double.init),
               rendered >= start, start > 0,
               let namespace = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"] else { return "{}" }
+        #if TASK146_NATIVE_OPTIMIZED_ASSERTS
+        let optimizedNativeProfile = true
+        #else
+        let optimizedNativeProfile = false
+        #endif
         let value: [String: Any] = ["requestUptime": start, "renderUptime": rendered,
             "namespace": namespace, "pid": ProcessInfo.processInfo.processIdentifier,
+            "debugAssertionsEnabled": _isDebugAssertConfiguration(),
+            "optimizedNativeProfile": optimizedNativeProfile,
             "phases": shared.cachedCatalogPhases]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
         return String(decoding: data, as: UTF8.self)
