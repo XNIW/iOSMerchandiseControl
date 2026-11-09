@@ -4113,7 +4113,11 @@ struct DatabaseView: View {
     }
 
     private var activeDatabase: some View {
-        databaseRootSurface
+        #if DEBUG
+        Task144RootObservation.recordCachedCatalogPhase("database-construction-entry")
+        defer { Task144RootObservation.recordCachedCatalogPhase("database-construction-return") }
+        #endif
+        return databaseRootSurface
         .navigationTitle(L("database.title"))
         .onAppear { restoreLocalPresentation(); routePersistedCatalogConflictReview() }
         .background {

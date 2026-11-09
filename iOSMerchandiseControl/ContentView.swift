@@ -622,6 +622,9 @@ struct ContentView: View {
                     if catalogAvailable || hasAdmittedBusinessNavigation {
                         NavigationStack {
                             Group {
+                                #if DEBUG
+                                let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
+                                #endif
                                 if !catalogAvailable {
                                     businessPrivacyGate(syncOrchestrator: syncOrchestrator)
                                         .navigationTitle(L("tab.database"))
@@ -683,16 +686,28 @@ struct ContentView: View {
         // switching tabs keeps its navigation, workbook and editor state.
         .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
         .task {
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry")
+            #endif
             guard !hasAdmittedBusinessNavigation else { return }
             // An already-running local reader can publish before we build a
             // placeholder NavigationStack and then replace its entire content.
             // Yield once only: never wait on a proof, network or another domain.
             if (selectedTab == 1 && !catalogAvailable) || (selectedTab == 2 && !sessionsAvailable) {
+                #if DEBUG
+                Task144RootObservation.recordCachedCatalogPhase("navigation-yield-before")
+                #endif
                 await Task.yield()
+                #if DEBUG
+                Task144RootObservation.recordCachedCatalogPhase("navigation-yield-after")
+                #endif
             }
             guard !Task.isCancelled, isCurrentModelGeneration else { return }
             // Once admitted, retain navigation even if a capability is later
             // withdrawn; the existing inner privacy gates remain authoritative.
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("navigation-admission")
+            #endif
             hasAdmittedBusinessNavigation = true
         }
         .task145PerformanceRender("tabsRender")

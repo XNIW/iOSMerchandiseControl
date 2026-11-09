@@ -21,6 +21,14 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — B2: controllo non profilato FAIL, confini di costruzione — 2026-11-09T15:35:44.817017+00:00
+
+**✅ SDK/SIM ESEGUITI 0af, run42640488883 FAIL6,303622s**, memo valido/riuso fisico/frontier completo/zero full scan. Worker147,58ms; fine worker→MainActor1,494720s; autorità174,97ms; pubblicazione→riga1,948678s. Il costo rimane nei due intervalli richiesti: non basta eliminare il profiler. Nessuna scansione introdotta, nessun PASS dedotto da altri binari. SDK ordinario0af disponibile remoto, non scaricato senza budget.
+
+**✅ STATIC ESEGUITO PASS; nuovo SDK/SIM NOT_RUN.** ContentView e DatabaseView aggiungono soltanto sette nomi di fase al buffer RAM DEBUG/cache esistente, ancora massimo32: ingresso task, prima/dopo l'UNICO yield già presente, ammissione, contenuto Nav e costruzione Database ingresso/ritorno. Nessun nuovo yield, ritardo, logger, publisher, store access, vista/modifier o profilo compiler; Release esclude i marker e l'esplicito return conserva lo stesso getter. Servono a distinguere il ramo realmente eseguito dal lavoro di costruzione e dal successivo framework/render, dopo che la traccia CPU ha mostrato contesa loader/monitor non attribuibile esclusivamente al codice. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-native-construction-boundaries.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Tre T11 interi349e/run42643091789 già in corso sulla sola esistenza iniziale con unicità globale invariata; i risultati non sono anticipati. C3 e14 PASS3f; Root/Malformed PASS6cdb; Clear Corrupt prima fase PASS0af, whole T11 ancora aperti. Handoff ACTIVE/EXECUTION: scegliere il fix B2 dai nuovi confini, classificare T11, poi composizione/review/fullCI/PR29/main. Ordinario reale sul Mac ancora NOT_RUN per budget (libero26,97GB nell'ultima misura, richiesta risorsa utente pendente);16offline/statistiche DIFFERITI. Nessun merge con gate critici aperti.
+
 ### Execution — T11: Clear attraversato, conteggio iniziale ridondante — 2026-11-09T15:16:57.267021+00:00
 
 **✅ BUILD/SIM ESEGUITI 0af, due FAIL qualificati.** CorruptSeal supera il nuovo Clear (lettura vuota728ms dopo il ritorno del tap), digita davvero Q, invia Search, trova la riga e supera qualifica/autorità/no-resend dopo riavvio. Fallisce nella SECONDA ammissione Options: selected nativo1 e globale4/4 sono positivi ma terminano in5,433853s. Stable fallisce nella PRIMA ammissione: quattro selected negativi, poi selected1/globale4 positivi oltre5s; il suo Clear è NOT_TRAVERSED. Non è un nuovo difetto della pubblicazione Clear dimostrato.
