@@ -690,18 +690,9 @@ struct ContentView: View {
             Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry")
             #endif
             guard !hasAdmittedBusinessNavigation else { return }
-            // An already-running local reader can publish before we build a
-            // placeholder NavigationStack and then replace its entire content.
-            // Yield once only: never wait on a proof, network or another domain.
-            if (selectedTab == 1 && !catalogAvailable) || (selectedTab == 2 && !sessionsAvailable) {
-                #if DEBUG
-                Task144RootObservation.recordCachedCatalogPhase("navigation-yield-before")
-                #endif
-                await Task.yield()
-                #if DEBUG
-                Task144RootObservation.recordCachedCatalogPhase("navigation-yield-after")
-                #endif
-            }
+            // The task may start after readability has already published.
+            // Latch navigation immediately; never suspend this admission on a
+            // captured earlier capability, another domain or the network.
             guard !Task.isCancelled, isCurrentModelGeneration else { return }
             // Once admitted, retain navigation even if a capability is later
             // withdrawn; the existing inner privacy gates remain authoritative.
