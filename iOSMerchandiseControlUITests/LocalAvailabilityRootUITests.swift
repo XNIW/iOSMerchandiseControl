@@ -3456,15 +3456,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let owners = app.windows.containing(.tabBar, identifier: nil)
             .containing(.navigationBar, identifier: title)
         let windows = requiresForm ? owners.containing(.collectionView, identifier: nil) : owners
-        // The public selected attribute is available during query matching
-        // (XCUIElementAttributes). One native filtered count establishes the
-        // selected title under its actual owning TabBar/window and all required
-        // structures, without separate window-count and selected RPCs.
+        // A native existence query establishes AT LEAST one selected title
+        // under its actual owning TabBar/window and all required structures.
+        // The global disjoint-role total below proves EXACTLY one of EACH,
+        // including this title: enumerating its count here was redundant.
         let selectedButtons = windows.tabBars.buttons.matching(NSPredicate(
             format: "label == %@ AND selected == YES", title))
-        let selectedCount = selectedButtons.count
-        guard selectedCount == 1 else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); owned-native-selected-count=\(selectedCount)")
+        let selectedExists = selectedButtons.element(boundBy: 0).exists
+        guard selectedExists else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); owned-native-selected-exists=\(selectedExists)")
             return false
         }
         // The native owned-selected query proves at least one of EVERY role.
@@ -3474,7 +3474,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // Both native results must still finish in the caller's original5s.
         let afterCount = structures.count
         let admitted = afterCount == expectedCount
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-after=\(afterCount); expected=\(expectedCount); owned-native-selected-count=\(selectedCount); native-filtered-admission=\(admitted)")
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-after=\(afterCount); expected=\(expectedCount); owned-native-selected-exists=\(selectedExists); native-filtered-admission=\(admitted)")
         return admitted
     }
 
