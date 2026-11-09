@@ -633,6 +633,9 @@ struct ContentView: View {
                                         ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
                                 }
                             }
+                            // Keep the root title mode stable while local
+                            // availability changes; avoid large-title promotion.
+                            .navigationBarTitleDisplayMode(.inline)
                             .id(presentationID)
                             .toolbar { syncToolbar }
                         }
