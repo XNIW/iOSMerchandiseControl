@@ -4435,7 +4435,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let start = form.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
                 dx: startX - formFrame.minX, dy: startY - formFrame.minY))
             panExecuted = true
-            start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: endY - startY)),
+            // Give the Form's native recognizer a real touch-down before the
+            // same sole drag. A zero-duration press delivered the full pointer
+            // path but left the Name row completely stationary on the hosted SDK.
+            start.press(forDuration: 0.2, thenDragTo: start.withOffset(CGVector(dx: 0, dy: endY - startY)),
                         withVelocity: .slow, thenHoldForDuration: 0.2)
             // Scrolling may change the toolbar/control layout. One fresh tree
             // must qualify the field against its current band, not the pre-pan one.
@@ -5901,12 +5904,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // The first Cloud-only viewport needs a shorter step; later rows
             // allow a larger native pan. Actual overlap is still mandatory.
             let anchorBottom = anchors.values.map { min($0.frame.maxY, observation.viewport.maxY) }.max()!
-            let distance = min(observation.viewport.height * 0.9,
+            // The initial Cloud viewport exposes only a 39pt Theme sliver.
+            // Use the helper's existing 42% pointer overlap for that first pan;
+            // later, several body rows support the larger bounded step.
+            let distance = min(observation.viewport.height * (ordinal == 0 ? 0.58 : 0.9),
                 // The collapsing large title plus measured native overshoot
                 // consumed the previous44pt margin and lost all shared pixels.
                 max(24, anchorBottom - observation.viewport.minY - 88))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
-                halfStepFraction: distance / observation.viewport.height / 2, velocity: XCUIGestureVelocity(rawValue: 400))
+                halfStepFraction: distance / observation.viewport.height / 2,
+                velocity: ordinal == 0 ? .slow : XCUIGestureVelocity(rawValue: 400))
         }
     }
 

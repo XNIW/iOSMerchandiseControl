@@ -151,20 +151,23 @@ jobs:
           from pathlib import Path
           temporary=Path(os.environ['RUNNER_TEMP'])
           selected=json.loads(os.environ.get('TASK146_FOCUSED_TESTS')or'[]')
-          # The composed B2 gate passed with project-scoped optimization and
-          # forced Debug assertions. Apply that verified profile only to ui-core;
-          # other shards keep stock Debug. No deadline or selector waiver.
-          optimized=(os.environ['TASK146_BUILD_SHARD']=='ui-core'or(
+          # Measure cached startup first in the existing long-observation shard,
+          # before earlier UI cases accumulate runner state. All2101 selectors
+          # stay in the same eight-way matrix; T0/5s and assertions are unchanged.
+          cache_selector='iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'
+          coverage=json.loads(Path('.github/ci/ios-xctest-coverage.json').read_text())
+          cached_start_suite=next(row for row in coverage['shards']if row['id']=='ui-long-observation')
+          optimized=(os.environ['TASK146_BUILD_SHARD']=='ui-long-observation'or(
               os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
               and os.environ['TASK146_BUILD_SHARD']=='focused'
-              and selected==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld']))
+              and cache_selector in selected and set(selected)<=set(cached_start_suite['expected'])))
           argv=['xcodebuild','-project','iOSMerchandiseControl.xcodeproj','-scheme','iOSMerchandiseControl',
               '-configuration','Debug','-destination','platform=iOS Simulator,id='+os.environ['DEVICE_ID'],
               'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
-          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_UI_CORE'if optimized else'DEBUG_STANDARD',
+          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START'if optimized else'DEBUG_STANDARD',
               'optimization':'-O'if optimized else'-Onone(project Debug)',
               'assertConfiguration':'Debug(forced)'if optimized else'Debug(project default)',
-              'scope':'project Debug targets; ui-core or exact B2 discriminator'if optimized else'unchanged stock build',
+              'scope':'project Debug targets; first cached startup and long regressions'if optimized else'unchanged stock build',
               'assertionProbe':{'status':'NOT_REQUESTED_ON_STANDARD'}}
           path=temporary/'task146-debug-build-profile.json'
           def save():path.write_text(json.dumps(profile,indent=2)+'\n')
@@ -587,12 +590,6 @@ jobs:
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
           export('debug-build-profile.json', ['cat', str(Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json')])
           export('toolchain.txt', ['python3', '-c', "import json,subprocess,pathlib,os; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; result={key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()}; profile=pathlib.Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'; result['resourcePhases']=[json.loads(line)for line in profile.read_text().splitlines()] if profile.exists() else []; print(json.dumps(result,sort_keys=True))"])
-          if os.environ.get('TASK146_FOCUSED_TESTS') or os.environ.get('TASK146_CI_SHARD') == 'ui-core':
-              # Diagnostic only, inside the existing byte/time-limited exporter.
-              # These public fields are closed qualification timings, not Auth/body logs.
-              export('runtime-cost.log', ['xcrun', 'simctl', 'spawn', os.environ['DEVICE_ID'],
-                  'log', 'show', '--style', 'compact', '--last', '75m',
-                  '--predicate', '(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39" OR eventMessage BEGINSWITH "TASK146_R4_INIT"'])
           base = ['xcrun', 'xcresulttool', 'get', 'test-results']
           # This aggregate hit its20s limit on697 while the complete tests/DB
           # still contained all8 real results. One bounded export, no retry;
@@ -608,13 +605,15 @@ jobs:
                       tests = json.load(source)
                   provenance['failedLeafCount'] = 0
                   cache_observation = None
+                  cache_result = None
                   def walk(value, module=None):
                       if isinstance(value, dict):
-                          global cache_observation
+                          global cache_observation, cache_result
                           if value.get('nodeType') in {'Unit test bundle', 'UI test bundle'}:
                               module = value.get('name')
-                          if value.get('nodeType') == 'Test Case' and value.get('result') == 'Passed' and value.get('nodeIdentifier') == 'LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld()' and module == 'iOSMerchandiseControlUITests':
+                          if value.get('nodeType') == 'Test Case' and value.get('result') in {'Passed','Failed'} and value.get('nodeIdentifier') == 'LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld()' and module == 'iOSMerchandiseControlUITests':
                               cache_observation = value['nodeIdentifier']
+                              cache_result = value['result']
                           if value.get('nodeType') == 'Test Case' and value.get('result') == 'Failed':
                               provenance['failedLeafCount'] += 1
                               if len(provenance['failedTests']) < MAX_FAILED_LEAVES:
@@ -637,8 +636,21 @@ jobs:
                           export(f'failure-{index:03d}.{kind}.json',
                                  base + [kind, '--path', str(bundle), '--test-id', case['id']])
                   if cache_observation:
-                      provenance['cacheObservationTest'] = {'id': cache_observation, 'result': 'Passed', 'purpose': 'Existing physical timing attachment; no acceptance override'}
+                      provenance['cacheObservationTest'] = {'id': cache_observation, 'result': cache_result, 'purpose': 'Existing physical timing attachment; no acceptance override'}
                       export('cache-observation.activities.json', base + ['activities', '--path', str(bundle), '--test-id', cache_observation])
+                      details_ok = export('cache-observation.test-details.json', base + ['test-details', '--path', str(bundle), '--test-id', cache_observation])
+                      if details_ok:
+                          details = json.loads((output/'cache-observation.test-details.json').read_text())
+                          started, duration = details['startTime'], details['durationInSeconds']
+                          if not isinstance(started, (int,float)) or not isinstance(duration, (int,float)) or not 0 < duration < 4200:
+                              raise ValueError('Invalid closed B2 diagnostic interval')
+                          # The75minute store scan timed out on082 after emitting
+                          # only early cases. Use this actual test's epoch interval,
+                          # preserving the same exporter timeout/byte caps and filter.
+                          export('runtime-cost.log', ['xcrun','simctl','spawn',os.environ['DEVICE_ID'],
+                              'log','show','--style','compact','--info',
+                              '--start','@'+str(int(started)-1),'--end','@'+str(int(started+duration)+2),
+                              '--predicate','(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39" OR eventMessage BEGINSWITH "TASK146_R4_INIT"'])
               except (KeyError, ValueError, OSError, TypeError, RecursionError) as error:
                   provenance['selectionErrorType'] = type(error).__name__
                   provenance['selectionStatus'] = 'NOT_PARSED_SELECTION_ERROR'

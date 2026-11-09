@@ -2035,7 +2035,6 @@
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHealthyIncrementalAppliesRemoteProductWithoutSnapshotReplacement",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHistoryLocalSuccessDoesNotClaimCloudConfirmationForNewerSavedRevision",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHistoryTitleSavesSurviveRecoveryCutoverAndReplayOriginalSealedRevisionAfterProcessRestart",
-        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testInvalidCursorRequiresContractualRecoveryWithoutBlindReset",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testMalformedNotificationHeadPreservesItsBytesWhileValidSiblingRegistersOnce",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testMissingEntityEventGapRequiresRecoveryWithoutAdvancingPastGap",
@@ -2069,7 +2068,6 @@
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHealthyIncrementalAppliesRemoteProductWithoutSnapshotReplacement",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHistoryLocalSuccessDoesNotClaimCloudConfirmationForNewerSavedRevision",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testHistoryTitleSavesSurviveRecoveryCutoverAndReplayOriginalSealedRevisionAfterProcessRestart",
-        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testInvalidCursorRequiresContractualRecoveryWithoutBlindReset",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testMalformedNotificationHeadPreservesItsBytesWhileValidSiblingRegistersOnce",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testMissingEntityEventGapRequiresRecoveryWithoutAdvancingPastGap",
@@ -2158,10 +2156,12 @@
     {
       "id": "ui-long-observation",
       "onlyTesting": [
+        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testTenMinuteNormalUseDuringHeldRecoveryPreservesNativeEditorAndResumesAfterQuietGap",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation"
       ],
       "expected": [
+        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testTenMinuteNormalUseDuringHeldRecoveryPreservesNativeEditorAndResumesAfterQuietGap",
         "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation"
       ]
