@@ -11,7 +11,7 @@
 | Esito documentale | EXECUTION_PARZIALE — Android main e CI qualificati, offline OS iOS differito dall’utente, fix e CI iOS in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, qualifica finale iOS, gate TEST rimanenti e CI mobile |
-| Creato / aggiornato | 2026-11-04 / 2026-11-08, America/Santiago |
+| Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
 | Registro unico | [RESUME_STATUS](../COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261016-resume/RESUME_STATUS.md) |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — cinque FAIL48 classificati, osservazioni native dirette — 2026-11-09T04:37:17.344975+00:00
+
+**✅ BUILD/SIM/CI ESEGUITI FAIL sul48.** Run42558269721 SDK PASS, cinque casi tutti FAIL con discovery2101/zero missing; reporter summary60s qualificato correttamente. R4 supera reveal reale5000/adozione no-op/prima riapertura, poi SaveBfocus15s; Corrupt/Stable T11 superano navigazione/diagnosi/ritorni e falliscono tastiera5s. Malformed attende observed40s (non20), B2 holdprezzi10s: marker reali presenti nella successiva gerarchia, ma cache5s NON ATTRAVERSATA nel48, effetto diagnostici postrender ancora NOT_MEASURED. UltimoB2timed697FAIL7,492279167 resta aperto; nessuna promozione dai vecchiPASS. [Evidenze](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-cache-observer-native-union.ROOT/focused.ROOT/VERIFIED.ROOT.json).
+
+**✅ STATIC ESEGUITO PASS; SDK/native successori NOT_RUN.** Solo LocalAvailabilityRootUITests.swift. Tracce mostrano pausa iniziale1s/debugDescription ripetute; sostituite soltanto ammissioni pertinenti con exists nativo diretto entro identici deadline prima/dopo getter. R4Focus precede queryOptions non pertinenti e usa un solo albero nativo completo1024nodi per geometria univoca field/Form/window/editor/keyboard/band/assistant; frame finiti e contenimento intero, hitnativo reale entro15s, max5slowpan200 invariati. Readiness due snapshotstabili5s/SelectAll/Save/ACK/riaperture originali invariati. Nessun deltaapp/API/atomicità/manual/outbox. Parse/diffcheck/membership cinque attivi PASS, SDK reale prima degli stessi5 discriminanti. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-direct-native-observation.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**✅ CLEANUP ESEGUITO PASS.** IndexStorev5SDK chiuso:4197fileIDXR/IDXU qualificati per intestazione/percorso/consumer,15Productsunici+403canonici verificati prima/dopo;79.024.496Blogici/88.195.072Ballocati ritirati. Totale task5.381.246.412Blogici/5.470.834.688Ballocati, fisicoesclusivo UNKNOWN_APFS_AND_CONCURRENCY. [Receipt](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-cache-observer-native-union.ROOT/CLOSED-SDK-INDEX/RESULT.ROOT.json). Libero30844641280B, forecast190MB e riserva30,3GB, nessun SDK/device locale nuovo.
+
+**Handoff ACTIVE/EXECUTION.** ROOT prosegue esiti discriminanti, composizione stabile/matriceobbligatoria/review/PR29/mainCI e chiusuraPR28 dopo recupero/assenzausi; nessunmerge conFAILcritici.16OSoffline fisici e statistiche DIFFERITI. Main remote riconfermate iOS94fb/Android5b4/Admin617, WIP/indice/dati/sessioni protetti. Addendumautorizza REVIEWpoiDONE soltanto dopo tuttiicriteri, senza nuovoGOformale; stato ora invariato.
 
 ### Execution — C3 completo PASS nativo, driver residui e reporter in correzione — 2026-11-09T03:46:47.210088+00:00
 

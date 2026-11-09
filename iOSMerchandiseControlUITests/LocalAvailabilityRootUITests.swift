@@ -981,7 +981,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
         launch("hold-prices")
         let pricesHeld = app.staticTexts["task146.b2.hold-prices.held"]
-        XCTAssertTrue(pricesHeld.waitForExistence(timeout: 10))
+        XCTAssertTrue(directNativeExists(pricesHeld, timeout: 10))
         app.tabBars.buttons["History"].tap()
         let session = app.staticTexts["B2 saved session"]
         XCTAssertTrue(session.waitForExistence(timeout: 5))
@@ -1523,6 +1523,73 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
             return
         }
+        if focusInVisibleEditor {
+            // SaveB alone owns focus/reveal within the original15s/five-drag
+            // budget. One complete native tree replaces many separate geometry
+            // RPCs; the actual field still supplies the final native hit query.
+            var drags = 0
+            var observations: [String] = []
+            defer {
+                let evidence = XCTAttachment(string: observations.joined(separator: "\n"))
+                evidence.name = "R4 focused field coherent native reveal"
+                evidence.lifetime = .keepAlways; add(evidence)
+            }
+            guard element.exists, element.isHittable,
+                  ProcessInfo.processInfo.systemUptime < deadline else {
+                XCTFail("R4 field must admit the real focus tap within15s"); return
+            }
+            element.tap()
+            guard directNativeExists(app.keyboards.element(boundBy: 0),
+                timeout: min(5, deadline - ProcessInfo.processInfo.systemUptime)) else {
+                XCTFail("R4 keyboard must appear within the original focus budget"); return
+            }
+            while ProcessInfo.processInfo.systemUptime < deadline {
+                let captureStarted = ProcessInfo.processInfo.systemUptime
+                guard let root = try? app.snapshot(),
+                      let nodes = try? c3OptionsSnapshotNodes(root, stage: "R4-focused-\(drags)", downstream: []) else { break }
+                let fields = nodes.filter { $0.elementType == .textField && $0.label == Self.r23ItemCodeFieldLabel }
+                let bars = nodes.filter { $0.elementType == .navigationBar && $0.identifier == "Edit product" }
+                let bands = nodes.filter { $0.elementType == .other && $0.identifier == "task144.controlled.editor.band" }
+                let keyboards = nodes.filter { $0.elementType == .keyboard }
+                let assistants = nodes.filter { $0.elementType == .other && $0.identifier == "SystemInputAssistantView" }
+                guard fields.count == 1, bars.count == 1, bands.count <= 1,
+                      keyboards.count == 1, assistants.count <= 1 else { break }
+                let windows = nodes.filter { $0.elementType == .window && fields[0].path.starts(with: $0.path) }
+                let forms = nodes.filter { $0.elementType == .collectionView && fields[0].path.starts(with: $0.path) }
+                guard windows.count == 1, forms.count == 1,
+                      (bars + bands + forms).allSatisfy({ $0.path.starts(with: windows[0].path) }) else { break }
+                let window = windows[0].frame
+                let viewport = root.frame.intersection(window).intersection(forms[0].frame)
+                let frame = fields[0].frame
+                let upper = max(viewport.minY, max(bars[0].frame.maxY, bands.first?.frame.maxY ?? viewport.minY)) + 12
+                var lower = min(viewport.maxY, keyboards[0].frame.minY) - 12
+                if let assistant = assistants.first {
+                    let covered = assistant.frame.intersection(viewport)
+                    if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
+                }
+                guard (fields + bars + bands + keyboards + assistants + windows + forms).allSatisfy({ node in
+                    let f = node.frame
+                    return [f.minX, f.minY, f.maxX, f.maxY].allSatisfy({ $0.isFinite })
+                        && !f.isNull && !f.isInfinite && f.width > 0 && f.height > 0
+                }), lower > upper + 16 else { break }
+                let inside = viewport.contains(frame) && frame.minY >= upper && frame.maxY <= lower
+                let captureFinished = ProcessInfo.processInfo.systemUptime
+                let hit = inside && captureFinished < deadline ? element.isHittable : false
+                observations.append("capture-start=\(captureStarted); capture-end=\(captureFinished); field=\(frame); viewport=\(viewport); upper=\(upper); lower=\(lower); inside=\(inside); hit=\(hit); hit-end=\(ProcessInfo.processInfo.systemUptime); deadline=\(deadline); drags=\(drags)")
+                if inside, hit, ProcessInfo.processInfo.systemUptime < deadline { return }
+                guard drags < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+                let upward = frame.midY > (upper + lower) / 2
+                let startY = upward ? lower : upper
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                    dx: viewport.minX + 24 - root.frame.minX, dy: startY - root.frame.minY))
+                drags += 1
+                start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
+                    dx: 0, dy: (upward ? -1 : 1) * min(200, lower - upper))),
+                    withVelocity: .slow, thenHoldForDuration: 0.2)
+            }
+            XCTFail("R4 focused field not visible above keyboard within 15 seconds and 5 drags")
+            return
+        }
         let optionsNavigation = app.navigationBars["Options"]
         if app.navigationBars.count == 1 && optionsNavigation.exists && app.tabBars.buttons["Options"].isSelected {
             for drag in 0...5 {
@@ -1592,53 +1659,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
             }
             XCTFail("R4 control not reachable within 15 seconds and 5 drags")
-            return
-        }
-        if focusInVisibleEditor {
-            // SaveB's Item Code can move underneath the keyboard after focus.
-            // Own the focus and its reveal in ONE15s/five-drag window. The
-            // original5s coherent readiness/native hit/Select All follows below.
-            var focused = false
-            for drag in 0...5 {
-                guard ProcessInfo.processInfo.systemUptime < deadline else { break }
-                let keyboard = app.keyboards.firstMatch
-                if !focused && element.exists && element.isHittable {
-                    element.tap()
-                    focused = true
-                    let remaining = min(5, deadline - ProcessInfo.processInfo.systemUptime)
-                    guard remaining > 0 && keyboard.waitForExistence(timeout: remaining) else { break }
-                }
-                let editor = app.navigationBars["Edit product"]
-                if focused && keyboard.exists && editor.exists {
-                    let viewport = app.frame.intersection(app.windows.firstMatch.frame)
-                    var upper = max(viewport.minY + 12, editor.frame.maxY + 12)
-                    let band = app.otherElements["task144.controlled.editor.band"]
-                    if band.exists { upper = max(upper, band.frame.maxY + 12) }
-                    var lower = min(viewport.maxY, keyboard.frame.minY) - 12
-                    let assistant = app.otherElements["SystemInputAssistantView"]
-                    if assistant.exists {
-                        let covered = assistant.frame.intersection(viewport)
-                        if covered.width > 0 && covered.height > 0 { lower = min(lower, covered.minY - 12) }
-                    }
-                    let frame = element.frame
-                    guard [frame.minX, frame.minY, frame.maxX, frame.maxY, upper, lower].allSatisfy({ $0.isFinite }),
-                          frame.width > 0, frame.height > 0, lower > upper + 16 else { break }
-                    if viewport.contains(frame), frame.minY >= upper, frame.maxY <= lower,
-                       element.isHittable, ProcessInfo.processInfo.systemUptime < deadline { return }
-                    guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
-                    let upward = frame.midY > (upper + lower) / 2
-                    let startY = upward ? lower : upper
-                    let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
-                        dx: viewport.minX + 24 - app.frame.minX, dy: startY - app.frame.minY))
-                    start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                        dx: 0, dy: (upward ? -1 : 1) * min(200, lower - upper))),
-                        withVelocity: .slow, thenHoldForDuration: 0.2)
-                } else {
-                    guard drag < 5, !focused, ProcessInfo.processInfo.systemUptime < deadline else { break }
-                    app.swipeUp()
-                }
-            }
-            XCTFail("R4 focused field not visible above keyboard within 15 seconds and 5 drags")
             return
         }
         for drag in 0...5 {
@@ -3578,9 +3598,23 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
     }
 
+    // Pertinent native admissions only: avoid XCTest's initial polling sleep
+    // and automatic debugDescription capture after every negative observation.
+    // A getter completing beyond the original absolute deadline cannot pass.
+    private func directNativeExists(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        guard timeout > 0 else { return false }
+        let deadline = ProcessInfo.processInfo.systemUptime + timeout
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            let exists = element.exists
+            if ProcessInfo.processInfo.systemUptime > deadline { return false }
+            if exists { return true }
+        }
+        return false
+    }
+
     private func setIsolationSearch(_ field: XCUIElement, value: String) {
         field.tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(directNativeExists(app.keyboards.element(boundBy: 0), timeout: 5))
         let current = field.value as? String ?? ""
         if !current.isEmpty && current != field.placeholderValue {
             let clear = app.buttons["Clear search"]
@@ -3605,7 +3639,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func awaitIsolationFact(_ suffix: String, timeout: TimeInterval) throws {
-        let found = app.staticTexts["task145.isolation." + suffix].waitForExistence(timeout: timeout)
+        let found = directNativeExists(app.staticTexts.matching(identifier: "task145.isolation." + suffix).element(boundBy: 0), timeout: timeout)
         if !found { captureControlledAutomaticReadback() }
         XCTAssertTrue(found, "T11 boundary not traversed: " + suffix)
     }
