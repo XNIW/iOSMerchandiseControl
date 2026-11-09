@@ -21,6 +21,12 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — Witness WMO corretto prima del caso nativo — 2026-11-09T12:45:34.725177+00:00
+
+**✅ STATIC ESEGUITO FAIL del verificatore, corretto.** SDKlocale `swiftc -### -O -whole-module-optimization` conferma frontend senza flagWMO esplicito: ildriver lo consuma. RunB2own42619247268 annullata controllatamente duranteBuildDebug per evitare mismatch noto nel verificatore; report/processi/postflight conservati, nessunPASS nativo inferito. C3standard42619239659 prosegue sul5ba immutato.
+
+**✅ STATIC ESEGUITO PASS.** Solo workflow: provaWMO esplicita su ogni driver effettivo di tutti3targetprogetto; optimization/assertDebug/macro restano controllati su tuttii comandi driver/frontend. SPMstock e veroassert positivo/negativo invariati.10Python/diffcheckPASS. Successore B2 su stessisorgenti applicativi/test/config, solowitnesscorretto. Handoff ACTIVE/EXECUTION: attendere SDK e risultato, nessuna nuova matrice/merge conFAILcritici.16offline/statistiche DIFFERITI.
+
 ### Execution — Sette regressioni PASS, retry C3 assenti e discriminante whole-module — 2026-11-09T12:42:05.121748+00:00
 
 **✅ BUILD/SIM ESEGUITI con attribuzione31a.** Run42614501852 SDKstandardPASS,7PASS/1FAIL: BaseRoot, ACK, treT11, oracolo14 e T19 interi PASS; C3FAIL al topB dopo queryfirstMatch su righe non realizzate con ripetuti retry nativi12:25:27..41. Il batchpostgetter non è raggiunto. Run42614506500 SDK-O/assertDebugPASS, B2FAIL7,697038708s; worker178ms, workerfinish→resumeMainActor1,908s, authority120ms, authorityreturn→render2,521s. Pubblicazione/keyguard non è il maggiore costo. Risorse terminali/targetShutdown, metadata e payload entro4MB/artifact, nessun SDK locale scaricato.

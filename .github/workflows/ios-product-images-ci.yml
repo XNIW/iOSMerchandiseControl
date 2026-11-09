@@ -200,7 +200,7 @@ jobs:
                   'TASK146_NATIVE_PROFILE_SWIFT_FLAGS=-Xfrontend -assert-config -Xfrontend Debug -D TASK146_NATIVE_OPTIMIZED_ASSERTS']
           argv+=['build-for-testing'];profile['buildArguments']=argv;save()
           print(json.dumps({key:profile[key]for key in['name','optimization','assertConfiguration','scope']}),flush=True)
-          witnesses={}
+          witnesses={};wholemodule_drivers={}
           process=subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
           for line in process.stdout:
               sys.stdout.write(line)
@@ -210,16 +210,21 @@ jobs:
               except(ValueError,IndexError):continue
               witness={'optimization':[x for x in arguments if x in['-O','-Onone','-Osize','-Ounchecked']],
                   'forcedDebugAssertions':any(arguments[i:i+2]==['-assert-config','Debug']or arguments[i:i+3]==['-assert-config','-Xfrontend','Debug']for i in range(len(arguments))),
-                  'optimizedProfileMacro':'TASK146_NATIVE_OPTIMIZED_ASSERTS'in arguments,
-                  'wholeModuleOptimization':'-whole-module-optimization'in arguments or '-wmo'in arguments}
+                  'optimizedProfileMacro':'TASK146_NATIVE_OPTIMIZED_ASSERTS'in arguments}
               if witness not in witnesses.setdefault(module,[]):witnesses[module].append(witness)
-          code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses
+              # swift-frontend consumes the driver's mode and omits the flag.
+              # Require the explicit mode on every observed compiler driver.
+              if 'swiftc 'in line:
+                  wholemodule_drivers.setdefault(module,[]).append('-whole-module-optimization'in arguments or '-wmo'in arguments)
+          code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses;profile['wholeModuleDriverWitnesses']=wholemodule_drivers
           if optimized and code==0:
               projectModules=['iOSMerchandiseControl','iOSMerchandiseControlTests','iOSMerchandiseControlUITests']
               checks={module:bool(witnesses.get(module))and all(row=={'optimization':['-O'],
-                  'forcedDebugAssertions':True,'optimizedProfileMacro':True,'wholeModuleOptimization':True}for row in witnesses[module])for module in projectModules}
+                  'forcedDebugAssertions':True,'optimizedProfileMacro':True}for row in witnesses[module])for module in projectModules}
+              for module in projectModules:
+                  checks[module+'.wholemoduleDriver']=bool(wholemodule_drivers.get(module))and all(wholemodule_drivers[module])
               checks['IssueReportingStockDebug']=bool(witnesses.get('IssueReporting'))and all(row=={'optimization':['-Onone'],
-                  'forcedDebugAssertions':False,'optimizedProfileMacro':False,'wholeModuleOptimization':False}for row in witnesses['IssueReporting'])
+                  'forcedDebugAssertions':False,'optimizedProfileMacro':False}for row in witnesses['IssueReporting'])
               profile['SDKProfileVerification']={'status':'PASS'if all(checks.values())else'FAIL','checks':checks}
               save();assert all(checks.values()),checks
           save()
