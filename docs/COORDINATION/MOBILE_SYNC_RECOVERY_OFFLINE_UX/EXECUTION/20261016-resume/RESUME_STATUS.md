@@ -1,5 +1,11 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — C3 dopo setup: binding nativi e costo confermato — 2026-11-09T14:03:49.697760+00:00
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/SIM NOT_RUN.** Ilf6 attraversa recovery2,408s/localqualification23ms/Aqualified, poiBtop e dueviewport completi con tuttii14oracoli immutati; FAIL15s prima delviewportseguente. Ora un'enumerazione unica legata agli elementiaccessibili reali(APIpubblicaAppleXCUIElementQuery.h48), non agliindici, sostituisce le9query1,09..1,93s. Ognicandidato inclusooffscreen ha label/hit nativi; labelinstrada ilruolo, seenRole neprovaunicità ancheoffscreen e totale<=8. Nessunruolodaordineogeometria. StessaFormcompletafrescapostgetter/doppiaassociazione/shapeIDs/rawValue; adminusaunbindingAX unico perhit/snapshot evitando resolverripetuto.15s/cinquegesti/overlap/privacy/footer/ritornoA invariati. Duecasiinteri C3+oracolo14 dopoSDKstandard. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-native-accessibility-bindings.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+B2CPU/run42630508260 continua su app/test byte-esattif6, profilo-O/assertDebug preesistente, non variantecompiler e nonnuovo5sPASS. T11Malformed/Stable eBaseRootrestanoFAILf6 con causali nativeproprie, non cancellati dal precedente7PASS31a. Nessun fullmatrix/merge anticipato. Handoff ACTIVE/EXECUTION: rootcausali pertinenti mentrecampiona, poi sourcecomposizione/review/CI/main.16offline/statistiche DIFFERITI; primarioWIP/dati/indiceintatti.
+
 ### Execution — Duef6 terminali, intervalli B2 e preparazione C3 PASS — 2026-11-09T14:00:34.054310+00:00
 
 **✅ BUILD/SIM ESEGUITI con attribuzionef6.**42623157302 SDK-Opreesistente/assertDebugPASS, B2FAIL5,380573167s. Worker129,94ms; attesaMainActor1,908→1,380s e pubblicazione→riga2,521→1,477s; ingressoappanch'esso2,596→1,900s, non attribuitoalloYield. Memo/tokenfrontiercomplete/physicalreusevero, stessiguard; beneficio pertinente osservato, non causalitàstatistica o PASS5s. Il candidatoYield rimane in valutazione, nessunulterioreyield/profilocompilatore. [Confronto](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-preparation-boundary.ROOT/cached-start/B2-INTERVAL-COMPARISON.ROOT.json).

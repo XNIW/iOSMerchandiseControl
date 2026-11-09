@@ -5500,7 +5500,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // Reads only bounded aggregates, never XCUIElement/snapshot properties.
             var lines = ["stage=\(stage); ordinal=\(ordinal); clock=systemUptime; unit=seconds",
                 "public-call durations include XCTest internals; not IPC/network latency",
-                "button indexes are the pinned eight-role order for native hittability; the shared post-getter snapshot has no index"]
+                "button indexes identify native accessibility bindings only; roles come from each bound element label, never position; the shared post-getter snapshot has no index"]
             for site in Site.allCases {
                 for opcode in Opcode.allCases {
                     guard let value = aggregates[Key(site: site, opcode: opcode)] else { continue }
@@ -5647,37 +5647,37 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             uniformTypeIdentifier: "public.json")
         preGetterRoot.name = "TASK145 C3 PRE-GETTER eight public OptionRows " + stage + " #\(ordinal)"
         preGetterRoot.lifetime = .keepAlways; add(preGetterRoot)
-        // Enumerate the complete union and every role natively. An absent
-        // virtualized row is an empty result, never an unresolved firstMatch
-        // whose implicit retries consume the traversal window. No snapshot
-        // geometry prunes candidates or supplies their native hittability.
+        // Bind the complete union to actual accessibility elements, rather
+        // than re-running eight role queries or binding by array position.
+        // Every candidate supplies its own native label and native hit test;
+        // snapshot geometry never prunes it or assigns its source role.
         let rolePredicates: [NSPredicate] = optionRows.map { role in
             NSPredicate(format: "label BEGINSWITH %@", role.title + ",")
         }
-        let unionCount = queryTiming.measure(.enumeration, site: .button) {
+        let buttons = queryTiming.measure(.enumeration, site: .button) {
             form.buttons.matching(NSCompoundPredicate(orPredicateWithSubpredicates: rolePredicates))
-                .allElementsBoundByIndex.count
+                .allElementsBoundByAccessibilityElement
         }
-        var enumeratedCount = 0
+        try scopeRequire(buttons.count <= optionRows.count,
+            stage: stage + "-complete-native-option-role-count", downstream: downstream)
+        var seenRoles: Set<String> = []
         var liveRoles: Set<String> = []
-        for (roleIndex, role) in optionRows.enumerated() {
+        for (index, button) in buttons.enumerated() {
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-before", downstream: downstream)
-            let buttons = queryTiming.measure(.enumeration, site: .button, index: roleIndex) {
-                form.buttons.matching(rolePredicates[roleIndex]).allElementsBoundByIndex
-            }
-            enumeratedCount += buttons.count
-            try scopeRequire(buttons.count <= 1,
+            let label = queryTiming.measure(.label, site: .button, index: index) { button.label }
+            let roles = optionRows.filter { label.hasPrefix($0.title + ",") }
+            try scopeRequire(roles.count == 1,
+                stage: stage + "-native-option-role-routing", downstream: downstream)
+            let role = roles[0].role
+            // Include nonhittable/offscreen candidates in native uniqueness.
+            try scopeRequire(seenRoles.insert(role).inserted,
                 stage: stage + "-native-option-role-not-unique", downstream: downstream)
-            for button in buttons {
-                let hittable = queryTiming.measure(.hittable, site: .button, index: roleIndex) { button.isHittable }
-                if hittable { liveRoles.insert(role.role) }
-            }
+            let hittable = queryTiming.measure(.hittable, site: .button, index: index) { button.isHittable }
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-pre-getter-witness-deadline-after", downstream: downstream)
+            if hittable { liveRoles.insert(role) }
         }
-        try scopeRequire(enumeratedCount == unionCount,
-            stage: stage + "-complete-native-option-role-enumeration", downstream: downstream)
         // One complete, fresh capture AFTER every live getter supplies all
         // role subtrees at the same instant. No role is pruned by geometry;
         // the native getters above cover every enumerated row, including offscreen rows.
@@ -5730,9 +5730,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         }
         // The only additional content role is the source-unique administrative Text ID
         // inside the Cloud body. A header, footer or arbitrary matching label is not an anchor.
-        let administrative = form.staticTexts.matching(identifier: "options.business-summary-unavailable")
-        if queryTiming.measure(.count, site: .administrative, { administrative.count }) == 1 {
-            let element = administrative.firstMatch
+        let administrative = queryTiming.measure(.enumeration, site: .administrative) {
+            form.staticTexts.matching(identifier: "options.business-summary-unavailable")
+                .allElementsBoundByAccessibilityElement
+        }
+        try scopeRequire(administrative.count <= 1,
+            stage: stage + "-native-administrative-role-not-unique", downstream: downstream)
+        if let element = administrative.first {
             if queryTiming.measure(.hittable, site: .administrative, { element.isHittable }) {
                 let node = try c3OptionsSnapshotMatch(element, type: .staticText, nodes: formNodes,
                     stage: stage + "-administrative", downstream: downstream, timing: queryTiming, site: .administrative)
