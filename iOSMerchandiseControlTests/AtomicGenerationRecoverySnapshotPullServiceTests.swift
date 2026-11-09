@@ -3758,6 +3758,9 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         await fulfillment(of: [waiterEntered], timeout: 2)
         let foreignOwner = UUID(uuidString: "99999999-aaaa-4bbb-8ccc-111111111111")!
         SelectedShopStore(defaults: fixture.defaults).noteActiveAccount(AccountBindingStore.accountHash(for: foreignOwner))
+        // A queued sign-out between owners still carries the held old worker's
+        // drain; the next authenticated task cannot bypass that predecessor.
+        controller.startLocalBodyQualification(ownerUserID: nil)
         for _ in 0..<32 {
             controller.startLocalBodyQualification(ownerUserID: foreignOwner)
         }
@@ -6525,7 +6528,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         selected.markResolutionUnresolved(accountHash: scope.accountHash)
         let reopened = try reopenFixture(clean)
         let controller = reopened.controller
+        var enteredBeforeYield = false
+        controller.localBodyQualificationDidEnterForTesting = { enteredBeforeYield = true }
         controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
+        XCTAssertTrue(enteredBeforeYield, "The authenticated cached reader must enter before first layout can monopolize MainActor")
         let full = await controller.awaitLocalBodyQualification()
         XCTAssertFalse(full)
         XCTAssertGreaterThan(controller.localBodyPhysicalReuseCountForTesting, 0)

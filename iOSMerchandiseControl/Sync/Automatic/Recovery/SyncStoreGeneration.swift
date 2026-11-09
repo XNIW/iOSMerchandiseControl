@@ -1653,10 +1653,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private var manifestQualificationRequested = false
     private var manifestQualificationOwner: UUID?
     private var manifestQualificationStartedOwner: UUID?
+    private var manifestQualificationLaunch: (id: UUID, started: Bool, drainsPredecessor: Bool)?
     #if DEBUG
     private var rootQualificationObservationTicket: UInt64 = 0
     // Tests hold the real detached readback before its existing publication guards.
     var localBodyQualificationBeforePublicationForTesting: (@MainActor () async -> Void)?
+    var localBodyQualificationDidEnterForTesting: (@MainActor () -> Void)?
     var localBodyQualificationBeforeDomainForTesting: (@MainActor @Sendable (Task126LocalReadDomain) async throws -> Void)?
     private(set) var localBodyFullReadbackCountForTesting = 0
     private(set) var localBodyPhysicalReuseCountForTesting = 0
@@ -1909,6 +1911,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         Task144RootObservation.record("body-start", "branch.manifest-body-qualification", callsite: "SyncStoreGeneration.startLocalBodyQualification")
         #endif
         let retiringQualification = localBodyQualificationTask
+        // Only a still-queued populated task has no worker to drain. An empty
+        // root task, started task or queued task draining an older predecessor
+        // retains the original join (including owner -> nil -> new owner).
+        let retiringQualificationNotStarted = manifestQualificationLaunch.map {
+            $0.id == manifestQualificationID && !$0.started && !$0.drainsPredecessor
+        } ?? false
         retiringQualification?.cancel()
         let captured = active
         let container = captured.container
@@ -1939,6 +1947,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let identity = UUID()
         let readAdmissionGeneration = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
         manifestQualificationID = identity
+        manifestQualificationLaunch = (identity, false, retiringQualification != nil && !retiringQualificationNotStarted)
         manifestQualificationStartedOwner = ownerUserID
         manifestQualificationRequested = false
         manifestQualificationOwner = ownerUserID
@@ -1953,7 +1962,13 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let qualificationCostStartNS = DispatchTime.now().uptimeNanoseconds
 #endif
 // TASK145_COST39_END qualification-start
-        localBodyQualificationTask = Task(priority: foregroundQualificationPriority) { [weak self] in
+        let operation: @MainActor @Sendable () async -> Bool = { [weak self] in
+            if self?.manifestQualificationLaunch?.id == identity {
+                self?.manifestQualificationLaunch?.started = true
+            }
+            #if DEBUG
+            self?.localBodyQualificationDidEnterForTesting?()
+            #endif
 // TASK145_COST39_BEGIN qualification-attempts
 #if DEBUG
             var qualificationCostAttempts: UInt64 = 0
@@ -1999,7 +2014,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             // Publish the new owner's task immediately, but wait for the old
             // worker to terminate before starting another validation.
-            if let retiringQualification { _ = await retiringQualification.value }
+            if let retiringQualification, !retiringQualificationNotStarted { _ = await retiringQualification.value }
             #if DEBUG
             // This fixture observes the one qualification carrying real owner authority.
             if ownerUserID == nil, self?.localBodyQualificationBeforeDomainForTesting != nil { return false }
@@ -2271,6 +2286,18 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             return false
         }
+        let task: Task<Bool, Never>
+        if !hasCurrentBodyProof, ownerUserID != nil {
+            // Submit the detached reader before first layout holds MainActor.
+            // No file work moves onto this actor; execution suspends at the
+            // same worker/join awaits and retains every publication guard.
+            task = Task.immediate(priority: foregroundQualificationPriority, operation: operation)
+        } else {
+            task = Task(priority: foregroundQualificationPriority, operation: operation)
+        }
+        // An immediate body may complete and synchronously request a successor.
+        // Never overwrite that successor's handle with this older result.
+        if manifestQualificationLaunch?.id == identity { localBodyQualificationTask = task }
     }
 
     /// Presentation-only admission for a physically empty first bootstrap.
