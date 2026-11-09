@@ -6185,9 +6185,17 @@ private struct Task144ControlledRootControls: View {
                 Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
                     .frame(width: 1, height: 1).allowsHitTesting(false)
-                ForEach(displayedFacts, id: \.self) { fact in
-                    Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                // Ordinary launch has no technical fact band. Keep this
+                // cache-only witness eager and bounded without resizing the
+                // real Database as its factual ledger grows.
+                ScrollView(.vertical) {
+                    VStack(spacing: 1) {
+                        ForEach(displayedFacts, id: \.self) { fact in
+                            Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                        }
+                    }
                 }
+                .frame(height: 32)
             }
             .dynamicTypeSize(.medium ... .large)
             .accessibilityElement(children: .contain)
@@ -6215,8 +6223,7 @@ private struct Task144ControlledRootControls: View {
             }
             if ProcessInfo.processInfo.environment["TASK145_T14_OBSERVATION"] == "1"
                 || ["cycles", "repeated-material"].contains(ProcessInfo.processInfo.environment["TASK145_T19_UI"] ?? "")
-                || ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1"
-                || ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                || ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1" {
                 // Long witnesses append real facts. Keep their eager public
                 // markers within one fixed band instead of shrinking the app
                 // viewport as the passive ledger grows. Controls stay outside.
@@ -6229,8 +6236,7 @@ private struct Task144ControlledRootControls: View {
                         }
                     }
                 }
-                .frame(height: (ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1"
-                    || ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache") ? 32 : 96)
+                .frame(height: ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1" ? 32 : 96)
             } else {
                 ForEach(displayedFacts, id: \.self) { fact in
                     Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
