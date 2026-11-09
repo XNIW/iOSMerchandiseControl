@@ -969,6 +969,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
     func testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld() throws {
         try task146ConfigureAnimationIdleDriver()
+        XCTAssertTrue(_isDebugAssertConfiguration(), "B2 runner must retain Debug assertions")
         func launch(_ phase: String) {
             app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = phase
             app.launch()
@@ -1025,6 +1026,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertTrue(render.waitForExistence(timeout: 5))
         let renderData = try XCTUnwrap((render.value as? String)?.data(using: .utf8))
         let observation = try XCTUnwrap(JSONSerialization.jsonObject(with: renderData) as? [String: Any])
+        XCTAssertEqual(observation["debugAssertionsEnabled"] as? Bool, true,
+                       "The real app must retain Debug assertions in every build profile")
+        #if TASK146_NATIVE_OPTIMIZED_ASSERTS
+        XCTAssertEqual(observation["optimizedNativeProfile"] as? Bool, true)
+        #else
+        XCTAssertEqual(observation["optimizedNativeProfile"] as? Bool, false)
+        #endif
         XCTAssertEqual(observation["namespace"] as? String, runID)
         XCTAssertEqual(try XCTUnwrap(observation["requestUptime"] as? Double), cacheLaunchStarted, accuracy: 0.000001)
         let renderedAt = try XCTUnwrap(observation["renderUptime"] as? Double)
@@ -3640,8 +3648,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(submit.count, 1)
         let search = submit.element(boundBy: 0)
         XCTAssertTrue(search.isHittable); search.tap()
-        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
-        XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 5), .completed)
+        // A missing firstMatch performs SDK retries while proving absence.
+        // The direct native count proves the same absence without resolving a
+        // nonexistent element. Preserve the original absolute5s before/after.
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        var hidden = false
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            let count = app.keyboards.count
+            guard ProcessInfo.processInfo.systemUptime <= deadline else { break }
+            if count == 0 { hidden = true; break }
+        }
+        XCTAssertTrue(hidden, "T11 native keyboard must be absent within the original5s")
     }
 
     private func awaitIsolationFact(_ suffix: String, timeout: TimeInterval) throws {
@@ -5191,7 +5208,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: "C3-explicit-normal-return-A", downstream: ["qualified-summary-return"])
         options.tap()
         let returnedForm = try c3OptionsForm(stage: "C3-return-A", downstream: ["qualified-summary-return"])
-        try c3OptionsRewindToTop(returnedForm, stage: "C3-return-A-top", privacy: false, downstream: ["qualified-summary-return"])
+        try c3OptionsRewindToTop(returnedForm, stage: "C3-return-A-top", privacy: false, downstream: ["qualified-summary-return"], velocity: .fast)
         try c3OptionsReveal(sync, form: returnedForm, stage: "C3-return-A-cloud", downstream: ["qualified-summary-return"], velocity: .fast)
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable && !unavailable.exists,
             stage: "C3-current-A-cloud-return", downstream: ["qualified-summary-return"])
@@ -5781,7 +5798,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: stage + "-no-business-labels", downstream: downstream)
     }
     private func c3OptionsRewindToTop(_ form: XCUIElement, stage: String, privacy: Bool,
-                                     downstream: [String]) throws {
+                                     downstream: [String], velocity: XCUIGestureVelocity = .slow) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
             let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
@@ -5789,10 +5806,19 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             if privacy { try c3NoBusinessInCurrentViewport(stage: stage + "-rewind-\(ordinal)", downstream: downstream) }
             try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-traversal-deadline-after-privacy", downstream: downstream)
-            if c3OptionsEndpoint(form, value: "0%") && app.staticTexts["Theme"].isHittable { return }
+            // ReturnA has no intervening privacy wait or gesture: use the
+            // scrollbar values from this same complete native viewport rather
+            // than resolving every scrollbar again. B keeps its live endpoint.
+            let atTop = privacy ? c3OptionsEndpoint(form, value: "0%")
+                : !observation.scrollValues.isEmpty && observation.scrollValues.allSatisfy { $0 == "0%" }
+            if atTop && app.staticTexts["Theme"].isHittable {
+                try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
+                    stage: stage + "-top-deadline-after-native-hit", downstream: downstream)
+                return
+            }
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-top-endpoint-NOT_QUALIFIED", downstream: downstream)
-            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: false)
+            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: false, velocity: velocity)
         }
     }
     private func c3OptionsReveal(_ target: XCUIElement, form: XCUIElement, stage: String,

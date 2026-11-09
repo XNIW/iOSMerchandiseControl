@@ -143,12 +143,56 @@ jobs:
 
       - name: Build Debug
         timeout-minutes: 15
-        run: >-
-          xcodebuild -project iOSMerchandiseControl.xcodeproj
-          -scheme iOSMerchandiseControl
-          -configuration Debug
-          -destination "platform=iOS Simulator,id=$DEVICE_ID"
-          CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build-for-testing
+        env:
+          TASK146_BUILD_SHARD: ${{ matrix.shard }}
+        run: |
+          python3 - <<'PYBUILD'
+          import hashlib,json,os,resource,signal,subprocess
+          from pathlib import Path
+          temporary=Path(os.environ['RUNNER_TEMP'])
+          selected=json.loads(os.environ.get('TASK146_FOCUSED_TESTS')or'[]')
+          # One changed-profile discriminator only. Full/PR/main remain stock
+          # until the actual result is reviewed; no deadline or selector waiver.
+          optimized=(os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
+              and os.environ['TASK146_BUILD_SHARD']=='focused'
+              and selected==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'])
+          argv=['xcodebuild','-project','iOSMerchandiseControl.xcodeproj','-scheme','iOSMerchandiseControl',
+              '-configuration','Debug','-destination','platform=iOS Simulator,id='+os.environ['DEVICE_ID'],
+              'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
+          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_DIAGNOSTIC'if optimized else'DEBUG_STANDARD',
+              'optimization':'-O'if optimized else'-Onone(project Debug)',
+              'assertConfiguration':'Debug(forced)'if optimized else'Debug(project default)',
+              'scope':'FOCUSED_NOT_FINAL'if optimized else'unchanged stock build',
+              'assertionProbe':{'status':'NOT_REQUESTED_ON_STANDARD'}}
+          path=temporary/'task146-debug-build-profile.json'
+          def save():path.write_text(json.dumps(profile,indent=2)+'\n')
+          save()
+          if optimized:
+              # Preserve Debug assertions while optimizing the large DEBUG UI
+              # fixture. Prove the actual SDK compiler retains a real assertion.
+              resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+              probe=temporary/'task146-debug-assertion-probe';probe.mkdir(exist_ok=False)
+              source=probe/'probe.swift';binary=probe/'probe'
+              source.write_text('if !_isDebugAssertConfiguration() { fatalError("TASK146_ASSERT_CONFIG_DISABLED") }\nif CommandLine.arguments.contains("trip") { assert(false, "TASK146_DEBUG_ASSERTION_PROBE") }\nprint("TASK146_DEBUG_ASSERTIONS_ENABLED")\n')
+              command=['xcrun','swiftc','-O','-Xfrontend','-assert-config','-Xfrontend','Debug',str(source),'-o',str(binary)]
+              profile['assertionProbe']={'status':'RUNNING','sourceSHA256':hashlib.sha256(source.read_bytes()).hexdigest(),'compilerArguments':command};save()
+              subprocess.run(command,check=True,timeout=90)
+              positive=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
+              negative=subprocess.run([str(binary),'trip'],capture_output=True,text=True,timeout=15)
+              assert positive.returncode==0 and positive.stdout.strip()=='TASK146_DEBUG_ASSERTIONS_ENABLED'
+              assert negative.returncode in[-signal.SIGILL,-signal.SIGTRAP]and'TASK146_DEBUG_ASSERTION_PROBE'in negative.stderr
+              profile['assertionProbe'].update(status='PASS_REAL_DEBUG_ASSERTION_RETAINED',positiveExit=positive.returncode,
+                  negativeSignal=-negative.returncode,negativeMessageVerified=True,binarySHA256=hashlib.sha256(binary.read_bytes()).hexdigest())
+              # Both owned probe processes have exited; keep the small receipt.
+              (probe/'verification.json').write_text(json.dumps(profile['assertionProbe'],indent=2)+'\n')
+              source.unlink();binary.unlink()
+              argv+=['SWIFT_OPTIMIZATION_LEVEL=-O',
+                  'OTHER_SWIFT_FLAGS=$(inherited) -Xfrontend -assert-config -Xfrontend Debug -D TASK146_NATIVE_OPTIMIZED_ASSERTS']
+          argv+=['build-for-testing'];profile['buildArguments']=argv;save()
+          print(json.dumps({key:profile[key]for key in['name','optimization','assertConfiguration','scope']}),flush=True)
+          result=subprocess.run(argv);profile['SDKBuildExit']=result.returncode;save()
+          raise SystemExit(result.returncode)
+          PYBUILD
 
       - name: Package exact ordinary ARM app
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' }}
@@ -179,7 +223,8 @@ jobs:
               'workflowSHA256':hashlib.sha256(Path('.github/workflows/ios-product-images-ci.yml').read_bytes()).hexdigest(),
               'appSourceTree':subprocess.check_output(['git','rev-parse','HEAD:iOSMerchandiseControl'],text=True).strip(),
               'packageBytes':package.stat().st_size,'packageSHA256':hashlib.sha256(package.read_bytes()).hexdigest(),
-              'appBytes':sum(row['bytes']for row in rows),'fileCount':len(rows),'files':rows}
+              'appBytes':sum(row['bytes']for row in rows),'fileCount':len(rows),'files':rows,
+              'debugBuildProfile':json.loads((Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json').read_text())}
           assert manifest['architecture']=='arm64'
           (out/'ordinary-app.manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
           print(json.dumps({key:manifest[key]for key in ['scope','head','architecture','appBytes','packageBytes','fileCount']}))
@@ -515,6 +560,7 @@ jobs:
                       and not result.get('timedOut') and not result.get('errorType'))
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
+          export('debug-build-profile.json', ['cat', str(Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json')])
           export('toolchain.txt', ['python3', '-c', "import json,subprocess,pathlib,os; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; result={key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()}; profile=pathlib.Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'; result['resourcePhases']=[json.loads(line)for line in profile.read_text().splitlines()] if profile.exists() else []; print(json.dumps(result,sort_keys=True))"])
           if os.environ.get('TASK146_FOCUSED_TESTS') or os.environ.get('TASK146_CI_SHARD') == 'ui-core':
               # Diagnostic only, inside the existing byte/time-limited exporter.
@@ -622,6 +668,7 @@ jobs:
         with:
           name: task145-ci-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            ${{ runner.temp }}/task146-debug-assertion-probe/
             ${{ runner.temp }}/ios-xctest-shard
             ${{ runner.temp }}/ios-xctest-failure-summary
             ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
