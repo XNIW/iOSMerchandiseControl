@@ -150,6 +150,7 @@ struct ContentView: View {
     @State private var runtimePresentationID: String?
     @State private var rootIndicatorState: SyncRootPresentationState = .hidden
     @State private var fallbackSelectedTab = Self.initialSelectedTab()
+    @State private var openedTabs: Set<Int>
     private let selectedTabOverride: Binding<Int>?
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
@@ -191,6 +192,7 @@ struct ContentView: View {
         _foregroundActivityCenter = StateObject(wrappedValue: foregroundActivityCenterOverride ?? ForegroundCloudWorkflowActivityCenter())
         _workbookPreparation = StateObject(wrappedValue: workbookPreparationOverride ?? LocalWorkbookPreparation())
         self.selectedTabOverride = selectedTabOverride
+        _openedTabs = State(initialValue: [selectedTabOverride?.wrappedValue ?? Self.initialSelectedTab()])
         _syncStateStore = StateObject(wrappedValue: syncStateOverride ?? SyncStateStore(storeGenerationController: storeGenerationController))
         _shopContextStore = StateObject(
             wrappedValue: shopContextOverride ?? ShopContextStore(
@@ -598,26 +600,30 @@ struct ContentView: View {
         let sessionsAvailable = !hidesBusinessData || canReadLocalDomain(.sessions)
         TabView(selection: selectedTabBinding) {
             NavigationStack {
-                InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
-                    businessContentIsCurrent: { canReadLocalDomain(.catalog) },
-                    unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
-                    openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
-                    .environmentObject(excelSession)
-                    .environmentObject(shopContextStore)
-                    .id(presentationID)
-                    .toolbar { syncToolbar }
+                if selectedTab == 0 || openedTabs.contains(0) {
+                    InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
+                        businessContentIsCurrent: { canReadLocalDomain(.catalog) },
+                        unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
+                        openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
+                        .environmentObject(excelSession)
+                        .environmentObject(shopContextStore)
+                        .id(presentationID)
+                        .toolbar { syncToolbar }
+                }
             }
             .tabItem { Label(L("tab.inventory"), systemImage: "doc.on.doc") }
             .tag(0)
 
             NavigationStack {
                 Group {
-                    if !catalogAvailable {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                            .navigationTitle(L("tab.database"))
-                    } else {
-                        DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                    if selectedTab == 1 || openedTabs.contains(1) {
+                        if !catalogAvailable {
+                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                .navigationTitle(L("tab.database"))
+                        } else {
+                            DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                        }
                     }
                 }
                 .id(presentationID)
@@ -628,11 +634,13 @@ struct ContentView: View {
 
             NavigationStack {
                 Group {
-                    if !sessionsAvailable {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                            .navigationTitle(L("tab.history"))
-                    } else {
-                        HistoryView(historySessionSyncService: historySessionSyncService)
+                    if selectedTab == 2 || openedTabs.contains(2) {
+                        if !sessionsAvailable {
+                            businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                .navigationTitle(L("tab.history"))
+                        } else {
+                            HistoryView(historySessionSyncService: historySessionSyncService)
+                        }
                     }
                 }
                 .id(presentationID)
@@ -642,16 +650,21 @@ struct ContentView: View {
             .tag(2)
 
             NavigationStack {
-                OptionsView(remoteCountFetcher: remoteCountFetcher,
-                    supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    deviceAuthorization: shopDeviceRegistrationService,
-                    accountStoreReplacementRuntime: syncOrchestrator)
+                if selectedTab == 3 || openedTabs.contains(3) {
+                    OptionsView(remoteCountFetcher: remoteCountFetcher,
+                        supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
+                        syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                        deviceAuthorization: shopDeviceRegistrationService,
+                        accountStoreReplacementRuntime: syncOrchestrator)
+                }
             }
             .tabItem { Label(L("tab.options"), systemImage: "gearshape") }
             .tag(3)
             .task145PerformanceRender("optionsRender")
         }
+        // Mount the visible section first. A visited section stays mounted so
+        // switching tabs keeps its navigation, workbook and editor state.
+        .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
         .task145PerformanceRender("tabsRender")
     }
 }
