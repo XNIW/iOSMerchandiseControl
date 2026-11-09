@@ -1018,6 +1018,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let cacheLaunchStarted = ProcessInfo.processInfo.systemUptime
         app.launchEnvironment["TASK146_B2_LAUNCH_REQUEST_UPTIME"] = String(cacheLaunchStarted)
         app.launch()
+        // Keep AX polling out of the measured launch. The independent committed-
+        // layout/display marker below must STILL precede the original T0 + 5s;
+        // delaying this observer cannot qualify a late or missing render.
+        let cacheRenderDeadline = cacheLaunchStarted + 5
+        while ProcessInfo.processInfo.systemUptime < cacheRenderDeadline {
+            Thread.sleep(forTimeInterval: max(0, min(0.05, cacheRenderDeadline - ProcessInfo.processInfo.systemUptime)))
+        }
         XCTAssertEqual((app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue, false)
         let catalogRowAppeared = catalogRow.waitForExistence(timeout: 5)
         let automationElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
@@ -1517,7 +1524,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     dx: frame.midX - window.minX, dy: y - window.minY))
                 drags += 1
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0)
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: XCUIGestureVelocity(rawValue: 1_500), thenHoldForDuration: 0)
             }
             emit()
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
@@ -3429,9 +3436,22 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount)")
             return false
         }
-        let buttons = windows.element(boundBy: 0).tabBars.buttons.matching(NSPredicate(format: "label == %@", title))
-        let buttonCount = buttons.count
-        let selected = buttonCount == 1 && buttons.element(boundBy: 0).isSelected
+        // One complete native TabBar capture supplies both title cardinality
+        // and selected state, without requesting the diagnostic values elsewhere
+        // in the application. Keep both global topology counts and window guard.
+        guard let bar = try? windows.element(boundBy: 0).tabBars.element(boundBy: 0).snapshot(),
+              bar.elementType == .tabBar else { return false }
+        var pending = [bar]
+        var visited = 0
+        var titleButtons: [XCUIElementSnapshot] = []
+        while let node = pending.popLast() {
+            visited += 1
+            guard visited <= 128, pending.count + node.children.count <= 128 else { return false }
+            if node.elementType == .button && node.label == title { titleButtons.append(node) }
+            pending.append(contentsOf: node.children)
+        }
+        let buttonCount = titleButtons.count
+        let selected = buttonCount == 1 && titleButtons[0].isSelected
         // A changing structure count cannot borrow the earlier topology.
         let afterCount = structures.count
         let admitted = selected && afterCount == expectedCount
@@ -3551,6 +3571,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     selected = ProcessInfo.processInfo.systemUptime <= deadline
                     break
                 }
+            }
+            if !selected {
+                let timing = XCTAttachment(string: observations.joined(separator: "\n"))
+                timing.name = "T11 return-tab native admission " + scenario
+                timing.lifetime = .keepAlways; add(timing)
             }
             XCTAssertTrue(selected, "T11 return tab must be natively selected within the original5s")
         }
@@ -5682,7 +5707,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
     private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, applicationOrigin: CGPoint, upward: Bool,
                                halfStepFraction: CGFloat = 0.29, velocity: XCUIGestureVelocity = .slow) {
-        // The default keeps 42% overlap; B traversal retains 38% overlap.
+        // The default keeps 42% pointer overlap; B bounds its step by a
+        // qualified content anchor and verifies actual content overlap below.
         // Both endpoints remain inside the just-qualified viewport, and each
         // later viewport rechecks actual content overlap before advancing.
         let halfStep = viewport.height * halfStepFraction
@@ -5820,7 +5846,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             // The first Cloud-only viewport needs a shorter step; later rows
             // allow a larger native pan. Actual overlap is still mandatory.
             let anchorBottom = anchors.values.map { min($0.frame.maxY, observation.viewport.maxY) }.max()!
-            let distance = min(observation.viewport.height * 0.58,
+            let distance = min(observation.viewport.height * 0.9,
                 max(24, anchorBottom - observation.viewport.minY - 44))
             c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: true,
                 halfStepFraction: distance / observation.viewport.height / 2, velocity: .default)
