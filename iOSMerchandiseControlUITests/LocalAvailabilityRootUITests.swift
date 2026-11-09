@@ -5208,7 +5208,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: "C3-explicit-normal-return-A", downstream: ["qualified-summary-return"])
         options.tap()
         let returnedForm = try c3OptionsForm(stage: "C3-return-A", downstream: ["qualified-summary-return"])
-        try c3OptionsRewindToTop(returnedForm, stage: "C3-return-A-top", privacy: false, downstream: ["qualified-summary-return"], velocity: .fast)
+        try c3OptionsRewindToTop(returnedForm, stage: "C3-return-A-top", privacy: false, downstream: ["qualified-summary-return"], halfStepFraction: 0.45, velocity: .fast)
         try c3OptionsReveal(sync, form: returnedForm, stage: "C3-return-A-cloud", downstream: ["qualified-summary-return"], velocity: .fast)
         try scopeRequire(sync.waitForExistence(timeout: 10) && sync.isHittable && !unavailable.exists,
             stage: "C3-current-A-cloud-return", downstream: ["qualified-summary-return"])
@@ -5798,7 +5798,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             stage: stage + "-no-business-labels", downstream: downstream)
     }
     private func c3OptionsRewindToTop(_ form: XCUIElement, stage: String, privacy: Bool,
-                                     downstream: [String], velocity: XCUIGestureVelocity = .slow) throws {
+                                     downstream: [String], halfStepFraction: CGFloat = 0.29,
+                                     velocity: XCUIGestureVelocity = .slow) throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 15
         for ordinal in 0...5 {
             let observation = try c3OptionsViewport(form, stage: stage, ordinal: ordinal,
@@ -5818,7 +5819,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             try scopeRequire(ordinal < 5 && ProcessInfo.processInfo.systemUptime < deadline,
                 stage: stage + "-top-endpoint-NOT_QUALIFIED", downstream: downstream)
-            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: false, velocity: velocity)
+            // Return A may traverse 90% of the real viewport per pan; B keeps
+            // its original smaller rewind and all measured overlap checks.
+            c3OptionsDrag(form, viewport: observation.viewport, applicationOrigin: observation.applicationOrigin, upward: false,
+                halfStepFraction: halfStepFraction, velocity: velocity)
         }
     }
     private func c3OptionsReveal(_ target: XCUIElement, form: XCUIElement, stage: String,

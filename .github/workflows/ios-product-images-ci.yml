@@ -201,7 +201,7 @@ jobs:
                   arguments=shlex.split(line);module=arguments[arguments.index('-module-name')+1]
               except(ValueError,IndexError):continue
               witness={'optimization':[x for x in arguments if x in['-O','-Onone','-Osize','-Ounchecked']],
-                  'forcedDebugAssertions':any(arguments[i:i+3]==['-assert-config','-Xfrontend','Debug']for i in range(len(arguments))),
+                  'forcedDebugAssertions':any(arguments[i:i+2]==['-assert-config','Debug']or arguments[i:i+3]==['-assert-config','-Xfrontend','Debug']for i in range(len(arguments))),
                   'optimizedProfileMacro':'TASK146_NATIVE_OPTIMIZED_ASSERTS'in arguments}
               if witness not in witnesses.setdefault(module,[]):witnesses[module].append(witness)
           code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses
