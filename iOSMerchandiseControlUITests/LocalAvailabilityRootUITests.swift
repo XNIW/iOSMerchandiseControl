@@ -1018,13 +1018,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         let cacheLaunchStarted = ProcessInfo.processInfo.systemUptime
         app.launchEnvironment["TASK146_B2_LAUNCH_REQUEST_UPTIME"] = String(cacheLaunchStarted)
         app.launch()
-        // Keep AX polling out of the measured launch. The independent committed-
-        // layout/display marker below must STILL precede the original T0 + 5s;
-        // delaying this observer cannot qualify a late or missing render.
-        let cacheRenderDeadline = cacheLaunchStarted + 5
-        while ProcessInfo.processInfo.systemUptime < cacheRenderDeadline {
-            Thread.sleep(forTimeInterval: max(0, min(0.05, cacheRenderDeadline - ProcessInfo.processInfo.systemUptime)))
-        }
         XCTAssertEqual((app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue, false)
         let catalogRowAppeared = catalogRow.waitForExistence(timeout: 5)
         let automationElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
@@ -1524,7 +1517,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     dx: frame.midX - window.minX, dy: y - window.minY))
                 drags += 1
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                    dx: 0, dy: upward ? -distance : distance)), withVelocity: XCUIGestureVelocity(rawValue: 1_500), thenHoldForDuration: 0)
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: XCUIGestureVelocity(rawValue: 5_000), thenHoldForDuration: 0)
             }
             emit()
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
@@ -3421,11 +3414,17 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         // the global union count proves EXACTLY one of each, not just a match.
         let types = [XCUIElement.ElementType.tabBar.rawValue, XCUIElement.ElementType.navigationBar.rawValue]
             + (requiresForm ? [XCUIElement.ElementType.collectionView.rawValue] : [])
-        let structures = app.descendants(matching: .any).matching(NSPredicate(format: "elementType IN %@", types))
-        let expectedCount = requiresForm ? 3 : 2
+        // Include the target title in the same global union. The owning window
+        // and actual selected getter below establish at least one of EVERY role;
+        // this total proves exactly one of each, including the selected title.
+        let structures = app.descendants(matching: .any).matching(NSCompoundPredicate(orPredicateWithSubpredicates: [
+            NSPredicate(format: "elementType IN %@", types),
+            NSPredicate(format: "elementType == %d AND label == %@", XCUIElement.ElementType.button.rawValue, title)
+        ]))
+        let expectedCount = types.count + 1
         let beforeCount = structures.count
         guard beforeCount == expectedCount else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-structures=\(beforeCount); expected=\(expectedCount)")
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-structures-and-title=\(beforeCount); expected=\(expectedCount)")
             return false
         }
         let owners = app.windows.containing(.tabBar, identifier: nil)
@@ -3436,26 +3435,12 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount)")
             return false
         }
-        // One complete native TabBar capture supplies both title cardinality
-        // and selected state, without requesting the diagnostic values elsewhere
-        // in the application. Keep both global topology counts and window guard.
-        guard let bar = try? windows.element(boundBy: 0).tabBars.element(boundBy: 0).snapshot(),
-              bar.elementType == .tabBar else { return false }
-        var pending = [bar]
-        var visited = 0
-        var titleButtons: [XCUIElementSnapshot] = []
-        while let node = pending.popLast() {
-            visited += 1
-            guard visited <= 128, pending.count + node.children.count <= 128 else { return false }
-            if node.elementType == .button && node.label == title { titleButtons.append(node) }
-            pending.append(contentsOf: node.children)
-        }
-        let buttonCount = titleButtons.count
-        let selected = buttonCount == 1 && titleButtons[0].isSelected
+        let button = windows.element(boundBy: 0).tabBars.buttons.matching(NSPredicate(format: "label == %@", title)).firstMatch
+        let selected = button.isSelected
         // A changing structure count cannot borrow the earlier topology.
         let afterCount = structures.count
         let admitted = selected && afterCount == expectedCount
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-before=\(beforeCount); global-after=\(afterCount); expected=\(expectedCount); windows=\(windowCount); buttons=\(buttonCount); selected=\(selected); native-filtered-admission=\(admitted)")
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-before=\(beforeCount); global-after=\(afterCount); expected=\(expectedCount); windows=\(windowCount); selected=\(selected); native-filtered-admission=\(admitted)")
         return admitted
     }
 

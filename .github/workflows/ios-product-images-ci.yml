@@ -431,11 +431,11 @@ jobs:
                           'selectionStatus': 'NOT_QUALIFIED_METADATA_LIMIT'}) + '\n').encode()
               assert len(data) <= METADATA_RESERVE
               (output / 'provenance.json').write_bytes(data)
-          def export(name, argv):
+          def export(name, argv, timeout=EXPORT_TIMEOUT_SECONDS):
               global retained_bytes
               stdout, stderr = output / name, output / (name + '.stderr')
               result = {'argv': argv, 'stdout': stdout.name, 'stderr': stderr.name,
-                        'timeoutSeconds': EXPORT_TIMEOUT_SECONDS, 'attempted': False,
+                        'timeoutSeconds': timeout, 'attempted': False,
                         'hashScope': 'retained-file-bytes'}
               if retained_bytes >= ARTIFACT_LIMIT - METADATA_RESERVE:
                   result.update(omitted=True, omissionReason='ARTIFACT_BYTE_BUDGET',
@@ -447,7 +447,7 @@ jobs:
                               'truncated': False, 'digest': hashlib.sha256()}
                          for key in ['stdout', 'stderr']}
               process, selector = None, selectors.DefaultSelector()
-              deadline = time.monotonic() + EXPORT_TIMEOUT_SECONDS
+              deadline = time.monotonic() + timeout
               with stdout.open('wb') as out, stderr.open('wb') as err:
                   try:
                       process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -460,7 +460,7 @@ jobs:
                       while selector.get_map():
                           remaining = deadline - time.monotonic()
                           if remaining <= 0:
-                              raise subprocess.TimeoutExpired(argv, EXPORT_TIMEOUT_SECONDS)
+                              raise subprocess.TimeoutExpired(argv, timeout)
                           for ready, _ in selector.select(remaining):
                               key, file, limit = ready.data
                               try:
@@ -523,7 +523,10 @@ jobs:
                   'log', 'show', '--style', 'compact', '--last', '75m',
                   '--predicate', '(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39" OR eventMessage BEGINSWITH "TASK146_R4_INIT"'])
           base = ['xcrun', 'xcresulttool', 'get', 'test-results']
-          summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)])
+          # This aggregate hit its20s limit on697 while the complete tests/DB
+          # still contained all8 real results. One bounded export, no retry;
+          # byte caps and complete-output qualification remain unchanged.
+          summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)], timeout=60)
           tests_ok = export('tests.json', base + ['tests', '--path', str(bundle)])
           provenance['selectionStatus'] = 'NOT_PARSED_INCOMPLETE_SUMMARY_OR_TESTS'
           if summary_ok and tests_ok:

@@ -467,6 +467,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }()
 
     @Published private(set) var facts: Set<String> = []
+    @Published private(set) var cachedCatalogDiagnosticsReady = false
     @Published private(set) var automaticReadback = ""
     @Published private(set) var rootPresentationObservation = ""
     private var rootPresentationObservationOrdinal = 0
@@ -1359,6 +1360,12 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             malformedManifestPreserved: bytes == Task145StoreLoadFailureObservation.malformedManifest,
             manifestAbsent: controller.activeManifest == nil,
             signedIn: authViewModel.isSignedIn)
+    }
+
+    func showCachedCatalogDiagnosticsAfterRender() {
+        guard independentDomainPhase == .cache, !cachedCatalogDiagnosticsReady else { return }
+        Task144RootObservation.recordCachedCatalogPhase("diagnostics-after-render")
+        cachedCatalogDiagnosticsReady = true
     }
 
     func prepareIfNeeded() {
@@ -6185,13 +6192,16 @@ private struct Task144ControlledRootControls: View {
                 Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
                     .frame(width: 1, height: 1).allowsHitTesting(false)
-                // Ordinary launch has no technical fact band. Keep this
-                // cache-only witness eager and bounded without resizing the
-                // real Database as its factual ledger grows.
+                // Ordinary launch has no technical fact band. Construct its
+                // eager rows only after the real catalog's committed layout
+                // records its timestamp. Keep every fact and the same32pt band;
+                // the passive render readback above is always mounted.
                 ScrollView(.vertical) {
                     VStack(spacing: 1) {
-                        ForEach(displayedFacts, id: \.self) { fact in
-                            Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                        if fixture.cachedCatalogDiagnosticsReady {
+                            ForEach(displayedFacts, id: \.self) { fact in
+                                Text(fact).font(.system(size: 8)).accessibilityIdentifier(fact)
+                            }
                         }
                     }
                 }

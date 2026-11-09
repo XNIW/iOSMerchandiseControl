@@ -3876,7 +3876,10 @@ struct DatabaseView: View {
                                     validate: {
                                         isCurrentModelGeneration && Task126OwnerStoreGate.permitsSameScopeLocalRead(
                                             .catalog, modelContainer: context.container, ownerUserID: currentPendingOwnerUserID)
-                                    }, onRendered: { Task144RootObservation.recordCachedCatalogRender() })
+                                    }, onRendered: {
+                                        Task144RootObservation.recordCachedCatalogRender()
+                                        Task144LocalAvailabilityRootFixture.current?.showCachedCatalogDiagnosticsAfterRender()
+                                    })
                             }
                         }
                         #endif
