@@ -27,6 +27,11 @@ on:
         type: boolean
         required: false
         default: false
+      task146_export_ordinary_app:
+        description: "Focused ARM diagnostic only: export the compiled app with hashes for ordinary TEST reuse"
+        type: boolean
+        required: false
+        default: false
       task146_focused_tests:
         description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
         type: string
@@ -47,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '' && 'macos-26-intel' || 'macos-26' }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '' && inputs.task146_export_ordinary_app != true && 'macos-26-intel' || 'macos-26' }}
     timeout-minutes: 75
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
@@ -58,7 +63,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Validate explicit focused selection
-        if: ${{ matrix.shard == 'focused' }}
+        if: ${{ matrix.shard == 'focused' || inputs.task146_export_ordinary_app == true }}
         run: python3 .github/ci/ios-xctest-shards.py validate-focused focused
 
       - name: Record diagnostic export reservation
@@ -144,6 +149,51 @@ jobs:
           -configuration Debug
           -destination "platform=iOS Simulator,id=$DEVICE_ID"
           CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build-for-testing
+
+      - name: Package exact ordinary ARM app
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,stat,subprocess,tarfile
+          from pathlib import Path
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert head==os.environ['GITHUB_SHA']
+          roots=list((Path.home()/'Library/Developer/Xcode/DerivedData').glob('iOSMerchandiseControl-*/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app'))
+          assert len(roots)==1, 'require the single product compiled by this fresh job'
+          app=roots[0];assert app.is_dir() and not app.is_symlink()
+          rows=[]
+          for path in sorted(app.rglob('*')):
+              assert not path.is_symlink(), 'do not export linked native inputs'
+              info=path.stat();assert stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)
+              if path.is_file():
+                  rows.append({'path':path.relative_to(app).as_posix(),'bytes':info.st_size,
+                      'mode':stat.S_IMODE(info.st_mode),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+          out=Path(os.environ['RUNNER_TEMP'])/'task146-ordinary-app';out.mkdir(exist_ok=False)
+          package=out/'ordinary-app.tar.gz'
+          with tarfile.open(package,'w:gz',compresslevel=1)as archive:archive.add(app,arcname=app.name)
+          for row in rows:
+              path=app/row['path'];assert path.stat().st_size==row['bytes'] and hashlib.sha256(path.read_bytes()).hexdigest()==row['sha256']
+          manifest={'scope':'SDK_PRODUCT_ONLY_NOT_NATIVE_ACCEPTANCE','head':head,'runID':os.environ['GITHUB_RUN_ID'],
+              'runAttempt':os.environ['GITHUB_RUN_ATTEMPT'],'architecture':subprocess.check_output(['uname','-m'],text=True).strip(),
+              'xcode':subprocess.check_output(['xcodebuild','-version'],text=True).strip(),
+              'workflowSHA256':hashlib.sha256(Path('.github/workflows/ios-product-images-ci.yml').read_bytes()).hexdigest(),
+              'appSourceTree':subprocess.check_output(['git','rev-parse','HEAD:iOSMerchandiseControl'],text=True).strip(),
+              'packageBytes':package.stat().st_size,'packageSHA256':hashlib.sha256(package.read_bytes()).hexdigest(),
+              'appBytes':sum(row['bytes']for row in rows),'fileCount':len(rows),'files':rows}
+          assert manifest['architecture']=='arm64'
+          (out/'ordinary-app.manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps({key:manifest[key]for key in ['scope','head','architecture','appBytes','packageBytes','fileCount']}))
+          PY
+
+      - name: Preserve exact ordinary ARM app
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: task146-ordinary-app-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/task146-ordinary-app/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
 
       - name: Release SDK memory before Simulator boot
         run: |
