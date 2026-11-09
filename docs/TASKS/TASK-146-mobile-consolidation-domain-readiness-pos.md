@@ -21,6 +21,16 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — C3standard2PASS/1FAIL, profilo diagnostico circoscritto — 2026-11-09T10:48:12.096372+00:00
+
+**✅ BUILD/SIM ESEGUITI con attribuzione.**4a707/run42599314027 SDK standard PASS; Name/replayACK e oracolo14 PASS, C3 FAIL15s prima dell'ultimo getter. Primo pan313pt conserva overlap; viewport0 costa2,049s, viewport1 costa4,975s e43percento, terza snapshot lascia1,299s per sei righe native. Nessun rilassamento15s/gesti/privacy/associazioni o promozione del FAIL. TargetShutdown/0booted, payload864361B/4MB, originali conservati. Gruppi long3-O e continuation5standard ancora in corso, nessuna cancellazione/matrice nuova.
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/native NOT_RUN.** Solo workflow per discriminante esatto degli stessi tre casi core sul correntehelperc800, profilo project-only-O/assertDebug già verificato per l'app ordinaria. Probe positivo/veroassertnegativo e compilerwitnesses obbligatori, tutte le dipendenze osservate stock. Nessuna adozione fullcore, nessun cambio test/app/selector/manifest/timeout/skip. Ipotesi costo Debug da verificare, non causa dichiarata. YAML/embeddedPython/membership/diffcheck PASS. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-scoped-debug-profile.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Riuso precisato.** Nuova impactmap6f verifica14path cambiati dalla prova live e10dalla provaPOS: deferral dei pending/rejectedSave è cambiato nel servizio incrementale, mentre apply per entità/tombstone e contratti di rete sono invariati. Non dire l'intero file byteimmutato. T11/R4/ACK/unit e matrice correnti restano obbligatori; POS con propria versione, ordinario8d AppTree esatto direttamente riusato. Vecchi5,286/5,343 sono limiti delle vecchie catture avvio, non latenze della propagazione live. [Impactmap](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-continuation-native-admission.ROOT/EVIDENCE-REUSE-CURRENT-SOURCE-IMPACT.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** Seguire tutti i discriminanti fino al terminale, adottare soltanto delta qualificati, poi matricefinale/review/PR29/mainCI/ritiro2920/PR28/tracking.16offlineOS/statistiche DIFFERITI, indice/WIP preservati, nessun merge conFAILcritici.
+
 ### Execution — 082 terminale, tre residui continuation e prove mirate — 2026-11-09T10:28:16.471206+00:00
 
 **✅ SIM/CI ESEGUITI e classificati.** Matrice082/run42588356827 terminale:2026PASS/16FAIL/43skip ammessi/16DEFERRED_USER, discovery2101/zero missing-unexpected. Unit1916PASS39skip e Debug/Release/Analyze/scan PASS. I16FAIL sono10T18reachaccount,3core(Name/B2/C3),3continuation(BaseRoot/CorruptSeal/Stable). Nessuna qualifica finale o merge. SeiT18 interi b726 dopoSDK PASS; discriminanti4a707 long3-O/core3standard ancora in corso, non cancellati.
