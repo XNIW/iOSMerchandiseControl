@@ -1517,7 +1517,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                     dx: frame.midX - window.minX, dy: y - window.minY))
                 drags += 1
                 start.press(forDuration: 0, thenDragTo: start.withOffset(CGVector(
-                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0.2)
+                    dx: 0, dy: upward ? -distance : distance)), withVelocity: .fast, thenHoldForDuration: 0)
             }
             emit()
             XCTFail("R4 resolution control not reachable within 15 seconds and 5 drags")
@@ -3409,41 +3409,33 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     private func isolationTabIsSelected(_ title: String, requiresForm: Bool = false,
                                         observe: ((String) -> Void)? = nil) -> Bool {
         let started = ProcessInfo.processInfo.systemUptime
-        // A new native snapshot for EACH sample supplies all original global
-        // cardinalities and owning-window/selection facts at one instant. Six
-        // separate live queries consumed2.58s per sample in the retained FAIL.
-        guard let root = try? app.snapshot() else {
-            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot=unavailable")
+        // Avoid requesting every diagnostic accessibilityValue in app.snapshot().
+        // One owning window proves AT LEAST one of each required structure;
+        // the global union count proves EXACTLY one of each, not just a match.
+        let types = [XCUIElement.ElementType.tabBar.rawValue, XCUIElement.ElementType.navigationBar.rawValue]
+            + (requiresForm ? [XCUIElement.ElementType.collectionView.rawValue] : [])
+        let structures = app.descendants(matching: .any).matching(NSPredicate(format: "elementType IN %@", types))
+        let expectedCount = requiresForm ? 3 : 2
+        let beforeCount = structures.count
+        guard beforeCount == expectedCount else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-structures=\(beforeCount); expected=\(expectedCount)")
             return false
         }
-        var pending: [(XCUIElementSnapshot, Int?, Bool)] = [(root, nil, false)]
-        var windowOrdinal = 0
-        var visited = 0
-        var bars: [Int?] = [], navigation: [(String, String, Int?)] = [], forms: [Int?] = []
-        var buttons: [(Int?, Bool)] = []
-        while let (node, inheritedWindow, inheritedTab) = pending.popLast() {
-            visited += 1
-            guard visited <= 1_024 else {
-                observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); snapshot=over1024; NOT_QUALIFIED")
-                return false
-            }
-            var window = inheritedWindow
-            if node.elementType == .window { windowOrdinal += 1; window = windowOrdinal }
-            let insideTab = inheritedTab || node.elementType == .tabBar
-            if node.elementType == .tabBar { bars.append(window) }
-            if node.elementType == .navigationBar { navigation.append((node.identifier, node.label, window)) }
-            if node.elementType == .collectionView { forms.append(window) }
-            if insideTab && node.elementType == .button && node.label == title {
-                buttons.append((window, node.isSelected))
-            }
-            pending.append(contentsOf: node.children.map { ($0, window, insideTab) })
+        let owners = app.windows.containing(.tabBar, identifier: nil)
+            .containing(.navigationBar, identifier: title)
+        let windows = requiresForm ? owners.containing(.collectionView, identifier: nil) : owners
+        let windowCount = windows.count
+        guard windowCount == 1 else {
+            observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); windows=\(windowCount)")
+            return false
         }
-        let owner = bars.count == 1 ? bars[0] : nil
-        let admitted = bars.count == 1 && navigation.count == 1 && owner != nil
-            && navigation[0].2 == owner && (navigation[0].0 == title || navigation[0].1 == title)
-            && (!requiresForm || (forms.count == 1 && forms[0] == owner))
-            && buttons.count == 1 && buttons[0].0 == owner && buttons[0].1
-        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); bars=\(bars.count); navigation=\(navigation.count); forms=\(forms.count); buttons=\(buttons.count); same-window-selected=\(admitted); fresh-native-snapshot=true; nodes=\(visited)")
+        let buttons = windows.element(boundBy: 0).tabBars.buttons.matching(NSPredicate(format: "label == %@", title))
+        let buttonCount = buttons.count
+        let selected = buttonCount == 1 && buttons.element(boundBy: 0).isSelected
+        // A changing structure count cannot borrow the earlier topology.
+        let afterCount = structures.count
+        let admitted = selected && afterCount == expectedCount
+        observe?("capture-start=\(started); capture-end=\(ProcessInfo.processInfo.systemUptime); global-before=\(beforeCount); global-after=\(afterCount); expected=\(expectedCount); windows=\(windowCount); buttons=\(buttonCount); selected=\(selected); native-filtered-admission=\(admitted)")
         return admitted
     }
 
