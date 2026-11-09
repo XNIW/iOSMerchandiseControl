@@ -166,7 +166,6 @@ jobs:
               'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
           profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START'if optimized else'DEBUG_STANDARD',
               'optimization':'-O'if optimized else'-Onone(project Debug)',
-              'compilationMode':'wholemodule'if optimized else'incremental(project Debug)',
               'assertConfiguration':'Debug(forced)'if optimized else'Debug(project default)',
               'scope':'project Debug targets; first cached startup and long regressions'if optimized else'unchanged stock build',
               'assertionProbe':{'status':'NOT_REQUESTED_ON_STANDARD'}}
@@ -180,7 +179,7 @@ jobs:
               probe=temporary/'task146-debug-assertion-probe';probe.mkdir(exist_ok=False)
               source=probe/'probe.swift';binary=probe/'probe'
               source.write_text('if !_isDebugAssertConfiguration() { fatalError("TASK146_ASSERT_CONFIG_DISABLED") }\nif CommandLine.arguments.contains("trip") { assert(false, "TASK146_DEBUG_ASSERTION_PROBE") }\nprint("TASK146_DEBUG_ASSERTIONS_ENABLED")\n')
-              command=['xcrun','swiftc','-O','-whole-module-optimization','-Xfrontend','-assert-config','-Xfrontend','Debug',str(source),'-o',str(binary)]
+              command=['xcrun','swiftc','-O','-Xfrontend','-assert-config','-Xfrontend','Debug',str(source),'-o',str(binary)]
               profile['assertionProbe']={'status':'RUNNING','sourceSHA256':hashlib.sha256(source.read_bytes()).hexdigest(),'compilerArguments':command};save()
               subprocess.run(command,check=True,timeout=90)
               positive=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
@@ -194,13 +193,11 @@ jobs:
               source.unlink();binary.unlink()
               # Custom settings are expanded only by this project's Debug
               # configuration; SPM dependencies keep their stock Debug flags.
-              # Cross-file specialization targets the measured startup/UI work;
-              # this profile retains the same real Debug assertion probe.
-              argv+=['TASK146_NATIVE_OPTIMIZATION_LEVEL=-O','TASK146_NATIVE_COMPILATION_MODE=wholemodule',
+              argv+=['TASK146_NATIVE_OPTIMIZATION_LEVEL=-O',
                   'TASK146_NATIVE_PROFILE_SWIFT_FLAGS=-Xfrontend -assert-config -Xfrontend Debug -D TASK146_NATIVE_OPTIMIZED_ASSERTS']
           argv+=['build-for-testing'];profile['buildArguments']=argv;save()
           print(json.dumps({key:profile[key]for key in['name','optimization','assertConfiguration','scope']}),flush=True)
-          witnesses={};wholemodule_drivers={}
+          witnesses={}
           process=subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
           for line in process.stdout:
               sys.stdout.write(line)
@@ -212,17 +209,11 @@ jobs:
                   'forcedDebugAssertions':any(arguments[i:i+2]==['-assert-config','Debug']or arguments[i:i+3]==['-assert-config','-Xfrontend','Debug']for i in range(len(arguments))),
                   'optimizedProfileMacro':'TASK146_NATIVE_OPTIMIZED_ASSERTS'in arguments}
               if witness not in witnesses.setdefault(module,[]):witnesses[module].append(witness)
-              # swift-frontend consumes the driver's mode and omits the flag.
-              # Require the explicit mode on every observed compiler driver.
-              if 'swiftc 'in line:
-                  wholemodule_drivers.setdefault(module,[]).append('-whole-module-optimization'in arguments or '-wmo'in arguments)
-          code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses;profile['wholeModuleDriverWitnesses']=wholemodule_drivers
+          code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses
           if optimized and code==0:
               projectModules=['iOSMerchandiseControl','iOSMerchandiseControlTests','iOSMerchandiseControlUITests']
               checks={module:bool(witnesses.get(module))and all(row=={'optimization':['-O'],
                   'forcedDebugAssertions':True,'optimizedProfileMacro':True}for row in witnesses[module])for module in projectModules}
-              for module in projectModules:
-                  checks[module+'.wholemoduleDriver']=bool(wholemodule_drivers.get(module))and all(wholemodule_drivers[module])
               checks['IssueReportingStockDebug']=bool(witnesses.get('IssueReporting'))and all(row=={'optimization':['-Onone'],
                   'forcedDebugAssertions':False,'optimizedProfileMacro':False}for row in witnesses['IssueReporting'])
               profile['SDKProfileVerification']={'status':'PASS'if all(checks.values())else'FAIL','checks':checks}

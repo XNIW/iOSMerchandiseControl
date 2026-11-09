@@ -21,6 +21,16 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — WMO respinto, preparazione C3 osservabile e primo mount navigazione — 2026-11-09T13:10:25.675525+00:00
+
+**✅ BUILD/SIM ESEGUITI con esito distinto.**5ba/run42619239659 SDKstandardPASS/oracolo14PASS, C3FAIL al setupA30s: ledger contiene solo membershipingress/response, UIresta Preparingcontrolledlocalbaseline; nuovohelperenumerazione NOT_TRAVERSED.02f/run42619681359 BUILDFAILtimeout15min confermato da annotationGitHub; appWMO compila12m40 e testiniziano quando ilbudgetSDK è quasi esaurito. NativeNOT_RUN, WMO NON adottato; workflow/pbx ripristinati byte-esatti31a. Tutti postflightShutdown/0booted; logSDK letto tramiteconnector inmemoria1,84MB, conservato soltanto estratto pertinente, nessun SDK locale.
+
+**✅ STATIC ESEGUITO PASS; SDK/native successori NOT_RUN.** C3soltanto: treboundarysetup e unrecordperstadioprogress esistente nelledger bounded256/131KB, soloenvC3 e originalScopeancoranil. Nessunaauthority/timer/protocollomutata, niente nuoveinfra. ContentView: primoDB/Historynonleggibile concede un soloTask.yield prima delNavplaceholder; nessunawaitproof/rete/altrodominio. Corpo giàleggibile monta subito; latch poi mantieneNav e privacygateinterni/id/visitedstate. Inventario/POS/Options invariati. Ipotesi mirata sul costoMainActor iniziale misurato, beneficio NOT_MEASURED, non dichiaratoPASS. DueSwiftparse/10embeddedPython/pbx/diffcheckPASS. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-preparation-boundary.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**✅ CLEANUP ESEGUITO PASS.** Due737/f260APKrestore140.545.520Blogici/140.550.144allocati rimossi dopo condizioneesplicita soddisfatta (restoreesatto+13user0immutati), hash/identità/nouso ricontrollati e3APKfinali verificati prima/dopo. Nessun dato/sessione/altroartifacttoccato. Cumulativoobsoleti6.430.642.023Blogici/6.521.143.296allocati; fisicoesclusivoUNKNOWN_APFS_AND_CONCURRENCY. Libero28,94GB misura2026-11-09T12:54:30Z28.936.183.808B; variabilitàindipendente nonattribuita alla pulizia. SDK/install/native localivoluminosi HOLD, soglia30GB/riserva30,3invariate. Monitorospitati soloAPI/metadatacap4MB, nessunartifactintegrale/binario; operazioni leggere restano disponibili sotto sogliaSDK.
+
+**Handoff ACTIVE/EXECUTION.** SDK-Ostandardpreesistente poiB2; SDKstandard poi8regressioniintere inclC3diagnostico. Sono gruppipertinenti al root condiviso, nonnuova matrice/ritentativoinvariato. Serve nuovoordinario perContentView quando budgetammesso, poi composizionestabile/matrice8/review/PR29/mainCI/ritiro2920/PR28.16offlineOS/statistiche DIFFERITI. Nessunmerge conFAILcritici.
+
 ### Execution — Witness WMO corretto prima del caso nativo — 2026-11-09T12:45:34.725177+00:00
 
 **✅ STATIC ESEGUITO FAIL del verificatore, corretto.** SDKlocale `swiftc -### -O -whole-module-optimization` conferma frontend senza flagWMO esplicito: ildriver lo consuma. RunB2own42619247268 annullata controllatamente duranteBuildDebug per evitare mismatch noto nel verificatore; report/processi/postflight conservati, nessunPASS nativo inferito. C3standard42619239659 prosegue sul5ba immutato.

@@ -151,6 +151,7 @@ struct ContentView: View {
     @State private var rootIndicatorState: SyncRootPresentationState = .hidden
     @State private var fallbackSelectedTab = Self.initialSelectedTab()
     @State private var openedTabs: Set<Int>
+    @State private var hasAdmittedBusinessNavigation = false
     private let selectedTabOverride: Binding<Int>?
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
@@ -618,18 +619,22 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 1 || openedTabs.contains(1) {
-                    NavigationStack {
-                        Group {
-                            if !catalogAvailable {
-                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                    .navigationTitle(L("tab.database"))
-                            } else {
-                                DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                    if catalogAvailable || hasAdmittedBusinessNavigation {
+                        NavigationStack {
+                            Group {
+                                if !catalogAvailable {
+                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                        .navigationTitle(L("tab.database"))
+                                } else {
+                                    DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                        ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                                }
                             }
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
                         }
-                        .id(presentationID)
-                        .toolbar { syncToolbar }
+                    } else {
+                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
                     }
                 } else { Color.clear }
             }
@@ -638,17 +643,21 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 2 || openedTabs.contains(2) {
-                    NavigationStack {
-                        Group {
-                            if !sessionsAvailable {
-                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                    .navigationTitle(L("tab.history"))
-                            } else {
-                                HistoryView(historySessionSyncService: historySessionSyncService)
+                    if sessionsAvailable || hasAdmittedBusinessNavigation {
+                        NavigationStack {
+                            Group {
+                                if !sessionsAvailable {
+                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                        .navigationTitle(L("tab.history"))
+                                } else {
+                                    HistoryView(historySessionSyncService: historySessionSyncService)
+                                }
                             }
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
                         }
-                        .id(presentationID)
-                        .toolbar { syncToolbar }
+                    } else {
+                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
                     }
                 } else { Color.clear }
             }
@@ -673,6 +682,19 @@ struct ContentView: View {
         // Mount the visible section first. A visited section stays mounted so
         // switching tabs keeps its navigation, workbook and editor state.
         .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
+        .task {
+            guard !hasAdmittedBusinessNavigation else { return }
+            // An already-running local reader can publish before we build a
+            // placeholder NavigationStack and then replace its entire content.
+            // Yield once only: never wait on a proof, network or another domain.
+            if (selectedTab == 1 && !catalogAvailable) || (selectedTab == 2 && !sessionsAvailable) {
+                await Task.yield()
+            }
+            guard !Task.isCancelled, isCurrentModelGeneration else { return }
+            // Once admitted, retain navigation even if a capability is later
+            // withdrawn; the existing inner privacy gates remain authoritative.
+            hasAdmittedBusinessNavigation = true
+        }
         .task145PerformanceRender("tabsRender")
     }
 }

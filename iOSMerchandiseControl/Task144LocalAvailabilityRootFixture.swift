@@ -1384,6 +1384,14 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         await withCheckedContinuation { cachedCatalogRenderWaiters.append($0) }
     }
 
+    // Only C3's unmeasured fixture preparation writes these bounded ledger
+    // notes. They observe completed/entered boundaries and grant no readiness.
+    private func noteC3Preparation(_ stage: String) throws {
+        guard ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1",
+              let control = scopeSwitchControl, control.originalScope == nil else { return }
+        try control.note("c3-preparation-boundary", ["stage": stage])
+    }
+
     func prepareIfNeeded() {
         guard !hasPreparationStarted else { return }
         let cacheManifest = independentDomainPhase == .cache ? controller.activeManifest : nil
@@ -1685,11 +1693,14 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 }
                 if !emptyBootstrap {
                     setupStage = .initialRecovery
+                    try noteC3Preparation("initial-recovery-entry")
                     _ = try await recoveryService().recoverFromRemoteSnapshot(ownerUserID: owner)
+                    try noteC3Preparation("initial-recovery-return")
                     setupStage = .postInitialScope
                     guard await controller.awaitLocalBodyQualification() else {
                         throw SyncStoreGenerationError.activationReadBackFailed
                     }
+                    try noteC3Preparation("local-qualification-return")
                 }
                 if independentDomainPhase == .seed {
                     let context = ModelContext(controller.modelContainer)
@@ -3463,6 +3474,17 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             progressReporter: { [weak self, weak stateStore] event in
                 stateStore?.recordRecoveryProgress(event)
                 Task144RootObservation.performanceDurableProgress(event.progress)
+                if ProcessInfo.processInfo.environment["TASK146_C3_COMPACT_FACT_BAND"] == "1",
+                   let control = self?.scopeSwitchControl, control.originalScope == nil {
+                    let stage = String(describing: event.progress.stage)
+                    // One record per existing progress stage, never per row/page.
+                    if !control.ledger.entries.contains(where: {
+                        $0.kind == "c3-preparation-progress" && $0.values["stage"] == stage
+                    }) {
+                        do { try control.note("c3-preparation-progress", ["stage": stage]) }
+                        catch { self?.recordSetupFailure(error, stage: .initialRecovery) }
+                    }
+                }
                 do { try self?.interruptionProgress(event) }
                 catch {
                     self?.interruptionControl?.state.observationFailed = true
