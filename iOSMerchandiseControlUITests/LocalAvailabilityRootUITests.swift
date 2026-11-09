@@ -3358,6 +3358,9 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func exerciseIsolation(_ scenario: String, pending: String, failedUI: Bool) throws {
+        // The same owned SDK setting must cover initial marker snapshots too,
+        // not begin only after the runtime marker has already been admitted.
+        try task146ConfigureAnimationIdleDriver()
         app.launchEnvironment["TASK145_ISOLATION_UI"] = scenario
         app.launch()
         XCTAssertTrue(app.staticTexts["task145.isolation.seed-qualified"].waitForExistence(timeout: 25))
@@ -3479,7 +3482,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     }
 
     private func assertIsolationVisible(_ scenario: String, pending: String, failedUI: Bool) throws {
-        try task146ConfigureAnimationIdleDriver()
         app.tabBars.buttons["Options"].tap()
         var observations: [String] = []
         func require(_ condition: Bool, _ stage: String) throws {
