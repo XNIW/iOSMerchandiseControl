@@ -1,5 +1,15 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — 082 terminale, tre residui continuation e prove mirate — 2026-11-09T10:28:16.471206+00:00
+
+**✅ SIM/CI ESEGUITI e classificati.** Matrice082/run42588356827 terminale:2026PASS/16FAIL/43skip ammessi/16DEFERRED_USER, discovery2101/zero missing-unexpected. Unit1916PASS39skip e Debug/Release/Analyze/scan PASS. I16FAIL sono10T18reachaccount,3core(Name/B2/C3),3continuation(BaseRoot/CorruptSeal/Stable). Nessuna qualifica finale o merge. SeiT18 interi b726 dopoSDK PASS; discriminanti4a707 long3-O/core3standard ancora in corso, non cancellati.
+
+**Causa e delta minimo.** BaseRoot15snapshotvalidi mostrano Nomey710,333 sotto tastiera553: prima messa a fuoco ometteva il singolo pan già usato alla seconda apertura; aggiunto soltanto quel posizionamento. T11CorruptSeal valore corretto nell'immagine finale NON prova il rispetto5s: polling diretto dello stesso valore nativo entro deadline assoluta5s, Clear/type/Search originali. T11Stable selezione positiva termina5,581s dopo tre query: una sola snapshot nativa completa(max1024), stessi conteggi esatti globali/identifier/selected/TabBar/Window, caller5s prima/dopo invariato. Il vecchio snapshotTabBar697 usava quattro RPC; nuova latenza NOT_MEASURED, nessuna presunzione PASS. Tutti i guard di geometria/hit/authority/outbox/ACK invariati.
+
+**✅ STATIC ESEGUITO PASS; nuovoSDK/native NOT_RUN.** Swiftparse/diffcheck, cinque selector attivi e discovery2101 verificati. Solo UITest; AppTreec7118e4015ae90ec0de5b1dbe7862e6f3bf07c38 e prodotto ordinario8d invariati. DopoSDK standard: treT11 interi, BaseRoot e C3 (helper condiviso). Nessun nuovo selector/skip/deadline/API/dipendenza. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-continuation-native-admission.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** Proseguono tre gruppi mirati, poi composizione stabile/matrice obbligatoria/review/mergePR29/mainCI.16offlineOS e statistiche DIFFERITI, fixture2920 viva finché prove binarie necessarie. Nessun merge conFAILcritici, indice/WIP preservati. Cleanup contabilità6,29GB logici obsoleti; fisico esclusivoUNK2026-11-09T10:28:16.471206+00:00N.
+
 ### Execution — T18sei PASS, residui core e qualifica del primo avvio — 2026-11-09T10:12:31.613822+00:00
 
 **✅ SIM/CI ESEGUITI con attribuzione.** b726/run42593501776 SDK standard e6T18 interi PASS (4itmaxFAILprecedenti+itmaxdarkidle+zhmaxdarkrecovery), report/discovery2101/hash/selection completi, targetShutdown/0booted. Run082/42588356827 ancora in corso: unit1916PASS39skip, Release/Analyze/scan PASS; long2PASS, zh16PASS4defer, it12PASS4FAIL4defer, es12PASS4FAIL4defer, en14PASS2FAIL4defer; tutti10T18 falliscono reachaccount, non promossi prima del nuovo completo. Core28PASS/3FAIL/1skip: Nameunico pan non muove campo, B2valido6,818580542s FAIL, C3prima coppia viewport senza pixelcomuni. Continuation ancora IN_PROGRESS, nessuna nuova matrice. [Core](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-final-08294ec2.ROOT/core-failures.ROOT).
