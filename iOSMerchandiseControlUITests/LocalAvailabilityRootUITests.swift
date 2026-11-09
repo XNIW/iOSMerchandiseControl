@@ -6329,7 +6329,10 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // bar. Reveal it in either direction through bounded gestures.
                 let frame = element.frame
                 if [frame.minY, frame.maxY].allSatisfy({ $0.isFinite }), frame.height > 0 {
-                    let pageDistance = min(360, (bottom - top) * 0.75)
+                    // A held max-font Cloud card can be more than four screens
+                    // below the top. Spend each of the same eight gestures on
+                    // the measured viewport, leaving both endpoints inside it.
+                    let pageDistance = (bottom - top) * 0.90
                     if frame.minY > bottom {
                         movement = -min(pageDistance, max(24, frame.maxY - bottom))
                     } else if frame.maxY < top {
@@ -6339,8 +6342,13 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                         // minimum oscillated across the narrow max-font fit.
                         // Keep24pt of real movement: observed8-13pt drags did
                         // not begin scrolling a clipped Review button.
-                        if frame.maxY > bottom { movement = -min(160, max(24, frame.maxY - bottom)) }
-                        else if frame.minY < top { movement = min(160, max(24, top - frame.minY)) }
+                        // Native drag recognition consumed 10-14pt in the
+                        // failed seek. Land inside the available slack rather
+                        // than exactly on the clipped edge; retain the existing
+                        // 24pt minimum and avoid overshooting a nearly full row.
+                        let inset = min(24, max(0, (bottom - top - frame.height) / 2))
+                        if frame.maxY > bottom { movement = -min(pageDistance, max(24, frame.maxY - bottom + inset)) }
+                        else if frame.minY < top { movement = min(pageDistance, max(24, top - frame.minY + inset)) }
                         else { movement = 0 }
                     } else {
                         movement = max(-160, min(160, (top + bottom) / 2 - frame.midY))
@@ -6350,7 +6358,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             }
             // Both ends stay inside the measured viewport, including the
             // longer page used only for a wholly offscreen target.
-            movement = max(-min(360, (bottom - top) * 0.75), min(min(360, (bottom - top) * 0.75), movement))
+            let maximumTravel = (bottom - top) * 0.90
+            movement = max(-maximumTravel, min(maximumTravel, movement))
             let startY = (top + bottom) / 2 - movement / 2
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
                 .withOffset(CGVector(dx: 0, dy: startY))
