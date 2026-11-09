@@ -5447,7 +5447,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
     @discardableResult
     private func c3OptionsViewport(_ form: XCUIElement, stage: String, ordinal: Int,
                                    deadline: TimeInterval, collectContentAnchors: Bool = true,
-                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, applicationOrigin: CGPoint, decisionReviewFrame: CGRect?) {
+                                   downstream: [String]) throws -> (anchors: [String: C3OptionsContentAnchor], viewport: CGRect, applicationOrigin: CGPoint, decisionReviewFrame: CGRect?, scrollValues: [String]) {
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-before-viewport", downstream: downstream)
         let observationStarted = ProcessInfo.processInfo.systemUptime
@@ -5515,8 +5515,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(reviews.count <= 1
                 && reviews.allSatisfy({ $0.path.starts(with: forms[0].path) }),
                 stage: stage + "-unique-native-Review-in-Form", downstream: downstream)
+            let scrollValues = nodes.filter { $0.path.count > formNode.path.count
+                && $0.path.starts(with: formNode.path) && $0.label.hasPrefix("Vertical scroll bar") }
+                .map { $0.value ?? "UNAVAILABLE" }
             return (anchors: [:], viewport: viewportFrame, applicationOrigin: root.frame.origin,
-                decisionReviewFrame: reviews.first?.frame)
+                decisionReviewFrame: reviews.first?.frame, scrollValues: scrollValues)
         }
         let formNodes = nodes.filter { $0.path.count > formNode.path.count && $0.path.starts(with: formNode.path) }
         // These eight source-unique OptionRow roles are Buttons in Section bodies,
@@ -5676,7 +5679,8 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         timing.lifetime = .keepAlways; add(timing)
         try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
             stage: stage + "-traversal-deadline-after-viewport", downstream: downstream)
-        return (anchors: anchors, viewport: viewportFrame, applicationOrigin: root.frame.origin, decisionReviewFrame: nil)
+        return (anchors: anchors, viewport: viewportFrame, applicationOrigin: root.frame.origin,
+            decisionReviewFrame: nil, scrollValues: snapshotScrollValues)
     }
     private func c3OptionsDrag(_ form: XCUIElement, viewport: CGRect, applicationOrigin: CGPoint, upward: Bool,
                                halfStepFraction: CGFloat = 0.29, velocity: XCUIGestureVelocity = .slow) {
@@ -5703,6 +5707,15 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             NSPredicate(format: "elementType == %d AND (identifier == %@ OR label == %@)",
                 XCUIElement.ElementType.textField.rawValue, "task144.product.name", "task144.product.name")
         ])
+        let businessLabels = ["Products", "Suppliers", "Categories", "Price history", "History sessions", "Last sync", "Local changes waiting"]
+        let businessPredicate = NSPredicate(
+            format: "elementType == %d AND (identifier IN %@ OR label IN %@)",
+            XCUIElement.ElementType.staticText.rawValue, businessLabels, businessLabels)
+        // One current global query can prove ALL original absences together.
+        // A nonzero result follows the original separate checks/wait unchanged.
+        let allForbidden = app.descendants(matching: .any).matching(
+            NSCompoundPredicate(orPredicateWithSubpredicates: [hiddenPredicate, businessPredicate]))
+        if allForbidden.count == 0 { return }
         let forbiddenSurfaces = app.descendants(matching: .any).matching(hiddenPredicate)
         if forbiddenSurfaces.count != 0 {
             let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
@@ -5711,7 +5724,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             try scopeRequire(XCTWaiter.wait(for: [hidden], timeout: 5) == .completed,
                 stage: stage + "-no-A-summary-diagnostics-row-or-editor", downstream: downstream)
         }
-        let businessLabels = ["Products", "Suppliers", "Categories", "Price history", "History sessions", "Last sync", "Local changes waiting"]
         let forbiddenLabels = app.staticTexts.matching(NSPredicate(
             format: "identifier IN %@ OR label IN %@", businessLabels, businessLabels))
         // A single fresh query covers ALL seven names, including offscreen matches.
@@ -5792,7 +5804,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             if anchors["cloud.administrative-text"] != nil { administrativeSurfaceSeen = true }
             // Cloud is now first; Language is the final administrative section.
             let footer = form.staticTexts["Language changes apply immediately."]
-            if c3OptionsEndpoint(form, value: "100%") && footer.exists && footer.isHittable {
+            // This viewport's actual native scrollbar values were captured with
+            // its geometry. No gesture has intervened. Keep nonempty/all100%,
+            // the live footer and the SAME traversal deadline; no offset estimate.
+            if !observation.scrollValues.isEmpty && observation.scrollValues.allSatisfy({ $0 == "100%" })
+                && footer.exists && footer.isHittable {
                 try scopeRequire(ProcessInfo.processInfo.systemUptime < deadline,
                     stage: "C3-B-traversal-deadline-at-bottom", downstream: downstream)
                 try scopeRequire(administrativeSurfaceSeen,
