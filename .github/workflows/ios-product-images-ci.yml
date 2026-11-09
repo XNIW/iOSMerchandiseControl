@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '' && inputs.task146_export_ordinary_app != true && 'macos-26-intel' || 'macos-26' }}
+    runs-on: macos-26
     timeout-minutes: 75
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
