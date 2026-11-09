@@ -286,6 +286,10 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func bootstrap(scenePhase: ScenePhase) async {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("bootstrap.entry")
+        defer { Task144RootObservation.recordScopeReplacementPhase("bootstrap.exit") }
+        #endif
         guard !isStopped else { return }
         currentScenePhase = scenePhase
         recordRuntimeDiagnostic("rootHost.taskStartedAt", Date().timeIntervalSince1970)
@@ -349,6 +353,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func resumeDeferredForegroundCheckIfReady() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("resume-check.interactive.\(didReachInteractiveUI).deferred.\(hasDeferredForegroundCheck).busy.\(activityCenter.blocksAutomaticSync)")
+        #endif
         guard didReachInteractiveUI,
               hasDeferredForegroundCheck,
               !activityCenter.blocksAutomaticSync else { return }
@@ -371,6 +378,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func stop() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("stop.entry")
+        #endif
         isStopped = true
         localQualificationSubscription?.cancel()
         localQualificationSubscription = nil
@@ -1020,6 +1030,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func cancelForegroundCheck() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("cancel-foreground.deferred.\(hasDeferredForegroundCheck).task.\(foregroundTask != nil)")
+        #endif
         pendingPopulatedQualificationScope = nil
         let preserveRecoveryRequired = foregroundStartedFromRecoveryRequired
             && !isAccountStoreReplacementInProgress
@@ -1264,6 +1277,9 @@ final class SyncOrchestrator: ObservableObject {
            ) {
             preferredSource = pendingSource
         }
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("defer.source." + preferredSource.rawValue)
+        #endif
         hasDeferredForegroundCheck = true
         deferredForegroundSource = preferredSource
         deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
@@ -1281,6 +1297,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     private func clearDeferredForegroundCheck() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("clear-deferred.was.\(hasDeferredForegroundCheck)")
+        #endif
         hasDeferredForegroundCheck = false
         deferredForegroundSource = nil
         deferredForegroundForceIncremental = false

@@ -47,10 +47,27 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private static let observesScopeReplacement = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
         .flatMap(UUID.init(uuidString:)) != nil
         && ProcessInfo.processInfo.environment["TASK145_SCOPE_SWITCH_UI"] == "confirmed-delayed-response"
+    private static let observesBaseRoot = ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
+        .flatMap(UUID.init(uuidString:)) != nil
+        && ProcessInfo.processInfo.environment["TASK146_BASE_ROOT_RUNTIME_OBSERVATION"] == "1"
+    @MainActor private static var baseRootPhases: [[String: Any]] = []
+    @MainActor private static var baseRootPhasesDropped = 0
     @MainActor static var scopeReplacementPhaseObserver: (@MainActor (String) -> Void)?
     @MainActor static func recordScopeReplacementPhase(_ phase: String) {
+        if observesBaseRoot {
+            // Same closed phase channel, bounded RAM only; no publication,
+            // persistence, store access, scheduling or changes to any guard.
+            if baseRootPhases.count == 256 {
+                baseRootPhases.removeFirst(); baseRootPhasesDropped += 1
+            }
+            baseRootPhases.append(["phase": String(phase.prefix(192)),
+                "utc": Date().timeIntervalSince1970, "uptime": ProcessInfo.processInfo.systemUptime])
+        }
         guard observesScopeReplacement else { return }
         scopeReplacementPhaseObserver?(phase)
+    }
+    @MainActor static func baseRootPhaseReadback() -> [String: Any] {
+        ["events": baseRootPhases, "dropped": baseRootPhasesDropped]
     }
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
@@ -2474,7 +2491,8 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 && binding?.storeIdentity == manifest?.storeIdentity,
             "selectionMatchesManifest": manifest != nil && selection?.shopID == manifest?.shopID
                 && selection?.localStoreIdentity == manifest?.storeIdentity,
-            "syncAllowed": shopContextStore.context.syncAllowed, "runtime": runtimeObservation]
+            "syncAllowed": shopContextStore.context.syncAllowed, "runtime": runtimeObservation,
+            "foregroundPhases": Task144RootObservation.baseRootPhaseReadback()]
         let leaseAfter = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
         value["observedLeaseGeneration"] = String(leaseAfter)
         value["status"] = leaseBefore == leaseAfter ? "CURRENT_READ_ONLY" : "READ_REJECTED_SCOPE_CHANGED"

@@ -3596,6 +3596,32 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(min(0.05, remaining))) }
             }
             if !selected {
+                // DIAGNOSTIC ONLY, after the original five-second verdict.
+                // Preserve actual AX bindings to distinguish missing ownership
+                // from selected-predicate/query cost; never retry admission here.
+                let diagnosticStart = ProcessInfo.processInfo.systemUptime
+                let nodes = app.descendants(matching: .any).matching(NSPredicate(
+                    format: "elementType == %d OR (elementType == %d AND label == %@)",
+                    XCUIElement.ElementType.navigationBar.rawValue,
+                    XCUIElement.ElementType.button.rawValue, title)).allElementsBoundByAccessibilityElement
+                var nativeRows: [[String: Any]] = []
+                if nodes.count <= 8 {
+                    for node in nodes {
+                        var row: [String: Any] = ["type": node.elementType.rawValue,
+                            "identifier": node.identifier, "label": node.label]
+                        if node.elementType == .button { row["selected"] = node.isSelected }
+                        nativeRows.append(row)
+                    }
+                }
+                let diagnostic: [String: Any] = ["scope": "POST_DEADLINE_DIAGNOSTIC_NEVER_ADMISSION",
+                    "title": title, "originalDeadline": deadline,
+                    "started": diagnosticStart, "finished": ProcessInfo.processInfo.systemUptime,
+                    "nativeCount": nodes.count, "nativeRows": nativeRows]
+                if let bytes = try? JSONSerialization.data(withJSONObject: diagnostic, options: [.sortedKeys]) {
+                    let detail = XCTAttachment(data: bytes, uniformTypeIdentifier: "public.json")
+                    detail.name = "T11 post-deadline native attributes " + scenario
+                    detail.lifetime = .keepAlways; add(detail)
+                }
                 let timing = XCTAttachment(string: observations.joined(separator: "\n"))
                 timing.name = "T11 return-tab native admission " + scenario
                 timing.lifetime = .keepAlways; add(timing)
@@ -3637,9 +3663,21 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         if !current.isEmpty && current != field.placeholderValue {
             let clear = app.buttons["Clear search"]
             XCTAssertTrue(clear.waitForExistence(timeout: 5) && clear.isHittable)
+            // Clear is an asynchronous native edit. Admit the next input only
+            // after its actual value is empty, within five seconds INCLUDING
+            // the real Clear tap. A missing value or a late getter cannot pass.
+            let placeholder = field.placeholderValue
+            let clearDeadline = ProcessInfo.processInfo.systemUptime + 5
             clear.tap()
-            let cleared = field.value as? String ?? ""
-            XCTAssertTrue(cleared.isEmpty || cleared == field.placeholderValue)
+            var cleared = false
+            while ProcessInfo.processInfo.systemUptime < clearDeadline {
+                let nativeValue = field.value as? String
+                if ProcessInfo.processInfo.systemUptime > clearDeadline { break }
+                if let nativeValue, nativeValue.isEmpty || nativeValue == placeholder {
+                    cleared = true; break
+                }
+            }
+            XCTAssertTrue(cleared, "The real Clear action must publish an empty search within5s before the next input")
             field.tap()
         }
         field.typeText(value)
