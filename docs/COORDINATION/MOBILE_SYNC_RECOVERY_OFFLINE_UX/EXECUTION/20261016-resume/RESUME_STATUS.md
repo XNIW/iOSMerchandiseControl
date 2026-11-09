@@ -1,5 +1,30 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — Duef6 terminali, intervalli B2 e preparazione C3 PASS — 2026-11-09T14:00:34.054310+00:00
+
+**✅ BUILD/SIM ESEGUITI con attribuzionef6.**42623157302 SDK-Opreesistente/assertDebugPASS, B2FAIL5,380573167s. Worker129,94ms; attesaMainActor1,908→1,380s e pubblicazione→riga2,521→1,477s; ingressoappanch'esso2,596→1,900s, non attribuitoalloYield. Memo/tokenfrontiercomplete/physicalreusevero, stessiguard; beneficio pertinente osservato, non causalitàstatistica o PASS5s. Il candidatoYield rimane in valutazione, nessunulterioreyield/profilocompilatore. [Confronto](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-c3-preparation-boundary.ROOT/cached-start/B2-INTERVAL-COMPARISON.ROOT.json).
+
+42623146952 SDKstandardPASS, **4PASS/4FAIL**. PASSACK,corruptseal,oracolo14,T19; precedenti7PASS31a conservano la propria versione. C3preparazione effettivamente attraversata: initialRecovery2,408s, localqualificationaltri22,76ms, Aqualified; nuovohelperesegue dueviewportB con snapshot completa/associazioni/nativehit ma traversataFAIL15sprima della terza. Noveenumerazioni/viewportcostano1,09..1,93s; singoloadminhit+snapshotB1altri2,88s. PrimoFAILsetup5ba resta storico, nontrasformatoPASS. BaseRootarriva aSave/draft/cutover/focus maFAILdrain20s: runtimecurrentpushdrainsuccessentra17,79s dopo inizioattesa e termina25,03s, poi fact latevisibile; causaeventoinripresaancoradanotare, nessunbugdati dedotto. T11MalformedFAILreturnHistory5snativoselectedquery0; gerarchiatardivaHistoryselectednonprova5s. StableFAILletturaimmediata dopoClear, gerarchiatardivacampovuoto, providercoerentepending2/ACK1; nonpromuovereallPASS.
+
+**✅ STATIC ESEGUITO PASS; SDK/native CPU successori NOT_RUN.** Solo workflow/helperdedicato nelrunner esistente: opt-in esatto singletonB2, due sampleCPU1s/2s a markerprepare-task-submit/entry giàemessi, PIDprocessoverificato, nessunlaunchalternativo/variantecompiler o modificaapp/test. Nessuntracciatovoluminoso; report/mainthreadcappati, childownedchiusi e originalnativeexitpreservato, diagnosticoincompleto nonpuòverde. ProveCPU diagnostiche, non qualifica5sfinale. Prima compilazione SDK reale invariata poi caso. [Review](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-native-cpu-sampling.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+**Handoff ACTIVE/EXECUTION.** RootregressionspostflightShutdown0booted; B2postflightgiàchiuso. Oltre campionamentoB2, correggereC3soltanto sul costooraattraversato e diagnosticare i treFAILspecifici senza variarelimiti. Nessunfullmatrixprima composizionestabile. Ordinariofinale realeInventario/default/selezioneripristinata rimaneNOT_RUNperbudget(28,92GB; input31,34GB/native31,54GB richiesti nelle rispettivefasi), vecchio8d2,3snonattribuitof6. Android/atomic/live/POSnonriaperti;16offline/statistiche DIFFERITI. Seguono review/PR29/mainCI/ritiro2920/PR28/cleanup e REVIEW→DONE solopercriteri effettivi.
+
+### Execution — Addendum corrente: attendere f6, decisione causale e percorso ordinario reale — 2026-11-09T13:29:22.210848+00:00
+
+Le due run42623157302(first-navigation-admission) e42623146952(root-preparation-observation) proseguono senza modifiche o cancellazioni. SDKstandardf6PASS, ottointeriinSIM; SDK-OdelprofilopreesistentePASS, B2inSIM. Nessun miglioramentoMainActor/pubblicazione→render ancora qualificato; attendere entrambi gli esiti prima di altrointervento/matrice. Yieldda mantenere soltanto per beneficio pertinente misurato; niente ulteriorivarianti scheduling/compilatore senza nuovaevidenza. C3prima diagnosi della preparazione; helper nonraggiunto resta NOT_TRAVERSED.
+
+| Ipotesi già scartata / sostituita | Esito e motivo |
+|---|---|
+| B2primo nel long4a | FAIL7,122s: ordinamento da solo inefficace |
+| B2mountAppSyncHostdifferito488 | FAIL6,956s: nessun beneficio, ritirato |
+| WMO02f | BUILDtimeout15min, nativeNOT_RUN: respinto, limite invariato |
+| C3profilo-Odiagnosticofc235 | StessoFAIL15sgetter: rimosso |
+| SnapshotglobaleT11c800 | Positive corrette5,49..6,55s oltre5s: sostituite da querynative; treT11interi31aPASS |
+| C3firstMatchdi ruoli assenti31a | Retry nativi consumano15s: sostituito da enumerazione;5baferma al setup30s, nuovohelperNOT_TRAVERSED |
+
+Ordinariofinale: usare Inventario/default o selezioneripristinata reale, senza attribuirgli il B2forzatoDatabase o il vecchioPASS2,3s. Valutare il nuovoContentView; POSnegozio conserva indipendenza con riuso esplicito dei percorsi invariati. Android/atomicità/live/POSgiàqualificati nonriaperti senza impatto concreto.16offlinefisici/statistiche DIFFERITI. ASUSsolo variazioni pertinenti, non nuovoaudit. Budget attuale insufficiente per SDK/acquisizione/estrazione/install/nativepesanti locali; runnerospitati e metadatacappati proseguono. Handoff ACTIVE/EXECUTION: dopo sourcequalificata review/matrice/main29/mainCI/riconciliazione28/cleanup; REVIEW→DONE già autorizzato quando criteri realmente soddisfatti.
+
 ### Execution — WMO respinto, preparazione C3 osservabile e primo mount navigazione — 2026-11-09T13:10:25.675525+00:00
 
 **✅ BUILD/SIM ESEGUITI con esito distinto.**5ba/run42619239659 SDKstandardPASS/oracolo14PASS, C3FAIL al setupA30s: ledger contiene solo membershipingress/response, UIresta Preparingcontrolledlocalbaseline; nuovohelperenumerazione NOT_TRAVERSED.02f/run42619681359 BUILDFAILtimeout15min confermato da annotationGitHub; appWMO compila12m40 e testiniziano quando ilbudgetSDK è quasi esaurito. NativeNOT_RUN, WMO NON adottato; workflow/pbx ripristinati byte-esatti31a. Tutti postflightShutdown/0booted; logSDK letto tramiteconnector inmemoria1,84MB, conservato soltanto estratto pertinente, nessun SDK locale.

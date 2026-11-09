@@ -32,6 +32,11 @@ on:
         type: boolean
         required: false
         default: false
+      task146_b2_cpu_sampling:
+        description: "Focused B2 only: two short CPU samples at existing cache markers; diagnostic, not acceptance"
+        type: boolean
+        required: false
+        default: false
       task146_focused_tests:
         description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
         type: string
@@ -57,6 +62,7 @@ jobs:
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
       TASK144_A_CAMPAIGN: ${{ inputs.task144_a_campaign || false }}
+      TASK146_B2_CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling || false }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -341,7 +347,12 @@ jobs:
       - name: XCTest exact coverage shard
         if: ${{ matrix.shard != 'campaign-a' }}
         id: xctest
-        run: python3 .github/ci/ios-xctest-shards.py run '${{ matrix.shard }}'
+        run: |
+          if [ "$TASK146_B2_CPU_SAMPLING" = "true" ]; then
+            python3 .github/ci/ios-b2-startup-sampling.py -- python3 .github/ci/ios-xctest-shards.py run '${{ matrix.shard }}'
+          else
+            python3 .github/ci/ios-xctest-shards.py run '${{ matrix.shard }}'
+          fi
 
       - name: XCTest A fixed campaign
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true }}
@@ -711,6 +722,7 @@ jobs:
             ${{ runner.temp }}/ios-xctest-failure-summary
             ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
             ${{ runner.temp }}/task146-runner-resources.jsonl
+            ${{ runner.temp }}/task146-b2-sampling/
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
