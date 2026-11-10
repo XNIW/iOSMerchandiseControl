@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 5aRoot9PASS/B2FAIL6,537189; proprietà ImageStore da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — c671Root16PASS/B2FAIL7,495117; ImageState ritirato, hostbackground da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — c671Root16 PASS/B2 FAIL7,495117; ritiro ImageState e host fuori layout — 2026-11-10T11:52:35.018546+00:00
+
+**✅ BUILD/SIMc671 ESEGUITI.** Root42807495430/job129800306008 **16PASS**,196,762s (9Root/Auth+7Image scope/generazione/replacement/lateLoad/editor), stockDebug/provenienza/discovery2101/Shutdown0booted qualificati;14warning baseline, nessuno sui file produzione del delta. B242807536765/job129800450120 **FAIL_LATENCY7,495117s >5**, preparazione/cache/autorità PASS, PID28254 zero scan. PreApp3,224251s/init427,591ms/worker588,308ms; fineworker→Main1,221453s (5a1,269697), pub→riga1,834916s (5a1,338684). App2→1 ma Root7 invariato/Database9→10: nessun beneficio pertinente coerente. ImageState **RITIRATO**, App byte-esatto5a ripristinato. Non riclassifico48ms di coda come peggioramento né inferisco causa esclusiva. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-image-owner.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Post-elaborazione ESEGUITA**, Native13760628779 cumulativo532058/4MB, SDK13762006401 solo41009Bmanifest/11checkPASS, ZIP45064114B mai scaricato, nessun nuovo nativeMac/install. Fonte preApp: la proiezione acquisita0c ha0record primaApp, collector avviato aT0+0,765770 ma primostack1175,324148 dopoApp1175,303111; non attribuisco preApp ai successivi frame layout. Nessuna nuova raccolta/build per leggere i dati, budget/storico protetti. Free42,07GB circa, dati/sessioni/QCOW2/WIP invariati.
+
+**✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** Fileapp: App(solo ritiroImageState), ContentView(soloZStack→background host). Baseline applicativa equivalente5a, esclusa questa posizione dell'host. Root stack0c successivo al vecchio09d contiene ZStack/TabView costruttori/conformità nel tratto worker→Main; background separa l'host nonvisivo dal calcolo dimensioni TabView. È ipotesi mirata, non quotaCPU esclusiva. Il vecchio09d ebbe FAILPREP primohold10s, cache/T0 NOT_TRAVERSED: non esiste misura che dimostri inefficacia sul5s. Ora è presente il fixf031 di replayfresh dopo rinnovo scope, qualificato; NON attribuisco retroattivamente a esso la causa della vecchia preparazione sconosciuta. Contenuto/id trattenuto/frame0/callback/Task host invariati; TabView sempre presente, domini/bozze/guard/layoutvisibile conservati. Nessuna nuova attesa, yield, autorità memorizzata, timeout o compilerprofile. AnyViewDatabase resta provvisorio come5a, da qualificare nella composizione finale.
+
+Handoff ACTIVE/EXECUTION: Root9 originale intero Save/cutover/bozze/focus/drain20/ACK/reopen/nodup+Auth/negativelease e B2 originale sullo STESSO nuovo candidato. Leggere prima entrambi; FAILPREP resta distinto daNOT_TRAVERSED. Dopo gate: ordinario reale con interazione utile, full2101=2042PASS43skip16fisiciDIFFERITI/review/PR29/mainCI/PR28/ritiro2920/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti nel proprio perimetro; nuovo host avrà regressione effettiva sulla composizione, nessuna somma di binari. Main/PR29ancora94fb/082, nessun nuovoGO o arresto al verde mirato.
 
 ### Execution — 5a Root9 PASS/B2 FAIL6,537189; proprietà ImageStore nella scena — 2026-11-10T11:26:05.455200+00:00
 
