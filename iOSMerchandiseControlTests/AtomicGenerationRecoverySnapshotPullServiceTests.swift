@@ -3,6 +3,7 @@ import CryptoKit
 import Darwin
 import Security
 import SwiftData
+import SwiftUI
 import SQLite3
 import Supabase
 import XCTest
@@ -9666,6 +9667,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
     func testOrdinaryContinuationRejectsReplacementContainerAndOtherDefaults() async throws {
         let proof = try await makeRealContinuationProof(eventID: 42)
         let oldContainer = proof.fixture.controller.modelContainer
+        let oldRoot = LocalStoreRootBoundary(controller: proof.fixture.controller, selectedTab: 1) { EmptyView() }
+        XCTAssertEqual(oldRoot, LocalStoreRootBoundary(controller: proof.fixture.controller, selectedTab: 1) { EmptyView() })
+        XCTAssertNotEqual(oldRoot, LocalStoreRootBoundary(controller: proof.fixture.controller, selectedTab: 2) { EmptyView() },
+                          "A restored or user-selected tab must still reach the root")
         let product = ordinaryContinuationProduct(fixture: proof.fixture, id: proof.productID, stock: 2)
         let checkpoint = try makeCatalogPriceCheckpoint(fixture: proof.fixture, maxEventID: 43,
             seed: "ri08-replaced", products: [product], prices: [])
@@ -9674,6 +9679,8 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         _ = try await makeService(fixture: proof.fixture, transport: transport).recoverFromRemoteSnapshot(
             ownerUserID: proof.fixture.ownerUserID)
         XCTAssertFalse(proof.fixture.controller.modelContainer === oldContainer)
+        XCTAssertNotEqual(oldRoot, LocalStoreRootBoundary(controller: proof.fixture.controller, selectedTab: 1) { EmptyView() },
+                          "A physical generation cutover must never be filtered as unchanged input")
         proof.stateStore.recordRunResult(proof.result)
         XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired)
         let otherFixture = try makeFixture()

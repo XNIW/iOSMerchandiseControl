@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — f58 FAILpreparazione/cacheNOT_TRAVERSED; stagecostruttore in osservazione,0169beneficio conservato |
+| Esito documentale | EXECUTION_ATTIVA — beda FAIL7,021632; input root invariati filtrati, qualifica pertinente da eseguire |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Motivi root acquisiti; filtro degli input di vista invariati — 2026-11-10T05:48:39.637811+00:00
+
+**✅ BUILD/SIMbeda ESEGUITI: FAIL_LATENCY7,021632s >5s**, run42761297346/job129647342071. Preparazione e tutti i costruttori attraversati; booleans autorità tutti true/journal assente. Nei due hold primo required_read.false, poi successore guardPASS: non è prova della causa del precedente initf58, che restaUNKNOWN. CachePID41024 hit reale/autoritàPASS/zero scan; preApp2,687005s/Authsetup0,033849s, worker0,141085s; fineworker→Main1,510988s e pubblicazione→riga2,086152s. Root8/Database13, nessuna revisione locale fra i motivi. Non lifecycle/reportingFAIL inferito, nessun PASS5s.
+
+**✅ Post-elaborazione ESEGUITA senza nuova build/test:** recuperato stdout CRC dallo STESSO artefatto13738169779, cumulativo844656/4000000B. Proiezione completa degli eventi acquisiti nelle due finestre con PID/clock/motivo e lacune: niente CPUstack raccolti in questa run, nessuno stack inventato o quota esclusiva. Tre aggiornamenti root soltanto `_modelGenerationIsCurrent`; Database ripete i tre predicati di ambiente. Le stampe perturbano i tempi, non qualifica finale. Shutdown0booted verificato, nessun prodotto completo/installazioneMac. [Proiezione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-constructor-prep-reasons.ROOT/BODY-INVALIDATIONS.PROJECTION.ROOT.json).
+
+**✅ STATIC/parse e typecheck locale helper Swift6/MainActor ESEGUITI PASS; SDK/nuovoSIM NOT_RUN.** Fix minimo: confine di VISTA Equatable attorno al ContentView/iniezioni originali, uguaglianza su controller/contenitore FISICO/tab selezionata, proprietari trattenuti contro riciclo indirizzi. Gli observer discendenti continuano a pubblicare; cambio contenitore/controller/tab attraversa il confine. Non ripete il predicato/fence memorizzato già ritirato: filtra esplicitamente la ripropagazione degli input di vista uguali. Nessun risultato di autorità memorizzato, closure originali fresche, nessuna attesa o variante di layout/title/toolbar/yield. HostSync/body/id/callback/lifecycle originali esatti. Rimosse le8righe `_printChanges` prima della qualifica temporale; contatori RAM originali conservati. Beneficio ancoraNOT_MEASURED, adozione subordinata a B2 e regressioni.
+
+Testcutover esistente esteso sull'identità fisica reale e tab: nessun nuovo selettore, totale2101 invariato. Prossime due run STESSASHA: B2 originale O/Debugassert/CPUoff/exportSDK, Rootintero Save/cutover/bozze/focus/drain20/ACK/reopen/nodups+Auth reale+cutover/defaults StockDebug. Dopo composizione stabile: ordinario/interazioneutile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. Conservati0169beneficio e PASS qualificati nei propri scope; ordinario5,50FAIL e initf58UNKNOWN non cancellati. Android/backend/C3/T11/atomica/live/POS non riaperti senza impatto; fisico/statistiche DIFFERITI, QCOW2/dati/WIP/indice protetti. ACTIVE/EXECUTION, nessun nuovoGO o termine al prossimo verde.
 
 ### Execution — Diagnostica fermata prima cache, costruttore sotto osservazione — 2026-11-10T05:16:52.770062+00:00
 

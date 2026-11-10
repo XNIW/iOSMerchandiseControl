@@ -240,10 +240,6 @@ struct ContentView: View {
         #if DEBUG
         let cost = Task144RootObservation.beginCachedCatalogBodyObservation("content-body-inclusive")
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-body-inclusive", startedAt: cost) }
-        if cost != nil {
-            NSLog("TASK146_BODY_REASON kind.ContentView pid.%d uptime_ns.%llu", ProcessInfo.processInfo.processIdentifier, DispatchTime.now().uptimeNanoseconds)
-            Self._printChanges()
-        }
         #endif
         return activeRoot
     }
