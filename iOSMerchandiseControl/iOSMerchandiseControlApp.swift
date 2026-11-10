@@ -7,7 +7,9 @@ import SwiftData
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @StateObject private var productImageStore: ProductImageStore
-    @StateObject private var storefrontAuthoringStore: StorefrontAuthoringStore
+    // Own the stable reference without observing list/filter publications at
+    // the App scene. Database and editors observe it through EnvironmentObject.
+    @State private var storefrontAuthoringStore: StorefrontAuthoringStore
     @StateObject private var storeBootstrap: SyncStoreBootstrap
     @StateObject private var excelSession: ExcelSessionViewModel
     @StateObject private var workbookPreparation: LocalWorkbookPreparation
@@ -80,7 +82,7 @@ struct iOSMerchandiseControlApp: App {
         _localRootPresentationState = StateObject(wrappedValue: localPresentation)
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         _productImageStore = StateObject(wrappedValue: productImageStore)
-        _storefrontAuthoringStore = StateObject(wrappedValue: dependencies.storefrontAuthoringStore)
+        _storefrontAuthoringStore = State(initialValue: dependencies.storefrontAuthoringStore)
         _storeBootstrap = StateObject(wrappedValue: bootstrap)
         let shouldScheduleBackground = !Self.isRunningHostedXCTest && !isTask138VisualHarness
             && !isTask139AtomicCrashHarness && !isTask139PreboundHarness && !isTask140UITest

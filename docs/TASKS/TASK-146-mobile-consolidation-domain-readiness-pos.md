@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — ec018Root8PASS/1abortdeinit; fix leaf da qualificare, B2 mai avviato |
+| Esito documentale | EXECUTION_ATTIVA — d246Root9PASS/B2FAIL7,443368; ownership Storefront da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,18 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Root9 qualificata, B2 ancora lento; pubblicazioni Storefront alla scena — 2026-11-10T09:58:11.027130+00:00
+
+**✅ BUILD/SIM d246 ESEGUITI.** Root42782587340/job129715944455 **9/9PASS**,171,373s: crash deinit risolto, percorso intero Save/cutover/bozza/focus/drain20/ACK/riapertura/nodups, rinnovo e Auth reali. StockDebug/membership2101/provenienza/Shutdown0booted verificati; warning6083 solo baseline6014 spostato. Il fullaggregator è SKIPPED per focus, non requisito dei9; corretto solo qualificatore locale, nessun nuovo test. [Receipt](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-revision-deinit-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json).
+
+**B2 originale42782606778 FAIL_LATENCY7,443368s >5s**, preparazione/cache reale/autorità PASS, PID39341 zero scan. PreApp3,332104s, worker203,711ms, fineworker→Main1,222757s, pub→riga2,086264s; App2/Root9/Database14. FiltroAuth da solo senza beneficio root dimostrato;0pubSDK è solo contratto funzionale, non PASS5s. Conservati9PASS e precedenti5,50s ordinarioFAIL nei propri scope. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-revision-deinit.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Diagnosi con RIUSO SDK ESEGUITA**, nessuna build/appB2 aggiuntiva. Manifest41009B più unico ZIP45080887B,85hash verificati,53file repackTEST con sezioni/UUID/dipendenze esatti. Target6E installato senza perdita dei12file dati/preferenze ma UUID fisico mutato; suoi lookup app/dati sono stale a path inesistenti, preparazione/launch fermati, collector NOT_TRAVERSED. Tutte receipt conservate, niente erase/sessioncopy/killservizi. Nuovo target esclusivamente sintetico6FFFEA02 usa seed originale1prodotto/1prezzo/1sessione; namespace0fd2a05b. QueryHOME aggiuntiva indisponibile primaContinue, corretta solo nel collector isolato. Otto secondi attuali poi COMPLETI: PID81021,12root/11Database/16publisher,37PC app simbolizzati offline, cap16raggiunto/8frame e runtime26.1 vs26.2 espliciti; non prova5s. Shutdown e Registryconsumer chiusi. Free42,189GB nel postflight, riserva30,3 dopo forecast rispettata. Vecchio prodotto, offline/QCOW2/WIP conservati.
+
+**Causa source confermata:**7pub da Storefront.activate/resetFilter dopo primo Database, osservate anche dall'App @StateObject che usa solo il riferimento per injection; seguono altre rivalutazioni root/Database. Non quotaCPU esclusiva né spiegazione dei3,332s primaApp. **✅ STATIC/parse/diff PASS; nuovo SDK/SIM NOT_RUN.** Minimo App.swift: riferimento Storefront posseduto in State, stessa istanza, soli consumer EnvObject osservano i suoi campi. Storefront/module, Auth/no-op, image/Bootstrap/generation observers, hostSync/id/callback/layout byte-invariati. Target misurabile: AppScene/body e pub→riga. Nessun yield, tipo erasure, attesa/rete/timeout/compilazione diversa. [Proiezione e decisione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-d246-synthetic-publisher.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+Handoff ACTIVE/EXECUTION: Root9 originali e B2 originale sullo STESSO successore immutabile, poi ordinario reale/interazione utile, full2101=2042PASS43skip16fisiciDIFFERITI, review/PR29/mainCI/PR28/ritiro2920/cleanup. Integrazione mainiOS94fb/PR29head082 ancora aperta; nessun verde di candidato diverso sommato. Android/backend/C3/T11/atomica/live/POS acquisiti ove invariati; differimenti/protezioni invariati, nessun nuovoGO o stop al gruppo verde.
 
 ### Execution — Abort nella distruzione della leaf, correzione circoscritta — 2026-11-10T08:24:36.775111+00:00
 
