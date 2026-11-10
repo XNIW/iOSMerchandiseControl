@@ -125,6 +125,15 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
         return DispatchTime.now().uptimeNanoseconds
     }
 
+    // Body-reason diagnostic: bound stdout and stop at the original real row.
+    static func beginCachedCatalogBodyObservation(_ name: String) -> UInt64? {
+        guard let startedAt = beginCachedCatalogSynchronousCost() else { return nil }
+        shared.lock.lock(); defer { shared.lock.unlock() }
+        guard shared.cachedCatalogRenderedAt == nil,
+              (shared.cachedCatalogSynchronousCosts[name]?["count", default: 0] ?? 0) < 64 else { return nil }
+        return startedAt
+    }
+
     static func finishCachedCatalogSynchronousCost(_ name: String, startedAt: UInt64?) {
         guard let startedAt else { return }
         let elapsed = DispatchTime.now().uptimeNanoseconds &- startedAt

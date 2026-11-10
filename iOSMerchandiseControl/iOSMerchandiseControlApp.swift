@@ -147,7 +147,14 @@ struct iOSMerchandiseControlApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        #if DEBUG
+        let cost = Task144RootObservation.beginCachedCatalogBodyObservation("app-scene-body-inclusive")
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("app-scene-body-inclusive", startedAt: cost) }
+        if cost != nil {
+            NSLog("TASK146_BODY_REASON kind.AppScene pid.%d uptime_ns.%llu", ProcessInfo.processInfo.processIdentifier, DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
+        return WindowGroup {
             SyncStoreBootstrapGate(bootstrap: storeBootstrap, opened: { controller in
                 openedRoot(controller)
             }, pending: {
