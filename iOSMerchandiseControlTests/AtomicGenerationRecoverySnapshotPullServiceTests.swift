@@ -963,18 +963,26 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         let checkpoint = makeCheckpoint(fixture: fixture, maxEventID: 0, seed: "task145-held-terminal")
         let transport = AtomicRecoveryTestTransport(ownerUserID: fixture.ownerUserID,
             checkpoints: [checkpoint, checkpoint, checkpoint])
+        let preparation = Task146HeldPreparationObservation(change: change)
+        transport.phaseObserverForTesting = { preparation.record($0) }
         let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
         defer { auth.close() }
         let entered = expectation(description: "A real verified terminal result is held outside the facade/engine")
         let runtime = Task145HeldTerminalRuntime(facade: AutomaticSyncRuntimeFacade(
             authViewModel: auth.viewModel, catalogPushProvider: nil, productPriceProvider: nil,
             historySessionProvider: nil, incrementalPullProvider: nil,
-            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport),
+            recoverySnapshotPullProvider: makeService(fixture: fixture, transport: transport,
+                pageCommitProbe: { preparation.record("page-commit.\($0.rawValue)") }),
             activityRegistrationProvider: nil,
             deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
             defaults: fixture.defaults,
-            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(originalLease) } }),
+            runAdmissionValidator: { try await MainActor.run {
+                preparation.record("engine-lease-enter")
+                try fixture.controller.validateLease(originalLease)
+                preparation.record("engine-lease-return")
+            } }),
             entered: entered)
+        runtime.phaseObserverForTesting = { preparation.record($0) }
         defer { runtime.release() }
         let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
             activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
@@ -985,6 +993,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         // Registered after makeFixture's physical cleanup, so XCTest awaits
         // every owned writer first, including an early setup timeout/throw.
         addTeardownBlock { @MainActor in
+            preparation.record("cleanup-enter")
             orchestrator.stop()
             runtime.release()
             await runtime.cancelAndWait()
@@ -995,10 +1004,19 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             await runtime.resumeAfterStoreReplacement()
             let admissionRemainsSuspended = await AutomaticSyncSingleFlight.processShared.isSuspendedForStoreReplacement
             XCTAssertFalse(admissionRemainsSuspended)
+            preparation.record("cleanup-return")
+            preparation.emit(boundary: "cleanup", runCount: runtime.runCount,
+                heldStatus: runtime.heldResult?.status.rawValue,
+                counts: transport.counts(), defaults: fixture.defaults)
         }
+        preparation.record("before-scene-and-trigger")
         orchestrator.handleScenePhaseChanged(.active)
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
         await fulfillment(of: [entered], timeout: 2)
+        preparation.record("after-original-enter-wait")
+        preparation.emit(boundary: "enter-wait", runCount: runtime.runCount,
+            heldStatus: runtime.heldResult?.status.rawValue,
+            counts: transport.counts(), defaults: fixture.defaults)
         let terminal = try XCTUnwrap(runtime.heldResult)
         XCTAssertEqual(terminal.status, .success)
         XCTAssertTrue(terminal.verifiedConvergence)
@@ -14035,6 +14053,7 @@ private final class AtomicRecoveryProgressObservation {
 
 @MainActor
 private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting {
+    var phaseObserverForTesting: (@Sendable (String) -> Void)?
     private let ownerUserID: UUID
     private let checkpoints: [ShopSyncRecoveryCheckpoint]
     private let cancellationDomain: ShopSyncRecoveryDomain?
@@ -14100,6 +14119,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
     }
 
     func checkpoint(_ parameters: ShopSyncRecoveryCheckpointParameters) async throws -> Data {
+        phaseObserverForTesting?("checkpoint-enter")
+        defer { phaseObserverForTesting?("checkpoint-exit") }
         guard !checkpoints.isEmpty else {
             throw ShopSyncRecoveryContractError.invalidCheckpoint
         }
@@ -14136,6 +14157,8 @@ private final class AtomicRecoveryTestTransport: ShopSyncRecoveryRPCTransporting
     }
 
     func page(_ parameters: ShopSyncRecoveryPageParameters) async throws -> Data {
+        phaseObserverForTesting?("page-enter.\(parameters.domain)")
+        defer { phaseObserverForTesting?("page-exit.\(parameters.domain)") }
         pageCalls += 1
         pageCallParameters.append(parameters)
         try await pageInterception?(parameters)
@@ -15124,6 +15147,50 @@ private final class Task145LivenessAdmissionRuntime: SyncAutomaticRuntimeProvidi
     func resumeAfterStoreReplacement() async { await initial.resumeAfterStoreReplacement() }
 }
 
+/// Test-only bounded phase projection. No new suspension, retries or deadlines.
+private nonisolated final class Task146HeldPreparationObservation: @unchecked Sendable {
+    private nonisolated struct Entry: Sendable {
+        let phase: String
+        let uptimeNS: UInt64
+    }
+    private let lock = NSLock()
+    private let change: String
+    private var entries: [Entry] = []
+    private var dropped = 0
+
+    init(change: String) { self.change = change }
+
+    func record(_ phase: String) {
+        let entry = Entry(phase: phase, uptimeNS: DispatchTime.now().uptimeNanoseconds)
+        lock.lock()
+        defer { lock.unlock() }
+        guard entries.count < 48 else { dropped += 1; return }
+        entries.append(entry)
+    }
+
+    @MainActor
+    func emit(boundary: String, runCount: Int, heldStatus: String?,
+              counts: (checkpoints: Int, pages: Int, tailPages: Int), defaults: UserDefaults) {
+        lock.lock()
+        let snapshot = entries
+        let lost = dropped
+        lock.unlock()
+        let payload: [String: Any] = [
+            "schema": 1, "pid": ProcessInfo.processInfo.processIdentifier,
+            "change": change, "boundary": boundary, "runCount": runCount,
+            "heldStatus": heldStatus ?? "NOT_RETURNED", "dropped": lost,
+            "checkpoints": counts.checkpoints, "pages": counts.pages, "tailPages": counts.tailPages,
+            "engineOutcome": defaults.string(forKey: "sync.runtime.automatic.lastOutcome") ?? "NOT_RECORDED",
+            "events": snapshot.map { ["phase": $0.phase, "uptimeNS": $0.uptimeNS] as [String: Any] },
+            "gaps": "Phase hooks only; no stacks/CPU or unobserved-stage duration inferred. Exit hooks may throw."
+        ]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            NSLog("TASK146_HELD_PREP_TRACE %@", String(decoding: data, as: UTF8.self))
+        } catch { XCTFail("Cannot serialize owned preparation phase receipt: \(error)") }
+    }
+}
+
 @MainActor
 private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
     private let facade: AutomaticSyncRuntimeFacade
@@ -15134,6 +15201,7 @@ private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
     private(set) var heldResult: SyncAutomaticRunResult?
     private(set) var didReturn = false
     private(set) var runCount = 0
+    var phaseObserverForTesting: (@Sendable (String) -> Void)?
     init(facade: AutomaticSyncRuntimeFacade, entered: XCTestExpectation) {
         self.facade = facade
         self.entered = entered
@@ -15141,7 +15209,9 @@ private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
     var isRunning: Bool { facade.isRunning }
     func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
         runCount += 1
+        phaseObserverForTesting?("facade-enter")
         let result = await facade.run(action: action, source: source)
+        phaseObserverForTesting?("facade-return.\(result.status.rawValue)")
         heldResult = result
         await withCheckedContinuation { continuation in
             if releaseRequested {

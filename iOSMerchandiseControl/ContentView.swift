@@ -241,8 +241,7 @@ struct ContentView: View {
         let cost = Task144RootObservation.beginCachedCatalogBodyObservation("content-body-inclusive")
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-body-inclusive", startedAt: cost) }
         #endif
-        // Bound the root's concrete modifier type at the SwiftUI body entry.
-        return AnyView(activeRoot)
+        return activeRoot
     }
 
     private var scopedSyncOrchestrator: SyncOrchestrator? {
