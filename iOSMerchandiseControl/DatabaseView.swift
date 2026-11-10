@@ -4060,6 +4060,10 @@ struct DatabaseView: View {
         #if DEBUG
         let cost = Task144RootObservation.beginCachedCatalogBodyObservation("database-body-inclusive")
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("database-body-inclusive", startedAt: cost) }
+        if cost != nil {
+            NSLog("TASK146_BODY_REASON kind.DatabaseView pid.%d uptime_ns.%llu", ProcessInfo.processInfo.processIdentifier, DispatchTime.now().uptimeNanoseconds)
+            Self._printChanges()
+        }
         #endif
         return Group {
             if isCurrentModelGeneration {

@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; fence ritirati, revisione locale osservata fuori dai root in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — revision-leaf verificata; B2 residuo5,349908s, diagnostica bounded degli aggiornamenti rimasti |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Beneficio revisione verificato, residuo350ms e motivi aggiornati — 2026-11-10T04:38:31.910522+00:00
+
+**✅ BUILD/SIM0169 ESEGUITI.** B2run42753336851/job129621851049 **FAIL_LATENCY5,349908s >5s**, preparazione/cache/autorità PASS e zero scan sul PID32501. Correzione revision-leaf **CONSERVATA**: rispetto9b root12→8/Database22→13body; fineworker→Main1,447591→1,105150s e pubblicazione→riga2,022977→1,621631s. Worker510ms; costi inclusivi non additivi, nessuna attribuzione esclusiva dell'intero tempo. SogliaancoraFAIL, non sostituibile con il miglior vecchio risultato. Rootrun42753341893/job129621865534 **2/2 PASS**: percorso intero Save/recovery/generazione/bozza/focus/Cancel/drain20/ACK/riapertura/nodups e testAuth originale esteso su leafAppStorage/scopedDefaults/UIHostingController. Initial/unrelated0pub, diniego reale1pub, writer respinto PRIMA attesaUI. Profilo/provenienza/Shutdown0booted verificati; warning6014baseline, nessun nuovo warning scoped. ManifestSDK85file/O+asserzioniDebug/26.6 PASS; soli41009B acquisiti, nessun prodotto completo/installazione. [Causale e postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-revision-leaf.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo BUILD/SIM NOT_RUN.** Mancano i motivi degli8aggiornamenti root/13Database RIMASTI dopo il fix; i logd05 non descrivono questa composizione e i contatori danno costi, non origini. Unica nuova raccolta necessaria:8righeDEBUG in ContentView/Database, markerPID/uptime e `_printChanges` entro il cap64/tipo e prima della riga originale. Sorgente produttiva0169 esatta rimuovendo i due soli prologhi. Nessun nuovo fix per tentativi, CPUoff, exportSDKfalse; T0/5s/cache/autorità/profilo originali. Diagnostica perturbante, non qualifica finale5s; nessuna Root/fullmatrix aggiuntiva per questo solo hookcache. I vecchi ledger0c/d05/0169 conservano i propri cumulativi, nessun budget azzerato con nomi nuovi; nessuna nuova raccolta nativa Mac o prodotto SDK acquisito. La compilazione serve al nuovo hook mancante nel binario, non a elaborare tracce già disponibili.
+
+Handoff ACTIVE/EXECUTION: leggere motivi aggiornati prima del prossimo fix minimo; conservare il beneficio revision-leaf e tutte le evidenze nei rispettivi perimetri. Poi ordinario della stessa composizione/interazioneutile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. C3/T11/Android/backend/atomica/live/POS non riaperti senza impatto; ordinario5,50s restaFAIL, fisico/statistiche DIFFERITI, dati/QCOW2/WIP/indice protetti. Nessun nuovoGO o chiusura al gruppo funzionale verde.
 
 ### Execution — Fence ritirati; isolamento delle invalidazioni della revisione locale — 2026-11-10T04:01:48.651891+00:00
 
