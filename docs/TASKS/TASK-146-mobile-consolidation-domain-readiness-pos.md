@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 944Root8PASS/1PREPFAIL finale-seal1,714s; B2aperto; ordinario5a diagnostico acquisito |
+| Esito documentale | EXECUTION_ATTIVA — 630prep2PASS/SQLite0; B2aperto; rootimageobserver in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — 630prep2PASS; DatabaseSDK5a2,482s; osservazione immagini nel consumer — 2026-11-10T17:06:33.617418+00:00
+
+**✅ BUILD/SIM630 ESEGUITI:**run42856463777/job129970731056 **2PASS**, stessi2selettori/deadline2s, discovery2101/provenienza/stockDebug qualificati.6allegatiJSON completi/0drop/0issue;0vnode/0invalidatedFD/0SQLite,14warning baseline/0nuovi. Prima final-seal141,788125ms (key36,343ms, encode25,857ms, snapshot46,675ms), successive34,837/45,591ms. Picco9441,714519125s NON riprodotto: localizzato nella sigillatura, sottocausa storica **UNKNOWN**, non retroattivamente risolta. Stop al batch diagnostico, nessun aumento deadline. Ricevuta `b1/ios-held-final-seal-phases.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json` nell'evidence canonica. Native1335938/4MB acquisito una volta, nessun SDK55MB scaricato. Nuovo incidenteGitHub hnf21m9jkl3c/Actionspartial/PRmajor: richiesta già inviata comunque completata; due timeoutTLS del solo osservatore preservati, nessun dispatch duplicato.
+
+**✅ SIM diagnosticoSDK5a ESEGUITO:**Databaseforzato suTEST3F26.2, prodotto/prezzo sintetici visibili alframe02 entro **2,481620s**, riuso fisico/autoritàPASS/0scan PID16711; worker57,301ms, ritorno→pub67,093ms inclusivalidazione/scheduling. Nessun debugger/profiler/fixtureUUID, solooverrideinizialeDatabase; nointerazione inquesta specificaprova. Non è ordinarioInventory né B2/finale630. Confronto non dimostra causa esclusiva runner; splitpreApp assente. Report `b1/ios-ordinary-database-diagnostic.ROOT/DIAGNOSTIC-AND-POSTFLIGHT.ROOT.json`. PostflightShutdown/53pinSDKcanonico+installatoPASS/dati12filepreservati. Rimossi solo4JPEGidentici933104Blogici/933888Ballocati, canonico03 e tempi originaliKEEP con mappingesatto; APFSnetto separato. Free39,26GB circa, nessun dato/sessione/SDK/QCOW2 rimosso.
+
+**✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** Codice33116757, soloContentView.swift+App.swift: immagini pubblicano reset/revision già osservati; App usa il riferimento eContent legge solo canBegin/acquisiscelease nel recupero manuale. SottoscrizioneContent spostata nel modifier privato del medesimo alert; disponibilità fresca e stessoStore passati all'azione, preflight/beginlease/deferrelease immutati. App possiede stessaistanza inState. Scena/root non devono rivalutare tutto il contenuto per queste pubblicazioni. Precedentec671 cambiava SOLOApp, Root7invariato/B2FAIL: ritirato; nuovo delta comprende il consumerContent rimasto allora sottoscritto. Targetworker→Main e pub→riga; beneficio ancora da provare e condizione di conservazione esplicita. Nav/bozze/host/id/generation/immagini/API/autorità/T0/5s/profili invariati. Review `b1/ios-image-decision-root.ROOT/PRE-SDK-REVIEW.ROOT.json`. Il primo aggiornamento tracking si era fermato per SyntaxError del solo formatter locale; nessun test/SDK eseguito in quel passaggio. Codicecommittato intatto, aggiornamento tracking separato prima della pubblicazione, senza amend/reset.
+
+Handoff ACTIVE/EXECUTION: Root16 (Root9+6imageScope/editor+mutazioneconcorrente/lease) e intero B2 originale sullo STESSO nuovo headimmutabile; leggere esiti prima di altrofix. Collector metadata precedente8sSPENT, ulteriori8PENDING_USER/non eseguiti, tracce/budget0c invariati. Poi composizione qualificata→ordinario finale utile/full2101=2042PASS43skip16fisiciDIFFERITI/review/PR29/mainCI/PR28/ritiro2920+de10/cleanup. AnyViewDatabase/StorefrontState restano provvisori; Authfresco/fixcorrettezza acquisiti, Android/backend/C3/T11/atomica/live/POS invariati. MainiOS94fb/PR29head082 non avanzati; nessun verde mirato promosso aREVIEW/DONE, nessun nuovoGO.
 
 ### Execution — 944 Root8PASS/1PREPFAIL: sigillatura finale1,714s; SQLite0 osservato — 2026-11-10T16:37:03.253204+00:00
 
