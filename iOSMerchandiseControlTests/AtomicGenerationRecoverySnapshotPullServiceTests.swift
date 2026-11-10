@@ -989,6 +989,12 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             runtime.release()
             await runtime.cancelAndWait()
             await runtime.waitForReturnIfStarted()
+            _ = await fixture.controller.awaitLocalBodyQualification()
+            // The real facade uses processShared flight admission. Its join
+            // suspends it for replacement, so release that test-owned hold.
+            await runtime.resumeAfterStoreReplacement()
+            let admissionRemainsSuspended = await AutomaticSyncSingleFlight.processShared.isSuspendedForStoreReplacement
+            XCTAssertFalse(admissionRemainsSuspended)
         }
         orchestrator.handleScenePhaseChanged(.active)
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)

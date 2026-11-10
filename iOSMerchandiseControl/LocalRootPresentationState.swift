@@ -292,12 +292,40 @@ private struct LocalModelGenerationFenceKey: EnvironmentKey {
     static let defaultValue: () -> Bool = { true }
 }
 
+/// Render identity only: access decisions always execute the current predicate.
+/// Do not retain a capability result across SDK, shop or physical-store changes.
+nonisolated struct LocalBusinessAccessIdentity: Equatable, Sendable {
+    let controller: ObjectIdentifier
+    let container: ObjectIdentifier
+    let presentationID: String
+    let auth: ObjectIdentifier
+    let qualificationRevision: Int
+    let authorizationRevision: Int
+    let ownerUserID: UUID?
+}
+
+nonisolated struct LocalBusinessReadGate: Equatable, Sendable {
+    let identity: LocalBusinessAccessIdentity?
+    let evaluate: @MainActor (Task126LocalReadDomain) -> Bool
+
+    @MainActor func callAsFunction(_ domain: Task126LocalReadDomain) -> Bool { evaluate(domain) }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.identity == rhs.identity }
+}
+
+nonisolated struct LocalBusinessWriteGate: Equatable, Sendable {
+    let identity: LocalBusinessAccessIdentity?
+    let evaluate: @MainActor () -> Bool
+
+    @MainActor func callAsFunction() -> Bool { evaluate() }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.identity == rhs.identity }
+}
+
 private struct LocalBusinessReadGateKey: EnvironmentKey {
-    static let defaultValue: @MainActor (Task126LocalReadDomain) -> Bool = { _ in true }
+    static let defaultValue = LocalBusinessReadGate(identity: nil, evaluate: { _ in true })
 }
 
 private struct LocalBusinessWriteGateKey: EnvironmentKey {
-    static let defaultValue: @MainActor () -> Bool = { true }
+    static let defaultValue = LocalBusinessWriteGate(identity: nil, evaluate: { true })
 }
 
 extension EnvironmentValues {
@@ -310,12 +338,12 @@ extension EnvironmentValues {
         set { self[LocalModelGenerationFenceKey.self] = newValue }
     }
 
-    var localBusinessReadIsAllowed: @MainActor (Task126LocalReadDomain) -> Bool {
+    var localBusinessReadIsAllowed: LocalBusinessReadGate {
         get { self[LocalBusinessReadGateKey.self] }
         set { self[LocalBusinessReadGateKey.self] = newValue }
     }
 
-    var localBusinessWriteIsAllowed: @MainActor () -> Bool {
+    var localBusinessWriteIsAllowed: LocalBusinessWriteGate {
         get { self[LocalBusinessWriteGateKey.self] }
         set { self[LocalBusinessWriteGateKey.self] = newValue }
     }

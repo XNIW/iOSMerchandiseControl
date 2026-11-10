@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 2426B2FAIL6,175509/Root7PASS2PREPFAIL; background ritirato, cleanup test da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 2cRoot8PASS1PREPFAIL; join bilanciato e identità gate business da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Root2c8PASS/1FAIL, join condiviso bilanciato; identità dei gate business — 2026-11-10T12:53:23.038802+00:00
+
+**✅ BUILD/SIM2c6356ed ESEGUITI:8PASS/1FAIL**, run42816521833/job129830880919,201,039s. Intera rootUI/5Auth/continuation e negativo owner/shop PASS; negativo16,342s complessivi, soglia2s originale invariata. Solo positivo held-terminal **FAIL_PREPARATION busy/nonverified**, successive verifiche rinnovo **NOT_TRAVERSED**. Errore introdotto nel teardown: il facade reale passa processShared all'engine, cancelAndWait sospende l'ammissione e mancava resume. Non è il defaultper-instance dell'engine né un layout. Fix test minimo: join controller qualificazione corrente, poi resumeAfterStoreReplacement e assert ammissione riaperta. Nessuna modifica produzione al flight. Prima causa timeout2s precedente restaUNKNOWN; console mantiene15diagnosticheSQLite su cancellazioni fixture, quindi non dichiaro connessioni chiuse/zero warning. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-held-teardown-root.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Acquisizione cumulativa529333/4MB; Shutdown0booted, nessun fullSDK/nativeMac.
+
+**✅ STATIC/parse/diff e contratto tipi Swift6 ESEGUITI PASS; nuovoSDK/SIM NOT_RUN.** ContentView/LocalRootPresentationState: i due metodi di accesso business erano ricreati come closure a ogni root, e proiezione già acquisita bedaPID41024 nomina ripetutamente _localReadIsAllowed/_localWriteIsAllowed nella finestra pub→riga. Wrapper callable Equatable/Sendable con identità di controller/contenitore/presentazione/Auth/revisioni/owner evita cambiamenti soltanto di closure; ogni chiamata esegue esattamente il predicato corrente, non conserva un Bool/capability. Restano freshSDK, vecchia generazione fisica, account/shop/device e scrittori finali. Nessuna modifica al fence generazione già scartato, a layout/host/latch/scheduling/timeout/compilatore. Tutti i consumer mantengono chiamate identiche; nessuna API pubblica o dipendenza nuova. Test revocaSDK esistente conserva i gate pre-denial e richiede read/writefalse PRIMA dell'attesa UI.2101selector invariati. [Review statica](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-access-predicate-identity.PREPARED.ROOT/STATIC-REVIEW.ROOT.json). Beneficio sui due intervalli e adozione **NON PROVATI**, da misurare sullo stesso successore; tipi stub non sono buildSDK app.
+
+Handoff ACTIVE/EXECUTION: Root9 originale (include entrambi i delta test) e B2 originale sullo STESSO successore immutabile, non retry identico di2c. B2T0/5s/cache/autorità/profilo invariati; nuovo errore richiede lettura causa prima di iterare. Ordinario5,500695FAIL preservato. Dopo composizione qualificata: ordinario reale/interazione utile→full2101/2042PASS43skip16fisiciDIFFERITI→review/PR29/mainCI/PR28/ritiro2920/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti ove invariati; dati/QCOW2/WIP e differimenti protetti. Free41.997GB, nessuna cancellazione; nessun nuovoGO o stop al gruppo verde.
 
 ### Execution — background misurato ritirato; join del cleanup di preparazione — 2026-11-10T12:31:24.136331+00:00
 
