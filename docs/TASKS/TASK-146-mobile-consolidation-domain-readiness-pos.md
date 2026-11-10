@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 461Root16PASS/B2FAIL5,648413; confine Database da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 5aRoot9PASS/B2FAIL6,537189; proprietà ImageStore da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — 5a Root9 PASS/B2 FAIL6,537189; proprietà ImageStore nella scena — 2026-11-10T11:26:05.455200+00:00
+
+**✅ BUILD/SIM5a ESEGUITI.** Root42803174861/job129785604664 **9PASS**,176,862s, stockDebug/provenienza/discovery2101/Shutdown0booted qualificati;14warning baseline globali, nessuno sui file produzione del delta. B242803214408/job129785743449 **FAIL_LATENCY6,537189s >5**, preparazione/cache/autorità PASS, PID27373 zero scan. PreApp2,759517s/init535,375ms/worker489,681ms; fineworker→Main1,269697s, pub→riga1,338684s. Rispetto461 i due intervalli scendono1,303→1,270 e1,635→1,339s; Root7 invariato, Database10→9, App1→2; preApp+1,008s e init+0,248s. Nessuna causa esclusiva/qualifica5s inferita. Confine AnyView rimane provvisorio per intervalli e RootPASS, adozione finale ancora non qualificata. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-database-surface.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Post-elaborazione medesimi artefatti ESEGUITA.** Native13758272610 cumulativo536374/4MB, nessuna nuova raccolta/build. SDK13756604835 manifest11checkPASS/SHA/AppTree49279/toolchain26.6/assertDebug reali/85files. Primo reader fermo prima fetch per cartella journal mancante: corretta solo preparazione locale, carico prudenziale16001B conservato; cumulativo57010B nel recupero, nessun reset budget. ZIP45063638B MAI scaricato, nessun install/nativeMac. Helper ordinario preservativo sintassiPASS e filtro logPID esatto; gate acquisizione esplicitamente BLOCKED_B2_FAIL. Dati/Keychain/offline/QCOW2/WIP invariati.
+
+**Causa source verificata:** App osserva ProductImageStore con StateObject ma non legge i suoi campi: usa soltanto lo stesso riferimento in injection e callback bootstrap/cambio-generazione. La precedente proiezione reale beda contiene invalidazione Content `_productImageStore`; App si sottoscrive inoltre alle stesse pubblicazioni e rigenera le iniezioni di root. Nessuna quota CPU esclusiva attribuita, preApp non spiegato da questo rilievo. **✅ STATIC/parse/diff PASS; nuovo SDK/SIM NOT_RUN.** Solo proprietà/initializer App ImageStore inState, come riferimento Storefront già presente. Content mantiene EnvObject per canBeginAccountStoreReplacement e lease; moduli/cancellazioni/cache/revision immagine, callback weak di apertura/cutover, tutti i consumer e hostSync/id/layout/guard invariati. Nessun nuovo layout, fence, relay, memo d'autorità, yield, compilerprofile o collector.
+
+Handoff ACTIVE/EXECUTION: Root9 più7test immagini esistenti su scope/generazione/lateLoad/replacement/Databaseeditor (16) e B2 originale sullo STESSO successore immutabile. Poi ordinario reale/interazione utile, full2101=2042PASS43skip16fisiciDIFFERITI, review/PR29/mainCI/PR28/ritiro2920/cleanup. PR28 riconciliata preparatoria103percorsi/2043vecchiselettori presenti/12criticiidentici+Authsuccessore spiegato, non chiusa. Android main5b4d2155/CI42382508251 PASS e checkout pulito riconfermati read-only; runtime acquisiti non riaperti. Ordinario5,50FAIL/C3/T11/POS/live/atomica nei loro scope, differimenti invariati, spazio42,13GB circa, nessun nuovoGO o fine task al verde mirato.
 
 ### Execution — Storefront16 PASS, B2 FAIL5,648413; confine del tipo Database — 2026-11-10T10:54:56.315463+00:00
 
