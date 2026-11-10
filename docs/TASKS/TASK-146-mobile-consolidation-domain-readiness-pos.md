@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 407Root16PASS/B2FAIL5,889, coppiaimmagini ritirata; unica raccolta8s daeseguire |
+| Esito documentale | EXECUTION_ATTIVA — B2aperto, ProbeDEBUGinattiva in qualifica; collector16sSPENT/stop |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — raccoltaaggiuntivaFAILparziale: tipo concretoProbeinattiva; solo montaggioDEBUG — 2026-11-10T17:46:19.323670+00:00
+
+**✅ Raccolta diagnostica ESEGUITA, FAIL_PARTIAL delcollector:**unico8s aggiuntivo delegato dall'utente, SDK5a53pin/TEST3F26.2, PID20625.17eventi/6052B letture dirette/8frame; crash nativoLLDB inSetThreadStopInfo/WaitForEvent prima del completamento. Nessun crashapp dedotto, detachedNOT_CONFIRMED; shutdown/PIDassente/SDKcanonico+installato53pin/Registryquiescente verificati. Fonte grezza CAPTURING lasciata intatta. **Root/DBbody NOT_TRAVERSED**. Un dato completo: fields(of:) eCoreViewRepresentableDynamicPropertyFields ricevono **Task145PerformanceWindowObservation**, UUIDapp3BE71 eSwiftUICoreF7E2 verificati,8frame. Ricevuta `b1/ios-5a-dynamic-property-input.ROOT/CAPTURE-EXACT-CLASSIFICATION-POSTFLIGHT.ROOT.json`. Nessuna build/install/seed/nuovoB2 per la raccolta, nessun JIT/valorebusiness. Budgetold8+extra8=**16sSPENT,0rimanenti**, nessun altrocollector/ripristinoquote; tracce0c3899970/4MB e407B2532307/4MB immutate. Dati/sessione/bozza/treQCOW2 protetti; free38,49GB circa.
+
+**Causa source circoscritta:**App monta sempre la UIViewRepresentableDEBUG, la cui makeUIView creaProbe. Soltanto didMoveToWindow verifica `Task145PerformanceConfiguration.measures`; B2 eordinario non hannoMODEmeasure, dunque il ponte e la sua preparazioneSwiftUI sono lavoro inutilizzato. Tipo concreto verificato, non sola presenza di metadata negli stack; quotaCPU/esclusività NON misurate. **✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** SoloApp.swift,7righe: il medesimo guardmeasures precede il montaggio background. Espressione/implementazioneprobeattiva identiche; T0 originale, rowcallback,AXreadback B2,autorità,cache,host/id/nav/bozze/ownership originali invariati. TargetMainActorcostruzionegrafo e pub→riga, beneficio ancora da provare. Non filonecollector/metadatagenerico o variante layout/yield. Review `b1/ios-inactive-window-probe-root.ROOT/PRE-SDK-REVIEW.ROOT.json`. T20statistiche estese restanoDIFFERITE, equivalenzaramoattivo verificataSTATIC senza inventaremisure.
+
+Handoff ACTIVE/EXECUTION: Root9 originale stockDebug e B2 intero originaleO+vereasserzioniDebug sulloSTESSO nuovo headimmutabile; leggere entrambi.407Root16PASS resta attribuito407, coppiaimmagini ritirata/baseAppUI5a ripristinata a063; nessun PASS composto da binari diversi. Poi candidatoqualificato→ordinariofinaleutile/full2101=2042PASS43skip16fisiciDIFFERITI/review/PR29/mainCI/PR28/ritiro2920+de10/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti salvoimpatto; main94fb/PR29head082 non integrati, nessunDONE/nuovoGO o arrestoalverdeintermedio.
 
 ### Execution — 407Root16PASS/B2FAIL5,888537: coppia immagini ritirata — 2026-11-10T17:35:21.312138+00:00
 

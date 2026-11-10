@@ -183,7 +183,13 @@ struct iOSMerchandiseControlApp: App {
             }
             #if DEBUG
             .task144ControlledRootControls()
-            .background(Task145PerformanceWindowObservation().allowsHitTesting(false))
+            .background {
+                // The probe's own lifecycle hook has this same guard. Avoid
+                // constructing its UIKit bridge when no measurement uses it.
+                if Task145PerformanceConfiguration.measures {
+                    Task145PerformanceWindowObservation().allowsHitTesting(false)
+                }
+            }
             .task { Task144LocalAvailabilityRootFixture.current?.prepareIfNeeded() }
             #endif
         }
