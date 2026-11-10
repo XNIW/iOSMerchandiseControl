@@ -6400,20 +6400,13 @@ private struct Task144ControlledRootControls: View {
     var body: some View {
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             VStack(spacing: 1) {
-                Group {
-                    if fixture.cachedCatalogDiagnosticsReady {
-                        Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
-                            readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
-                    } else {
-                        Color.clear
-                    }
-                }
-                .frame(width: 1, height: 1).allowsHitTesting(false)
+                Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
+                    readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
+                    .frame(width: 1, height: 1).allowsHitTesting(false)
                 // Ordinary launch has no technical fact band. Construct its
                 // eager rows only after the real catalog's committed layout
                 // records its timestamp. Keep every fact and the same32pt band;
-                // the AX bridge also mounts after that timestamp. It exports
-                // the original RAM sample; it never creates the render witness.
+                // the passive render readback above is always mounted.
                 ScrollView(.vertical) {
                     VStack(spacing: 1) {
                         if fixture.cachedCatalogDiagnosticsReady {

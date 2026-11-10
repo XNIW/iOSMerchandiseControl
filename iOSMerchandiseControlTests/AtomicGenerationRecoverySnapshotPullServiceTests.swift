@@ -992,12 +992,13 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         defer { orchestrator.stop() }
         // Registered after makeFixture's physical cleanup, so XCTest awaits
         // every owned writer first, including an early setup timeout/throw.
-        addTeardownBlock { @MainActor in
+        let ownedCleanup = Task146HeldPreparationCleanup {
             preparation.record("cleanup-enter")
             orchestrator.stop()
             runtime.release()
             await runtime.cancelAndWait()
             await runtime.waitForReturnIfStarted()
+            await orchestrator.awaitStoppedForegroundTaskForTesting()
             _ = await fixture.controller.awaitLocalBodyQualification()
             // The real facade uses processShared flight admission. Its join
             // suspends it for replacement, so release that test-owned hold.
@@ -1009,6 +1010,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
                 heldStatus: runtime.heldResult?.status.rawValue,
                 counts: transport.counts(), defaults: fixture.defaults)
         }
+        addTeardownBlock { @MainActor [ownedCleanup] in await ownedCleanup.run() }
         preparation.record("before-scene-and-trigger")
         orchestrator.handleScenePhaseChanged(.active)
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
@@ -15147,6 +15149,23 @@ private final class Task145LivenessAdmissionRuntime: SyncAutomaticRuntimeProvidi
     func resumeAfterStoreReplacement() async { await initial.resumeAfterStoreReplacement() }
 }
 
+/// Release the joined test operation's captures before physical fixture cleanup.
+@MainActor
+private final class Task146HeldPreparationCleanup {
+    private var operation: (@MainActor () async -> Void)?
+
+    init(operation: @escaping @MainActor () async -> Void) { self.operation = operation }
+
+    func run() async {
+        var action = operation
+        operation = nil
+        await action?()
+        // XCTest may retain this registered holder. It must no longer own the
+        // facade, orchestrator or SwiftData containers at physical teardown.
+        autoreleasepool { action = nil }
+    }
+}
+
 /// Test-only bounded phase projection. No new suspension, retries or deadlines.
 private nonisolated final class Task146HeldPreparationObservation: @unchecked Sendable {
     private nonisolated struct Entry: Sendable {
@@ -15186,6 +15205,12 @@ private nonisolated final class Task146HeldPreparationObservation: @unchecked Se
         ]
         do {
             let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            XCTContext.runActivity(named: "TASK146 held preparation \(change) \(boundary)") { activity in
+                let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+                attachment.name = "TASK146 held preparation phases"
+                attachment.lifetime = .keepAlways
+                activity.add(attachment)
+            }
             NSLog("TASK146_HELD_PREP_TRACE %@", String(decoding: data, as: UTF8.self))
         } catch { XCTFail("Cannot serialize owned preparation phase receipt: \(error)") }
     }

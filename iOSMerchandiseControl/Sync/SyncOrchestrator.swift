@@ -394,6 +394,15 @@ final class SyncOrchestrator: ObservableObject {
         syncEventSignalWatcher?.stop()
     }
 
+    #if DEBUG
+    /// Test fixture teardown must also join the outer terminal-result handler.
+    /// A provider's return alone does not mean this task has released its scope.
+    func awaitStoppedForegroundTaskForTesting() async {
+        precondition(isStopped)
+        if let foregroundTask { await foregroundTask.value }
+    }
+    #endif
+
     func shouldShowRootBanner(
         _ state: SyncRootPresentationState,
         selectedTab: Int

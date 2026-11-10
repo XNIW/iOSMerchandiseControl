@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — preparazione63f2PASS; trace parziale, B2FAIL; diagnosi ordinaria autorizzata prima del gate |
+| Esito documentale | EXECUTION_ATTIVA — ordinario5a cache2PASS/interazionePASS; a8Root9PASS/B2FAIL8,204; readback ritirato, lifetime fixture in fix |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — a8 Root9PASS/B2FAIL8,204; readback ritirato, join esterno fixture — 2026-11-10T16:00:04.136231+00:00
+
+**✅ BUILD/SIM a8cde1a2 ESEGUITI.** Root42845387515/job129931363566 **9PASS**,14warning baseline/0nuovi; nativo18vnode-unlink+18invalidatedFD,12nel negativo owner/shop e6nel rinnovo lease. B242845377253/job129931343167 **FAIL_LATENCY8,204144s >5**, preparazione/cache/autoritàPASS, PID28803 zero scan, O+vereasserzioniDebug. PreApp3,516659s/init0,525538s/worker0,218681s/fineworker→Main1.953073s/pub→riga1,807922s. Il ponteAX post-render non migliora gli intervalli rispetto5a1,269697/1,338684: **RITIRATO**; fixture torna byte-esatta63f. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-post-render-readback.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Run/letture terminate senza nuova raccolta o SDK completo a8; budget nativo cumulativo invariato nel receipt. Nessun motivo per full o merge dal solo Root9verde.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovoSDK/SIM NOT_RUN.** SyncOrchestrator.stop cancella foregroundTask ma non l'attende; il ritorno segnalato dal runtime precede il completamento del task esterno. Il test ora attende quel task con un accessor soloDEBUG dopo stop/release/joinfacade/runtime e prima della qualificazione controller. Cleanup one-shot scarica esplicitamente la closure e i suoi riferimenti sotto autoreleasepool; bilancio processShared invariato. Marker completi aggiunti come allegatoJSON bounded dopo il wait2s, nella stessa build necessaria al fix, non per rielaborare vecchie tracce. Deadline2s/assertioni originali immutate; primo timeout storico restaUNKNOWN, chiusura di ognihandleSQLite non ancora provata. [Review circoscritta](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-held-full-lifetime-root.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Ordinario diagnosticoSDK5a: tutti6esiti conservati;5,802928sFAILvisivo in preparazione incompleta/NOTcachevalida, secondo primo-download non concluso; riqualifiche2,614245/3,922481s15scan; cachevalide2,375061/2,293538s0scan/autoritàPASS e interazione manuale→Add→CancelPASS nel proprio scope. Nessuna promozione a B2PASS o nuova composizione. Vecchio6E,dati/sessioni/bozza/QCOW2 conservati.
+
+Handoff ACTIVE/EXECUTION: Root9 originale sul successore del solo fixlifetime; decidere dalla diagnosi nativa e marker completi, non aumentare timeout. B2 resta aperto: nessun'altra variante SwiftUI/body/metadata da soli. Mancano il tipo/lavoro concreto nel tratto di costruzione del grafo; una eventuale raccolta ulteriore richiede domanda decisiva/cap/stop espliciti e riuso SDK, senza filone metadata autonomo. Poi composizione qualificata→ordinario finale/full2101/review/PR29/mainCI/PR28/ritiro2920+de10/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti dove invariati,16fisici/statistiche DIFFERITI.
 
 ### Execution — ordinario5a utile e due riaperture cache; candidato readback post-render — 2026-11-10T15:31:19.579566+00:00
 
