@@ -144,15 +144,20 @@ struct ContentView: View {
     @StateObject private var excelSession: ExcelSessionViewModel
     @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
     @StateObject private var workbookPreparation: LocalWorkbookPreparation
-    @StateObject private var rootSyncState: RootSyncStateOwner
-    private var syncStateStore: SyncStateStore { rootSyncState.store }
+    @StateObject private var syncStateStore: SyncStateStore
     @StateObject private var shopContextStore: ShopContextStore
     @State private var currentSyncOrchestrator: SyncOrchestrator?
     @State private var runtimePresentationID: String?
     @State private var rootIndicatorState: SyncRootPresentationState = .hidden
     @State private var fallbackSelectedTab = Self.initialSelectedTab()
     @State private var openedTabs: Set<Int>
-    @State private var hasAdmittedBusinessNavigation = false
+    @State private var businessNavigationAdmission = RootBusinessNavigationAdmission()
+    @State private var needsInitialBusinessNavigation = false
+    private var hasAdmittedBusinessNavigation: Bool {
+        // The published value mounts a still-blocked first stack. Once a stack
+        // is already readable, remembering admission must not invalidate it.
+        needsInitialBusinessNavigation || businessNavigationAdmission.isAdmitted
+    }
     private let selectedTabOverride: Binding<Int>?
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
@@ -195,10 +200,7 @@ struct ContentView: View {
         _workbookPreparation = StateObject(wrappedValue: workbookPreparationOverride ?? LocalWorkbookPreparation())
         self.selectedTabOverride = selectedTabOverride
         _openedTabs = State(initialValue: [selectedTabOverride?.wrappedValue ?? Self.initialSelectedTab()])
-        _rootSyncState = StateObject(wrappedValue: RootSyncStateOwner(
-            store: syncStateOverride ?? SyncStateStore(storeGenerationController: storeGenerationController),
-            presentationID: storeGenerationController?.presentationID
-        ))
+        _syncStateStore = StateObject(wrappedValue: syncStateOverride ?? SyncStateStore(storeGenerationController: storeGenerationController))
         _shopContextStore = StateObject(
             wrappedValue: shopContextOverride ?? ShopContextStore(
                 fetcher: supabaseTransportClient.map { MobileLinkedShopService(remote: $0) } ?? EmptyLinkedShopFetcher()
@@ -285,12 +287,6 @@ struct ContentView: View {
         .frame(width: 0, height: 0)
         .accessibilityHidden(true)
         }
-        .background {
-            RootSyncPhaseObserver(store: syncStateStore, presentationID: presentationID) { observation in
-                guard syncStoreGenerationController.presentationID == observation.presentationID else { return }
-                rootSyncState.accept(observation)
-            }
-        }
         .accountSyncDecisionDialog(
             isPresented: $isCorruptJournalReviewPresented,
             decision: Self.interruptedRecoveryDecision,
@@ -349,7 +345,7 @@ struct ContentView: View {
             syncStoreGenerationController.preferLocalReadDomain(selectedTab == 2 ? .sessions : .catalog)
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         }
-        .onChange(of: rootSyncPhase) { _, _ in
+        .onChange(of: syncStateStore.state.phase) { _, _ in
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
@@ -591,7 +587,7 @@ struct ContentView: View {
     }
 
     private var unavailableReason: LocalCatalogUnavailableReason {
-        if case .blocked(.deviceNotActive) = rootSyncPhase { return .restricted }
+        if case .blocked(.deviceNotActive) = syncStateStore.state.phase { return .restricted }
         if let owner = supabaseAuthViewModel.localMutationOwnerUserID,
            let manifest = syncStoreGenerationController.activeManifest,
            AccountBindingStore.accountHash(for: owner) != manifest.accountHash { return .restricted }
@@ -603,19 +599,15 @@ struct ContentView: View {
         let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-privacy-view", startedAt: cachedCost) }
         #endif
-        return RootSyncReplacementPrivacyGate(
-            store: syncStateStore,
+        return SyncReplacementPrivacyGate(
             reason: unavailableReason,
-            hasCurrentInvocation: { syncOrchestrator?.hasCurrentPresentationInvocation == true },
+            state: syncStateStore.state,
+            isBusy: syncOrchestrator?.hasCurrentPresentationInvocation == true
+                && syncStateStore.state.phase.isSignificantAutomaticWork,
             requiresManualReview: requiresManualRecoveryReview,
             openOptions: { selectedTab = 3 },
             review: { isCorruptJournalReviewPresented = true }
         )
-    }
-
-    private var rootSyncPhase: SyncPhase {
-        rootSyncState.observation.presentationID == syncStoreGenerationController.presentationID
-            ? rootSyncState.observation.phase : syncStateStore.state.phase
     }
 
     @ToolbarContentBuilder
@@ -737,10 +729,18 @@ struct ContentView: View {
             #if DEBUG
             Task144RootObservation.recordCachedCatalogPhase("navigation-admission")
             #endif
-            hasAdmittedBusinessNavigation = true
+            let needsCatalogStack = (selectedTab == 1 || openedTabs.contains(1)) && !canReadLocalDomain(.catalog)
+            let needsSessionsStack = (selectedTab == 2 || openedTabs.contains(2)) && !canReadLocalDomain(.sessions)
+            businessNavigationAdmission.isAdmitted = true
+            if needsCatalogStack || needsSessionsStack { needsInitialBusinessNavigation = true }
         }
         .task145PerformanceRender("tabsRender")
     }
+}
+
+@MainActor
+private final class RootBusinessNavigationAdmission {
+    var isAdmitted = false
 }
 
 nonisolated enum LocalCatalogUnavailableReason {
@@ -758,60 +758,6 @@ nonisolated enum LocalCatalogUnavailableReason {
         case .firstDownload: "sync.local.firstDownload.waiting"
         case .restricted: "sync.local.restricted.detail"
         }
-    }
-}
-
-// Keep the store's lifetime at the root without forwarding every progress
-// publication through all visited navigation stacks. Phase changes still reach
-// the root; the privacy gate and Options observe the full store themselves.
-private struct RootSyncPhaseObservation: Equatable {
-    let presentationID: String?
-    let phase: SyncPhase
-}
-
-@MainActor
-private final class RootSyncStateOwner: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
-    let store: SyncStateStore
-    private(set) var observation: RootSyncPhaseObservation
-
-    init(store: SyncStateStore, presentationID: String?) {
-        self.store = store
-        self.observation = RootSyncPhaseObservation(presentationID: presentationID, phase: store.state.phase)
-    }
-
-    func accept(_ observation: RootSyncPhaseObservation) {
-        guard self.observation != observation else { return }
-        objectWillChange.send()
-        self.observation = observation
-    }
-}
-
-private struct RootSyncPhaseObserver: View {
-    @ObservedObject var store: SyncStateStore
-    let presentationID: String
-    let publish: (RootSyncPhaseObservation) -> Void
-
-    var body: some View {
-        let observation = RootSyncPhaseObservation(presentationID: presentationID, phase: store.state.phase)
-        Color.clear.frame(width: 0, height: 0).accessibilityHidden(true)
-            .onChange(of: observation, initial: true) { _, value in publish(value) }
-    }
-}
-
-private struct RootSyncReplacementPrivacyGate: View {
-    @ObservedObject var store: SyncStateStore
-    let reason: LocalCatalogUnavailableReason
-    let hasCurrentInvocation: () -> Bool
-    let requiresManualReview: Bool
-    let openOptions: () -> Void
-    let review: () -> Void
-
-    var body: some View {
-        let state = store.state
-        SyncReplacementPrivacyGate(reason: reason, state: state,
-            isBusy: hasCurrentInvocation() && state.phase.isSignificantAutomaticWork,
-            requiresManualReview: requiresManualReview, openOptions: openOptions, review: review)
     }
 }
 

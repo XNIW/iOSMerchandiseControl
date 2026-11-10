@@ -415,13 +415,33 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         let service = SupabaseAuthService(provider: fixture.provider)
         let viewModel = SupabaseAuthViewModel(authService: service)
         let originalWitness = try XCTUnwrap(service.localIdentityReadWitness)
+        var publications = 0
+        let observation = viewModel.objectWillChange.sink { publications += 1 }
+        defer { observation.cancel() }
+        let unchanged = try XCTUnwrap(viewModel.sessionInfo)
+        for _ in 0..<3 { viewModel.refreshCurrentSessionSnapshot() }
+        viewModel.apply(.init(generation: service.authGeneration, event: .initialSession(unchanged)))
+        viewModel.apply(.init(generation: service.authGeneration, event: .tokenRefreshed(unchanged)))
+        XCTAssertEqual(publications, 0, "An identical accepted SDK body/witness must not invalidate the business root")
+        XCTAssertEqual(service.localIdentityReadWitness, originalWitness)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try fixture.storage.store(key: fixture.storageKey, value: encoder.encode(fixture.original))
+        XCTAssertEqual(service.currentSession, unchanged, "Exercise a new read epoch with identical displayed fields")
+        XCTAssertNotEqual(service.localIdentityReadWitness, originalWitness)
+        viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertGreaterThan(publications, 0, "Identical displayed fields must not suppress a changed SDK witness")
+        XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.original.user.id)
+        let acceptedWitnessBeforeNewOwner = try XCTUnwrap(service.localIdentityReadWitness)
+        publications = 0
         try fixture.storage.store(key: fixture.storageKey, value: JSONEncoder().encode(fixture.newLogin))
         XCTAssertEqual(fixture.provider.client.auth.currentSession?.user.id, fixture.newLogin.user.id)
-        XCTAssertFalse(service.acceptsLocalIdentityReadWitness(originalWitness))
+        XCTAssertFalse(service.acceptsLocalIdentityReadWitness(acceptedWitnessBeforeNewOwner))
         XCTAssertNil(viewModel.localMutationOwnerUserID, "A successful read of another owner invalidates the old value immediately")
         fixture.storage.failRetrieval(key: fixture.storageKey)
         viewModel.refreshCurrentSessionSnapshot()
         XCTAssertNil(viewModel.localMutationOwnerUserID, "A later storage fault cannot resurrect the first owner's witness")
+        XCTAssertGreaterThan(publications, 0, "A changed/absent SDK body must still publish and withdraw the prior presentation")
         fixture.storage.failRetrieval(key: nil)
         viewModel.refreshCurrentSessionSnapshot()
         XCTAssertEqual(viewModel.localMutationOwnerUserID, fixture.newLogin.user.id)
@@ -571,11 +591,22 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         XCTAssertNotNil(local.viewModel.localMutationOwnerUserID)
         let before = ModelContext(local.controller.modelContainer)
         let pending = LocalPendingChangeCASToken(try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first))
+        // First make the public snapshot nil through a genuine transient read
+        // failure. Definitive absence must still notify with those same values.
+        local.auth.storage.failRetrieval(key: local.auth.storageKey)
+        local.viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertNil(local.viewModel.sessionInfo)
+        XCTAssertNotNil(local.viewModel.localMutationOwnerUserID)
+        local.auth.storage.failRetrieval(key: nil)
+        var publications = 0
+        let observation = local.viewModel.objectWillChange.sink { publications += 1 }
+        defer { observation.cancel() }
         try local.auth.storage.remove(key: local.auth.storageKey)
         XCTAssertNil(try local.auth.storage.retrieve(key: local.auth.storageKey),
             "This is a completed absence read, not a transient storage error")
         XCTAssertNil(local.auth.provider.client.auth.currentSession)
         local.viewModel.refreshCurrentSessionSnapshot()
+        XCTAssertGreaterThan(publications, 0, "A confirmed absence cannot be suppressed because the UI was already nil")
         XCTAssertEqual(local.service.authGeneration, generation)
         XCTAssertNil(local.viewModel.localMutationOwnerUserID,
             "A same-generation RAM value cannot override definitive disappearance of the current SDK session")
