@@ -2,6 +2,8 @@ import Combine
 import Foundation
 import Supabase
 import SwiftData
+import SwiftUI
+import UIKit
 import XCTest
 @testable import iOSMerchandiseControl
 
@@ -604,6 +606,29 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         let manifest = try XCTUnwrap(local.controller.activeManifest)
         let before = ModelContext(local.controller.modelContainer)
         let token = LocalPendingChangeCASToken(try XCTUnwrap(before.fetch(FetchDescriptor<LocalPendingChange>()).first))
+        // Traverse the real AppStorage leaf used by App/ContentView, not a mock
+        // authority publisher. Unrelated defaults must not publish the same UI value.
+        let revisionState = LocalAuthorizationRevisionState(defaults: local.defaults)
+        let initialRevision = revisionState.revision
+        let mounted = expectation(description: "Revision observation mounted")
+        let changed = expectation(description: "Actual device denial reaches root UI revision")
+        var publications: [Int] = []
+        let observation = revisionState.$revision.dropFirst().sink { value in
+            publications.append(value)
+            if value == initialRevision + 1 { changed.fulfill() }
+        }
+        defer { observation.cancel() }
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let host = UIHostingController(rootView: LocalAuthorizationRevisionObservation(state: revisionState)
+            .defaultAppStorage(local.defaults).onAppear { mounted.fulfill() })
+        let window = UIWindow(windowScene: scene)
+        window.rootViewController = host
+        window.isHidden = false
+        defer { window.isHidden = true; window.rootViewController = nil }
+        await fulfillment(of: [mounted], timeout: 5)
+        local.defaults.set("unrelated", forKey: "task146.revision-observer.unrelated")
+        XCTAssertEqual(revisionState.revision, initialRevision)
+        XCTAssertTrue(publications.isEmpty)
         let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "R23_CONFIRMED_DENIAL", canWrite: false,
             serverTime: nil, lastSeenAt: nil, reasonCode: "revoked", recommendedAction: "contact_admin", checkedAt: Date())
         XCTAssertTrue(SelectedShopStore(defaults: local.defaults).recordDeviceAuthorization(denial,
@@ -614,6 +639,10 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
             ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { _ in
                 XCTFail("A value-only cached owner must never bypass the current device denial")
             })
+        await fulfillment(of: [changed], timeout: 5)
+        XCTAssertEqual(revisionState.revision, initialRevision + 1)
+        XCTAssertEqual(publications, [initialRevision + 1],
+                       "Initial or unrelated defaults notifications must not republish the same revision")
         let read = ModelContext(local.controller.modelContainer)
         XCTAssertTrue(token.matches(try XCTUnwrap(read.fetch(FetchDescriptor<LocalPendingChange>()).first)))
         let cold = SupabaseAuthViewModel(authService: SupabaseAuthService(provider: local.auth.provider))

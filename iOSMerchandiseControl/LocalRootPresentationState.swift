@@ -255,54 +255,37 @@ private struct LocalRootPresentationStateKey: EnvironmentKey {
     static let defaultValue: LocalRootPresentationState? = nil
 }
 
-/// The predicate is stable for one displayed container, not a cached permission.
-/// Every call still checks the live controller, and old closures fail after cutover.
+/// UI invalidation only: the actual access predicates still reread authority.
 @MainActor
-final class LocalModelGenerationFenceCache {
-    @MainActor
-    final class Fence {
-        private weak var controller: SyncStoreGenerationController?
-        private weak var displayedContainer: ModelContainer?
-        let isCurrent: () -> Bool
+final class LocalAuthorizationRevisionState: ObservableObject {
+    @Published private(set) var revision: Int
 
-        init(controller: SyncStoreGenerationController) {
-            let displayedContainer = controller.modelContainer
-            self.controller = controller
-            self.displayedContainer = displayedContainer
-            isCurrent = { [weak controller, weak displayedContainer] in
-                guard let controller, let displayedContainer else { return false }
-                return controller.modelContainer === displayedContainer
-            }
-        }
-
-        func matches(_ controller: SyncStoreGenerationController) -> Bool {
-            self.controller === controller && displayedContainer === controller.modelContainer
-        }
+    init(defaults: UserDefaults = .standard) {
+        revision = defaults.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey)
     }
 
-    private var current: Fence?
-
-    func fence(for controller: SyncStoreGenerationController) -> Fence {
-        if let current, current.matches(controller) { return current }
-        let next = Fence(controller: controller)
-        current = next
-        return next
+    func observe(_ revision: Int) {
+        guard revision != self.revision else { return }
+        self.revision = revision
     }
 }
 
-/// A comparable environment value keeps an unchanged fence from invalidating
-/// readers. Equality describes the binding only; access is checked on every call.
-nonisolated struct LocalModelGenerationPredicate: Equatable, Sendable {
-    let fence: LocalModelGenerationFenceCache.Fence?
+/// Keep AppStorage's existing observation in a small leaf, so unrelated defaults
+/// notifications cannot reevaluate the whole business root with the same value.
+struct LocalAuthorizationRevisionObservation: View {
+    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var revision = 0
+    let state: LocalAuthorizationRevisionState
 
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.fence === rhs.fence }
-
-    @MainActor
-    func callAsFunction() -> Bool { fence?.isCurrent() ?? true }
+    var body: some View {
+        Color.clear.frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onChange(of: revision, initial: true) { _, value in state.observe(value) }
+    }
 }
 
 private struct LocalModelGenerationFenceKey: EnvironmentKey {
-    static let defaultValue = LocalModelGenerationPredicate(fence: nil)
+    static let defaultValue: () -> Bool = { true }
 }
 
 private struct LocalBusinessReadGateKey: EnvironmentKey {
@@ -318,7 +301,7 @@ extension EnvironmentValues {
         get { self[LocalRootPresentationStateKey.self] }
         set { self[LocalRootPresentationStateKey.self] = newValue }
     }
-    var localModelGenerationIsCurrent: LocalModelGenerationPredicate {
+    var localModelGenerationIsCurrent: () -> Bool {
         get { self[LocalModelGenerationFenceKey.self] }
         set { self[LocalModelGenerationFenceKey.self] = newValue }
     }

@@ -134,7 +134,7 @@ struct ContentView: View {
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
-    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
+    @StateObject private var localAuthorizationRevisionState = LocalAuthorizationRevisionState()
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var syncStoreGenerationController: SyncStoreGenerationController
@@ -287,6 +287,7 @@ struct ContentView: View {
         .frame(width: 0, height: 0)
         .accessibilityHidden(true)
         }
+        .background(LocalAuthorizationRevisionObservation(state: localAuthorizationRevisionState))
         .accountSyncDecisionDialog(
             isPresented: $isCorruptJournalReviewPresented,
             decision: Self.interruptedRecoveryDecision,
@@ -340,7 +341,7 @@ struct ContentView: View {
             restoreLocalPresentation()
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         }
-        .onChange(of: localAuthorizationRevision) { _, _ in restoreLocalPresentation() }
+        .onChange(of: localAuthorizationRevisionState.revision) { _, _ in restoreLocalPresentation() }
         .task {
             syncStoreGenerationController.preferLocalReadDomain(selectedTab == 2 ? .sessions : .catalog)
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
@@ -410,7 +411,7 @@ struct ContentView: View {
         #if DEBUG
         if Task144RootObservation.enabled { return observeTask144RootPrivacyChoice() }
         #endif
-        _ = localAuthorizationRevision
+        _ = localAuthorizationRevisionState.revision
         if let owner = supabaseAuthViewModel.localMutationOwnerUserID,
            let shop = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)),
            let device = try? DeviceInstallIDStore().requireDeviceInstallID(),
@@ -439,7 +440,7 @@ struct ContentView: View {
         var hidden = false
         var branch = "NOT_SELECTED"
         defer { observation.finish(hidden, branch: branch, firstFalseLabel: "first-false-branch-condition") }
-        _ = localAuthorizationRevision
+        _ = localAuthorizationRevisionState.revision
         if let owner = observation.optional(supabaseAuthViewModel.localMutationOwnerUserID, "owner"),
            let shop = observation.optional(SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)), "selected-shop"),
            let device = observation.attempt("device", { try DeviceInstallIDStore().requireDeviceInstallID() }),

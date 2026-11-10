@@ -8,10 +8,10 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; predicato ambiente Equatable in qualifica, d4 Root2PASS/B2FAIL |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; fence ritirati, revisione locale osservata fuori dai root in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
-| Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
+| Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
 | Registro unico | [RESUME_STATUS](../COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261016-resume/RESUME_STATUS.md) |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Fence ritirati; isolamento delle invalidazioni della revisione locale — 2026-11-10T04:01:48.651891+00:00
+
+**✅ BUILD/SIM9b ESEGUITI.** B2run42749212950/job129608584867 **FAIL_LATENCY6,177380s >5s**, preparazione/cache/autorità PASS, PID33185 zero scan. Fineworker→Main1,447591s; pubblicazione→riga2,022977s; preApp1,900378s/Authsetup0,049077s. Root12/Database22body, nessun beneficio pertinente da fencefunzione/Equatable: **ENTRAMBI RITIRATI**, funzione di generazione/tipo ambiente e testAtomic originalie7 ripristinati byte-esatti. Il minor totale rispetto14,64s non prova beneficio del fix (startup/Auth erano diversi). Rootrun42749219022/job129608598976 **2/2 PASS** nel proprio9bperimetro, percorso completo+cutover reale, profilo/provenienza/Shutdown0booted verificati; nessun nuovo warning, test6014baseline. ManifestSDK85file/O+Debugassert/26.6 PASS, soli41009B acquisiti, mai prodotto completo/installazione. Causale e budget cumulativo nel registro `b1/ios-b2-comparable-generation-fence.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json`.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo BUILD/SIM NOT_RUN.** I motivi d05 mostrano ripetute invalidazioni del campo `localAuthorizationRevision`; il mancato cambiamento dell'intero nel percorsoB2 è inferenza dal writer, non un valore runtime già registrato. Fix circoscritto App/ContentView/LocalRootPresentationState: AppStorage resta nel piccolo osservatore hidden0x0, i due root ricevono una pubblicazione solo quando l'intero cambia. Nessun risultato di autorità memorizzato: guardie leggono ancora gli store correnti; nessuna attesa dominio/rete o ritardo/yield. AppStorage mantiene il meccanismo osservazione preesistente; scartato un sostituto solo-Notification perché non copre modifiche da altri processi (documentazione Apple). HostSync/ZStack/id/callback/lifecycle byte-esatti originali; nuova leaf osserva soltanto preferenza, non ospita sync. Beneficio ancora NOT_MEASURED.
+
+Test Auth esistente esteso con UIHostingController/scopedDefaults/leaf reale: nessuna pubblicazione initial/unrelated, diniego reale arriva alla revisione UI una volta, writer già respinto prima dell'attesa UI. Tutte le asserzioni Auth precedenti conservate, AtomicTests ripristinati, selettori2101 invariati. Handoff ACTIVE/EXECUTION: prossimo commit due tag B2 originale e Rootintero+Authdenial originale esteso, stessaSHA; leggere entrambi prima di altrodelta. Poi ordinario reale/interazioneutile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. C3/T11/Android/backend/atomica/live/POS conservati dove non impattati; ordinario5,50s restaFAIL, fisico/statistiche DIFFERITI, QCOW2/dati/WIP/indice protetti. Nessun nuovoGO o arresto al gruppo verde.
 
 ### Execution — d4 funzionale PASS, B2 FAIL; predicato ambiente confrontabile — 2026-11-10T03:23:00.224273+00:00
 

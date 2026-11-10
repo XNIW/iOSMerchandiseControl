@@ -13,8 +13,7 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var workbookPreparation: LocalWorkbookPreparation
     @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
     @State private var selectedTab = 0
-    private let rootGenerationFenceCache = LocalModelGenerationFenceCache()
-    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
+    @StateObject private var localAuthorizationRevisionState = LocalAuthorizationRevisionState()
     @StateObject private var localRootPresentationState: LocalRootPresentationState
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
@@ -159,6 +158,7 @@ struct iOSMerchandiseControlApp: App {
                 SyncStoreOpeningShell(bootstrap: storeBootstrap, preparation: workbookPreparation,
                     session: excelSession, selectedTab: $selectedTab)
             })
+            .background(LocalAuthorizationRevisionObservation(state: localAuthorizationRevisionState))
             .modifier(LocalWorkbookImportHost(preparation: workbookPreparation, session: excelSession,
                 activityCenter: foregroundActivityCenter))
             .modifier(POSReadPresentationHost(auth: supabaseAuthViewModel, remote: supabaseTransportClient))
@@ -176,7 +176,7 @@ struct iOSMerchandiseControlApp: App {
             .onChange(of: supabaseAuthViewModel.localMutationOwnerUserID) { _, _ in
                 workbookPreparation.contextDidChange(session: excelSession)
             }
-            .onChange(of: localAuthorizationRevision) { _, _ in
+            .onChange(of: localAuthorizationRevisionState.revision) { _, _ in
                 workbookPreparation.contextDidChange(session: excelSession)
             }
             #if DEBUG
@@ -267,8 +267,12 @@ struct iOSMerchandiseControlApp: App {
         }
     }
 
-    private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> LocalModelGenerationPredicate {
-        LocalModelGenerationPredicate(fence: rootGenerationFenceCache.fence(for: syncStoreGenerationController))
+    private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> () -> Bool {
+        let displayedContainer = syncStoreGenerationController.modelContainer
+        return { [weak controller = syncStoreGenerationController, weak displayedContainer] in
+            guard let controller, let displayedContainer else { return false }
+            return controller.modelContainer === displayedContainer
+        }
     }
 
     private var controlledShopContext: ShopContextStore? {
