@@ -6,9 +6,7 @@ import SwiftData
 @main
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
-    // Image publications are observed by their consumers and the replacement
-    // decision leaf. This scene only owns and injects the stable reference.
-    @State private var productImageStore: ProductImageStore
+    @StateObject private var productImageStore: ProductImageStore
     // Own the stable reference without observing list/filter publications at
     // the App scene. Database and editors observe it through EnvironmentObject.
     @State private var storefrontAuthoringStore: StorefrontAuthoringStore
@@ -83,7 +81,7 @@ struct iOSMerchandiseControlApp: App {
         _foregroundActivityCenter = StateObject(wrappedValue: ForegroundCloudWorkflowActivityCenter())
         _localRootPresentationState = StateObject(wrappedValue: localPresentation)
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
-        _productImageStore = State(initialValue: productImageStore)
+        _productImageStore = StateObject(wrappedValue: productImageStore)
         _storefrontAuthoringStore = State(initialValue: dependencies.storefrontAuthoringStore)
         _storeBootstrap = StateObject(wrappedValue: bootstrap)
         let shouldScheduleBackground = !Self.isRunningHostedXCTest && !isTask138VisualHarness

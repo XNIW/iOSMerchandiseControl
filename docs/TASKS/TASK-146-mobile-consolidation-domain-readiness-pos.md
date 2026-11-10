@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 630prep2PASS/SQLite0; B2aperto; rootimageobserver in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — 407Root16PASS/B2FAIL5,889, coppiaimmagini ritirata; unica raccolta8s daeseguire |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — 407Root16PASS/B2FAIL5,888537: coppia immagini ritirata — 2026-11-10T17:35:21.312138+00:00
+
+**✅ BUILD/SIM407 ESEGUITI:**Root42861666044/job129989132743 **16PASS**, stockDebug/discovery2101/provenienza epostflightShutdown/0booted,14warning baseline/0nuovi. InteraRoot Save/cutover/drafts/focus/drain20/ACK/reopen e6immagini+lease mutazioneconcorrente attraversati. B242861685871/job129989203559 **FAIL_LATENCY5,888537s >5**, intero percorso4fasi, cachehitpresente/autorità/0scan PID26877/O+vereasserzioniDebug qualificati. Nessun errorepreparazione/reporting. PreApp2,005305s/init0,363781s/worker0,113386s; worker→Main **1,421317s**, pub→riga **1,803792s**, entrambi peggiori di5a1,269697/1,338684. App1/Root8/DB11, senza inferire causalità dai conteggi. Totale più basso perpreApp/worker, non beneficio pertinente. **CoppiaAppState+imageleaf RITIRATA**, duefileUI byte-esatti630/5a ripristinati dopo entrambi gli esiti; lifetimejoin e clockDEBUG630 conservati. Ricevute `b1/ios-image-decision-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json` e `b1/ios-b2-image-decision.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json`. Budget nativoB2 cumulativo532307/4MB, SDK13785867304 ZIP45MB non scaricato; niente nuova build per leggere i dati. BOOTprobeUNKNOWN20s resta distinta, postflightShutdown verificato.
+
+**✅ Rollback mirato STATIC/parse/diff; nuovoSDK/SIM NON ESEGUITI:**nessun reset/stash/clean/amend, nessuna nuova varianteUI o B2 dal ritiro. QualificaRoot16 resta407, non trasferita automaticamente alla base630. AnyViewDatabase e ownershipStorefront provvisori con ragioni nel registro; Authfresco/no-op/atomicità/B1a/fixcorrettezza conservati. Intermittenza2s944 localizzatafinal-seal1,714519s restaUNKNOWNinternamente;6302PASS/seal142ms non la risolvono retroattivamente.
+
+**Indirizzamento utente ricevuto:**“Decidi te la migliore gestione”. Scelta autonoma: **una sola raccolta aggiuntiva8s** colcollector corretto, sullo stesso SDK5a53pin/targetTEST3F26.2, senza build/install/seed/nuovoB2. Domanda: tipo concreto della queryDynamicPropertyCache.fields lungoRoot/Database/representable, dato assente nelle tracce. Regex soloentryreale esclude5closure; stopprimaContinue alcap per evitare la garaLLDB precedente. Budget precedente8sSPENT conservato; nuovo8s separato (totale massimo16),16eventi/tipo/8frame/262144B/64stop invariati; nessuna ulteriore raccolta automatica se manca ancora il dato. Runtime/alias/PIDbirth/UUID/profilo verificate, nomi soltanto, niente JIT/valori business. Autorizzazione e ledger `b1/ios-5a-dynamic-property-input.ROOT/ADDITIONAL-BUDGET-USER-DELEGATION.ROOT.json`. Preparazione delcollector epreflight, raccolta ancora NOT_RUN al checkpoint. Riserva30,3GB dopo forecast invariata,38,52GB circa prima del lotto, dato libero da rimisurare; treQCOW2/dati/sessioni/WIP/indice protetti.
+
+Handoff ACTIVE/EXECUTION: unica raccolta8s→leggere tipo/stack/gap→decidere un fix soltanto sul lavoro concreto, nessuna build per riesportaretracce. Restano B2 eordinariofinale/full2101/review/PR29/mainCI/PR28/ritirofixture/cleanup, main94fb/PR29head082 invariati; nienteSTOPalverdeRoot16 oDONE. Android/backend/C3/T11/atomica/live/POS acquisiti salvoimpatto,16fisici/statisticheDIFFERITI.
 
 ### Execution — 630prep2PASS; DatabaseSDK5a2,482s; osservazione immagini nel consumer — 2026-11-10T17:06:33.617418+00:00
 

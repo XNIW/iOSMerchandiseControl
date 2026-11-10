@@ -138,6 +138,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var syncStoreGenerationController: SyncStoreGenerationController
+    @EnvironmentObject private var productImageStore: ProductImageStore
     @Environment(\.localRootPresentationState) private var localPresentation
     @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @StateObject private var excelSession: ExcelSessionViewModel
@@ -287,16 +288,16 @@ struct ContentView: View {
         .accessibilityHidden(true)
         }
         .background(LocalAuthorizationRevisionObservation(state: localAuthorizationRevisionState))
-        .modifier(RootImageReplacementDecisionDialog(
+        .accountSyncDecisionDialog(
             isPresented: $isCorruptJournalReviewPresented,
             decision: Self.interruptedRecoveryDecision,
             isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
-            onChoose: { choice, imageStore in
+            onChoose: { choice in
                 if case .discardLocalAndBind = choice, let orchestrator = scopedSyncOrchestrator {
-                    beginCorruptJournalReplacement(using: orchestrator, productImageStore: imageStore)
+                    beginCorruptJournalReplacement(using: orchestrator)
                 } else { isCorruptJournalReviewPresented = false }
             }
-        ))
+        )
         .alert(L("options.accountDecision.error.title"), isPresented: Binding(
             get: { corruptJournalReplacementError != nil },
             set: { if !$0 { corruptJournalReplacementError = nil } }
@@ -540,10 +541,10 @@ struct ContentView: View {
         corruptJournalReplacementPreflight != nil
             && corruptJournalReplacementTask == nil
             && !foregroundActivityCenter.isBusy
+            && productImageStore.canBeginAccountStoreReplacement
     }
 
-    private func beginCorruptJournalReplacement(using runtime: SyncOrchestrator,
-                                                productImageStore: ProductImageStore) {
+    private func beginCorruptJournalReplacement(using runtime: SyncOrchestrator) {
         isCorruptJournalReviewPresented = false
         guard corruptJournalReplacementTask == nil,
               let initialPreflight = corruptJournalReplacementPreflight,
@@ -779,26 +780,6 @@ private struct SyncReplacementPrivacyGate: View {
         .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
         .accessibilityIdentifier("sync-replacement-business-data-gate")
-    }
-}
-
-/// Only the replacement decision depends on image mutation availability.
-/// Image loads and scope resets must not invalidate the business root.
-private struct RootImageReplacementDecisionDialog: ViewModifier {
-    @EnvironmentObject private var productImageStore: ProductImageStore
-    @Binding var isPresented: Bool
-    let decision: AccountSyncDecision
-    let isCloudReplacementEnabled: Bool
-    let onChoose: (AccountSyncUserChoice, ProductImageStore) -> Void
-
-    func body(content: Content) -> some View {
-        content.accountSyncDecisionDialog(
-            isPresented: $isPresented,
-            decision: decision,
-            isCloudReplacementEnabled: isCloudReplacementEnabled
-                && productImageStore.canBeginAccountStoreReplacement,
-            onChoose: { choice in onChoose(choice, productImageStore) }
-        )
     }
 }
 
