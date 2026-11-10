@@ -2881,8 +2881,11 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         var sealed = false
         #if DEBUG
         let sealBeganNS = DispatchTime.now().uptimeNanoseconds
+        var sealAuthorityNS: UInt64 = 0, sealBodyNS: UInt64 = 0, sealFenceNS: UInt64 = 0
+        var sealSnapshotNS: UInt64 = 0, sealPersistNS: UInt64 = 0
         defer {
             Self.qualificationLogger.notice("populated-qualification-physical kind.finalization-seal completed.\(sealed, privacy: .public) elapsed_ns.\(DispatchTime.now().uptimeNanoseconds &- sealBeganNS, privacy: .public)")
+            NSLog("TASK146_FINAL_SEAL_TIMING pid.%d start_ns.%llu authority_ns.%llu body_ns.%llu fence_ns.%llu snapshot_ns.%llu persist_ns.%llu", ProcessInfo.processInfo.processIdentifier, sealBeganNS, sealAuthorityNS, sealBodyNS, sealFenceNS, sealSnapshotNS, sealPersistNS)
         }
         #endif
         guard let repository, let manifest = active.manifest else { return false }
@@ -2899,14 +2902,30 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                       !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
                         shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
                       try repository.isRecoveryFinalized(manifest) else { return false }
+                #if DEBUG
+                sealAuthorityNS = DispatchTime.now().uptimeNanoseconds
+                #endif
                 // This original guard requires the registered active container's
                 // accepted RAM body fence to still equal its actual file fence.
                 try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(active.container)
+                #if DEBUG
+                sealBodyNS = DispatchTime.now().uptimeNanoseconds
+                #endif
                 let fence = try repository.captureActiveMutationFence(for: active)
+                #if DEBUG
+                sealFenceNS = DispatchTime.now().uptimeNanoseconds
+                #endif
                 let snapshot = try repository.capturePhysicalBodyProof(for: active, fence: fence)
+                #if DEBUG
+                sealSnapshotNS = DispatchTime.now().uptimeNanoseconds
+                #endif
                 // Recapture and existing capsule-fsync/latest-Keychain ordering
                 // remain unchanged; no old context, file or anchor is copied.
-                return repository.sealPhysicalBodyProof(snapshot, for: active, fence: fence)
+                let persisted = repository.sealPhysicalBodyProof(snapshot, for: active, fence: fence)
+                #if DEBUG
+                sealPersistNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                return persisted
             }
             return sealed
         } catch { return false }

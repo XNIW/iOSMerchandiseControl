@@ -1301,17 +1301,27 @@ nonisolated enum LocalCatalogPhysicalProofStore {
 // TASK145_PHYSICAL_FRONTIER_BEGIN seal-internal
 #if DEBUG
         var sealFrontier = "key", sealCompleted = false
+        let timingStart = DispatchTime.now().uptimeNanoseconds
+        var timingLock: UInt64 = 0, timingKey: UInt64 = 0, timingEncode: UInt64 = 0
+        var timingWrite: UInt64 = 0, timingFileSync: UInt64 = 0, timingDirectorySync: UInt64 = 0
+        var timingLatestEncode: UInt64 = 0, timingLatestUpdate: UInt64 = 0
         defer {
             Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.seal-internal frontier.\(sealFrontier, privacy: .public) completed.\(sealCompleted, privacy: .public)")
+            // Cumulative clocks preserve gaps on failure; no keys, paths or payloads.
+            NSLog("TASK146_SEAL_TIMING pid.%d start_ns.%llu lock_ns.%llu key_ns.%llu encode_ns.%llu write_ns.%llu file_sync_ns.%llu directory_sync_ns.%llu latest_encode_ns.%llu latest_update_ns.%llu", ProcessInfo.processInfo.processIdentifier, timingStart, timingLock, timingKey, timingEncode, timingWrite, timingFileSync, timingDirectorySync, timingLatestEncode, timingLatestUpdate)
         }
 #endif
 // TASK145_PHYSICAL_FRONTIER_END seal-internal
         keyLock.lock(); defer { keyLock.unlock() }
+        #if DEBUG
+        timingLock = DispatchTime.now().uptimeNanoseconds
+        #endif
         guard snapshot.version == version, var record = try key(account: snapshot.keyAccount, create: true) else {
             throw Failure.unavailable
         }
 // TASK145_PHYSICAL_FRONTIER_BEGIN encode
 #if DEBUG
+        timingKey = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "encode"
 #endif
 // TASK145_PHYSICAL_FRONTIER_END encode
@@ -1327,22 +1337,28 @@ nonisolated enum LocalCatalogPhysicalProofStore {
         // Interrupted/missing/mismatched pairs are misses, never startup repairs.
 // TASK145_PHYSICAL_FRONTIER_BEGIN write
 #if DEBUG
+        timingEncode = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "write"
 #endif
 // TASK145_PHYSICAL_FRONTIER_END write
         try encoded.write(to: capsuleURL, options: [.atomic])
 // TASK145_PHYSICAL_FRONTIER_BEGIN fsync-file
 #if DEBUG
+        timingWrite = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "fsync-file"
 #endif
 // TASK145_PHYSICAL_FRONTIER_END fsync-file
         try synchronize(capsuleURL)
 // TASK145_PHYSICAL_FRONTIER_BEGIN fsync-directory
 #if DEBUG
+        timingFileSync = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "fsync-directory"
 #endif
 // TASK145_PHYSICAL_FRONTIER_END fsync-directory
         try synchronize(capsuleURL.deletingLastPathComponent())
+        #if DEBUG
+        timingDirectorySync = DispatchTime.now().uptimeNanoseconds
+        #endif
         record.latestCapsuleSHA256 = hash(encoded)
         record.latestContextSHA256 = snapshot.contextSHA256
         record.latestGenerationID = snapshot.generationID
@@ -1354,6 +1370,7 @@ nonisolated enum LocalCatalogPhysicalProofStore {
         let update: [String: Any] = [kSecValueData as String: try encoder.encode(record)]
 // TASK145_PHYSICAL_FRONTIER_BEGIN latest-update
 #if DEBUG
+        timingLatestEncode = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "latest-update"
 #endif
 // TASK145_PHYSICAL_FRONTIER_END latest-update
@@ -1361,6 +1378,7 @@ nonisolated enum LocalCatalogPhysicalProofStore {
                             update as CFDictionary) == errSecSuccess else { throw Failure.unavailable }
 // TASK145_PHYSICAL_FRONTIER_BEGIN seal-internal-success
 #if DEBUG
+        timingLatestUpdate = DispatchTime.now().uptimeNanoseconds
         sealFrontier = "success"; sealCompleted = true
 #endif
 // TASK145_PHYSICAL_FRONTIER_END seal-internal-success

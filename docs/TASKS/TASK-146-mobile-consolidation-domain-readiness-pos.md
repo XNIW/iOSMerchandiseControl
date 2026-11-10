@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — ordinario5a cache2PASS/interazionePASS; a8Root9PASS/B2FAIL8,204; readback ritirato, lifetime fixture in fix |
+| Esito documentale | EXECUTION_ATTIVA — 944Root8PASS/1PREPFAIL finale-seal1,714s; B2aperto; ordinario5a diagnostico acquisito |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — 944 Root8PASS/1PREPFAIL: sigillatura finale1,714s; SQLite0 osservato — 2026-11-10T16:37:03.253204+00:00
+
+**✅ BUILD/SIM ESEGUITI:**944185e3/run42850306971/job129948846220, stockDebug/discovery2101/provenienza qualificati, **8PASS/1FAIL_PREPARATION**. Deadline originale2s scaduta e terminalenil nel primo caso owner; ramo shop e asserzioni post-hold di quel selettore NOT_TRAVERSED. Sei pagine e checkpointB conclusi entro0,518477s; facade ritorna successo a2,542946s durante cleanup. Il log identifica **finalization-seal1,714519125s su MainActor**, contro0,078909917s nel positivo same-entity. Sottocosto interno ancoraUNKNOWN, nessuna attribuzione aUI o quotaCPU. [Receipt completo](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-held-full-lifetime-root.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). MarkerJSON4 completi/0drop, non più i prefissi troncati63f; sola lettura della stessa run, nessuna ricompilazione per esportarli. Primo readerrootId.id errato corretto inpost-processing arootId.hash, tentativo e byte mantenuti: cumulativo1927926/4MB.
+
+**✅ Lifecycle/postflight osservati:**join esterno e rilascio capture conservati; **0vnode-unlink/0invalidatedFD/0SQLite nel nativo unit corrente**, contro18+18 precedente. Questo risultato non risolve retroattivamente l'intermittenza né dimostra ognihandle chiuso. RootUI Save/cutover/bozze/focus/drain20/ACK/reopen/nodup, positivo lease, continuation e5Auth PASS nei propri scope.14warning baseline/0nuovi. ProbeafterbootUNKNOWN per timeout separato; afterTestsShutdown/0booted verificati. Nessuna cancellazione, free39,29GB circa, WIP/indice/dati/sessioni/bozza/QCOW2 protetti. B2 non avviato su944; restano5a6,537189FAIL e a8ritirato8,204144FAIL.
+
+**✅ STATIC/parse/diff PASS; prossimoSDK/SIM NOT_RUN.** Solo LocalCatalogBodyProofStore.swift e SyncStoreGeneration.swift: timestamp scalari DEBUG ai confini già presenti di scope/fence/snapshot e lock/key/encode/write/fsync/latest-update. Nessuna nuova sospensione, oggetto di autorità, API, timeout, ordine capsule→fsync→latest o log di valori sensibili. Domanda unica: quale operazione occupa la sigillatura lenta? Una run dei due selettori originali, poi decisione; non filone metadata né matrice per cercare il collo di bottiglia. Nuova build necessaria per dato assente, non per rileggere il risultato esistente. [Ammissione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-held-final-seal-phases.ROOT/PRE-SDK-REVIEW.ROOT.json).
+
+Handoff ACTIVE/EXECUTION: leggere i tempi interni→correzione solo motivata; B2 root resta aperto con lacune preApp/grafo esplicite. Collector metadata precedente FAIL/8s interamente spesi; correzione solo preparata, eventuali ulteriori8s attendono risposta utente già richiesta, nessun reset del budget. OrdinarioSDK5a cache2PASS/interazioneAddCancelPASS resta diagnostico attribuito; AnyViewDatabase/ownershipStorefront provvisori, Auth fresh-read/no-op corretto e preservato. Dopo composizione: B2/regressioni/ordinario finale/full2101=2042PASS43skip16fisiciDIFFERITI/review/PR29/mainCI/PR28/ritirofixture2920+de10/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti salvo impatto; niente nuovoGO, niente merge con gate critici FAIL.
 
 ### Execution — a8 Root9PASS/B2FAIL8,204; readback ritirato, join esterno fixture — 2026-11-10T16:00:04.136231+00:00
 
