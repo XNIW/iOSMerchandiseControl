@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — revision-leaf verificata; B2 residuo5,349908s, diagnostica bounded degli aggiornamenti rimasti |
+| Esito documentale | EXECUTION_ATTIVA — f58 FAILpreparazione/cacheNOT_TRAVERSED; stagecostruttore in osservazione,0169beneficio conservato |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Diagnostica fermata prima cache, costruttore sotto osservazione — 2026-11-10T05:16:52.770062+00:00
+
+**✅ BUILD/SIMf58 ESEGUITI.** Run42757226667/job129634299398 **FAIL_PREPARATION_FIXTURE_INIT**, non threshold5s: seed/hold-prices attraversati, hold-sessions PID26076 termina in `fixture-init` con `activationReadBackFailed`04:58:16.092724Z. Prima anomalia registrata: hold-prices `required_read.false` prima delhold04:57:38.194428, poi successore guardPASS04:57:40.836951, rilascio/qualifica reale04:58:07.081025. Causa esatta del guardcostruttore UNKNOWN; non inferiti journal, autorità mancante, corruzione o causalità delle stampe. Cache/T0/nuovo `_printChanges` **NOT_TRAVERSED**: il codice aggiunto era attivo solo in cache, fase mai avviata. Non attribuire il FAIL automaticamente al delta UI o a servizioesterno.
+
+**✅ Post-elaborazione ESEGUITA senza build/test aggiuntivo.** Recuperato stdout dallo stesso artefatto13737216530 conCRC; cumulativo811871/4000000B, nessun reset. Il log ha soltanto categoria dell'errore, non substage/valori dei guard: dato mancante non recuperabile dall'export esistente. Controlli fixture osservano già `facts`, ipotesi mancatoobserver non applicata. Shutdown/0booted verificati, nessun prodotto completo f58 né datoMac toccato. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-post-revision-reasons.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC/parse/diff ESEGUITI PASS; prossimo BUILD/SIM NOT_RUN.** Unico file aggiuntivo fixtureDEBUG: ultimo stagecostruttore via defer e booleans chiusi selectedshop/binding/manifest/journal prima del guard originale, markers device/controller/postAuth. Nessuna guardia allentata, riparazione binding, attesa o timeout nuovo, nessun dato identificativo. Il primo posizionamento automatico di `complete` era fuori init: corretto sul confine effettivo prima di build/pubblicazione. È una raccolta mirata necessaria al primo tratto chefallisce, non una nuova variante dell'helper nonraggiunto. Un solo B2 originale O/assertDebug/CPUoff; exportSDK permette eventuale riuso successivo con corrispondenza verificata, senza ammettere prodotto finale o acquisizioneMac ora.
+
+Handoff ACTIVE/EXECUTION: qualificare la preparazione e leggere lo stage osservato; poi attraversare realmente cache/motiviRoot, fix minimo e gate0169 ancoraFAIL5,349908. Revision-leaf conservata per beneficio e Root/Auth2PASS propri, nessuna Root/fullmatrix aggiuntiva solo per questo probe. Obiettivo invariato: ordinario/interazioneutile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. Android/backend/atomica/live/POS/C3/T11 conservati doveinvariati, fisico/statistiche DIFFERITI, QCOW2/dati/WIP protetti; nessun nuovoGO o termine intermedio.
 
 ### Execution — Beneficio revisione verificato, residuo350ms e motivi aggiornati — 2026-11-10T04:38:31.910522+00:00
 

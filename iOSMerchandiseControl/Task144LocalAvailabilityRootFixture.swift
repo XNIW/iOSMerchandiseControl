@@ -744,6 +744,13 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     }
 
     private init(runID: UUID) throws {
+        let b2InitPhase = ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"]
+        var b2InitStage = "entry"
+        defer {
+            if let b2InitPhase {
+                NSLog("TASK146_B2_INIT_LAST phase.%@ stage.%@", b2InitPhase, b2InitStage)
+            }
+        }
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             Task144RootObservation.recordCachedCatalogPhase("fixture-init-entry")
             NSLog("TASK146_B2_COST39 phase.fixture-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
@@ -911,8 +918,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
         }
+        b2InitStage = "active-manifest-read"
         let existingManifest = (Task145PerformanceConfiguration.measures || t10Enabled || r4Enabled || saveBEnabled || restartScenario != nil || domain != nil || retryEnabled || seq6Scenario != nil || isolationScenario != nil || interruptionScenario != nil || independentDomainPhase != nil)
             ? try repository.activeManifest() : nil
+        b2InitStage = "phase-existing-manifest-and-memo"
         if let independentDomainPhase, independentDomainPhase != .seed {
             guard existingManifest != nil else { throw SyncStoreGenerationError.activationReadBackFailed }
             let memo = repository.physicalBodyProofURL
@@ -922,6 +931,20 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 let retainedMemo = root.appendingPathComponent("retained-\(independentDomainPhase.rawValue)-memo.json")
                 try FileManager.default.moveItem(at: memo, to: retainedMemo)
             }
+        }
+        b2InitStage = "persisted-authority"
+        if let b2InitPhase, let existingManifest {
+            let binding = AccountBindingStore().currentBinding
+            let store = AccountBindingStore()
+            NSLog("TASK146_B2_INIT_AUTHORITY phase.%@ selected-shop.%d binding-account.%d binding-store.%d manifest-account.%d manifest-shop.%d journal-present.%d journal-decodable.%d",
+                b2InitPhase,
+                selected.selectedShop(accountHash: hash)?.shopID == shop ? 1 : 0,
+                binding?.accountHash == hash ? 1 : 0,
+                binding?.storeIdentity == existingManifest.storeIdentity ? 1 : 0,
+                existingManifest.accountHash == hash ? 1 : 0,
+                existingManifest.shopID == shop ? 1 : 0,
+                store.hasPendingReplacementJournal ? 1 : 0,
+                store.pendingRecoveryJournal != nil ? 1 : 0)
         }
         if let existingManifest {
             // Reopen validates the original authority; it must not create a new
@@ -941,7 +964,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
         }
+        b2InitStage = "device-read"
         let device = try DeviceInstallIDStore().requireDeviceInstallID()
+        b2InitStage = "controller-load"
         if provesSafeStoreLoadFailure {
             try Task145StoreLoadFailureObservation.malformedManifest.write(to: repository.manifestURL, options: .withoutOverwriting)
             controller = try SyncStoreGenerationController.openingControlledRepositoryForTesting(repository, runID: runID)
@@ -970,6 +995,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 throw error
             }
         }
+        b2InitStage = "controller-loaded-product-setup"
         let product = RemoteInventoryProductRow(
             id: Task145PerformanceConfiguration.enabled ? Task145PerformanceConfiguration.targetID : UUID(uuidString: "14400000-0000-4000-8000-000000000003")!,
             ownerUserID: owner, shopID: shop, barcode: Task145PerformanceConfiguration.enabled ? "T20-020000" : "LOCAL-ROOT",
@@ -1038,8 +1064,10 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             publishableKey: "task144-controlled-public", productImageAPIBaseURL: nil),
             authStorage: storage, session: session, autoRefreshToken: false,
             authRegistry: SupabaseAuthClientRegistry())
+        b2InitStage = "auth-service-create"
         let authService = SupabaseAuthService(provider: provider)
         authViewModel = SupabaseAuthViewModel(authService: authService)
+        b2InitStage = "post-auth-fixture-controls"
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
             Task144RootObservation.recordCachedCatalogPhase("auth-setup-return")
             NSLog("TASK146_B2_COST39 phase.auth-setup-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
@@ -1287,6 +1315,7 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
             Task144RootObservation.recordCachedCatalogPhase("fixture-init-return")
             NSLog("TASK146_B2_COST39 phase.fixture-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
+        b2InitStage = "complete"
     }
 
     // TASK145_T18_INSERT_BEGIN passive-snapshot
