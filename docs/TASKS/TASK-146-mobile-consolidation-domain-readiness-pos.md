@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — d246Root9PASS/B2FAIL7,443368; ownership Storefront da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 49Root9PASS/B2FAIL7,578566; reset Storefront da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Root9 PASS, B2 FAIL qualificato; reset Storefront senza cambiamento — 2026-11-10T10:32:48.113067+00:00
+
+**✅ BUILD/SIM 49c3377b ESEGUITI.** Root42795374846/job129759123818 **9/9PASS**,214,292s, stockDebug/provenienza/discovery2101/Shutdown0booted verificati. B242795399820/job129759203864 **FAIL_LATENCY7,578566s >5**, preparazione/cache durevole/autorità PASS, PID28753 zero scansioni globali. PreApp2,401923s, worker177,385ms, fineworker→Main1,734885s, pub→riga2,563423s. Root9→7/Database14→10 ma App2 invariato: riduzione invalidazioni osservata, beneficio sui due intervalli NON DIMOSTRATO, nessuna qualifica finale. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-storefront-owner.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo SDK/SIM NOT_RUN.** Dalla cattura già acquisita16publisher/8s: activate/resetFilter Storefront pubblicano assegnazioni di collezioni già vuote/false/nil; Database continua ad osservarle. Minimo StorefrontAuthoring.swift: evita solo setter senza differenza; avanzamento generation/filterGeneration, revoca task, scope e guard dei callback immutati. Test batch esistente esteso: zero pubblicazioni iniziali/all-filter, obbligo di pubblicazione dei dati reali e della loro rimozione al cambio shop. Nessun selector aggiunto,2101 invariati. Riferimento App inState resta provvisorio fino alla qualifica composta. SyncAuth invia alla sola host, senza prova di un nuovo cambiamento Content: non modificato. Nessun layout, host identity, relay, yield, attesa, timeout o nuovo collector.
+
+Handoff ACTIVE/EXECUTION: stessi9Root/Auth più7Storefront esistenti (16selettori) e B2 originale dello STESSO successore immutabile. Poi ordinario reale con interazione utile, full2101=2042PASS43skip16fisiciDIFFERITI, review/PR29/mainCI/PR28/ritiro2920/cleanup. Nessun PASS trasportato tra SHA. Ordinario5,50FAIL preservato; Android/backend/C3/T11/atomica/live/POS acquisiti dove invariati, differimenti/protezioni invariati. Spazio42,13GB circa, niente prodotto completo49 scaricato, nessun nuovoGO o stop al gruppo verde.
 
 ### Execution — Root9 qualificata, B2 ancora lento; pubblicazioni Storefront alla scena — 2026-11-10T09:58:11.027130+00:00
 
