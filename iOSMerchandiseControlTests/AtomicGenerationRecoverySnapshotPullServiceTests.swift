@@ -789,7 +789,7 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         case "device": fixture.defaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id")
         case "revoked":
             XCTAssertTrue(selection.recordDeviceAuthorization(.init(status: "revoked", code: "TASK146_DENIAL",
-                canWrite: false, serverTime: nil, lastSeenAt: nil, reasonCode: "synthetic", recommendedAction: nil,
+                canWrite: false, serverTime: nil, lastSeenAt: nil, reasonCode: "synthetic", recommendedAction: "none",
                 checkedAt: Date()), ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
                 deviceIdentityHash: captured.deviceIdentityHash))
         case "stopped": orchestrator.stop()

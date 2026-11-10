@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 761 Root FAILdrain20 confermato e B2prepFAIL; fix richiesta fresca da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — b58 BUILD_FAIL fixture, literal corretto; nuova Root5 da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,12 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Correzione tipo fixture, nessun esito SIM anticipato — 2026-11-10T07:03:53.354892+00:00
+
+**✅ BUILD b58 ESEGUITA: FAIL interno fixture**, run42771605020/job129680464146: `recommendedAction:nil` incompatibile con String a test792. SIM **NOT_RUN**, nessun risultato applicativo inferito. Corretto il solo literal a `"none"`; sorgenti app invariati. RunB242771607242 annullata dal proprietario prima del test per lo stesso blocco semantico, BUILD_CANCELLED/SIM_NOT_RUN. Root postflight nel log ufficiale Shutdown/0booted; nessun prodotto completo Mac. Reader artefatto13742132403 in HOLD perché non esiste provenance xcresult prima del testbuild: upper3,8MB conservato, nessun retry di acquisizione.
+
+**✅ Parse/diff ESEGUITI PASS; SDK corretto/nuovoSIM NOT_RUN.** Prossima Root con gli stessi5selettori prima del B2 già preparato, per evitare altre build parallele sul medesimo errore. Fix applicativo di richiesta fresca invariato e ancora da qualificare; nessun nuovo layout, timeout o collector. Dopo gate della stessa composizione: ordinario/interazione utile, matrice2101, review/PR29/mainCI/PR28/cleanup. ACTIVE/EXECUTION, differimenti e protezioni invariati.
 
 ### Execution — Drain tardivo confermato; richiesta fresca coalescente — 2026-11-10T06:51:11.205477+00:00
 

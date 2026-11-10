@@ -1,5 +1,11 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — Correzione tipo fixture, nessun esito SIM anticipato — 2026-11-10T07:03:53.354892+00:00
+
+**✅ BUILD b58 ESEGUITA: FAIL interno fixture**, run42771605020/job129680464146: `recommendedAction:nil` incompatibile con String a test792. SIM **NOT_RUN**, nessun risultato applicativo inferito. Corretto il solo literal a `"none"`; sorgenti app invariati. RunB242771607242 annullata dal proprietario prima del test per lo stesso blocco semantico, BUILD_CANCELLED/SIM_NOT_RUN. Root postflight nel log ufficiale Shutdown/0booted; nessun prodotto completo Mac. Reader artefatto13742132403 in HOLD perché non esiste provenance xcresult prima del testbuild: upper3,8MB conservato, nessun retry di acquisizione.
+
+**✅ Parse/diff ESEGUITI PASS; SDK corretto/nuovoSIM NOT_RUN.** Prossima Root con gli stessi5selettori prima del B2 già preparato, per evitare altre build parallele sul medesimo errore. Fix applicativo di richiesta fresca invariato e ancora da qualificare; nessun nuovo layout, timeout o collector. Dopo gate della stessa composizione: ordinario/interazione utile, matrice2101, review/PR29/mainCI/PR28/cleanup. ACTIVE/EXECUTION, differimenti e protezioni invariati.
+
 ### Execution — Drain tardivo confermato; richiesta fresca coalescente — 2026-11-10T06:51:11.205477+00:00
 
 **✅ 761 BUILD/SIM ESEGUITI.** Root run42766950381:2PASS/1FAIL, Save/cutover/bozza/focus/Cancel attraversati, **drain20 realmente tardivo**. Proiezione completa della finestra45s/PID12072: alla chiusura deferred=false; scope superato durante decideAction aveva scartato l'intento. Primo runtime da foregroundPoll a+21,896595s, ritorno+25,086802s. Poi pending0/ACK1/call1/event1; ACK pubblico/riapertura NOT_TRAVERSED dopo asserzione. Stesso artefatto710423/4MB, nessuna nuova build per leggere il payload. [Proiezione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-direct-model-context-root.ROOT/ROOT-DRAIN-TIMELINE.PROJECTION.ROOT.json).
