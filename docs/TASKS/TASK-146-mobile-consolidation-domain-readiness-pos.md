@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 2cRoot8PASS1PREPFAIL; join bilanciato e identità gate business da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 19bRoot9PASS/B2FAIL7,608371; gate ritirati, confine metadata body da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,18 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — 19bRoot9PASS/B2FAIL7,608371, gate ritirati; confine metadata body root — 2026-11-10T13:20:52.026893+00:00
+
+**✅ BUILD/SIM19b53404 ESEGUITI.** Root42819636884/job129841546210 **9PASS**,203,194s, stockDebug/provenienza2101/Shutdown0booted. Negativo15,439s e positivo2,704s complessivi, originario enter2s e tutti i controlli di lease/autorità/rinnovo attraversati; join condiviso bilanciato PASS. Intera root Save/ACK/reopen/nodup e5Auth PASS.14warning compiler corrispondono esattamente alla baseline2426 per file/messaggio (solo righe/timestamp cambiati),0nuovi. Console conserva18diagnosticheSQLite nel teardown delle sole fixture sintetiche: non dichiaro chiuse tutte le connessioni native o risolto quel warning. [Root](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-access-predicate-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json).
+
+B242819687587/job129841719458 **FAIL_LATENCY7,608371s >5**, preparazione/cache/autorità PASS, PID26866 zero scan; preApp2,437093/init459,604ms/worker205,378ms, fineworker→Main2,200790s/pub→riga2,121882s. App1/Root8/Database8, metodi Content118,712ms e Database225,970ms inclusivi complessivi: l'ampia finestra non è spiegata dal tempo dei soli metodi. Gate business **RITIRATI**, nessun beneficio pertinente nei due intervalli; Content/LocalRootPresentationState/Auth test tornano byte-esatti2c prima del prossimo unico delta. Join Atomic22righe conservato. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-access-predicate.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Solo postprocessing stesso artefatto, nessuna nuova raccolta; Native532254/4MB, SDK13767960788 solo41009B/11checkPASS, ZIP45087580B mai acquisito/installato. Errore EOF dei monitor era lettura API locale, non app/Actions: riprese soltanto letture con stati/budget conservati dopo conferma connettore.
+
+**✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** Unica nuova riga produttiva: ContentView.body restituisce AnyView(activeRoot), confine stabile del tipo concreto all'ingresso SwiftUI. Il lavoro misurato è elaborazione Graph/metadata/conformità oltre i costi dei metodi; la proiezione0c già acquisita contiene5record activeRoot/ZStack/TabView e17terminali di ricerca conformità nella finestra Main. Sono record parziali, non percentualiCPU né causa esclusiva. Il confine riduce il tipo concreto propagato dal body alla costruzione del grafo; NON modifica il layout, posizione/identità host, stato, latch, task o guard. Diverso da4ca22e66: quello cancellava tipi all'interno dei4rami di navigazione e falliva, questo al witnessbody esterno; nessun risultato precedente trasportato. Mantenere solo con prova pertinente e regressioni. B2T0/5s/cache/autorità/profile originali; nessun nuovo yield/ritardo/profilo/collector.
+
+Registro ipotesi scartate: yield/titolo/toolbar/Intel/WMO invariati scartati; fence comparabile e relay nessun beneficio; ImageStateRoot16PASS/B2FAIL7,495→ritirato; backgroundRoot7PASS2PREPFAIL/B2FAIL6,176 con cache attraversata e intervalli non migliori→ritirato; gate businessRoot9PASS/B2FAIL7,608 senza beneficio pertinente→ritirato. Lacuna preApp rimane esplicita, non attribuita ai successivi frame. Nuovo confine body è un'ipotesi di metadata, non una qualifica.
+
+Handoff ACTIVE/EXECUTION: Root9 e B2 originali dello STESSO successore immutabile, leggere entrambi prima di altre modifiche. Poi composizione qualificata→ordinario reale con interazione utile→full2101=2042PASS43skip16fisiciDIFFERITI/review/PR29/mainCI/PR28/ritiro2920/cleanup. Ordinario5,500695FAIL preservato. Android/backend/C3/T11/atomica/live/POS acquisiti ove invariati; dati/QCOW2/WIP e differimenti invariati. Free41.921GB, nessuna cancellazione; main94fb/PR29head082 ancora aperti, nessun nuovoGO o arresto al prossimo verde.
 
 ### Execution — Root2c8PASS/1FAIL, join condiviso bilanciato; identità dei gate business — 2026-11-10T12:53:23.038802+00:00
 

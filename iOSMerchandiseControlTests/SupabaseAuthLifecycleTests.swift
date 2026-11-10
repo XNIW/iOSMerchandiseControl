@@ -641,22 +641,6 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         // authority publisher. Unrelated defaults must not publish the same UI value.
         let revisionState = LocalAuthorizationRevisionState(defaults: local.defaults)
         let initialRevision = revisionState.revision
-        let identity = LocalBusinessAccessIdentity(controller: ObjectIdentifier(local.controller),
-            container: ObjectIdentifier(local.controller.modelContainer), presentationID: local.controller.presentationID,
-            auth: ObjectIdentifier(local.viewModel),
-            qualificationRevision: local.controller.localBodyQualificationRevision,
-            authorizationRevision: initialRevision, ownerUserID: localOwner)
-        let retainedRead = LocalBusinessReadGate(identity: identity, evaluate: { domain in
-            Task126OwnerStoreGate.permitsSameScopeLocalRead(domain,
-                modelContainer: local.controller.modelContainer,
-                ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults)
-        })
-        let retainedWrite = LocalBusinessWriteGate(identity: identity, evaluate: {
-            Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: local.controller.modelContainer,
-                ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults)
-        })
-        XCTAssertTrue(retainedRead(.catalog))
-        XCTAssertTrue(retainedWrite())
         let mounted = expectation(description: "Revision observation mounted")
         let changed = expectation(description: "Actual device denial reaches root UI revision")
         var publications: [Int] = []
@@ -686,10 +670,6 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
             ownerUserID: local.viewModel.localMutationOwnerUserID, defaults: local.defaults) { _ in
                 XCTFail("A value-only cached owner must never bypass the current device denial")
             })
-        // Retain the exact pre-denial environment values: equality must never
-        // turn a render optimization into a cached permission.
-        XCTAssertFalse(retainedRead(.catalog))
-        XCTAssertFalse(retainedWrite())
         await fulfillment(of: [changed], timeout: 5)
         XCTAssertEqual(revisionState.revision, initialRevision + 1)
         XCTAssertEqual(publications, [initialRevision + 1],

@@ -241,7 +241,8 @@ struct ContentView: View {
         let cost = Task144RootObservation.beginCachedCatalogBodyObservation("content-body-inclusive")
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-body-inclusive", startedAt: cost) }
         #endif
-        return activeRoot
+        // Bound the root's concrete modifier type at the SwiftUI body entry.
+        return AnyView(activeRoot)
     }
 
     private var scopedSyncOrchestrator: SyncOrchestrator? {
@@ -261,14 +262,6 @@ struct ContentView: View {
         let hostPresentationID = currentSyncOrchestrator?.retainedSameScopeRecoveryHostPresentationID ?? presentationID
         let runtimeModelContainer = syncStoreGenerationController.modelContainer
         let hidesBusinessData = hidesBusinessDataForPendingRecovery
-        let accessIdentity = LocalBusinessAccessIdentity(
-            controller: ObjectIdentifier(syncStoreGenerationController),
-            container: ObjectIdentifier(modelContext.container),
-            presentationID: presentationID,
-            auth: ObjectIdentifier(supabaseAuthViewModel),
-            qualificationRevision: syncStoreGenerationController.localBodyQualificationRevision,
-            authorizationRevision: localAuthorizationRevisionState.revision,
-            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         return ZStack {
             tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
             AppSyncRootHost(
@@ -319,8 +312,8 @@ struct ContentView: View {
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
         .environment(\.catalogConflictResolutionService, catalogConflictResolutionService)
-        .environment(\.localBusinessReadIsAllowed, LocalBusinessReadGate(identity: accessIdentity, evaluate: canReadLocalDomain))
-        .environment(\.localBusinessWriteIsAllowed, LocalBusinessWriteGate(identity: accessIdentity, evaluate: canWriteLocalStore))
+        .environment(\.localBusinessReadIsAllowed, canReadLocalDomain)
+        .environment(\.localBusinessWriteIsAllowed, canWriteLocalStore)
         .environmentObject(shopContextStore)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
