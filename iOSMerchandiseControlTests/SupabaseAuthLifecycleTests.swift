@@ -656,61 +656,8 @@ final class SupabaseAuthLifecycleTests: XCTestCase {
         window.rootViewController = host
         window.isHidden = false
         defer { window.isHidden = true; window.rootViewController = nil }
-        // One bounded causal control for the two remaining AppStorage values
-        // in ContentView. It observes no auth/store object and publishes no state.
-        let appearanceMounted = expectation(description: "Root appearance defaults control mounted")
-        let appearanceChanged = expectation(description: "Real appearance change reaches control")
-        let unrelatedAppearance = XCTestExpectation(description: "Unrelated defaults redraw appearance control")
-        var appearancePhase = "mount"
-        var appearanceReadings: [[String: Any]] = []
-        var appearanceChangeFulfilled = false
-        var unrelatedAppearanceFulfilled = false
-        local.defaults.set("system", forKey: "appTheme")
-        local.defaults.set("system", forKey: "appLanguage")
-        let appearanceHost = UIHostingController(rootView: R23RootAppearanceDefaultsProbe { theme, language in
-            if appearanceReadings.count < 32 {
-                appearanceReadings.append(["phase": appearancePhase, "theme": theme, "language": language,
-                    "uptime": ProcessInfo.processInfo.systemUptime])
-            }
-            if appearancePhase == "positive-control", theme == "dark", language == "en",
-               !appearanceChangeFulfilled {
-                appearanceChangeFulfilled = true; appearanceChanged.fulfill()
-            }
-            if appearancePhase == "unrelated", theme == "dark", language == "en",
-               !unrelatedAppearanceFulfilled {
-                unrelatedAppearanceFulfilled = true; unrelatedAppearance.fulfill()
-            }
-        }.defaultAppStorage(local.defaults).onAppear { appearanceMounted.fulfill() })
-        let appearanceWindow = UIWindow(windowScene: scene)
-        appearanceWindow.rootViewController = appearanceHost
-        appearanceWindow.isHidden = false
-        defer { appearanceWindow.isHidden = true; appearanceWindow.rootViewController = nil }
-        await fulfillment(of: [mounted, appearanceMounted], timeout: 5)
-        appearancePhase = "positive-control"
-        local.defaults.set("dark", forKey: "appTheme")
-        local.defaults.set("en", forKey: "appLanguage")
-        await fulfillment(of: [appearanceChanged], timeout: 5)
-        let afterPositiveControl = appearanceReadings.count
-        appearancePhase = "unrelated"
+        await fulfillment(of: [mounted], timeout: 5)
         local.defaults.set("unrelated", forKey: "task146.revision-observer.unrelated")
-        // This standalone waiter classifies the hypothesis; a timeout here is
-        // NOT a failure of the original auth/revocation regression below.
-        let appearanceResult = await XCTWaiter.fulfillment(of: [unrelatedAppearance], timeout: 5)
-        let appearanceReport: [String: Any] = [
-            "question": "Do unrelated defaults writes redraw unchanged root theme/language AppStorage?",
-            "positiveControl": appearanceChangeFulfilled,
-            "unrelatedRedraw": appearanceResult == .completed,
-            "waiterResult": appearanceResult.rawValue,
-            "readingsAfterPositiveControl": afterPositiveControl,
-            "readings": appearanceReadings,
-            "scope": "UIKit causal control only, not B2 timing or whole-root CPU attribution"
-        ]
-        let appearanceData = try JSONSerialization.data(withJSONObject: appearanceReport, options: [.sortedKeys])
-        XCTAssertLessThanOrEqual(appearanceData.count, 16_384)
-        let appearanceAttachment = XCTAttachment(data: appearanceData, uniformTypeIdentifier: "public.json")
-        appearanceAttachment.name = "TASK146 root appearance defaults causal control"
-        appearanceAttachment.lifetime = .keepAlways
-        add(appearanceAttachment)
         XCTAssertEqual(revisionState.revision, initialRevision)
         XCTAssertTrue(publications.isEmpty)
         let denial = ShopDeviceAuthorizationSnapshot(status: "revoked", code: "R23_CONFIRMED_DENIAL", canWrite: false,
@@ -1391,18 +1338,4 @@ nonisolated private final class DeviceAuthorizationPublicationObservation: @unch
     private var recorded: [Bool] = []
     func record(_ value: Bool) { lock.withLock { recorded.append(value) } }
     var values: [Bool] { lock.withLock { recorded } }
-}
-
-/// Mirrors only ContentView's two AppStorage inputs, in an isolated native root.
-/// The callback records values in the test; it cannot publish into SwiftUI.
-@MainActor
-private struct R23RootAppearanceDefaultsProbe: View {
-    @AppStorage("appTheme") private var theme = "system"
-    @AppStorage("appLanguage") private var language = "system"
-    let onRender: @MainActor (String, String) -> Void
-
-    var body: some View {
-        let _ = onRender(theme, language)
-        Color.clear.overlay(Text(theme + ":" + language))
-    }
 }

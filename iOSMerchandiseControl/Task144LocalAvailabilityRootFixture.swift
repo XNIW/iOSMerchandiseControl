@@ -6396,9 +6396,17 @@ private struct Task144ControlledRootControls: View {
     private var displayedFacts: [String] {
         fixture.facts.sorted()
     }
-    @ViewBuilder
-    var body: some View {
+    // Keep inactive harness branches out of the body type SwiftUI asks for.
+    // Each process has one fixed fixture mode; the selected content is unchanged.
+    var body: AnyView {
         if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            return makeCachedCatalogControls()
+        }
+        return makeStandardControls()
+    }
+
+    private func makeCachedCatalogControls() -> AnyView {
+        AnyView(
             VStack(spacing: 1) {
                 Task145PerformanceReadback(identifier: "task146.b2.catalog-render",
                     readValue: { Task144RootObservation.cachedCatalogRenderSnapshot() })
@@ -6420,8 +6428,11 @@ private struct Task144ControlledRootControls: View {
             }
             .dynamicTypeSize(.medium ... .large)
             .accessibilityElement(children: .contain)
-        } else {
-        VStack(spacing: 1) {
+        )
+    }
+
+    private func makeStandardControls() -> AnyView {
+        AnyView(VStack(spacing: 1) {
 // TASK145_SCOPE_SWITCH_INSERT_BEGIN C-observation-controls
             if fixture.hasScopeSwitchControl {
                 Task145ScopeSwitchControls(fixture: fixture, prefix: controlPrefix)
@@ -6594,7 +6605,7 @@ private struct Task144ControlledRootControls: View {
                     Task145HistoryFeedbackHost(fixture: fixture, service: service)
                 }
             }
-        }
+        )
     }
 }
 /// On-demand public UIKit observations in the isolated fixture only. This view
@@ -6962,18 +6973,28 @@ private struct Task145T14NativeReadback: UIViewRepresentable {
 // TASK145_T14_INSERT_END context-specific-observer
 private struct Task144ControlledRootModifier: ViewModifier {
     let inEditor: Bool
-    func body(content: Content) -> some View {
-        if let fixture = Task144LocalAvailabilityRootFixture.current,
-           !inEditor, ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
-            content.overlay(alignment: .topLeading) {
+
+    func body(content: Content) -> AnyView {
+        guard let fixture = Task144LocalAvailabilityRootFixture.current else {
+            return AnyView(content)
+        }
+        if !inEditor, ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            return AnyView(content.overlay(alignment: .topLeading) {
                 // The cache phase consumes metadata only. Keep ordinary root
                 // geometry while the actual ProductRow owns the render witness.
                 Task144ControlledRootControls(fixture: fixture, controlPrefix: "task144.controlled")
                     .allowsHitTesting(false)
             }
-        } else if let fixture = Task144LocalAvailabilityRootFixture.current,
-           !inEditor {
-            VStack(spacing: 0) {
+            )
+        }
+        return makeFixtureContent(content: content, fixture: fixture)
+    }
+
+    // Ordinary launch and cache reopen never need this diagnostic composition.
+    private func makeFixtureContent(content: Content,
+        fixture: Task144LocalAvailabilityRootFixture) -> AnyView {
+        if !inEditor {
+            return AnyView(VStack(spacing: 0) {
                 Task144ControlledRootControls(fixture: fixture,
                     controlPrefix: inEditor ? "task144.controlled.editor" : "task144.controlled")
                     .overlay(alignment: .topLeading) {
@@ -6998,7 +7019,9 @@ private struct Task144ControlledRootModifier: ViewModifier {
                     }
                 content
             }
-        } else if let fixture = Task144LocalAvailabilityRootFixture.current {
+            )
+        }
+        return AnyView(
             content.safeAreaInset(edge: .top, spacing: 0) {
                 Task144ControlledRootControls(fixture: fixture,
                     controlPrefix: inEditor ? "task144.controlled.editor" : "task144.controlled")
@@ -7022,7 +7045,7 @@ private struct Task144ControlledRootModifier: ViewModifier {
                         // TASK145_T14_INSERT_END existing-observer-root-admission-close
                     }
             }
-        } else { content }
+        )
     }
 }
 extension View {
