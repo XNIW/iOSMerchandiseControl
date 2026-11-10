@@ -118,7 +118,6 @@ final class SupabaseAuthViewModel: ObservableObject {
             if !isTransitioning { state = authService == nil ? .unconfigured : .signedOut }
             return
         }
-        if hasUnchangedAcceptedSession(currentSession) { return }
         sessionInfo = currentSession
         rememberLocalIdentity(currentSession)
         if currentSession.isExpired {
@@ -128,17 +127,6 @@ final class SupabaseAuthViewModel: ObservableObject {
         } else {
             state = .signedIn
         }
-    }
-
-    /// Suppress only a proven no-op presentation update. A changed SDK read
-    /// epoch/generation, missing session or expired session takes the original
-    /// publication path, even when the displayed user happens to be unchanged.
-    private func hasUnchangedAcceptedSession(_ info: SupabaseAuthSessionInfo) -> Bool {
-        guard state == .signedIn, !info.isExpired, sessionInfo == info,
-              let authService, let localIdentity,
-              localIdentity.ownerUserID == info.userID,
-              authService.localIdentityReadWitness == localIdentity.witness else { return false }
-        return authService.acceptsLocalIdentityReadWitness(localIdentity.witness)
     }
 
     /// Identity supplied to the local mutation fence. That fence, rather
@@ -271,15 +259,11 @@ final class SupabaseAuthViewModel: ObservableObject {
         guard authService?.acceptsAuthGeneration(change.generation) == true else { return }
         switch change.event {
         case .initialSession, .tokenRefreshed, .signedIn, .signedOut:
-            if !hasResolvedInitialSession { hasResolvedInitialSession = true }
+            hasResolvedInitialSession = true
         case .other, .reauthenticationRequired: break
         }
         switch change.event {
         case .initialSession(let info), .tokenRefreshed(let info), .other(let info):
-            if let info, hasUnchangedAcceptedSession(info) {
-                registerShopDeviceIfReady(reason: "auth_event")
-                return
-            }
             sessionInfo = info
             rememberLocalIdentity(info)
             if let info, !info.isExpired {

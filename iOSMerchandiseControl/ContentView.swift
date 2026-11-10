@@ -151,13 +151,6 @@ struct ContentView: View {
     @State private var rootIndicatorState: SyncRootPresentationState = .hidden
     @State private var fallbackSelectedTab = Self.initialSelectedTab()
     @State private var openedTabs: Set<Int>
-    @State private var businessNavigationAdmission = RootBusinessNavigationAdmission()
-    @State private var needsInitialBusinessNavigation = false
-    private var hasAdmittedBusinessNavigation: Bool {
-        // The published value mounts a still-blocked first stack. Once a stack
-        // is already readable, remembering admission must not invalidate it.
-        needsInitialBusinessNavigation || businessNavigationAdmission.isAdmitted
-    }
     private let selectedTabOverride: Binding<Int>?
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
@@ -649,25 +642,22 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 1 || openedTabs.contains(1) {
-                    if catalogAvailable || hasAdmittedBusinessNavigation {
-                        NavigationStack {
-                            Group {
-                                #if DEBUG
-                                let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
-                                #endif
-                                if !catalogAvailable {
-                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                        .navigationTitle(L("tab.database"))
-                                } else {
-                                    DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                                        ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
-                                }
+                    NavigationStack {
+                        Group {
+                            #if DEBUG
+                            let _ = Task144RootObservation.recordCachedCatalogPhase("navigation-admission")
+                            let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
+                            #endif
+                            if !catalogAvailable {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                    .navigationTitle(L("tab.database"))
+                            } else {
+                                DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
                             }
-                            .id(presentationID)
-                            .toolbar { syncToolbar }
                         }
-                    } else {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                        .id(presentationID)
+                        .toolbar { syncToolbar }
                     }
                 } else { Color.clear }
             }
@@ -676,21 +666,17 @@ struct ContentView: View {
 
             Group {
                 if selectedTab == 2 || openedTabs.contains(2) {
-                    if sessionsAvailable || hasAdmittedBusinessNavigation {
-                        NavigationStack {
-                            Group {
-                                if !sessionsAvailable {
-                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
-                                        .navigationTitle(L("tab.history"))
-                                } else {
-                                    HistoryView(historySessionSyncService: historySessionSyncService)
-                                }
+                    NavigationStack {
+                        Group {
+                            if !sessionsAvailable {
+                                businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                    .navigationTitle(L("tab.history"))
+                            } else {
+                                HistoryView(historySessionSyncService: historySessionSyncService)
                             }
-                            .id(presentationID)
-                            .toolbar { syncToolbar }
                         }
-                    } else {
-                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                        .id(presentationID)
+                        .toolbar { syncToolbar }
                     }
                 } else { Color.clear }
             }
@@ -712,35 +698,16 @@ struct ContentView: View {
             .tag(3)
             .task145PerformanceRender("optionsRender")
         }
-        // Mount the visible section first. A visited section stays mounted so
+        // Containers do not require data readiness. Mount the visible section
+        // immediately; inner gates still guard every business view and action.
+        // A visited section stays mounted so
         // switching tabs keeps its navigation, workbook and editor state.
         .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
-        .task {
-            #if DEBUG
-            Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry")
-            #endif
-            guard !hasAdmittedBusinessNavigation else { return }
-            // The task may start after readability has already published.
-            // Latch navigation immediately; never suspend this admission on a
-            // captured earlier capability, another domain or the network.
-            guard !Task.isCancelled, isCurrentModelGeneration else { return }
-            // Once admitted, retain navigation even if a capability is later
-            // withdrawn; the existing inner privacy gates remain authoritative.
-            #if DEBUG
-            Task144RootObservation.recordCachedCatalogPhase("navigation-admission")
-            #endif
-            let needsCatalogStack = (selectedTab == 1 || openedTabs.contains(1)) && !canReadLocalDomain(.catalog)
-            let needsSessionsStack = (selectedTab == 2 || openedTabs.contains(2)) && !canReadLocalDomain(.sessions)
-            businessNavigationAdmission.isAdmitted = true
-            if needsCatalogStack || needsSessionsStack { needsInitialBusinessNavigation = true }
-        }
+        #if DEBUG
+        .task { Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry") }
+        #endif
         .task145PerformanceRender("tabsRender")
     }
-}
-
-@MainActor
-private final class RootBusinessNavigationAdmission {
-    var isAdmitted = false
 }
 
 nonisolated enum LocalCatalogUnavailableReason {

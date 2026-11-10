@@ -67,7 +67,45 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
         scopeReplacementPhaseObserver?(phase)
     }
     @MainActor static func baseRootPhaseReadback() -> [String: Any] {
-        ["events": baseRootPhases, "dropped": baseRootPhasesDropped]
+        // The existing AX value has an8KB ceiling. Repeated JSON keys and
+        // phases from earlier editing made the original full buffer disappear
+        // behind ENCODING_OR_BYTE_LIMIT at the first useful failure.
+        // Export every retained phase in the final45s using one dictionary;
+        // keep the original256-record RAM bound and make any prefix gap explicit.
+        let now = ProcessInfo.processInfo.systemUptime
+        let lower = now - 45
+        var names: [String] = []
+        var indices: [String: Int64] = [:]
+        var rows: [[Int64]] = []
+        var invalid = 0
+        var omittedEarlier = 0
+        var offsets: [Double] = []
+        for event in baseRootPhases {
+            guard let phase = event["phase"] as? String,
+                  let uptime = event["uptime"] as? Double, uptime.isFinite,
+                  let utc = event["utc"] as? Double, utc.isFinite else { invalid += 1; continue }
+            guard uptime >= lower else { omittedEarlier += 1; continue }
+            guard uptime <= now else { invalid += 1; continue }
+            let index: Int64
+            if let existing = indices[phase] { index = existing }
+            else { index = Int64(names.count); indices[phase] = index; names.append(phase) }
+            rows.append([index, Int64(((uptime - now) * 1_000_000).rounded())])
+            offsets.append(utc - uptime)
+        }
+        let firstRetained = baseRootPhases.first?["uptime"] as? Double
+        var value: [String: Any] = ["schema": 2, "phaseDictionary": names,
+            "columns": ["phaseIndex", "uptimeMicrosecondsRelativeToAnchor"], "rows": rows,
+            "anchorUptime": now, "anchorUTC": Date().timeIntervalSince1970,
+            "windowStartUptime": lower, "windowSeconds": 45, "roundingBoundMicroseconds": 0.5,
+            "sourceRetained": baseRootPhases.count, "sourceDropped": baseRootPhasesDropped,
+            "omittedBeforeWindow": omittedEarlier, "invalidRecords": invalid,
+            "completeWithinRetainedWindow": invalid == 0]
+        if let firstRetained {
+            value["firstRetainedUptime"] = firstRetained
+            value["prefixGapSeconds"] = baseRootPhasesDropped > 0 ? max(0, firstRetained - lower) : 0
+        }
+        if let min = offsets.min(), let max = offsets.max() { value["originalUTCMinusUptimeRange"] = [min, max] }
+        return value
     }
     private static let shared = Task144RootObservation()
     private let lock = NSLock()
@@ -2541,6 +2579,36 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
         let leaseAfter = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
         value["observedLeaseGeneration"] = String(leaseAfter)
         value["status"] = leaseBefore == leaseAfter ? "CURRENT_READ_ONLY" : "READ_REJECTED_SCOPE_CHANGED"
+        // Preserve the8KB output budget; history outside the exported window
+        // is not needed to explain a20s drain failure. Never hide an omission.
+        if let bytes = try? JSONSerialization.data(withJSONObject: value), bytes.count > 8192,
+           let history = runtimeObservation["history"] as? [[String: Any]],
+           let phases = value["foregroundPhases"] as? [String: Any],
+           let lower = phases["windowStartUptime"] as? Double {
+            let relevant = history.filter { row in
+                (row["finishedUptime"] as? Double ?? row["runtimeReturnedUptime"] as? Double
+                    ?? ProcessInfo.processInfo.systemUptime) >= lower
+            }
+            runtimeObservation["history"] = relevant
+            runtimeObservation["historyOmittedBeforeWindow"] = history.count - relevant.count
+            value["runtime"] = runtimeObservation
+            if let projected = try? JSONSerialization.data(withJSONObject: value), projected.count > 8192 {
+                runtimeObservation.removeValue(forKey: "history")
+                runtimeObservation["historyOmittedByOutputBudget"] = relevant.count
+                value["runtime"] = runtimeObservation
+                value["projectionBytesBeforeHistoryOmission"] = projected.count
+            }
+        }
+        if let bytes = try? JSONSerialization.data(withJSONObject: value), bytes.count > 8192,
+           let phases = value["foregroundPhases"] as? [String: Any] {
+            value["foregroundPhases"] = ["status": "NOT_EXPORTED_OUTPUT_BYTE_BUDGET",
+                "projectedTotalBytes": bytes.count, "outputByteLimit": 8192,
+                "sourceRetained": phases["sourceRetained"] ?? -1,
+                "sourceDropped": phases["sourceDropped"] ?? -1,
+                "windowStartUptime": phases["windowStartUptime"] ?? -1,
+                "anchorUptime": phases["anchorUptime"] ?? -1,
+                "omittedRows": (phases["rows"] as? [[Int64]])?.count ?? -1]
+        }
         return value
     }
 
