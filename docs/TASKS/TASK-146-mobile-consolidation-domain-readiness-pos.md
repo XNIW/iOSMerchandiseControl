@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — b58 BUILD_FAIL fixture, literal corretto; nuova Root5 da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — f031Root5PASS/B2FAIL7,067448; guard viste ritirato, no-opAuth da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,20 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — B2 f031 FAIL, guard viste ritirato; sole pubblicazioni Auth identiche — 2026-11-10T07:58:14.869565+00:00
+
+**✅ BUILD/SIM f031 ESEGUITI.** B2run42774644906 **FAIL_LATENCY7,067448s >5s**, preparazione intera/cache/autorità PASS, PID24618 zero scan. Root8/Database16, preApp2,754365s; fineworker→Main e pub→riga restano lenti (dettaglio causale). Nessun beneficio pertinente dei due guard fisici diretti: **RITIRATI**, ContentView/Database byte-esatti0169 ripristinati. Conservo revision-leaf e fix scheduler attuale Root5PASS; non sommo versioni. Native538501/4MB cumulativi, SDKsolo41009Bmanifest, mai prodotto completo/installato. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-scope-renewal-dto.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovoSDK/SIM NOT_RUN.** Solo Auth elimina pubblicazioni quando sessionInfo/state sono già identici e witness SDK corrente accettato è lo stesso. LetturaSDK prima del guard, nil/scadenza/cambio corpo o witness seguono percorso originale; registrazione device preservata. Riprende il solo Auth esatto6db, già cinque test SDK PASS nel suo scope, senza latch. Nuova evidenza: il rollback composto precedente aveva Root20FAIL di causa alloraUNKNOWN; l'attuale perdita d'intento è stata identificata e corretta con f031Root5PASS. Non attribuita retroattivamente una causa al vecchio6db, beneficio B2 ancora da misurare. I test reali ripristinati provano0pub per corpo/witness identici e pubblicazione obbligatoria per nuovoReadEpoch/assenza/owner diverso. TestUIKit revision-leaf corrente conservato, nessuna autorità memorizzata.
+
+Handoff ACTIVE/EXECUTION: Root9 prima (Root5+cinqueAuth,9unici), poi B2 originale dello STESSO candidato, invariati2101/T0/5s/cache/autorità. Nessun nuovo layout, yield, toolbar, compiler profile o collector. Dopo composizione qualificata: ordinario/interazione utile→full2101→review/PR29/mainCI/PR28/ritiro2920/cleanup. Differimenti/protezioni invariati; nessun nuovoGO o arresto al prossimo verde.
+
+### Execution — Root5 qualificata f031, B2 originale in corso — 2026-11-10T07:26:35.182814+00:00
+
+**✅ BUILD/SIM ESEGUITI PASS**, `f031ff1a`, run42772781358/job129684235255: **5/5 PASS**,190,565s, membership2101/provenienza e tutti i compiler witness stockDebug verificati; postflight Shutdown/0booted. Root intera Save/cutover/bozza/focus/drain20/ACK pubblico/riapertura/nodups, Auth reale, cutover/defaults e nuove regressioni deterministiche su rinnovo/limite/autorità sono attraversati. Warning6083 è6014baseline spostato; nessun nuovo warning scoped. Nessun tempo esatto nuovo del drain dedotto dal solo PASS entro20s. [Receipt](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-scope-renewal-dto-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json).
+
+B2 originale ora run42774644906, stessoSHA/tag `codex/task146-b2-scope-renewal-dto`, profilo O/Debugassert/T0/5s/cache/autorità invariati; esito **IN_PROGRESS, non PASS**. Helper ordinario pronti ma acquisizione completa ancora chiusa. Riferimenti integrazione riconfermati main94fb/PR29head082, entrambi antenati; nessun avanzamento. Source app immutata durante le run; questo aggiornamento è solo tracking. ACTIVE/EXECUTION: continuare B2→ordinario/interazioneutile→full2101→review/PR29/mainCI/PR28/cleanup, senza arresto al gruppo verde.
 
 ### Execution — Correzione tipo fixture, nessun esito SIM anticipato — 2026-11-10T07:03:53.354892+00:00
 

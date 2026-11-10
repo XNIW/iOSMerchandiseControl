@@ -140,6 +140,7 @@ struct ContentView: View {
     @EnvironmentObject private var syncStoreGenerationController: SyncStoreGenerationController
     @EnvironmentObject private var productImageStore: ProductImageStore
     @Environment(\.localRootPresentationState) private var localPresentation
+    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @StateObject private var excelSession: ExcelSessionViewModel
     @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
     @StateObject private var workbookPreparation: LocalWorkbookPreparation
@@ -355,8 +356,7 @@ struct ContentView: View {
     }
 
     private var isCurrentModelGeneration: Bool {
-        // Check the displayed physical context directly; no closure identity is a root input.
-        syncStoreGenerationController.modelContainer === modelContext.container
+        modelGenerationIsCurrent()
     }
 
     private func canReadLocalDomain(_ domain: Task126LocalReadDomain) -> Bool {
