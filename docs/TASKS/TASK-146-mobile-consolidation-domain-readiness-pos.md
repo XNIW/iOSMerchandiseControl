@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 49Root9PASS/B2FAIL7,578566; reset Storefront da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 461Root16PASS/B2FAIL5,648413; confine Database da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,18 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Storefront16 PASS, B2 FAIL5,648413; confine del tipo Database — 2026-11-10T10:54:56.315463+00:00
+
+**✅ BUILD/SIM 461ad4e5 ESEGUITI.** Root42800180329/job129775375518 **16/16PASS**,221,658s:9Root/Auth e7Storefront con reset0pub iniziale, pubblicazione dati/rimozione reali, scope/callback/filtri/bozze/ACK. StockDebug/provenienza/discovery2101/Shutdown0booted qualificati; nessun warning nei file del delta produzione,14righe baseline globali conservate (Atomic6083 già6014). [Receipt](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-storefront-reset-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json).
+
+**B242800223494 FAIL_LATENCY5,648413s >5**, preparazione/cache/autorità PASS, PID23106 zero scansioni. PreApp1,751266s/init287,203ms/worker528,455ms; fineworker→Main1,303012s e pub→riga1,635100s, contro1,734885/2,563423 di49. Root7/Database10 invariati, App2→1. Intervalli osservati migliorati, nessuna quota causale esclusiva o PASS5s dedotto. ResetStorefront conservato nel candidato per contratto0pub reale e regressioni PASS; AppState ancora da qualificare nella composizione finale. Nativeartefatto13755773720 cumulativo525261/4MB, nessuna raccolta/build per leggere i risultati. [Causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-storefront-reset.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Elaborazione locale della traccia già acquisita ESEGUITA**, zero nuovi byte rete/build/raccolte: indice completo dei191record acquisiti nelle due finestre, PID29387 e clock originali, stackIDs/gap/suffisso704476B mancante espliciti. Nei96record worker→Main ricorre conformitàSwift dentro ContentView.TabView; nei95pub→riga sono presenti Database.activeDatabase/getter e costruzione toolbarHStack. Non durateCPU/percentuali. Questo tratto Database è ancora equivalente salvo marker; le misure attuali mantengono10body. [Indice](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-kernel-census-guard.ROOT/causal-bundle.ROOT/WINDOW-APPLICATION-FRAME-INDEX.ROOT.json).
+
+**✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** Minimo DatabaseView.body: AnyView sul solo activeDatabase, per limitare il tipo composto toolbar/sheet esposto alla conformitàSwiftUI. Nessuno spostamento di NavigationStack, stato/@Query, hostSync/id, guard/callback, toolbar o geometria. Il vecchio4ca22e66 avvolgeva le quattro navigazioni tramite closure RootTabContent; non modificava il tipo interno Database ora individuato dai frame. Nuova adozione solo se beneficio pertinente e regressioni stesseSHA; nessun nuovo yield, compilerprofile, timeout o raccolta. Altri fileapp invariati461.
+
+Handoff ACTIVE/EXECUTION: Root9 originali e B2 originale dello STESSO nuovo candidato, poi ordinario reale/interazione utile (helper preservativo preparato, ancora NON ESEGUITO), full2101=2042PASS43skip16fisiciDIFFERITI, review/PR29/mainCI/PR28/ritiro2920/cleanup. Riuso Storefront7 precedente solo nel suo perimetro byte-invariato, full finale attuale ancora da eseguire. Ordinario5,50FAIL conservato; C3/T11/Android/backend/atomica/live/POS acquisiti salvo impatto da verificare nella matrice finale. Spazio42,136GB, nessun nuovo prodotto completo/target/dato/sessione acquisito; treQCOW2/WIP/indice protetti, nessun nuovoGO o fine task al gruppo verde.
 
 ### Execution — Root9 PASS, B2 FAIL qualificato; reset Storefront senza cambiamento — 2026-11-10T10:32:48.113067+00:00
 

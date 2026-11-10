@@ -4063,7 +4063,9 @@ struct DatabaseView: View {
         #endif
         return Group {
             if isCurrentModelGeneration {
-                activeDatabase
+                // Keep the large toolbar/sheet composition's metadata behind
+                // this stable boundary; Database state and navigation stay owned here.
+                AnyView(activeDatabase)
             }
         }
     }
