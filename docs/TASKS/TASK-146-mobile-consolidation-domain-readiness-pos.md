@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; background09 ritirato, costi RAM e boundarypreparazione in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; invalidazioni di ambiente misurate, closure di generazione stabile in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Invalidazioni misurate e closure di generazione stabile — 2026-11-10T02:52:42.281487+00:00
+
+**✅ BUILD/SIMd05 ESEGUITI.** Run42742153550/job129585578691: SDKPASS, preparazione/riuso cache/autorità PASS e zero scan, **FAIL_LATENCY5,211343s >5s**. Diagnostica perturbante, nessun PASS finale inferito. Fineworker→Main1,163146s; pubblicazione→riga1,697158s. AppScene1body/19,819ms; ContentView11/175,875ms; Database17/322,581ms inclusivi, non additivi. `_printChanges` mostra rivalutazioni ripetute per `_modelGenerationIsCurrent`, `_localReadIsAllowed`, `_localWriteIsAllowed`, incluse cinque Database dopo il montaggio con sole tre closure e altre sei con le stesse closure più @self. Dato confermato: invalidazioni dell'ambiente; non quota esclusiva dell'intera latenza. Proiezione completa delle finestre/PID/timestamp/motivi e lacune: `b1/ios-b2-root-body-reasons.ROOT/BODY-INVALIDATIONS.PROJECTION.ROOT.json`. Stesso artefatto cumulativo857.419B/4MB; export runtime riuscito, nessuna ricompilazione per post-elaborare. Shutdown/0booted; nessun SDK ordinario d05 esportato/acquisito/installato.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo BUILD/SIM NOT_RUN.** Fix minimo nei file App/LocalRootPresentationState: riuso della stessa closure di generazione quando controller e container fisico sono identici. Ogni chiamata confronta ancora il container vivo tramite riferimenti deboli; nessun risultato di autorità in cache, nessuna modifica a read/write gate, hostSync/ZStack/id/lifecycle/bozze/layout. Riduce le invalidazioni da identità della funzione quando il container non cambia; beneficio NOT_MEASURED. Tolte le stampe dai body ContentView/Database/App, conservati contatori RAM bounded/frozen sulla riga originale. Test esistente di recovery/cambio reale container esteso: stesso binding sul container invariato, vecchia closure false dopo cutover, nuova true; nessun nuovo selettore (2101 invariati).
+
+Handoff ACTIVE/EXECUTION: due tag dello STESSO prossimo commit, B2 originale O/assertDebug/CPUoff/exportSDK e regressione wholeRoot+test cutover stockDebug; leggere entrambi prima di altrodelta. Il prodotto ordinario sarà ammesso solo dopo PASS di entrambi e budget fresco. Poi ordinario reale/interazione utile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. Ordinario5,50s restaFAIL; Android/backend/C3/T11/atomica/live/POS conservati nei percorsi invariati, fisico/statistiche DIFFERITI, nessun nuovoGO o DONE anticipato.
 
 ### Execution — Esito7ed e diagnostica limitata delle invalidazioni — 2026-11-10T02:20:39.257622+00:00
 

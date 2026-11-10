@@ -13,6 +13,7 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var workbookPreparation: LocalWorkbookPreparation
     @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
     @State private var selectedTab = 0
+    private let rootGenerationFenceCache = LocalModelGenerationFenceCache()
     @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
     @StateObject private var localRootPresentationState: LocalRootPresentationState
     private let supabaseTransportClient: SupabaseTransportClient?
@@ -150,9 +151,6 @@ struct iOSMerchandiseControlApp: App {
         #if DEBUG
         let cost = Task144RootObservation.beginCachedCatalogBodyObservation("app-scene-body-inclusive")
         defer { Task144RootObservation.finishCachedCatalogSynchronousCost("app-scene-body-inclusive", startedAt: cost) }
-        if cost != nil {
-            NSLog("TASK146_BODY_REASON kind.AppScene pid.%d uptime_ns.%llu", ProcessInfo.processInfo.processIdentifier, DispatchTime.now().uptimeNanoseconds)
-        }
         #endif
         return WindowGroup {
             SyncStoreBootstrapGate(bootstrap: storeBootstrap, opened: { controller in
@@ -270,11 +268,7 @@ struct iOSMerchandiseControlApp: App {
     }
 
     private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> () -> Bool {
-        let displayedContainer = syncStoreGenerationController.modelContainer
-        return { [weak controller = syncStoreGenerationController, weak displayedContainer] in
-            guard let controller, let displayedContainer else { return false }
-            return controller.modelContainer === displayedContainer
-        }
+        rootGenerationFenceCache.fence(for: syncStoreGenerationController).isCurrent
     }
 
     private var controlledShopContext: ShopContextStore? {

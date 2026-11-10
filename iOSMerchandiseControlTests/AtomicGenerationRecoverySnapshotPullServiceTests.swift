@@ -9666,6 +9666,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
     func testOrdinaryContinuationRejectsReplacementContainerAndOtherDefaults() async throws {
         let proof = try await makeRealContinuationProof(eventID: 42)
         let oldContainer = proof.fixture.controller.modelContainer
+        let fenceCache = LocalModelGenerationFenceCache()
+        let oldFence = fenceCache.fence(for: proof.fixture.controller)
+        XCTAssertTrue(oldFence.isCurrent())
+        XCTAssertTrue(oldFence === fenceCache.fence(for: proof.fixture.controller),
+                      "Unchanged container must reuse the same environment predicate")
         let product = ordinaryContinuationProduct(fixture: proof.fixture, id: proof.productID, stock: 2)
         let checkpoint = try makeCatalogPriceCheckpoint(fixture: proof.fixture, maxEventID: 43,
             seed: "ri08-replaced", products: [product], prices: [])
@@ -9674,6 +9679,11 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         _ = try await makeService(fixture: proof.fixture, transport: transport).recoverFromRemoteSnapshot(
             ownerUserID: proof.fixture.ownerUserID)
         XCTAssertFalse(proof.fixture.controller.modelContainer === oldContainer)
+        XCTAssertFalse(oldFence.isCurrent(), "A retained old environment must fail after real cutover")
+        let currentFence = fenceCache.fence(for: proof.fixture.controller)
+        XCTAssertFalse(oldFence === currentFence)
+        XCTAssertTrue(currentFence.isCurrent())
+        XCTAssertTrue(currentFence === fenceCache.fence(for: proof.fixture.controller))
         proof.stateStore.recordRunResult(proof.result)
         XCTAssertEqual(proof.stateStore.state.phase, .recoveryRequired)
         let otherFixture = try makeFixture()

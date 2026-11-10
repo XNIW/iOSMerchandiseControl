@@ -255,6 +255,41 @@ private struct LocalRootPresentationStateKey: EnvironmentKey {
     static let defaultValue: LocalRootPresentationState? = nil
 }
 
+/// The predicate is stable for one displayed container, not a cached permission.
+/// Every call still checks the live controller, and old closures fail after cutover.
+@MainActor
+final class LocalModelGenerationFenceCache {
+    @MainActor
+    final class Fence {
+        private weak var controller: SyncStoreGenerationController?
+        private weak var displayedContainer: ModelContainer?
+        let isCurrent: () -> Bool
+
+        init(controller: SyncStoreGenerationController) {
+            let displayedContainer = controller.modelContainer
+            self.controller = controller
+            self.displayedContainer = displayedContainer
+            isCurrent = { [weak controller, weak displayedContainer] in
+                guard let controller, let displayedContainer else { return false }
+                return controller.modelContainer === displayedContainer
+            }
+        }
+
+        func matches(_ controller: SyncStoreGenerationController) -> Bool {
+            self.controller === controller && displayedContainer === controller.modelContainer
+        }
+    }
+
+    private var current: Fence?
+
+    func fence(for controller: SyncStoreGenerationController) -> Fence {
+        if let current, current.matches(controller) { return current }
+        let next = Fence(controller: controller)
+        current = next
+        return next
+    }
+}
+
 private struct LocalModelGenerationFenceKey: EnvironmentKey {
     static let defaultValue: () -> Bool = { true }
 }
