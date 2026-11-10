@@ -261,10 +261,8 @@ struct ContentView: View {
         let hostPresentationID = currentSyncOrchestrator?.retainedSameScopeRecoveryHostPresentationID ?? presentationID
         let runtimeModelContainer = syncStoreGenerationController.modelContainer
         let hidesBusinessData = hidesBusinessDataForPendingRecovery
-        // The lifecycle host keeps its retained identity without participating
-        // in the foreground TabView's size negotiation.
-        return tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
-        .background {
+        return ZStack {
+            tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
             AppSyncRootHost(
             modelContainer: runtimeModelContainer,
             presentationID: hostPresentationID,

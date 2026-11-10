@@ -982,6 +982,14 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             defaults: fixture.defaults, decisionInputProvider: completedRecoveryDecisionProvider(fixture),
             backgroundScheduler: SyncNoopBackgroundTaskScheduler(), now: { clock.value })
         defer { orchestrator.stop() }
+        // Registered after makeFixture's physical cleanup, so XCTest awaits
+        // every owned writer first, including an early setup timeout/throw.
+        addTeardownBlock { @MainActor in
+            orchestrator.stop()
+            runtime.release()
+            await runtime.cancelAndWait()
+            await runtime.waitForReturnIfStarted()
+        }
         orchestrator.handleScenePhaseChanged(.active)
         orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
         await fulfillment(of: [entered], timeout: 2)
@@ -15116,6 +15124,7 @@ private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
     private let entered: XCTestExpectation
     private var continuation: CheckedContinuation<Void, Never>?
     private var releaseRequested = false
+    private var returnWaiters: [CheckedContinuation<Void, Never>] = []
     private(set) var heldResult: SyncAutomaticRunResult?
     private(set) var didReturn = false
     private(set) var runCount = 0
@@ -15137,7 +15146,14 @@ private final class Task145HeldTerminalRuntime: SyncAutomaticRuntimeProviding {
             entered.fulfill()
         }
         didReturn = true
+        let waiters = returnWaiters
+        returnWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
         return result
+    }
+    func waitForReturnIfStarted() async {
+        guard runCount > 0, !didReturn else { return }
+        await withCheckedContinuation { returnWaiters.append($0) }
     }
     func release() {
         releaseRequested = true

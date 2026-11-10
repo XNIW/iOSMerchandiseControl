@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — c671Root16PASS/B2FAIL7,495117; ImageState ritirato, hostbackground da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — 2426B2FAIL6,175509/Root7PASS2PREPFAIL; background ritirato, cleanup test da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — background misurato ritirato; join del cleanup di preparazione — 2026-11-10T12:31:24.136331+00:00
+
+**✅ BUILD/SIM24262742 ESEGUITI.** B2run42811117713/job129812508976 **FAIL_LATENCY6,175509s >5**, preparazione intera/cache durevole/autorità PASS, PID29465/zero scan. PreApp2,074315s/init381,339ms/worker0.153032s; fineworker→Main1.656022s, pub→riga1,785726s. App2/Root7/Database9: nessun beneficio pertinente rispetto5a. Background **RITIRATO** sulla misura attraversata; ContentView e tutto il treeapp tornano byte-esatti5a (AppTree49279f38), che resta B2FAIL6,537189 nel proprio binario. [B2 causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-background-replay.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Root9 ESEGUITA:7PASS/2FAIL_PREPARATION**, run42811076284/job129812360758. Intera rootUI Save/recovery/cutover/bozze/focus/Cancel/drain20/ACK/reopen/nodup e cinqueAuth PASS nei propri scope. I due helper unitari held-terminal si fermano prima delle nuove verifiche: timeout originale2s/heldResultnil e terminal.busy/nonverified. Controlli autorità/rinnovo successivi **NOT_TRAVERSED**. ConsolePID16529 prova unlinkSQLite/WAL/SHM alle12:04:50,594503 con writer ancora attivo, ciclo precedente cancelled soltanto12:04:51,732739. Causa confermata del cleanup prematuro; causa del primo ritardo e origine esclusiva busy **UNKNOWN**, nessuna attribuzione al layout che questi unit non costruiscono. [Root causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-background-replay-root.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ STATIC/parse/diff PASS; nuovoSDK/SIM NOT_RUN.** File: ContentView(solo ritirobackground), AtomicGenerationRecoverySnapshotPullServiceTests(solo helper test). Teardownasync LIFO ferma orchestrator, rilascia hold e attende facade+ritorno runtime prima del teardown fisico registrato da makeFixture, anche dopo timeout/throw. Nessuna soglia aumentata, asserzione rimossa o modifica al protocollo produzione;2101selector invariati. Prossima prova **Root9 soltanto**, non un B2 per un delta test-only. Le acquisizioni attuali restano nei ledger originali545926/531938B su4MB; zero nuova raccolta/build per analizzare la console, zero fullSDK/download/installMac. Free42.084GB; nessuna cancellazione/dati/QCOW2/WIP alterati.
+
+Handoff ACTIVE/EXECUTION: qualificare chiusura test e leggere eventuale primo ritardo residuo, poi risolvere B2 dalla causa misurata senza nuove varianti layout speculative. FAIL ordinario5,500695 resta aperto. Dopo composizione qualificata: ordinario reale/interazione utile→full2101=2042PASS43skip16fisiciDIFFERITI→review/PR29/mainCI/PR28/ritiro2920/cleanup. Android/backend/C3/T11/atomica/live/POS acquisiti ove invariati; differimenti/protezioni invariati. Nessun nuovoGO o stop al prossimo verde.
 
 ### Execution — c671Root16 PASS/B2 FAIL7,495117; ritiro ImageState e host fuori layout — 2026-11-10T11:52:35.018546+00:00
 
