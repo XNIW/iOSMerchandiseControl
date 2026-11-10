@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — f031Root5PASS/B2FAIL7,067448; guard viste ritirato, no-opAuth da qualificare |
+| Esito documentale | EXECUTION_ATTIVA — ec018Root8PASS/1abortdeinit; fix leaf da qualificare, B2 mai avviato |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Abort nella distruzione della leaf, correzione circoscritta — 2026-11-10T08:24:36.775111+00:00
+
+**✅ BUILD/SIM ec018 ESEGUITI: 8PASS/1FAIL**, run42779130135/job129704656018. Fallisce con **SIGABRT malloc**, non asserzione5s, il caso nominale ChangedSDKSessionBody; B2 **NOT_RUN, mai dispatch**. L'intera root Save/heldRecovery/cutover/bozza/focus/Cancel/drain20/ACK pubblico/riapertura/nodups e gli altri quattro Auth sono PASS attuali. Profilo stockDebug tutti i witness/provenienza/membership2101 verificati; postflight Shutdown/0booted.
+
+**✅ Post-elaborazione dello STESSO artefatto ESEGUITA.** PID17662,2026-11-10 08:12:22.1636Z: UIKit rilascia UIHostingView dopo commitCA del test revision-leaf precedente; lo stack completo attraversa LocalAuthorizationRevisionState.__deallocating_deinit→swift_task_deinitOnExecutorImpl→TaskLocal.StopLookupScope→malloc abort. Nessun frame che provi un errore del nuovo guard Auth. Firma corrispondente al bug Swift87316/fix29245e4; storia allocazione non raccolta, attribuzione runtime corroborata ma non inventata. Proiezione124frame/clock/PID/lacune nella [causale](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-auth-publications-root.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json). Cumulativo562164/4000000B, nessuna nuova raccolta/build per leggere i log, zero prodotto completo Mac.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo SDK/SIM NOT_RUN.** Unico delta produttivo: deinit vuoto esplicitamente nonisolated sulla sola LocalAuthorizationRevisionState, come SyncStateStore già esistente. Contiene solo Published<Int>, nessun lavoro attore nel teardown; mutazioni restano MainActor. Nessuna modifica al filtro Auth, alla leaf AppStorage, alle guardie, all'host sync o layout; nessuna attesa/ritardo. Conservati fix scheduler e beneficio revision-leaf nei loro scope. Gli stessi9test esistenti attraversano la distruzione UIKit reale; nessun nuovo selector,2101 invariati.
+
+Handoff ACTIVE/EXECUTION: qualificare Root9 e B2 originale dello STESSO successore; run ospitate su due tag disgiunti, nessuna build nativa pesante. Poi ordinario/interazione utile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. Ec018ottoPASS non sono qualifica finale9/full; ordinario5,50FAIL e precedentiB2FAIL preservati. Android/backend/C3/T11/atomica/live/POS acquisiti dove invariati; differimenti fisico/statistiche e treQCOW2/dati/WIP protetti. Nessun nuovoGO o arresto al prossimo verde.
 
 ### Execution — B2 f031 FAIL, guard viste ritirato; sole pubblicazioni Auth identiche — 2026-11-10T07:58:14.869565+00:00
 

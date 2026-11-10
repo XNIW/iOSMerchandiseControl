@@ -264,6 +264,10 @@ final class LocalAuthorizationRevisionState: ObservableObject {
         revision = defaults.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey)
     }
 
+    // This value-only observer needs no actor work during destruction. UIKit
+    // may release it outside a Swift task after a hosting transaction commits.
+    nonisolated deinit {}
+
     func observe(_ revision: Int) {
         guard revision != self.revision else { return }
         self.revision = revision
