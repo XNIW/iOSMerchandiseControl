@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; invalidazioni di ambiente misurate, closure di generazione stabile in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — B2 aperto; predicato ambiente Equatable in qualifica, d4 Root2PASS/B2FAIL |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-09, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — d4 funzionale PASS, B2 FAIL; predicato ambiente confrontabile — 2026-11-10T03:23:00.224273+00:00
+
+**✅ BUILD/SIMd4 ESEGUITI.** B2run42745818774/job129597538362 **FAIL_LATENCY14,640043s >5s**, preparazione/cache/autorità PASS e zero scan sul PID38189. Pre-ingressoApp4,027105s, setupAuth4,527954s; worker668ms/fineworker→Main1,639385s; pubblicazione→riga3,105323s. Root12/Database18body: riuso della sola funzione NON mostra beneficio pertinente. Nessuna causa esclusiva dell'intero ritardo inferita; resourceprobe dopo boot UNKNOWN20s, bootstatus e test attraversati, non BLOCKED_EXTERNAL_CI. Rootrun42745824139/job129597550584 **2/2 PASS**, originale intero + reale cambio container (vecchia closure false), profiloDEBUG_STANDARD, coverage2101membership/provenienza/Shutdown0booted PASS. Warningtest6014 preesistente verificato anche d05/7ed, nessun nuovo warning sui file del fix. ManifestSDK esatto/85file/O+asserzioniDebug/toolchain26.6 PASS; soli41009B acquisiti, prodotto completo mai scaricato/installato e gate ordinario chiuso. Causale/postflight e budget cumulativo nel registro `b1/ios-b2-stable-generation-fence.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json`.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo BUILD/SIM NOT_RUN.** Delta circoscritto App/LocalRootPresentationState/test esistente: valore interno Equatable per il predicato di generazione, confrontato per identità dello stesso fence; ogni `predicate()` esegue l'identico confronto vivo con riferimenti deboli. Esplicita la confrontabilità nell'ambiente dopo l'insufficienza del solo riuso funzione; nessuna cache di permessi, API pubblica, guardia read/write, layout/hostSync/id/lifecycle o protocollo modificati. Cinque consumer controllati, stessa sintassi invocazione, defaultunscopedtrue precedente conservato. Test di cutover esteso con equalitystabile e vecchio/nuovo valorefalse/true, nessun nuovo selettore. Beneficio ancora NOT_MEASURED, non un fix finale qualificato.
+
+Handoff ACTIVE/EXECUTION: due run mirate dello STESSO prossimo commit B2 originale e Rootintero+testcutover; leggere entrambi prima altrodelta. Dopo qualifica: ordinario reale/interazioneutile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. C3/T11/Android/backend/atomica/live/POS conservati dove non impattati; ordinario5,50s restaFAIL, fisico/statistiche DIFFERITI, QCOW2/dati/WIP/indice protetti. Nessun nuovoGO o fine task inferita dal gruppo funzionale verde.
 
 ### Execution — Invalidazioni misurate e closure di generazione stabile — 2026-11-10T02:52:42.281487+00:00
 

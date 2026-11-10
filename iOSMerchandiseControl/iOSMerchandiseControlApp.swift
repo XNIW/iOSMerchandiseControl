@@ -267,8 +267,8 @@ struct iOSMerchandiseControlApp: App {
         }
     }
 
-    private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> () -> Bool {
-        rootGenerationFenceCache.fence(for: syncStoreGenerationController).isCurrent
+    private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> LocalModelGenerationPredicate {
+        LocalModelGenerationPredicate(fence: rootGenerationFenceCache.fence(for: syncStoreGenerationController))
     }
 
     private var controlledShopContext: ShopContextStore? {

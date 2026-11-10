@@ -290,8 +290,19 @@ final class LocalModelGenerationFenceCache {
     }
 }
 
+/// A comparable environment value keeps an unchanged fence from invalidating
+/// readers. Equality describes the binding only; access is checked on every call.
+nonisolated struct LocalModelGenerationPredicate: Equatable, Sendable {
+    let fence: LocalModelGenerationFenceCache.Fence?
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.fence === rhs.fence }
+
+    @MainActor
+    func callAsFunction() -> Bool { fence?.isCurrent() ?? true }
+}
+
 private struct LocalModelGenerationFenceKey: EnvironmentKey {
-    static let defaultValue: () -> Bool = { true }
+    static let defaultValue = LocalModelGenerationPredicate(fence: nil)
 }
 
 private struct LocalBusinessReadGateKey: EnvironmentKey {
@@ -307,7 +318,7 @@ extension EnvironmentValues {
         get { self[LocalRootPresentationStateKey.self] }
         set { self[LocalRootPresentationStateKey.self] = newValue }
     }
-    var localModelGenerationIsCurrent: () -> Bool {
+    var localModelGenerationIsCurrent: LocalModelGenerationPredicate {
         get { self[LocalModelGenerationFenceKey.self] }
         set { self[LocalModelGenerationFenceKey.self] = newValue }
     }
