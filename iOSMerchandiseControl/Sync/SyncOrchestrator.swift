@@ -688,7 +688,14 @@ final class SyncOrchestrator: ObservableObject {
             }
             if let automaticRecoveryScope, !isRecoveryTimerScopeCurrent(automaticRecoveryScope) {
                 recordRuntimeDiagnostic("foreground.outcome", "recovery_scope_changed_before_runtime")
-                completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                let canReplay = permitsFreshRequestAfterScopeRenewal(automaticRecoveryScope)
+                if canReplay {
+                    // Keep intent, never the old authority. A deferred replay
+                    // gets no further immediate replay if authority moves again.
+                    deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                }
+                completeForegroundTask(invocationID: invocationID,
+                    runDeferred: canReplay && !isDeferredReplay)
                 return
             }
             if let completedRecoveryScope,
@@ -1447,6 +1454,24 @@ final class SyncOrchestrator: ObservableObject {
         let descriptor = SyncPublishedRecoveryFinalization(identity: identity, generationID: manifest.generationID,
             checkpointDigest: manifest.checkpoint.checkpointDigest, baselineRunID: manifest.baselineRunID)
         return descriptor.matches(manifest: manifest, journal: journal) ? descriptor : nil
+    }
+
+    private func permitsFreshRequestAfterScopeRenewal(_ previous: Task126VerifiedOwnerStoreScope) -> Bool {
+        guard !isStopped, !Task.isCancelled, currentScenePhase == .active,
+              authViewModel.isSignedIn, !authViewModel.isTransitioning,
+              authViewModel.sessionInfo?.userID == previous.ownerUserID,
+              authViewModel.localMutationOwnerUserID == previous.ownerUserID,
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              (try? controller.validateLease(lease)) != nil,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: previous.ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true),
+              current.accountHash == previous.accountHash, current.shopID == previous.shopID,
+              current.storeIdentity == previous.storeIdentity,
+              current.deviceInstallID == previous.deviceInstallID,
+              current.deviceIdentityHash == previous.deviceIdentityHash,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: current.accountHash,
+                shopID: current.shopID, deviceIdentityHash: current.deviceIdentityHash) else { return false }
+        return true
     }
 
     private func isRecoveryTimerScopeCurrent(_ scope: Task126VerifiedOwnerStoreScope) -> Bool {

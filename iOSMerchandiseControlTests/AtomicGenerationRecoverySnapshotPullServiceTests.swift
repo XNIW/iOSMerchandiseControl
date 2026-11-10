@@ -726,6 +726,9 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
     func testHeldVerifiedRecoveryCannotPublishAfterOwnerOrShopAuthorityChanges() async throws {
         for change in ["owner", "shop"] { try await assertHeldVerifiedCompletion(change: change) }
+        for change in ["owner", "shop", "device", "revoked", "stopped"] {
+            try await assertSupersededDecisionAdmission(change: change)
+        }
     }
 
     func testHeldVerifiedRecoveryCannotPublishAfterBindingStoreEpochChangesInSameOwnerShopAndDevice() async throws {
@@ -734,6 +737,72 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
 
     func testHeldVerifiedRecoveryPublishesForSameEntityAfterLegitimateLeaseReplacement() async throws {
         try await assertHeldVerifiedCompletion(change: "same-entity")
+        try await assertSupersededDecisionAdmission(change: "same-entity")
+        try await assertSupersededDecisionAdmission(change: "repeated-renewal")
+    }
+
+    private func assertSupersededDecisionAdmission(change: String) async throws {
+        let fixture = try makeFixture()
+        let binding = AccountBindingStore(defaults: fixture.defaults)
+        let initial = try XCTUnwrap(binding.currentBinding)
+        let selection = SelectedShopStore(defaults: fixture.defaults)
+        let shop = try XCTUnwrap(selection.selectedShop(accountHash: initial.accountHash))
+        XCTAssertTrue(binding.beginSameScopeRecovery(accountHash: initial.accountHash,
+            storeIdentity: initial.storeIdentity, reason: "TASK146_DECISION_SCOPE_RENEWAL",
+            deviceIdentityHash: DeviceInstallIDStore.identityHash(for: fixture.deviceInstallID)))
+        let state = SyncStateStore(defaults: fixture.defaults,
+            keyPrefix: "task146.decision-renewal.\(change)", storeGenerationController: fixture.controller)
+        state.recordRunResult(.recoveryRequired())
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let entered = expectation(description: "Decision suspended before returning: \(change)")
+        let decision = Task146SuspendedDecisionProvider(base: completedRecoveryDecisionProvider(fixture), entered: entered)
+        defer { decision.release() }
+        let admitted = expectation(description: "Only the current same-entity request reaches runtime: \(change)")
+        admitted.isInverted = change != "same-entity"
+        let runtime = Task146CountedDecisionRuntime(entered: admitted)
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        let orchestrator = SyncOrchestrator(automaticRuntime: runtime, authViewModel: auth.viewModel,
+            activityCenter: ForegroundCloudWorkflowActivityCenter(), syncEventSignalWatcher: nil,
+            stateStore: state, storeGenerationController: fixture.controller, storeGenerationLease: lease,
+            defaults: fixture.defaults, decisionInputProvider: decision,
+            backgroundScheduler: SyncNoopBackgroundTaskScheduler())
+        defer { orchestrator.stop() }
+        orchestrator.handleScenePhaseChanged(.active)
+        orchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [entered], timeout: 2)
+        let captured = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults, allowsPendingReplacement: true)
+        switch change {
+        case "same-entity", "repeated-renewal":
+            XCTAssertTrue(selection.save(shop, accountHash: initial.accountHash))
+            if change == "repeated-renewal" {
+                decision.beforeSubsequentSnapshot = {
+                    XCTAssertTrue(selection.save(shop, accountHash: initial.accountHash))
+                }
+            }
+        case "owner": selection.noteActiveAccount(AccountBindingStore.accountHash(for: UUID()))
+        case "shop":
+            XCTAssertTrue(selection.save(SelectedShop(shopID: UUID(), code: shop.code, name: shop.name,
+                role: shop.role, status: shop.status, selectable: shop.selectable, canWrite: shop.canWrite),
+                accountHash: initial.accountHash))
+        case "device": fixture.defaults.set(UUID().uuidString.lowercased(), forKey: "shop.device.install.id")
+        case "revoked":
+            XCTAssertTrue(selection.recordDeviceAuthorization(.init(status: "revoked", code: "TASK146_DENIAL",
+                canWrite: false, serverTime: nil, lastSeenAt: nil, reasonCode: "synthetic", recommendedAction: nil,
+                checkedAt: Date()), ownerUserID: fixture.ownerUserID, shopID: fixture.shopID,
+                deviceIdentityHash: captured.deviceIdentityHash))
+        case "stopped": orchestrator.stop()
+        default: return XCTFail("Unknown decision-renewal scenario")
+        }
+        if change != "stopped" {
+            XCTAssertThrowsError(try Task126OwnerStoreGate.revalidateAutomaticScope(captured, defaults: fixture.defaults))
+        }
+        decision.release()
+        await fulfillment(of: [admitted], timeout: 2)
+        XCTAssertEqual(runtime.runCount, change == "same-entity" ? 1 : 0)
+        XCTAssertEqual(decision.snapshotCount, ["same-entity", "repeated-renewal"].contains(change) ? 2 : 1,
+            "Renewal permits one immediate fresh decision, never an unbounded retry")
     }
 
     func testRejectedHeldTerminalReleasesOnlyItsForegroundSlotAndCoalescesNextAdmission() async throws {
@@ -14953,6 +15022,44 @@ private final class Task144HeldRealDecisionProvider: SyncDecisionInputProviding 
         return snapshot
     }
     func release() { continuation?.resume(); continuation = nil }
+}
+
+@MainActor
+private final class Task146SuspendedDecisionProvider: SyncDecisionInputProviding {
+    private let base: SyncDecisionInputProvider
+    private let entered: XCTestExpectation
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var snapshotCount = 0
+    var beforeSubsequentSnapshot: (() -> Void)?
+    init(base: SyncDecisionInputProvider, entered: XCTestExpectation) {
+        self.base = base; self.entered = entered
+    }
+    func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async { await base.updateNetworkStatus(status) }
+    func recordRealtimeEvent() async { await base.recordRealtimeEvent() }
+    func makeSnapshot(triggerSource: SyncAutomaticTriggerSource, isAuthenticated: Bool,
+        ownerUserID: UUID?, isSyncBusy: Bool) async -> SyncDecisionInputSnapshot {
+        snapshotCount += 1
+        if snapshotCount == 1 {
+            await withCheckedContinuation { continuation = $0; entered.fulfill() }
+        } else { beforeSubsequentSnapshot?() }
+        return await base.makeSnapshot(triggerSource: triggerSource, isAuthenticated: isAuthenticated,
+            ownerUserID: ownerUserID, isSyncBusy: isSyncBusy)
+    }
+    func release() { continuation?.resume(); continuation = nil }
+}
+
+@MainActor
+private final class Task146CountedDecisionRuntime: SyncAutomaticRuntimeProviding {
+    private let entered: XCTestExpectation
+    private(set) var runCount = 0
+    init(entered: XCTestExpectation) { self.entered = entered }
+    var isRunning: Bool { false }
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        runCount += 1; entered.fulfill(); return .noWork()
+    }
+    func cancel() {}
+    func cancelAndWait() async {}
+    func resumeAfterStoreReplacement() async {}
 }
 
 @MainActor

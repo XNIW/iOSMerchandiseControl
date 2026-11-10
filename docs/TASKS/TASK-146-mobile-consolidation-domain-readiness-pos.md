@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — e593 FAIL5,074982; confine ritirato, guard fisico diretto in qualifica |
+| Esito documentale | EXECUTION_ATTIVA — 761 Root FAILdrain20 confermato e B2prepFAIL; fix richiesta fresca da qualificare |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Drain tardivo confermato; richiesta fresca coalescente — 2026-11-10T06:51:11.205477+00:00
+
+**✅ 761 BUILD/SIM ESEGUITI.** Root run42766950381:2PASS/1FAIL, Save/cutover/bozza/focus/Cancel attraversati, **drain20 realmente tardivo**. Proiezione completa della finestra45s/PID12072: alla chiusura deferred=false; scope superato durante decideAction aveva scartato l'intento. Primo runtime da foregroundPoll a+21,896595s, ritorno+25,086802s. Poi pending0/ACK1/call1/event1; ACK pubblico/riapertura NOT_TRAVERSED dopo asserzione. Stesso artefatto710423/4MB, nessuna nuova build per leggere il payload. [Proiezione](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-direct-model-context-root.ROOT/ROOT-DRAIN-TIMELINE.PROJECTION.ROOT.json).
+
+**B2 run42766948395 FAIL_PREPARATION_OBSERVATION**, cache/T0 NOT_TRAVERSED. Primo required_read.false, successore guardPASS31,391Z; getterAX33,994→42,313 supera deadline originale10s. Hierarchy52,450 contiene held/release e baseline. Primo frame/lavoro bloccante UNKNOWN, nessuna causa esclusiva attribuita al nuovo guard né relax del protocollo. Recupero dal medesimo artefatto715147/4MB, zero nuove raccolte; costruttori/autorità PASS, SDK manifest41009B soltanto, nessun prodotto completo/installato.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo BUILD/SIM NOT_RUN.** Fix minimo SyncOrchestrator: conserva l'intento dopo scope rinnovato durante decisione SOLO con stesso owner SDK accettato/shop/store/device, lease fisico corrente e nessun diniego. Una sola riesecuzione immediata con scope fresco; se cambia ancora, intento conservato per un evento reale, senza loop/timer/budget reset. Vecchie root e autorità differenti continuano a scartare. Due test esistenti estesi, totale2101 invariato; nessun nuovo selector o modifica alle prove parziali. Il guard fisico diretto delle due viste resta candidato non ancora misurato, non PASS.
+
+Handoff ACTIVE/EXECUTION: stesso commit, Root intero+Auth+cutover+2regressioni estese (5selettori) e B2 originale, pochi gate decisivi. Poi ordinario della composizione qualificata/interazione utile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. C3/T11/Android/backend/atomica/live/POS conservati nei percorsi invariati; fisico/statistiche DIFFERITI. Main/PR29 ancora94fb/082, dati/QCOW2/WIP/indice protetti. Nessun nuovoGO o termine al prossimo verde.
 
 ### Execution — Confine ritirato; contesto fisico corrente senza input ridondante — 2026-11-10T06:11:30.227430+00:00
 
