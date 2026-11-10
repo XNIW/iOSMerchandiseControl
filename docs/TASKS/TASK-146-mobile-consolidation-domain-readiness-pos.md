@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — beda FAIL7,021632; input root invariati filtrati, qualifica pertinente da eseguire |
+| Esito documentale | EXECUTION_ATTIVA — e593 FAIL5,074982; confine ritirato, guard fisico diretto in qualifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — Confine ritirato; contesto fisico corrente senza input ridondante — 2026-11-10T06:11:30.227430+00:00
+
+**✅ BUILD/SIM e593 ESEGUITI.** B2 run42764524950/job129657765057: **FAIL_LATENCY 5,074982s >5s**, preparazione/cache/autorità PASS, PID27615 zero scan. Worker107,902ms, fineworker→Main1,093145s e pubblicazione→riga1,481481s; preApp1,967258s. Conteggi ancora root8/Database13: il confine Equatable non dimostra la riduzione prevista ed è **RITIRATO**, nessun retry identico o adozione basata sul solo totale. Root run42764526275/job129657766498 **3/3 PASS**,173,738s: percorso intero Save/recovery/cutover/bozza/focus/Cancel/drain20/ACK/riapertura/nodups, Auth leaf/diniego reale e cutover/defaults reale. Profilo/provenienza/Shutdown0booted verificati; warning scoped Atomic6015 è6014 baseline spostato dall'import, nessun nuovo warning sui file produttivi modificati. [Causale e postflight](/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/ios-b2-root-input-boundary.ROOT/CAUSAL-AND-POSTFLIGHT.ROOT.json).
+
+**✅ Post-elaborazione ESEGUITA senza nuova raccolta:** stesso artefatto13739014062, cumulativo534671/4MB. Nessun nuovo stdout/CPU necessario alla decisione, nessun budget rinominato. SDK soltanto41009B manifest,85file/O+Debugassert/26.6/provenienza PASS; prodotto completo non acquisito/installato perché B2FAIL. Tre QCOW2/dati e prodotto precedente protetti. Ipotesi hash-only scartata dopo microbenchmark sintetico locale (~29,6µs/hash, non quotaCPU app): nessuna modifica a hash/Auth/outbox.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; nuovo SDK/SIM NOT_RUN.** App, helper e test del confine ripristinati byte-esatti0169. Delta produttivo minimo nei soli ContentView e Database: rimosso il campo Environment del predicato di generazione, confronto FRESCO fra controller.modelContainer e il proprio ModelContext.container; Database conserva ANCHE il guard localPresentation corrente. I punti di costruzione applicativi usano gli stessi oggetti fisici catturati dal predicato originale. Nessun nuovo tipo/cache di permessi, nessuna modifica a hostSync/id/callback/task/layout/attese/bozze; il predicato originale resta per gli altri consumer. Rimuove la dipendenza ridondante che i marker indicano come unico motivo di tre aggiornamenti root, anziché provare un'altra identità di closure. Beneficio da misurare; non attribuita causalità esclusiva all'intero intervallo.
+
+Handoff ACTIVE/EXECUTION: qualificare B2 originale e gli stessi3casi funzionali sullo STESSO commit immutabile, O+Debugassert/CPUoff perB2 e stockDebug perRoot. Totale2101 invariato. Solo dopo composizione stabile: ordinario del SUO prodotto/interazione utile, full2101/2042P43skip16differiti, review/PR29/mainCI/PR28/ritiro2920/cleanup. PR28 sorgenti correnti103percorsi/13critici esatti/2043vecchi selettori presenti è soltanto corrispondenza preparata, non chiusura main. Initf58UNKNOWN e ordinario5,50FAIL preservati; Android/backend/C3/T11/atomica/live/POS conservati dove invariati, fisico/statistiche DIFFERITI. Nessun nuovoGO o termine al prossimo verde.
 
 ### Execution — Motivi root acquisiti; filtro degli input di vista invariati — 2026-11-10T05:48:39.637811+00:00
 

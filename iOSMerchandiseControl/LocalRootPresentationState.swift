@@ -284,36 +284,6 @@ struct LocalAuthorizationRevisionObservation: View {
     }
 }
 
-/// Keep unchanged root inputs from republishing fresh environment closures.
-/// Descendants still observe their stores and recheck authority on every use.
-struct LocalStoreRootBoundary<Content: View>: View, Equatable {
-    // Retain the physical owners so recycled addresses cannot compare equal.
-    private let controller: SyncStoreGenerationController
-    private let displayedContainer: ModelContainer
-    private let controllerIdentity: ObjectIdentifier
-    private let containerIdentity: ObjectIdentifier
-    private let selectedTab: Int
-    private let content: Content
-
-    init(controller: SyncStoreGenerationController, selectedTab: Int,
-         @ViewBuilder content: () -> Content) {
-        self.controller = controller
-        displayedContainer = controller.modelContainer
-        controllerIdentity = ObjectIdentifier(controller)
-        containerIdentity = ObjectIdentifier(displayedContainer)
-        self.selectedTab = selectedTab
-        self.content = content()
-    }
-
-    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.controllerIdentity == rhs.controllerIdentity
-            && lhs.containerIdentity == rhs.containerIdentity
-            && lhs.selectedTab == rhs.selectedTab
-    }
-
-    var body: some View { content }
-}
-
 private struct LocalModelGenerationFenceKey: EnvironmentKey {
     static let defaultValue: () -> Bool = { true }
 }

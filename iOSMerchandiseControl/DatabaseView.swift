@@ -1833,7 +1833,6 @@ struct DatabaseView: View {
     var isFirstSnapshotPreparing = false
     @Environment(\.modelContext) private var context
     @Environment(\.localRootPresentationState) private var localPresentation
-    @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
     @Environment(\.localBusinessReadIsAllowed) private var localReadIsAllowed
     @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
     @EnvironmentObject private var generationController: SyncStoreGenerationController
@@ -4502,7 +4501,8 @@ struct DatabaseView: View {
     // MARK: - Azioni base
 
     private var isCurrentModelGeneration: Bool {
-        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+        generationController.modelContainer === context.container
+            && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
     }
 
     private func restoreLocalPresentation(editorPresentationID: String? = nil) {

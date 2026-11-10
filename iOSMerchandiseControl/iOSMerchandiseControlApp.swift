@@ -246,27 +246,24 @@ struct iOSMerchandiseControlApp: App {
         if Self.isRunningHostedXCTest {
             HostedXCTestRootView()
         } else {
-            LocalStoreRootBoundary(controller: controller, selectedTab: selectedTab) {
-                ContentView(
-                    supabaseTransportClient: supabaseTransportClient,
-                    supabasePullPreviewService: supabasePullPreviewService,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    syncEventSignalWatcher: syncEventSignalWatcher,
-                    shopDeviceRegistrationService: shopDeviceRegistrationService,
-                    shopContextOverride: controlledShopContext,
-                    syncStateOverride: controlledSyncState,
-                    catalogConflictResolutionServiceOverride: controlledConflictResolutionService,
-                    excelSessionOverride: excelSession, foregroundActivityCenterOverride: foregroundActivityCenter,
-                    selectedTabOverride: $selectedTab, storeGenerationController: controller,
-                    workbookPreparationOverride: workbookPreparation
-                )
-                .environment(\.localRootPresentationState, localRootPresentationState)
-                .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence(controller))
-                .environmentObject(supabaseAuthViewModel)
-                .environmentObject(productImageStore)
-                .environmentObject(storefrontAuthoringStore)
-            }
-            .equatable()
+            ContentView(
+                supabaseTransportClient: supabaseTransportClient,
+                supabasePullPreviewService: supabasePullPreviewService,
+                syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                syncEventSignalWatcher: syncEventSignalWatcher,
+                shopDeviceRegistrationService: shopDeviceRegistrationService,
+                shopContextOverride: controlledShopContext,
+                syncStateOverride: controlledSyncState,
+                catalogConflictResolutionServiceOverride: controlledConflictResolutionService,
+                excelSessionOverride: excelSession, foregroundActivityCenterOverride: foregroundActivityCenter,
+                selectedTabOverride: $selectedTab, storeGenerationController: controller,
+                workbookPreparationOverride: workbookPreparation
+            )
+            .environment(\.localRootPresentationState, localRootPresentationState)
+            .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence(controller))
+            .environmentObject(supabaseAuthViewModel)
+            .environmentObject(productImageStore)
+            .environmentObject(storefrontAuthoringStore)
         }
     }
 
