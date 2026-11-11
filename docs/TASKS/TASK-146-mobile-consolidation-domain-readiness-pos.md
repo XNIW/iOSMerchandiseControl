@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA —6dbf Root12PASS, B2FAIL6,412; attese dyld osservate/ownerUNKNOWN, T17runtimeNOT_RUN |
+| Esito documentale | EXECUTION_ATTIVA —f33f Root12PASS12, B2originaleFAIL7,336; gapCPUUNKNOWN, T17runtimeNOT_RUN |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
 | Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution —B2 originale su SDKf33f FAIL7,336; preparazione T17 indipendente — 2026-11-11T14:52:22.008982+00:00
+
+**✅ BUILD-riuso/SIM/lettura ESEGUITI:** b3ec16500f8b229355ef6e6868484b8122fe5f58/run43035888191/job130574463048, AppTreeaf49bfda e141file nativi esatti f33f, nessuna nuova SDKcompilazione. Tutte quattro fasi e asserzioni funzionali attraversate; unica soglia `LocalAvailabilityRootUITests.swift:1120` **FAIL_LATENCY7,335606833s>5**. T0=616,141255, PID10406, render623,476862; cachehit/present/autorità/riga veri,0scan. PreApp2,605084s; submit→MainActor1,937026s; pubblicazione→riga2,006658s. Contatori sincroni inclusivi sovrapposti non spiegano i gap, nessuna causa esclusiva app/runner dimostrata. Non trasferita la traccia d0/6dbf al binariof33f. Zero errori SQLite/checker nello stdout nativo completo1763960B. Indice directory parziale fermato al proprio180s; acquisita soltanto la foglia già individuata, decode zstd a dimensione ignota corretto dal raw locale senza altra rete/build. Ledger826416/4MB cumulativi, marker/summary/provenienze/SHA e shutdown0booted verificati. Ricevuta `b1/ios-b2-original-launch.ROOT/CLASSIFICATION-AND-POSTFLIGHT.ROOT.json`. Esperimento simctl resta ritirato, non riaperto; budgetCPU SPENT/0 invariato.
+
+**T17:** recuperata Release94 dal canonico ios-repair94-after-install/app:23file/hash/insieme esatti, eseguibile8511f5b5 e config154 verificati; receipt storiche conservate con mapping corrente. PredecessorDebug3a24 ancora NON BUILT. Intervento indipendente soloCI: job esplicito package-only nel workflow esistente e helper `.github/ci/ios-t17-predecessor-package.py`, source3a24/tree d68a immutabili, proiezione completa Git, configTEST154 inserita prima di build/firma standard, lock dipendenze/Automatic senza override, timeout totale1200s, forecast8GB+500MB/riserva30,3GB sul runner, firma/MachO/manifest dopo build, nessuna installazione/auth o accettazione runtime inferita. Nessun cambio app/protocollo condiviso. Python parse/YAML/diff PASS; native packaging NOT_RUN. LoginGoogleTEST richiesto su nuovo targetAndroid rimane INPUT_REQUIRED, domanda asincrona già aperta, nessuna nuova conferma.
+
+**Handoff ACTIVE/EXECUTION:** B2 causa gap ancora UNKNOWN; non aggiunta variante SwiftUI o retry identico. Chiudere causa misurata, T17reali, composizione finale2101/DebugReleaseAnalyzeScan/ordinario utile/review/PR29/mainCI/PR28. Root12f33f PASS12 e Android/backend/atomicità/live/POS/C3T11 conservati nel proprio scope. Fisicooffline16/statistiche DIFFERITI autorizzati, T17 non differito. WIP/indice/sessioni/3QCOW2/prodotti e prove uniche KEEP; MASTER fase/stato invariati. Nessun REVIEW/DONE o merge dichiarato con gate aperti.
 
 ### Execution —166 vero risultato PIDFAIL; esperimento simctl ritirato, ritorno al lancio B2 originale — 2026-11-11T14:08:50.368539+00:00
 
