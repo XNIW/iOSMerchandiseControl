@@ -1126,6 +1126,9 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                 .init(product: product, supplier: nil, category: nil, eventMaxID: 41,
                     prices: [price], history: [history], hasDomains: true)
             }
+            // Recovery and ordinary reconciliation must describe the same
+            // controlled server. The seed contains both prices and sessions.
+            catalogRemote.reconciliationSnapshot = transport.remoteSnapshot
             if independentDomainPhase.heldDomain != nil {
                 controller.localBodyQualificationBeforeDomainForTesting = { [weak self] domain in
                     guard let self, domain == independentDomainPhase.heldDomain,
@@ -1692,6 +1695,24 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
                             }
                             facts.insert("task146.b2.memo.\(hits > 0 ? "hit" : "miss")")
                         } else {
+                            // The next process must reopen the baseline we just
+                            // qualified, not an unfinished automatic recovery.
+                            // This technical completion does not gate the root or
+                            // the independent sections already exercised above.
+                            let terminalDeadline = ProcessInfo.processInfo.systemUptime + 10
+                            while await AutomaticSyncSingleFlight.processShared.isRunning {
+                                guard sameOwnerAndGeneration(),
+                                      ProcessInfo.processInfo.systemUptime < terminalDeadline else {
+                                    throw SyncStoreGenerationError.activationReadBackFailed
+                                }
+                                try await Task.sleep(for: .milliseconds(50))
+                            }
+                            guard sameOwnerAndGeneration(),
+                                  AccountBindingStore().pendingRecoveryJournal == nil else {
+                                throw SyncStoreGenerationError.activationReadBackFailed
+                            }
+                            NSLog("TASK146_B2_PREP_BOUNDARY phase.%@ stage.owned-work-terminal journal-present.0",
+                                independentDomainPhase.rawValue)
                             facts.insert("task146.b2.\(independentDomainPhase.rawValue).qualified")
                         }
                         return
@@ -3062,6 +3083,17 @@ final class Task144LocalAvailabilityRootFixture: ObservableObject {
     /// Observes the result of the real facade; it never submits work or changes
     /// admission. Only closed categories and bounded TEST-row counts are exposed.
     private func recordAutomaticReadback(action: SyncAction, result: SyncAutomaticRunResult, presentationID: String?, invocationID: UUID) {
+        if let phase = independentDomainPhase, phase.heldDomain != nil {
+            let raw = UserDefaults.standard.string(forKey: "sync.runtime.automatic.recovery.requestedReason") ?? "none"
+            let known = ["none", "canonical_drift_detected", "ordinary_continuation_local_work_pending", "sync_event_scope_fence_missing"]
+            NSLog("TASK146_B2_PREP_TERMINAL phase.%@ status.%@ recovery-reason.%@ journal-present.%d local-prices.%d remote-prices.%d local-sessions.%d remote-sessions.%d",
+                phase.rawValue, result.status.rawValue, known.contains(raw) ? raw : "other",
+                AccountBindingStore().pendingRecoveryJournal == nil ? 0 : 1,
+                UserDefaults.standard.integer(forKey: "sync.runtime.reconcile.local.productPrices"),
+                UserDefaults.standard.integer(forKey: "sync.runtime.reconcile.remote.productPrices"),
+                UserDefaults.standard.integer(forKey: "sync.runtime.reconcile.local.historySessions"),
+                UserDefaults.standard.integer(forKey: "sync.runtime.reconcile.remote.historySessions"))
+        }
         if let control = t10Control, presentationID == controller.presentationID {
             do {
                 let qualified = try t10Readback(beforeActivation: false)
@@ -7405,6 +7437,7 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
     nonisolated let usesServerAuthorizedShopScope = true
     enum Fault: Error { case unexpectedCall }
     private var current: RemoteInventoryProductRow
+    var reconciliationSnapshot: (() -> Task144ControlledRemoteSnapshot)?
     private var t10Control: Task145SavedRecoveryControl?
     func configureT10(_ control: Task145SavedRecoveryControl) {
         t10Control = control; current = control.state.product
@@ -8047,6 +8080,14 @@ private final class Task144ControlledCatalogRemote: SyncAutomaticCatalogRemoteWr
         try scopeSwitchIngress?("read:fetchReconciliationRemoteCounts")
 // TASK145_SCOPE_SWITCH_INSERT_END raw-fetchReconciliationRemoteCounts
         _ = try verifiedScope()
+        if let snapshot = reconciliationSnapshot?() {
+            let counts = SyncInventoryCountSnapshot(products: snapshot.product == nil ? 0 : 1,
+                suppliers: snapshot.supplier == nil ? 0 : 1, categories: snapshot.category == nil ? 0 : 1,
+                productPrices: snapshot.prices.count, historySessions: snapshot.history.count)
+            NSLog("TASK146_B2_PREP_COUNTS products.%d prices.%d sessions.%d", counts.products,
+                counts.productPrices, counts.historySessions)
+            return counts
+        }
         if let isolationControl {
             try isolationControl.raw("read:counts", identity: "scoped")
             return .init(products: isolationControl.state.remoteProduct == nil ? 1 : 2, suppliers: 0, categories: 0, productPrices: 0, historySessions: 0)
