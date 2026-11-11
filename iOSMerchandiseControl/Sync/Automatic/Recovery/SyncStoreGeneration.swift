@@ -1945,7 +1945,6 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let expectedShop = SelectedShopStore(defaults: defaults).selectedShop(accountHash: manifest.accountHash)
         let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
         let identity = UUID()
-        let readAdmissionGeneration = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
         manifestQualificationID = identity
         manifestQualificationLaunch = (identity, false, retiringQualification != nil && !retiringQualificationNotStarted)
         manifestQualificationStartedOwner = ownerUserID
@@ -2101,9 +2100,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                                     // These tests publish only through the existing awaited boundary below.
                                     guard self.localBodyQualificationBeforePublicationForTesting == nil else { return }
                                     #endif
-                                    guard Task126OwnerStoreGate.acceptLocalReadProof(container: container, domain: domain,
+                                    guard Task126OwnerStoreGate.acceptCurrentLocalReadProof(container: container, domain: domain,
                                             ownerUserID: ownerUserID, defaults: self.defaults,
-                                            admissionGeneration: readAdmissionGeneration, fence: before) else { return }
+                                            fence: before) else { return }
                                     self.localBodyQualificationRevision &+= 1
                                 }
                             }
@@ -2268,9 +2267,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                         // a resolved shop. Recheck the current lease and fence.
                         if canPublishCachedReads {
                             for domain in [Task126LocalReadDomain.catalog, .sessions, .priceHistory] {
-                                if Task126OwnerStoreGate.acceptLocalReadProof(container: container, domain: domain,
+                                if Task126OwnerStoreGate.acceptCurrentLocalReadProof(container: container, domain: domain,
                                         ownerUserID: ownerUserID, defaults: self.defaults,
-                                        admissionGeneration: readAdmissionGeneration, fence: fence) {
+                                        fence: fence) {
                                     cachedReadsPublished = true
                                 }
                             }

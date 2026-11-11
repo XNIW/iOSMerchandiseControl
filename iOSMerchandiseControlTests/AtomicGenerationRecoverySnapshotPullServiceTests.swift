@@ -6657,11 +6657,35 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         selected.markResolutionUnresolved(accountHash: scope.accountHash)
         let reopened = try reopenFixture(clean)
         let controller = reopened.controller
+        let originalAdmission = Task126OwnerStoreGate.localBodyProofAdmissionGeneration()
+        let readbackEntered = expectation(description: "Cached domain readback before same-scope lease renewal")
+        let publicationGate = Task144ManifestQualificationGate(entered: readbackEntered)
+        controller.localBodyQualificationBeforePublicationForTesting = { await publicationGate.wait() }
+        defer { publicationGate.release(); controller.localBodyQualificationBeforePublicationForTesting = nil }
         var enteredBeforeYield = false
         controller.localBodyQualificationDidEnterForTesting = { enteredBeforeYield = true }
         controller.startLocalBodyQualification(ownerUserID: reopened.ownerUserID)
         XCTAssertTrue(enteredBeforeYield, "The authenticated cached reader must enter before first layout can monopolize MainActor")
+        let barrier = await XCTWaiter.fulfillment(of: [readbackEntered], timeout: 2)
+        _ = try XCTUnwrap(barrier == .completed ? true : nil, "CACHED_READBACK_NOT_HELD")
+        // A normal resolver refresh renews its writer lease while this exact
+        // archive remains unchanged. Reproduce the old captured-epoch refusal
+        // without renewing that old API or allowing complete/writer authority.
+        let reopenedRepository = try physicalProofRepository(reopened)
+        let unchangedFence = try reopenedRepository.captureActiveMutationFence(for: controller.active)
+        let unchangedSnapshot = try reopenedRepository.capturePhysicalBodyProof(for: controller.active, fence: unchangedFence)
+        XCTAssertTrue(selected.markResolutionReady(accountHash: scope.accountHash))
+        selected.markResolutionUnresolved(accountHash: scope.accountHash)
+        XCTAssertNotEqual(Task126OwnerStoreGate.localBodyProofAdmissionGeneration(), originalAdmission)
+        XCTAssertEqual(try reopenedRepository.captureActiveMutationFence(for: controller.active), unchangedFence)
+        XCTAssertEqual(try reopenedRepository.capturePhysicalBodyProof(for: controller.active, fence: unchangedFence), unchangedSnapshot)
+        XCTAssertFalse(Task126OwnerStoreGate.acceptLocalReadProof(container: controller.modelContainer,
+            domain: .catalog, ownerUserID: reopened.ownerUserID, defaults: reopened.defaults,
+            admissionGeneration: originalAdmission, fence: unchangedFence),
+            "The captured-epoch API must keep rejecting an expired admission")
+        publicationGate.release()
         let full = await controller.awaitLocalBodyQualification()
+        controller.localBodyQualificationBeforePublicationForTesting = nil
         XCTAssertFalse(full)
         XCTAssertGreaterThan(controller.localBodyPhysicalReuseCountForTesting, 0)
         XCTAssertEqual(controller.localBodyFullReadbackCountForTesting, 0)

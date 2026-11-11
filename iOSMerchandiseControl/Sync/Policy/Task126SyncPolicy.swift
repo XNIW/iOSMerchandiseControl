@@ -767,6 +767,20 @@ nonisolated enum Task126OwnerStoreGate {
         }
     }
 
+    /// An unchanged local domain readback may outlive a same-scope resolver
+    /// refresh. Recheck its current authority and physical fence under the
+    /// current lease; this grants neither a complete body proof nor a writer.
+    static func acceptCurrentLocalReadProof(container: ModelContainer, domain: Task126LocalReadDomain,
+                                            ownerUserID: UUID?, defaults: UserDefaults,
+                                            fence: SyncStoreActiveMutationFence) -> Bool {
+        leaseStore.withCurrentLease { generation in
+            guard permitsSameScopeLocalAuthorityWithLeaseHeld(
+                modelContainer: container, ownerUserID: ownerUserID, defaults: defaults) else { return false }
+            return leaseStore.acceptLocalReadProofWithLeaseHeld(container, domain: domain,
+                generation: generation, fence: fence)
+        }
+    }
+
     static func clearLocalReadProofs(_ container: ModelContainer) {
         leaseStore.withCurrentLease { _ in leaseStore.clearLocalReadProofsWithLeaseHeld(container) }
     }
