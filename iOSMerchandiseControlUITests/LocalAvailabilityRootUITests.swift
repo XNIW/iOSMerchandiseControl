@@ -653,11 +653,23 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         app.buttons["Cancel"].tap()
         let quietStarted = ProcessInfo.processInfo.systemUptime
         t14EditorOpen = false
+        let quietDeadline = quietStarted + 20
+        // Cancel may return before the native sheet hierarchy has retired. Admit
+        // the actual root observer before taking the fresh clock/unique snapshot,
+        // sharing the original quiet deadline with the successor drain below.
+        let rootObserver = app.otherElements.matching(NSPredicate(
+            format: "identifier == %@", "task145.t14.native-observation.root")).element
+        try t14Require(rootObserver.exists || rootObserver.waitForExistence(
+            timeout: max(0, quietDeadline - ProcessInfo.processInfo.systemUptime)),
+            "post-Cancel-root-observer-admitted-within-original-quiet-deadline")
         // No input, availability control or manual sync after this real Cancel.
         let quietBoundary = try t14Observe("first-post-Cancel-app-clock-quiet-boundary")
         let quietAppUptime = try t14Number(quietBoundary["uptime"], "actual-post-Cancel-app-clock")
         let drained = app.staticTexts["task144.controlled.activated-and-drained"]
-        try t14Require(drained.waitForExistence(timeout: 20), "ordinary-successor-after-activity-and-quiet")
+        try t14Require(drained.waitForExistence(
+            timeout: max(0, quietDeadline - ProcessInfo.processInfo.systemUptime))
+            && ProcessInfo.processInfo.systemUptime <= quietDeadline,
+            "ordinary-successor-after-activity-and-quiet")
         try t14Require(app.staticTexts["task144.controlled.queue-empty-no-duplicates"].exists,
             "existing-terminal-exact-ACK-sent-count-event-count-readback")
         try t14Require(app.staticTexts["Cloud confirmed this save"].waitForExistence(timeout: 5), "current-A-own-ACK-feedback")
@@ -6690,9 +6702,18 @@ extension LocalAvailabilityRootUITests {
                         timeout: max(0, tabDeadline - ProcessInfo.processInfo.systemUptime))
                     XCTAssertTrue(present && ProcessInfo.processInfo.systemUptime <= tabDeadline)
                     if !button.isSelected { button.tap() }
-                    // Root recreation may replace the bar; require the real
-                    // current selected flag even when no redundant tap was needed.
-                    XCTAssertTrue(buttons.element(boundBy: 0).isSelected)
+                    // Root recreation may replace the bar after tap returns.
+                    // Require its actual selected flag within the same five-second
+                    // tab deadline; do not retap or extend admission after the tap.
+                    var selected = buttons.element(boundBy: 0).isSelected
+                    if !selected {
+                        let selection = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                            buttons.element(boundBy: 0).isSelected
+                        }, object: nil)
+                        selected = XCTWaiter.wait(for: [selection], timeout: max(
+                            0, tabDeadline - ProcessInfo.processInfo.systemUptime)) == .completed
+                    }
+                    XCTAssertTrue(selected && ProcessInfo.processInfo.systemUptime <= tabDeadline)
                     XCTAssertFalse(app.staticTexts["task145.t19.failed"].exists)
                 }
                 let optionsForm = try c3OptionsForm(stage: "T19-verified-date", downstream: ["verified-date"])

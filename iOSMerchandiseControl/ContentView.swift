@@ -155,9 +155,20 @@ struct ContentView: View {
     private let selectedTabOverride: Binding<Int>?
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
-        nonmutating set { if let selectedTabOverride { selectedTabOverride.wrappedValue = newValue } else { fallbackSelectedTab = newValue } }
+        nonmutating set {
+            // Persist the actual choice before SwiftUI publishes it. A same-scope
+            // authorization/readability update can restore presentation in the
+            // same transaction, before onChange has observed the new selection.
+            if isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery {
+                localPresentation?.update(presentationID: mountedPresentationID) { $0.selectedTab = newValue }
+            }
+            if let selectedTabOverride { selectedTabOverride.wrappedValue = newValue }
+            else { fallbackSelectedTab = newValue }
+        }
     }
-    private var selectedTabBinding: Binding<Int> { selectedTabOverride ?? $fallbackSelectedTab }
+    private var selectedTabBinding: Binding<Int> {
+        Binding(get: { selectedTab }, set: { selectedTab = $0 })
+    }
     @State private var mountedPresentationID: String?
     @State private var isCorruptJournalReviewPresented = false
     @State private var corruptJournalReplacementTask: Task<Void, Never>?
