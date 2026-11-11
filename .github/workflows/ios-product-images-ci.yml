@@ -22,6 +22,11 @@ on:
       - ".github/ci/**"
   workflow_dispatch:
     inputs:
+      task146_t17_predecessor_debug:
+        description: "Package frozen normal TEST Debug3a24 only; no tests or runtime acceptance"
+        type: boolean
+        required: false
+        default: false
       task144_a_campaign:
         description: "Run five isolated executions of the original TASK-144 A test"
         type: boolean
@@ -57,7 +62,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  t17-predecessor-debug:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_t17_predecessor_debug == true }}
+    name: T17 frozen predecessor Debug package only
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 3a24c7ac237eb20f7e279d2deffb2213e77e0e7a
+          path: t17-predecessor-source
+          persist-credentials: false
+      - name: Build normal prior Debug with frozen TEST resource before signing
+        env:
+          TASK146_IOS_CONFIG_154_B64: ${{ secrets.TASK146_IOS_TEST_CONFIG_154_B64 }}
+        run: python3 .github/ci/ios-t17-predecessor-package.py
+      - name: Preserve package, pins and diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: task146-t17-predecessor-debug-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/task146-t17-predecessor/*.json
+            ${{ runner.temp }}/task146-t17-predecessor/*.log
+            ${{ runner.temp }}/task146-t17-predecessor/*.txt
+            ${{ runner.temp }}/task146-t17-predecessor/*.plist
+            ${{ runner.temp }}/task146-t17-predecessor/*.tar.gz
+
   product-images:
+    if: ${{ inputs.task146_t17_predecessor_debug != true }}
     name: XCTest (${{ matrix.shard }})
     strategy:
       fail-fast: false
@@ -849,7 +888,7 @@ jobs:
           PY
 
   complete-coverage:
-    if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
+    if: ${{ always() && inputs.task146_t17_predecessor_debug != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
     needs: product-images
     runs-on: ubuntu-latest
     timeout-minutes: 10
