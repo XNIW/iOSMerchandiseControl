@@ -62,6 +62,39 @@ def extract(package, destination, pins):
         assert sha(path) == row["sha256"]
 
 
+def validate_plan_paths(plan):
+    # This immutable SDK plan has one coverage-only source prefix. It is not
+    # an executable lookup and is retained byte-for-byte, including its gap.
+    source_prefix = "/Users/runner/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-bbhhhqdbwqiitfbjjwnjszuswnjd/SourcePackages/checkouts/supabase-swift/Sources/Supabase/"
+    old_paths = []
+    def walk(value, path):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                walk(child, path+[key])
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, path+[index])
+        elif isinstance(value, str) and "/Users/runner/Library/Developer/Xcode/DerivedData/" in value:
+            old_paths.append((path, value))
+    assert isinstance(plan, dict)
+    walk(plan, [])
+    assert old_paths == [(["CodeCoverageBuildableInfos", 0, "SourceFilesCommonPathPrefix"], source_prefix)]
+    configurations = plan["TestConfigurations"]
+    assert len(configurations) == 1
+    targets = configurations[0]["TestTargets"]
+    assert {target["BlueprintName"] for target in targets} == {"iOSMerchandiseControlTests", "iOSMerchandiseControlUITests"}
+    for target in targets:
+        name = target["BlueprintName"]
+        assert target["TestBundlePath"] == "__TESTHOST__/PlugIns/"+name+".xctest"
+        host = "iOSMerchandiseControlUITests-Runner.app" if name.endswith("UITests") else "iOSMerchandiseControl.app"
+        assert target["TestHostPath"] == "__TESTROOT__/Debug-iphonesimulator/"+host
+        if name.endswith("UITests"):
+            assert target["UITargetAppPath"] == "__TESTROOT__/Debug-iphonesimulator/iOSMerchandiseControl.app"
+    return {"executablePaths": "RELATIVE_TESTROOT_AND_TESTHOST_VERIFIED",
+            "unchangedCoverageSourcePrefix": source_prefix,
+            "coverageSourceAvailability": "NOT_EXPORTED_GAP_NOT_NATIVE_EXECUTABLE_INPUT"}
+
+
 def main():
     assert os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
     assert os.environ["TASK146_REUSE_NATIVE_RUN"] == SOURCE_RUN
@@ -85,6 +118,8 @@ def main():
     assert app["appSourceTree"] == git_tree("iOSMerchandiseControl")
     required = {"iOSMerchandiseControl", "iOSMerchandiseControlTests", "iOSMerchandiseControlUITests", "iOSMerchandiseControl.xcodeproj", "contracts", "Vendor 2"}
     assert set(native["sourceTrees"]) == required
+    subprocess.run(["git", "diff", "--exit-code", "HEAD", "--", *sorted(required)], check=True,
+                   stdout=subprocess.DEVNULL)
     assert all(git_tree(path) == pin for path, pin in native["sourceTrees"].items())
     assert app["debugBuildProfile"] == native["debugBuildProfile"]
     profile = native["debugBuildProfile"]
@@ -103,7 +138,7 @@ def main():
     extract(incoming/"native-test-support.tar.gz", products, native["files"])
     plan = products/native["xctestrun"]
     parsed = plistlib.loads(plan.read_bytes())
-    assert isinstance(parsed, dict) and "/Users/runner/Library/Developer/Xcode/DerivedData/" not in repr(parsed), "Unrelocated prior product path"
+    plan_paths = validate_plan_paths(parsed)
     for bundle in [products/"Debug-iphonesimulator/iOSMerchandiseControl.app", products/"Debug-iphonesimulator/iOSMerchandiseControlUITests-Runner.app"]:
         subprocess.run(["codesign", "--verify", "--strict", str(bundle)], check=True)
     (temporary/"task146-debug-build-profile.json").write_text(json.dumps(profile, indent=2)+"\n")
@@ -112,7 +147,7 @@ def main():
                "sourceTrees": native["sourceTrees"], "manifestSHA256": MANIFEST_HASHES, "plan": str(plan),
                "nativeFilesVerified": len(app["files"])+len(native["files"]), "architecture": arch,
                "xcode": xcode, "runtime": selected[0][0], "SDKCompilationInConsumer": "NOT_RUN_REUSED_EXACT_SOURCE_PRODUCTS",
-               "nativeAcceptance": "NOT_RUN_YET"}
+               "nativeAcceptance": "NOT_RUN_YET", "planPaths": plan_paths}
     (temporary/"task146-native-product-reuse.json").write_text(json.dumps(receipt, indent=2)+"\n")
     with Path(os.environ["GITHUB_ENV"]).open("a") as stream:
         stream.write("TASK146_NATIVE_REUSE_PLAN="+str(plan)+"\n")
