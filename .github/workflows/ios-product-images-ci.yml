@@ -33,7 +33,7 @@ on:
         required: false
         default: false
       task146_b2_cpu_sampling:
-        description: "Focused B2 only: owned kernel stackshots and offline decoding; diagnostic, not acceptance"
+        description: "Focused B2 only: bounded owned process samples; diagnostic, not acceptance"
         type: boolean
         required: false
         default: false
@@ -115,7 +115,7 @@ jobs:
           echo "Selected compatible simulator: $DEVICE_ID"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
-      - name: Verify owned kernel sampler before SDK compilation
+      - name: Verify owned sampler admission before SDK compilation
         if: ${{ inputs.task146_b2_cpu_sampling == true }}
         run: python3 .github/ci/ios-b2-startup-sampling.py --probe-only
 

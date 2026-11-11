@@ -36,7 +36,7 @@ marker_rows = []
 errors = []
 # One bounded region avoids concurrent pre-symbolication of the same process.
 # Existing markers locate the requested queue/render intervals inside the trace.
-phases = {"cache-process-start": ("mainactor-admission-region", 5)}
+phases = {"cache-process-start": ("mainactor-admission-region", 4)}
 # Reuse the existing kernel birth-identity helper, also used by local runner
 # custody. A unique constant in the log predicate identifies only this stream.
 lifecycle = runpy.run_path("tools/agent/lib/artifact_lifecycle.py")
@@ -399,7 +399,7 @@ finally:
     report = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
         "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION", "backend": "sample-10ms-no-mayDie",
         "nativeExit": code, "observations": rows, "markers": marker_rows, "errors": errors,
-        "symbolInformation": "sample exact owned PID, 5s at10ms, no-mayDie; symbolication after bounded recording, exact all-thread text copied offline; aggregated stacks do not establish per-sample phase or owner",
+        "symbolInformation": "sample exact owned PID, 4s at10ms, no-mayDie; symbolication after bounded recording, exact all-thread text copied offline; aggregated stacks do not establish per-sample phase or owner",
         "selfProbe": probe,
         "collectorFinalizationLimitSeconds": 120,
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),

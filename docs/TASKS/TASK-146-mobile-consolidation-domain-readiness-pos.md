@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA —235 Root12PASS, B2FAIL6,524; ordinario osservato/driverFAIL, T17runtimeNOT_RUN |
+| Esito documentale | EXECUTION_ATTIVA —6dbf Root12PASS, B2FAIL6,412; CPU da identificare, T17runtimeNOT_RUN |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
 | Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution —6dbf: letture correnti Root12 PASS; B2 FAIL6,412 e unica raccolta app4s — 2026-11-11T09:57:15.443258+00:00
+
+**✅ BUILD/SIM ESEGUITI**, stessa SHA6dbf2b656db1d8e582100d741cbb77af2d0053a9 / AppTreec31ef0b915869dd30cd3301c0d2a7f82e51906d7. Root42994741317/job130435899312 **12PASS**, stockDebug verificato,14warning baseline/0 nuovi dal log completo2230734B, Shutdown/0booted. Regressione vera: readback cache trattenuto, refresh ordinario ready→unresolved rinnova lease mantenendo snapshot/fence; API catturata rifiuta l'epoca vecchia, controller ammette tre domini con full/writer ancora negati, revoca effettiva nega lettura. Anche root recovery/cambio generazione/bozze/Save/ACK e guardie Auth tardive PASS. Fix di correttezza conservato; non beneficio CPU dedotto.
+
+B2 originale senza profiler42994746252/job130435913916 **FAIL_LATENCY6,411931208s>5**: tutte quattro fasi PASS, sola asserzione finale soglia, cachehit/presente/riga/autorità vere, PID29409/namespaceab45df24…/0scan nel PID. PreApp2,143798s, init0,354795s, worker→Main1,452812s, pubblicazione→riga2,146379s; root8/Database11body. Nessun miglioramento pertinente qualificato, causa CPU/owner UNKNOWN. Il precedente timeout hold-prices resta FAIL di preparazione distinto, non risolto retroattivamente da un PASS. Proiezione completa contigua4737B del sessionlog precedente: query remota AX10,737s, al ritorno Application-only/no matches; nessuno stack app o istante del marker prima della deadline. `b1/ios-b2-sample-admission.ROOT/native-console.ROOT/PREPARATION-QUERY.PROJECTION.ROOT.json` e `b1/ios-current-read-admission-b2.ROOT/focused.ROOT/b2-timing.ROOT/EXACT-CLASSIFICATION.ROOT.json`.
+
+**✅ STATIC/parse/diff ESEGUITI PASS; successore solo-collector/app-test invariati.** Prima raccolta sample non raggiunse cache e non acquisì alcuno stack app. Ora4fasi ammesse, serve il dato ancora assente nelle due finestre lente: una sola raccolta app **4s/10ms**, non nuovo esperimento UI. Budget additivo originale7s preservato:1s probe locale+1s probe ospitato già consumati, prossimo probe1s+target4s, residuo poi0; kernel5+5/LLDB16/old0c4636446/4640000 invariati. Nessun retry automatico se preparazione/stack ancora mancanti, risultato sotto profiler solo DIAGNOSTIC. SDK disponibile ricontrollato:85file =52App+33PlugIns unit, nessuna directorydSYM/UITestRunner/xctestrun; precedente descrizione app+dSYM imprecisa corretta qui. Quel prodotto non esegue da solo il B2 nativo: unica build ospitata necessaria per nuova raccolta, non per esportare dati esistenti. Admission `b1/ios-current-startup-sample4.ROOT/ADMISSION.ROOT.json`. Metadata prodotto6dbf artifact13843977583 verificati11/11, letti41009B; ancora nessun download completo/install/native ordinario.
+
+Handoff **ACTIVE/EXECUTION**, non REVIEW: leggere la sola raccolta→fix soltanto dal lavoro effettivamente identificato→B2 originale/regressioni pertinenti→ordinario utile e matrice2101/2042PASS/43skip/16fisiciDIFFERITI, DebugReleaseAnalyzeScan→review/PR29/mainCI/PR28. T17 pacchetti qualificati, quattro upgrade runtime NOT_RUN e richiesta target/sessione normale/readback Release già aperta; nessuna esclusione automatica. Android/backend/POS/live/atomicità/cancellazioni acquisiti dove invariati. Preservati sorgenti/WIP/indice/dati/sessioni/QCOW2; liberi36,09GB prima del prossimo lotto, da rimisurare. MASTER fase/stato invariati.
 
 ### Execution — preparazione1f06 FAIL prima del sampler; correzione circoscritta ammissione letture — 2026-11-11T09:22:50.170232+00:00
 
