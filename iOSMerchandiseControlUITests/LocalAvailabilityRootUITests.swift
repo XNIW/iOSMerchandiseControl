@@ -1028,9 +1028,43 @@ final class LocalAvailabilityRootUITests: XCTestCase {
 
         app.launchEnvironment["TASK146_B2_DOMAIN_UI"] = "cache"
         app.launchEnvironment["TASK131_INITIAL_TAB"] = "database"
+        // Read host admission before T0. The original request clock includes
+        // IPC, dispatch, OS launch and every bit of app work; never subtract.
+        let nativeHostChannel = try XCTUnwrap(FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first)
+            .appendingPathComponent("TASK146-B2-NATIVE-LAUNCH", isDirectory: true)
+        let nativeAdmissionURL = nativeHostChannel.appendingPathComponent("admission.json")
+        let nativeAdmission: [String: Any]?
+        if FileManager.default.fileExists(atPath: nativeAdmissionURL.path) {
+            nativeAdmission = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: nativeAdmissionURL)) as? [String: Any])
+        } else { nativeAdmission = nil } // Local original driver remains usable.
         let cacheLaunchStarted = ProcessInfo.processInfo.systemUptime
         app.launchEnvironment["TASK146_B2_LAUNCH_REQUEST_UPTIME"] = String(cacheLaunchStarted)
-        app.launch()
+        var hostLaunch: [String: Any]?
+        if let nativeAdmission {
+            let target = try XCTUnwrap(ProcessInfo.processInfo.environment["SIMULATOR_UDID"])
+            XCTAssertEqual(nativeAdmission["targetUDID"] as? String, target)
+            XCTAssertEqual(nativeAdmission["schema"] as? Int, 1)
+            let challenge = try XCTUnwrap(nativeAdmission["challenge"] as? String)
+            let request: [String: Any] = ["schema": 1, "challenge": challenge,
+                "targetUDID": target, "runnerPID": ProcessInfo.processInfo.processIdentifier,
+                "requestUptime": cacheLaunchStarted, "environment": app.launchEnvironment,
+                "arguments": app.launchArguments]
+            try JSONSerialization.data(withJSONObject: request).write(
+                to: nativeHostChannel.appendingPathComponent("request.json"), options: .atomic)
+            let responseURL = nativeHostChannel.appendingPathComponent("response.json")
+            // Observe the original physical6s window before initiating AX.
+            // This is driver observation, never an app delay or a later T0.
+            while !FileManager.default.fileExists(atPath: responseURL.path),
+                  ProcessInfo.processInfo.systemUptime-cacheLaunchStarted < 16 {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+            hostLaunch = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: responseURL)) as? [String: Any])
+            XCTAssertEqual(hostLaunch?["challenge"] as? String, challenge)
+            XCTAssertEqual(hostLaunch?["targetUDID"] as? String, target)
+            XCTAssertEqual(hostLaunch?["namespace"] as? String, runID)
+            XCTAssertEqual(try XCTUnwrap(hostLaunch?["requestUptime"] as? Double), cacheLaunchStarted, accuracy: 0.000001)
+            app.activate() // Existing foreground PID; automation starts after measurement.
+        } else { app.launch() }
         XCTAssertEqual((app.value(forKey: "idleAnimationWaitEnabled") as? NSNumber)?.boolValue, false)
         let catalogRowAppeared = catalogRow.waitForExistence(timeout: 5)
         let automationElapsed = ProcessInfo.processInfo.systemUptime - cacheLaunchStarted
@@ -1048,6 +1082,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
         XCTAssertEqual(observation["namespace"] as? String, runID)
         XCTAssertEqual(try XCTUnwrap(observation["requestUptime"] as? Double), cacheLaunchStarted, accuracy: 0.000001)
         let renderedAt = try XCTUnwrap(observation["renderUptime"] as? Double)
+        if let hostLaunch {
+            XCTAssertEqual(observation["pid"] as? Int, hostLaunch["pid"] as? Int)
+            XCTAssertLessThanOrEqual(renderedAt, try XCTUnwrap(hostLaunch["automationMayAttachAfterUptime"] as? Double),
+                                    "The real row must render before the automation attachment")
+        }
         XCTAssertGreaterThanOrEqual(renderedAt, cacheLaunchStarted)
         let catalogElapsed = renderedAt - cacheLaunchStarted
         let memoObservation = app.staticTexts.matching(NSPredicate(

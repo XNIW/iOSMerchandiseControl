@@ -179,6 +179,14 @@ def run(shard_id):
         record['testArgv'] = argv
         record['status'] = 'RUNNING'
         write(output / 'run.json', record)
+        cache_selector = 'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'
+        if cache_selector in selection['activeExpected']:
+            # Only the measured process uses the ordinary launcher. Native
+            # XCTest still drives all four phases and every original assertion.
+            argv = [sys.executable, str(Path(__file__).with_name('ios-b2-ordinary-launch.py')), '--'] + argv
+            record['measuredCacheLaunch'] = 'ORDINARY_SIMCTL_THEN_NATIVE_AX_AFTER_PHYSICAL_WINDOW'
+            record['testArgv'] = argv
+            write(output / 'run.json', record)
         record['xcodeExit'] = bounded(argv, output / 'xcodebuild.log', cutoff)
         record['status'] = 'AWAITING_RESULT_EXPORT'
     except (AssertionError, KeyError, ValueError, OSError, subprocess.TimeoutExpired, InterruptedError) as error:

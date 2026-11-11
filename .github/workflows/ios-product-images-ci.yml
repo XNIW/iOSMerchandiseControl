@@ -22,11 +22,6 @@ on:
       - ".github/ci/**"
   workflow_dispatch:
     inputs:
-      task146_sdk_ordinary_diagnostic:
-        description: "One pinned existing SDK launch without XCTest; no app build, diagnostic only"
-        type: boolean
-        required: false
-        default: false
       task144_a_campaign:
         description: "Run five isolated executions of the original TASK-144 A test"
         type: boolean
@@ -50,45 +45,13 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: ios-product-images-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  sdk-ordinary-diagnostic:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_sdk_ordinary_diagnostic == true }}
-    runs-on: macos-26
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: task146-ordinary-app-42994746252-1
-          run-id: 42994746252
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/task146-sdk-input
-      - name: Launch exact SDK without XCTest or profiling
-        run: python3 .github/ci/ios-sdk-ordinary-diagnostic.py
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: task146-sdk-ordinary-diagnostic-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.json
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.jsonl
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.log
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.stdout
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.stderr
-            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.jpg
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0
   product-images:
-    if: ${{ inputs.task146_sdk_ordinary_diagnostic != true }}
     name: XCTest (${{ matrix.shard }})
     strategy:
       fail-fast: false
@@ -764,6 +727,7 @@ jobs:
             ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
             ${{ runner.temp }}/task146-runner-resources.jsonl
             ${{ runner.temp }}/task146-b2-sampling/
+            ${{ runner.temp }}/task146-b2-ordinary-launch/
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
@@ -814,7 +778,7 @@ jobs:
           PY
 
   complete-coverage:
-    if: ${{ always() && inputs.task146_sdk_ordinary_diagnostic != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
+    if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
     needs: product-images
     runs-on: ubuntu-latest
     timeout-minutes: 10
