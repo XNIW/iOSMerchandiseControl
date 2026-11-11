@@ -193,11 +193,11 @@ def run(shard_id):
         write(output / 'run.json', record)
         cache_selector = 'iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'
         if cache_selector in selection['activeExpected']:
-            # Only the measured process uses the ordinary launcher. Native
-            # XCTest still drives all four phases and every original assertion.
-            argv = [sys.executable, str(Path(__file__).with_name('ios-b2-ordinary-launch.py')), '--'] + argv
-            record['measuredCacheLaunch'] = 'ORDINARY_SIMCTL_THEN_NATIVE_AX_AFTER_PHYSICAL_WINDOW'
-            record['testArgv'] = argv
+            # The ordinary-launch experiment delayed process birth >10s and
+            # activate() replaced its PID. Restore the original XCTest launch;
+            # the retained UI bundle already contains this unchanged fallback.
+            # No broker creates an admission file in this fresh owned runner.
+            record['measuredCacheLaunch'] = 'ORIGINAL_XCTEST_LAUNCH_ORIGINAL_T0_5S'
             write(output / 'run.json', record)
         record['xcodeExit'] = bounded(argv, output / 'xcodebuild.log', cutoff)
         record['status'] = 'AWAITING_RESULT_EXPORT'
