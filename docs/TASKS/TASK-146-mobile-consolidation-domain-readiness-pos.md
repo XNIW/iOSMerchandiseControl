@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA —6dbf Root12PASS, B2FAIL6,412; CPU da identificare, T17runtimeNOT_RUN |
+| Esito documentale | EXECUTION_ATTIVA —6dbf Root12PASS, B2FAIL6,412; attese dyld osservate/ownerUNKNOWN, T17runtimeNOT_RUN |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
 | Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
@@ -20,6 +20,14 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — traccia corrente completa; confronto SDK senza XCTest — 2026-11-11T10:55:09.484808+00:00
+
+**✅ STATIC/postprocessing ESEGUITI PASS**, d0dcfdd5 app/test identici6dbf. Run42999570940/job130452066114: quattro fasi attraversate, unica soglia9,335145s FAIL **DIAGNOSTIC_ONLY**, non sostituisce B2 ordinario6,411931s FAIL. Testo completo1223183B+gzip62185B/dueSHA verificati, PID27862/TID80813/namespace2c11f8bc…/runtime26.2/Xcode26.6; stack completi in `b1/ios-current-startup-sample4.ROOT/causal-bundle.ROOT/MEASURED-REGION.COMPLETE-PROJECTION.ROOT.json`. Main: CoreText featureflags pread, dyld loaders-read lock, Accessibility dlopen con notifica sincrona remota. Owner/receiver UNKNOWN; workerAG80860 non dimostrato proprietario. Nessun timestamp per campione: sovrapposizione esatta alle fasi non qualificata, niente trasferimento dallo storico0c/7d2. Task prepareSubmit→entry5,043375s osservato, row dopo pubblicazione1,766382s; nessuna causa esclusiva attribuita all'app o XCTest. Postflight Shutdown/0booted/profiler terminati PASS; stack e SDK correntiKEEP. Budget sample7s SPENT/0, LLDB16/kernel5+5 e old0c invariati.
+
+**Prossima prova diagnostica una sola, senza buildapp**, prodotto6dbf artifact13843977583 già qualificato per sorgenti/profilo: stesso ARM/Xcode26.6/runtime26.2, fixture sintetica seed→cache senza XCTest/debugger/profiler. Interrogativo preciso: disponibilità reale Database con T0 prima del dispatch e soglia5s nello stesso SDK senza canale di automazione. Nuovi soli helperCI/workflow; tutte85pin+manifest/firma/albero verificate prima dell'installazione. Seed entro30s originale, singola apertura cache, tutti frame negativi conservati; budget osservative6s/32frame già esistente. Non percorre hold-prices/history/workbook/hold-sessions e **non vale PASS B2**. Stop al primo impedimento, nessun retry automatico/matrice. Admission `b1/ios-sdk-ordinary-no-xctest.ROOT/ADMISSION.ROOT.json`; liberi35.86GB, locale forecast80MB+150MB/reserve30,3GB, nuovo lotto pesante locale non necessario.
+
+Handoff **ACTIVE/EXECUTION**: confronto utile→solo fix motivato→B2 originale/regressioni/ordinario utile/matrice2101/DebugReleaseAnalyzeScan sulla stessa composizione→review/PR29/mainCI/PR28. T17quattro upgrade NOT_RUN e prerequisito target/sessione normale/readbackRelease già richiesto senza risposta, non differito automaticamente. Android/backend/live/POS/atomicità/cancellazioni acquisiti invariati, fisicoiOS16/statistiche DEFERRED_USER. WIP/indice/dati/QCOW2 preservati; nessun cambiofase MASTER.
 
 ### Execution —6dbf: letture correnti Root12 PASS; B2 FAIL6,412 e unica raccolta app4s — 2026-11-11T09:57:15.443258+00:00
 
