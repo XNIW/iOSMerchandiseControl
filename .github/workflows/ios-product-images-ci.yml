@@ -79,6 +79,7 @@ jobs:
           name: task146-sdk-ordinary-diagnostic-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.json
+            ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.jsonl
             ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.log
             ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.stdout
             ${{ runner.temp }}/task146-sdk-ordinary-diagnostic/*.stderr

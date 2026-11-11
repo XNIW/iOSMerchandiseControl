@@ -11,6 +11,9 @@ import os
 from pathlib import Path
 import plistlib
 import re
+import shutil
+import struct
+import sys
 import subprocess
 import tarfile
 import time
@@ -28,8 +31,26 @@ SIMCTL = ["xcrun", "simctl"]
 
 
 def run(args, timeout=25, **kwargs):
-    return subprocess.run(args, check=True, capture_output=True, text=True,
-                          timeout=timeout, **kwargs).stdout.strip()
+    started = time.monotonic()
+    event = {"argv": args, "startedUptime": started, "timeout": timeout}
+    try:
+        result = subprocess.run(args, check=True, capture_output=True, text=True,
+                                timeout=timeout, **kwargs)
+        event["exitCode"] = result.returncode
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        event["error"] = type(error).__name__
+        for name in ("stdout", "stderr"):
+            data = getattr(error, name, "") or ""
+            if isinstance(data, bytes):
+                data = data.decode(errors="replace")
+            event[name] = data[:8192]
+        raise
+    finally:
+        event["finishedUptime"] = time.monotonic()
+        if ROOT.exists():
+            with (ROOT / "command-journal.jsonl").open("a") as stream:
+                stream.write(json.dumps(event) + "\n")
 
 
 def digest(path):
@@ -47,6 +68,32 @@ def verify_files(app, manifest):
         p = app / row["path"]
         assert not p.is_symlink() and p.stat().st_size == row["bytes"]
         assert digest(p) == row["sha256"], row["path"]
+
+
+def compiled_image(path):
+    """Same compiled-sections/UUID/dependency guard as the qualified TEST repack."""
+    data = path.read_bytes()
+    header = struct.unpack_from("<IiiIIIII", data)
+    assert header[0] == 0xfeedfacf and header[1] == 0x0100000c
+    position, sections, dependencies, image_uuid = 32, {}, [], None
+    for _ in range(header[4]):
+        command, size = struct.unpack_from("<II", data, position)
+        assert size >= 8 and position + size <= 32 + header[5]
+        if command == 0x19:
+            for index in range(struct.unpack_from("<I", data, position+64)[0]):
+                offset = position + 72 + index*80
+                name = data[offset:offset+32]
+                length, start, flags = struct.unpack_from("<Q", data, offset+40)[0], struct.unpack_from("<I", data, offset+48)[0], struct.unpack_from("<I", data, offset+64)[0]
+                if start and length and flags & 255 not in (1, 12, 18):
+                    assert start+length <= len(data)
+                    sections[name.hex()] = hashlib.sha256(data[start:start+length]).hexdigest()
+        elif command == 0x1b:
+            image_uuid = data[position+8:position+24].hex()
+        elif command in (0xc, 0x80000018, 0x8000001f, 0x20, 0x80000023):
+            dependencies.append(hashlib.sha256(data[position:position+size]).hexdigest())
+        position += size
+    assert sections and image_uuid
+    return {"sections": sections, "uuid": image_uuid, "dependencies": dependencies}
 
 
 def main():
@@ -80,6 +127,28 @@ def main():
     verify_files(app, manifest)
     assert plistlib.loads((app / "Info.plist").read_bytes())["CFBundleIdentifier"] == BUNDLE
     run(["codesign", "--verify", "--deep", "--strict", str(app)])
+    # SDK export contains the unit-test plug-in. Use the ordinary52-file
+    # consumer already qualified on Mac; preserve the immutable85-pin archive.
+    before = compiled_image(app / "iOSMerchandiseControl")
+    assert sum(r["path"].startswith("PlugIns/") for r in manifest["files"]) == 33
+    shutil.rmtree(app / "PlugIns")
+    run(["codesign", "--force", "--sign", "-", "--timestamp=none", str(app)])
+    run(["codesign", "--verify", "--deep", "--strict", str(app)])
+    assert compiled_image(app / "iOSMerchandiseControl") == before
+    ordinary = {**manifest, "files": [r for r in manifest["files"] if not r["path"].startswith("PlugIns/")]}
+    changed = []
+    for row in ordinary["files"]:
+        p = app / row["path"]
+        if digest(p) != row["sha256"]:
+            changed.append(row["path"])
+            row.update(bytes=p.stat().st_size, sha256=digest(p))
+    assert set(changed) <= {"iOSMerchandiseControl", "_CodeSignature/CodeResources"}
+    assert len(ordinary["files"]) == 52
+    verify_files(app, ordinary)
+    write("ordinary-package.json", {"canonicalSDK85PinsVerified": True,
+          "ordinary52Pins": ordinary["files"], "changedSignatureFiles": changed,
+          "compiledSectionsUUIDDependenciesIdentical": True, "compiledImage": before,
+          "pluginRemovalScope": "only this verified SDK expansion; immutable input retained"})
     assert any(r["identifier"] == RUNTIME and r["isAvailable"] for r in
                json.loads(run(SIMCTL + ["list", "runtimes", "--json"]))["runtimes"])
     name = "TASK146-SDK-only-" + os.environ["GITHUB_RUN_ID"]
@@ -114,7 +183,7 @@ def main():
         run(SIMCTL + ["bootstatus", device, "-b"], timeout=120)
         run(SIMCTL + ["install", device, str(app)], timeout=60)
         installed = Path(run(SIMCTL + ["get_app_container", device, BUNDLE, "app"]))
-        verify_files(installed, manifest)
+        verify_files(installed, ordinary)
         data = Path(run(SIMCTL + ["get_app_container", device, BUNDLE, "data"]))
         seed_pid = launch("seed")
         workbook = data / "Library/Application Support/task144-root-fixtures" / namespace / "independent-domain-workbook.html"
@@ -156,13 +225,22 @@ def main():
               "scanMarkers": logs.count("populated-qualification-cost kind.scan entity."),
               "rowVisibleWithin5": "REQUIRES_FRAME_INSPECTION_NO_AUTOMATIC_PASS"})
     finally:
-        run(SIMCTL + ["shutdown", device], timeout=30)
-        devices = json.loads(run(SIMCTL + ["list", "devices", "--json"]))["devices"]
-        current = [r for rows in devices.values() for r in rows if r["udid"] == device]
-        assert len(current) == 1 and current[0]["state"] == "Shutdown"
-        write("postflight.json", {"device": device, "state": "Shutdown", "ownedConsumersClosed": True,
-              "preserved": "SDK input and controlled data until hosted-job disposal; metadata and every frame uploaded",
-              "noMacDataTouched": True})
+        primary_error = sys.exc_info()[0] is not None
+        postflight = {"device": device, "state": "UNKNOWN", "ownedConsumersClosed": False,
+                     "noMacDataTouched": True}
+        try:
+            run(SIMCTL + ["shutdown", device], timeout=30)
+            devices = json.loads(run(SIMCTL + ["list", "devices", "--json"]))["devices"]
+            current = [r for rows in devices.values() for r in rows if r["udid"] == device]
+            assert len(current) == 1 and current[0]["state"] == "Shutdown"
+            postflight.update(state="Shutdown", ownedConsumersClosed=True)
+        except Exception as error:
+            postflight["error"] = type(error).__name__
+            # Preserve the primary preparation error instead of masking it.
+            if not primary_error:
+                raise
+        finally:
+            write("postflight.json", postflight)
 
 
 if __name__ == "__main__":
