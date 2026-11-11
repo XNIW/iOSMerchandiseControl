@@ -22,6 +22,11 @@ on:
       - ".github/ci/**"
   workflow_dispatch:
     inputs:
+      task146_b2_arm_memory:
+        description: "One exact reused B2 on ARM with more memory; original test and clocks"
+        type: boolean
+        required: false
+        default: false
       task146_t17_predecessor_debug:
         description: "Package frozen normal TEST Debug3a24 only; no tests or runtime acceptance"
         type: boolean
@@ -102,14 +107,35 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
-    runs-on: macos-26
-    timeout-minutes: 75
+    runs-on: ${{ inputs.task146_b2_arm_memory == true && 'macos-26-xlarge' || 'macos-26' }}
+    timeout-minutes: ${{ inputs.task146_b2_arm_memory == true && 20 || 75 }}
     env:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
       TASK144_A_CAMPAIGN: ${{ inputs.task144_a_campaign || false }}
       TASK146_B2_CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling || false }}
       TASK146_REUSE_NATIVE_RUN: ${{ inputs.task146_reuse_native_run || '' }}
     steps:
+      - name: Admit one bounded exact-product ARM comparison
+        if: ${{ inputs.task146_b2_arm_memory == true }}
+        env:
+          COMPARE_EVENT: ${{ github.event_name }}
+          COMPARE_SHARD: ${{ matrix.shard }}
+          COMPARE_SAMPLING: ${{ inputs.task146_b2_cpu_sampling }}
+          COMPARE_EXPORT: ${{ inputs.task146_export_ordinary_app }}
+          COMPARE_CAMPAIGN: ${{ inputs.task144_a_campaign }}
+          COMPARE_PACKAGE: ${{ inputs.task146_t17_predecessor_debug }}
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          assert os.environ['COMPARE_EVENT']=='workflow_dispatch'
+          assert os.environ['COMPARE_SHARD']=='focused'
+          assert os.environ['TASK146_REUSE_NATIVE_RUN']=='43024699201'
+          assert json.loads(os.environ['TASK146_FOCUSED_TESTS'])==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld']
+          assert all(os.environ[key]!='true' for key in ['COMPARE_SAMPLING','COMPARE_EXPORT','COMPARE_CAMPAIGN','COMPARE_PACKAGE'])
+          assert subprocess.check_output(['uname','-m'],text=True).strip()=='arm64'
+          print(json.dumps({'host':{key:int(subprocess.check_output(['sysctl','-n',key],text=True)) for key in ['hw.memsize','hw.logicalcpu']},'scope':'ONE_EXACT_PRODUCT_B2_NO_COLLECTION_NO_COMPILATION_ORIGINAL_T0_5S'}))
+          PY
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
