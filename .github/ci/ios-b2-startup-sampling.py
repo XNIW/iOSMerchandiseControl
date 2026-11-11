@@ -157,6 +157,25 @@ def probe_target_admission(probe):
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+def sample_time_coverage(text, request_uptime):
+    # machabssec timestamps are inspected only in the completed offline text.
+    # A nonempty export alone cannot prove that startup was actually sampled.
+    times = []
+    for line in text.splitlines():
+        if re.match(r"^\s*<\d+\.", line):
+            for first, last in re.findall(r"(\d+\.\d+)s(?:-(\d+\.\d+)s)?", line):
+                times.extend([float(first), float(last) if last else float(first)])
+    if not times:
+        return {"status": "NO_SAMPLE_TIMESTAMPS", "measuredPhasesQualified": False}
+    first, last = min(times), max(times)
+    overlaps = first <= request_uptime + 5 and last >= request_uptime
+    return {"status": "PARTIAL_UNQUALIFIED_REQUIRES_PHASE_MATCH" if overlaps
+            else "NOT_TRAVERSED_ORIGINAL_T0_5S_WINDOW",
+            "firstSampleUptime": first, "lastSampleUptime": last,
+            "requestToFirstSampleSeconds": first - request_uptime,
+            "originalWindow": [request_uptime, request_uptime + 5],
+            "measuredPhasesQualified": False}
+
 def export_complete_offline_report(data, destination):
     # Post-recording only. Preserve every thread and image without relying on
     # the bounded main-thread preview or remote retention for a missing tail.
@@ -356,6 +375,7 @@ finally:
             row["completeOfflineExport"] = export_complete_offline_report(
                 data, output / (row["label"] + ".all-threads.txt.gz"))
             text = data.decode("utf-8", errors="replace")
+            row["sampleTimeCoverage"] = sample_time_coverage(text, row["requestUptime"])
             lines = text.splitlines()
             main = next((i for i, line in enumerate(lines) if "com.apple.main-thread" in line), None)
             if main is not None:
@@ -381,6 +401,7 @@ finally:
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),
         "interpretation": "Samples include profiler/OS overhead. Compare request, collector and actual first stackshot clocks; do not replace the original5s verdict. The startup region is diagnostic only. Use actual sample timestamps and recorded markers; no exclusive interval attribution.",
         "applicationCompilerAndTestsChanged": False,
+        "diagnosticCompleteScope": "TECHNICAL_RECORD_AND_EXPORT_ONLY; sampleTimeCoverage is not qualification of the measured phases or the original5s gate",
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
         row["exitCode"] == 0 and row.get("targetIdentityVerified") and row.get("liveMarkerStreamCreated") is False
