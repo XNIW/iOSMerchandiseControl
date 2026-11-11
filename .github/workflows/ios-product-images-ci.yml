@@ -265,6 +265,39 @@ jobs:
               'debugBuildProfile':json.loads((Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json').read_text())}
           assert manifest['architecture']=='arm64'
           (out/'ordinary-app.manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          # Retain the native test support without a second copy of the app.
+          # A CI-only driver repair can reuse these exact built tests later.
+          products=app.parent.parent
+          plans=list(products.glob('*.xctestrun'))
+          runners=list(app.parent.glob('iOSMerchandiseControlUITests-Runner.app'))
+          assert len(plans)==len(runners)==1, 'native test product custody is required'
+          support=out/'native-test-support.tar.gz'
+          selected=plans+runners+[p for p in app.parent.iterdir()
+              if p.suffix in ('.framework','.bundle','.dylib')]
+          native_pins=[]
+          with tarfile.open(support,'w:gz',compresslevel=1)as archive:
+              for item in selected:
+                  paths=[item]if item.is_file()else sorted(item.rglob('*'))
+                  for p in paths:
+                      assert not p.is_symlink(), 'refuse an unqualified linked test dependency'
+                      if p.is_file():native_pins.append({'path':p.relative_to(products).as_posix(),
+                          'bytes':p.stat().st_size,'mode':stat.S_IMODE(p.stat().st_mode),
+                          'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+                  archive.add(item,arcname=item.relative_to(products).as_posix())
+          source_trees={p:subprocess.check_output(['git','rev-parse','HEAD:'+p],text=True).strip()
+              for p in ['iOSMerchandiseControl','iOSMerchandiseControlTests','iOSMerchandiseControlUITests',
+                        'iOSMerchandiseControl.xcodeproj','contracts']}
+          for dependency in ['Vendor 2','Package.swift','Package.resolved','.gitmodules']:
+              pin=subprocess.run(['git','rev-parse','--verify','HEAD:'+dependency],text=True,capture_output=True)
+              if pin.returncode==0:source_trees[dependency]=pin.stdout.strip()
+          support_manifest={'scope':'NATIVE_TEST_SUPPORT_ONLY_NO_SECOND_APP_COPY_NOT_RUNTIME_ACCEPTANCE',
+              'head':head,'runID':os.environ['GITHUB_RUN_ID'],'runAttempt':os.environ['GITHUB_RUN_ATTEMPT'],
+              'architecture':manifest['architecture'],'xcode':manifest['xcode'],
+              'appManifestSHA256':hashlib.sha256((out/'ordinary-app.manifest.json').read_bytes()).hexdigest(),
+              'sourceTrees':source_trees,'debugBuildProfile':manifest['debugBuildProfile'],
+              'packageBytes':support.stat().st_size,'packageSHA256':hashlib.sha256(support.read_bytes()).hexdigest(),
+              'files':native_pins,'xctestrun':plans[0].relative_to(products).as_posix()}
+          (out/'native-test-support.manifest.json').write_text(json.dumps(support_manifest,indent=2)+'\n')
           print(json.dumps({key:manifest[key]for key in ['scope','head','architecture','appBytes','packageBytes','fileCount']}))
           PY
 

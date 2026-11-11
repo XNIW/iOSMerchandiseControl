@@ -1047,6 +1047,7 @@ final class LocalAvailabilityRootUITests: XCTestCase {
             let challenge = try XCTUnwrap(nativeAdmission["challenge"] as? String)
             let request: [String: Any] = ["schema": 1, "challenge": challenge,
                 "targetUDID": target, "runnerPID": ProcessInfo.processInfo.processIdentifier,
+                "channelPath": nativeHostChannel.path,
                 "requestUptime": cacheLaunchStarted, "environment": app.launchEnvironment,
                 "arguments": app.launchArguments]
             try JSONSerialization.data(withJSONObject: request).write(
@@ -1058,6 +1059,11 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                   ProcessInfo.processInfo.systemUptime-cacheLaunchStarted < 16 {
                 Thread.sleep(forTimeInterval: 0.05)
             }
+            // Post-window custody only; never extra I/O before the real row.
+            let custody = XCTAttachment(string: "channel=" + nativeHostChannel.path
+                + " request=" + String(decoding: try Data(contentsOf: nativeHostChannel.appendingPathComponent("request.json")), as: UTF8.self))
+            custody.name = "B2 ordinary launch runner-owned request custody"
+            custody.lifetime = .keepAlways; add(custody)
             hostLaunch = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: responseURL)) as? [String: Any])
             XCTAssertEqual(hostLaunch?["challenge"] as? String, challenge)
             XCTAssertEqual(hostLaunch?["targetUDID"] as? String, target)

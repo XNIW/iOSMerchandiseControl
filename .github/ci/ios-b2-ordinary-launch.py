@@ -55,6 +55,33 @@ def request_identity(request, admission, now):
     return namespace, t0
 
 
+def current_request_channel(data_root, admission):
+    """The runner's data UUID can change at install; follow only our challenge.
+
+    MCM can move the already-admitted data directory between enumeration and
+    the real runner launch. Never keep polling the old pathname, recreate an
+    admission in another scope, or grant a longer request deadline.
+    """
+    found = []
+    for container in data_root.iterdir():
+        if container.is_symlink():
+            continue
+        metadata = container / ".com.apple.mobile_container_manager.metadata.plist"
+        channel = container / "Library/Caches" / CHANNEL
+        request = channel / "request.json"
+        if not metadata.is_file() or not request.is_file():
+            continue
+        if plistlib.loads(metadata.read_bytes()).get("MCMMetadataIdentifier") != RUNNER:
+            continue
+        assert channel.resolve() == channel and not request.is_symlink()
+        current = read(channel / "admission.json")
+        if current != admission:
+            continue
+        found.append(channel)
+    assert len(found) <= 1, "Ambiguous current runner request"
+    return found[0] if found else None
+
+
 def main():
     assert sys.argv[1] == "--" and len(sys.argv) > 2
     device = str(uuid.UUID(os.environ["DEVICE_ID"])).upper()
@@ -95,9 +122,19 @@ def main():
                                  "head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()}
                     write(channel / "admission.json", admission)
                     write(root / "admission.json", admission)
+                    write(root / "channel-custody.json", {"initial": str(channel), "moves": []})
+            if channel is not None and not handled:
+                current_channel = current_request_channel(data_root, admission)
+                if current_channel is not None and current_channel != channel:
+                    custody = read(root / "channel-custody.json")
+                    custody["moves"].append({"from": str(channel), "to": str(current_channel),
+                                              "observedUptime": time.monotonic()})
+                    write(root / "channel-custody.json", custody)
+                    channel = current_channel
             if channel is not None and not handled and (channel / "request.json").is_file():
                 request = read(channel / "request.json")
                 namespace, t0 = request_identity(request, admission, time.monotonic())
+                assert request["channelPath"] == str(channel)
                 runner_pid = request["runnerPID"]
                 runner_path = executable(runner_pid)
                 assert device in runner_path.parts and runner_path.parent.name.endswith(".app")
@@ -142,6 +179,16 @@ def main():
                 handled = True
             time.sleep(0.05)
         code = native.wait()
+        final_channels = []
+        if data_root.is_dir():
+            for container in data_root.iterdir():
+                metadata = container / ".com.apple.mobile_container_manager.metadata.plist"
+                if metadata.is_file() and plistlib.loads(metadata.read_bytes()).get("MCMMetadataIdentifier") == RUNNER:
+                    path = container / "Library/Caches" / CHANNEL
+                    final_channels.append({"path": str(path), "exists": path.is_dir(),
+                                           "requestPresent": (path / "request.json").is_file(),
+                                           "responsePresent": (path / "response.json").is_file()})
+        write(root / "channel-final.json", {"runnerOwnedChannelsAfterNativeExit": final_channels})
         write(root / "native-result.json", {"exitCode": code, "cacheRequestHandled": handled,
               "scope": "ORIGINAL_FOUR_PHASE_B2_NATIVE_ASSERTIONS_REQUIRED_NOT_A_FRAME_ONLY_PASS"})
         return code if code else (0 if handled else 1)
