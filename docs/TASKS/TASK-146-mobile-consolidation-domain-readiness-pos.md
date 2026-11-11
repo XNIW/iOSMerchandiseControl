@@ -6,11 +6,11 @@
 |---|---|
 | Task ID / namespace | TASK-146 / iOSMerchandiseControl |
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
-| Stato globale / task | ACTIVE / ACTIVE |
-| Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA —f33f Root12PASS12, B2originaleFAIL7,336; gapCPUUNKNOWN, T17runtimeNOT_RUN |
+| Stato globale / task | ACTIVE / BLOCKED |
+| Fase attuale | **EXECUTION** (ultima fase) |
+| Esito documentale | BLOCKED_BILLING_AUTH —f33f Root12PASS12, B2originaleFAIL7,336/gapUNKNOWN; normaliDebugRelease packagePASS, T17runtimeNOT_RUN |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
+| Responsabile della prossima azione | **USER / dipendenze esterne Billing GitHub e normale login TEST; CODEX ROOT alla ripresa**, gate/composizione finale, review e integrazione |
 | Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
@@ -20,6 +20,18 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution / Handoff — pacchetti normali qualificati, impedimenti attivi distinti — 2026-11-11T15:54:43.063945+00:00
+
+**✅ BUILD/STATIC ESEGUITI PASS.** Release TEST candidata sourcec4146a1583fae8e1b25df369a171897c3393da69/tree043c388e, AppTreeaf49 identico a f33f e seiNativeTree verificati: run43048122134/job130617505423, controller4434f776, buildnormale Automatic/nessunoverride, config154 prima di firma dal tar3a24 verificato,791,453s/1200. Canonico29354924B/SHA3f258168… e tutti23pin scaricati/verificati; eseguibile73601fbf…/tar51a16181…. EntitlementsXML16545079…/DER2b1e66b7… su ARM/x86 uguali a Debug3a24 e Release94, namespace/staticcfgcompatibili; **non auth/runtime oT17PASS**. Due warningPOS348 sono lo stesso messaggio già nei precedenti6dbf/f33f, ripetuto per duearchitetture; AppIntents già nel Debugprecedente,0nuovi rispetto Appbaselinecorrente. Debugpredecessor3a24/build43042791070 e Release94 canonica restano qualificati e conservati. Receipt `b1/t17-upgrade-execution.ROOT/ios-candidate-release-hosted.ROOT/PACKAGE-COMPATIBILITY-REVIEW.ROOT.json`.
+
+**✅ scan sensibili ESEGUITO PASS** sul source/workflow4434, esatto comandoCI previsto, report/log/MDpersistiti in `b1/ios-current-sensitive-scan.ROOT`; nessun nuovo sourceapp/workflow dopo lo scan. DecisioniSTATICcorrenti registrate su AnyView/ownershipStore/Authnoop/Binding235/SHM in `b1/ios-stable-composition-review.ROOT/CURRENT-REVIEW-DECISIONS.ROOT.json`; conservati fixcorrettezza, nessun beneficioCPUesclusivo inventato e nessun'altra varianteUI. PR28 nonantenato:68pathApp cambiati,32contenutoesatto+6assorbiti automaticamente,29modificati+1fileaggiunto da raccordare,0delta rimasti identici alla base; non è approvazione di tutti30raccordi. PR29head3d4578 è antenato del checkpoint. PR28/rami/worktree/rescue KEEP fino a main qualificata e reviewdei raccordi.
+
+**Esiti attivi distinti:** B2originale b3ec/Appf33f **FAIL_LATENCY7,335606833s**, causaesclusiva delgapUNKNOWN; cacheHIT/0scan/autorità/riga vere, quattrofasipassate. ConfrontoARMc414/run43045019447 **BUILD/SIM NOT_RUN, BLOCKED_EXTERNAL_BILLING** prima dei job, domanda asincrona pendente per pagamenti/limiteGitHub. GitHubstandard operativo (Release appenaPASS), nessun disservizioglobale dedotto. Ordinariof33f **Save/restart reale PASS** su3F, una riga/nome/prezzo persistiti e pendingUIcleared, non nuovo serverACKdiretto; cache0scan dimostrata separatamente dalPID10305 diagnostico. **Gate unico cachevalida+contenutoutile≤5s corrente NON QUALIFICATO**, non sommarePIDs/esiti. Tutte aperture/miss/scansioni e FAILdriver conservati, nessun altro tentativo per un report. **T17 quattro upgrade NOT_RUN/BLOCKED_AUTH Android normale:** loginGoogleTEST richiesto sul targetpreparato o targetTESTgiàautenticato, domanda precedente aperta; niente trapianto sessioni/DB, né differimento nuovo. Full2101(2042PASSattesi/43skip/16fisiciDIFFERITI), Analyze corrente/reviewdefinitiva/avanzamentoPR29/merge/nuovaMainCI/chiusuraPR28 **NOT_RUN**, dipendenti dai gate. Root12f33f12PASS/C3T11/Android/backend/atomica/live/POS acquisiti dove invariati. Offlinefisico16/statisticheestese DIFFERITI autorizzati invariati.
+
+**Postflight/cleanup ✅ ESEGUITI:**8consumer locali correnti terminati/quiescenti, lease native chiuse, target3FShutdown; nessun processoaltrui terminato. Rimossi solo due eseguibili standalone duplicati esatti dei propriZIP: 117461808Blogici/117465088Ballocati, hash/membrotar/canonico/lsof ricontrollati, map receipt/journal; ZIPcompleti/prodotti necessari restano. Rimosso URLfirmato scaduto504B/4096allocati e secretCIclienttemporanea; le variazioniAPFS non sono recuperoesclusivo attribuito. Dati/auth/offline/DB/WAL/SHM/sorgenti/WIP/indiceP invariato e3QCOW2 KEEP. Liberi **32566587392B (32.57GBdecimali)**; prossimo lotto solo metadata≤230MB+riserva30,3GB, nuove acquisizioni/target avranno il proprio preflight.
+
+**Handoff operativo: TASK146 BLOCKED, ultima faseEXECUTION, NON REVIEW/DONE.** Azioni esterne richieste precise: disponibilità runner macos-26-xlarge dopo verificaBilling XNIW; normale loginGoogleTEST Android o indicazione di targetTESTautenticato. A variazione pertinente riprendere lo stesso candidatoB2 c414/tag `codex/task146-b2-arm-memory` e prodotti141filef33f, senza retryprima di nuovaevidenza; poi T17reali e ordinario utile/cache nel medesimocaso/composizione, matricefinale e controlli, reviewdefinitiva/PR29/mainCI, raccordoPR28 e cleanup. Nessun nuovoGO formale richiesto, nessun codiceapp cambiato in questo checkpoint. Main remote riconfermate: iOS94fb03a5fd3b770f866655154874723192ebc390 (CIbaseline38866643935PASS), Android5b4d2155fbad15730328e55553d79b427421f4e8 (CIesatta42382508251PASS), Admind20233220d451c4c8be4ffff5170e45ca224c7e6 (mobilecode9016054/docdelta invariato; buildCI42641653938/42641652917 su9016054, non attribuita al d202). Nessuna integrazione iOS nuova.
 
 ### Execution —B2 ARM bloccato prima dei job; f33f Save/riaperturaPASS e prerequisiti T17 qualificati — 2026-11-11T15:24:49.323135+00:00
 
