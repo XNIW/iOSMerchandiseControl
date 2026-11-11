@@ -8,10 +8,10 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — B2 aperto; 504 export completo ma startup NOT_TRAVERSED, causaapp UNKNOWN; LLDB16sSPENT/stop |
+| Esito documentale | EXECUTION_ATTIVA — 416 B2 PASS4,808847; Root9 PASS; ordinario utile PASS; matrice/review/integrazione pendenti |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
-| Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
+| Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
+| Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
 | Registro unico | [RESUME_STATUS](../COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261016-resume/RESUME_STATUS.md) |
@@ -20,6 +20,24 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — composizione416 B2 PASS4,808847 / Root9 PASS / ordinario utile qualificato — 2026-11-11T05:38:21.303890+00:00
+
+**✅ BUILD/SIM ESEGUITI, stessa SHA4166224ab68f6ff849bcae0394b5cc15a8eadebe / AppTree8bf964051c8caa0a68aa97a4a1d64796db07c6a1.** B2nonprofilato run42962427364/job130331847523:4fasi originali PASS, T0inclusivo **4,808846625s<=5**, riga vera/cachehit-presente/namespace/autorità/0scan, PID35092. Automazione7,162999s distinta dal render; preApp1,742951s, worker→Main1,043718s, pub→riga1,443891s. Nessuna nuova patchapp o attribuzione esclusiva a runner/layout: costo storico13,648s e owner0x145bb UNKNOWN restano nel perimetro storico. Root9 run42962450591/job130331921636 **9PASS**, recovery/generazione/bozze/focus/Save/drain20/ACK/reopen/no-dup +5Auth/lease/continuation. Entrambi14warningbaseline/0nuovi e Shutdown/0booted; profili originali O+asserzioniDebug reali B2/stockDebug Root. ConsoleRoot nativa238994B,0SQLite/vnode/FD,8seal deduplicate max0,135994s: non risolve retroattivamente picco1,714519s. Ricevute b1/ios-stable-composition-b2.ROOT e ios-stable-composition-root.ROOT/PASS-AND-POSTFLIGHT.ROOT.json.
+
+**✅ SIM/MANUAL ordinario reale ESEGUITO PASS** SDKesatto416/artifact13830536340,85pinSDK/53pinTEST-onlyrepack, sezioni compilate/UUID/loaddependencies invariati, targetTEST3F933A67…26.2. Installazioneufficiale preservativa: file ApplicationSupport/Preferences/Documents identici prima del primo avvio, nessunerase/uninstall/reseed. Primo aggiornamento: Inventario utile4,228113s, tokennonriusabile/protectedKey,21markerentitàscan e sigillatura; **non è cachevalidazeroscan**. Riapertura concachevalidafisicamenteriusata **1,647743s,0scan**. Poi reale Inventario→Database→Modifica prodotto sinteticoea0dfbb7…/barcodeT146CACHE-DE10DEF6737D-1→nomeT146 REVIEW 416 20261111→Salva; nome e ACKcloud visibili. Riavviofunzionale dopo Save: stesso nome/barcode/prezzo e unariga visibili, nessunaduplicazione; Inventarioutile4,185960s,15markerentitàscan e sigillatura dopo cambiomateriale, non terzotentativostatistico. T0prima del launch include terminazione/preApp, nessun debugger/profiler/taboverride. Tutti esiti mantenuti. Helper iniziale NameError dopo le due misure: **FAIL_INSTRUMENTATION/interazioneNOT_TRAVERSED**, corretto solo raccordo senza reinstallare/rimisurare; follow-upinterazionePASS. Postflight Shutdown/leasechiusa/SDKinstallato53pinPASS, liberi37,892GB, dati/sessioni/QCOW2KEEP. Ricevuta b1/ios-stable-composition-ordinary.ROOT/QUALIFIED-ORDINARY-AND-POSTFLIGHT.ROOT.json.
+
+**Decisioni sulla base applicativa:** AnyViewDatabase e ownershipStorefront mantenuti nella composizione verificata, stato/Query/navigazione/bozze esterni al confine e figli ancora sottoscritti ai propri store. Nessun beneficio CPU esclusivo dimostrato, nessuna nuova variante; restano soggetti alla matrice finale stessa composizione. Auth-noop solo con SDKaccettatofresco+testimonianza/autorità, fixcorrettezza conservato e cinque regressioni correntiPASS. Fixturelifetimejoin preservato. Corpo/test/workflow/dependencytree del prossimo commit solo-documentale devono coincidere416 prima della pubblicazione.
+
+Handoff **ACTIVE/EXECUTION**: gate mirati e ordinario superati, **matrice finale2101 (2042PASSattesi/43skip/16fisiciDIFFERITI), Debug/Release/Analyze/scan, review definitiva e integrazione ancora NOT_RUN**. Avanzare PR29 senza force per eseguire matrice reale, quindi merge/mainCI e riconciliazionePR28/cleanup/trackingREVIEW; nessun arresto al verde mirato. Android/backend/atomicità/live/cancellazioni/POS/C3/T11 acquisiti ove invariati; fisicoiOS/campagneestese DIFFERITI_USER. Nessun nuovo contrattoASUS/Windows; WIP/indice primaria protetti. MASTER fase/stato invariati.
+
+### Execution — ripresa verso REVIEW: stessa composizione416, B2 senza profiler e Root9 — 2026-11-11T05:10:00.449618+00:00
+
+Mandato utente corrente: eseguire i residui necessari fino a REVIEW, senza nuove conferme. Sorgente isolata pulita4166224a, AppTree8bf96405/testtree byte-esatti4a74/504. **Prima qualifica B2 nonprofilata su questo preciso AppTree**: run42962427364/tagcodex/task146-stable-composition-b2; Root9 run42962450591/tagcodex/task146-stable-composition-root, stesso416. D3nonprofilato aveva factoryDEBUG poi ritirate;504era solo diagnostico. Profili/T0/5s/cache/autorità originali, CPUcollectorOFF, selector1+9, nessuna matrice o variazioneapp per cercareunPASS. Leggere entrambe prima di altre decisioni; niente retryidentico seFAIL. ExportSDKesatto per l'ordinario finale utile, con acquisizione/installazione sotto preflight/retention/pin separati. Prodotti disponibili non contengono il bundleUITest nativo riusabile di416: build ospitate necessarie per questa qualifica, non per rileggere tracce.
+
+ReviewSTATIC in corso sui confini effettivi commit dati+cursore, bootstrap/trasferimento, pubblicazione conautorità fresca, Auth-noop, proprietàStorefront e AnyViewDatabase. Nessun nuovo bug sostanziale confermato inquesti confini; **non è review definitivaapp oPASSruntime**. Mapping e hash in `b1/ios-stable-composition-review.ROOT/STATIC-IN-PROGRESS.ROOT.json`. Nessuna patchapp durante le run. Campagneestese/fisicoiOSDIFFERITI; Android/backend/live/POS/atomica/C3/T11 acquisiti dove invariati. BudgetLLDB16SPENT/0, kernel5sSPENT e old0c4636446/4640000 conservati, nuove raccolte0. Primaria3a24/WIP/indice/dati/sessioni/3QCOW2 protetti; liberi38,27GB aldispatch, metadataforecast80MB+concorrenza150MB, nessun grande lotto locale ancoraammesso.
+
+Handoff operativo ancora **ACTIVE/EXECUTION**: leggere B2/Root9 reali→ordinario utile sul medesimo prodotto se qualificato→matrice2101(2042PASSattesi/43skip/16fisiciDIFFERITI), Debug/Release/Analyze/scan→reviewdefinitiva/avanzamentoPR29/merge/mainCI→riconciliazionePR28/cleanup/trackingREVIEW. Ilverde diunaselezione nonchiude ilmandato. MASTER fase/stato invariati.
 
 ### Execution — 504 SDK PASS / B2profilato FAIL7,339770; export completo ma startup NOT_TRAVERSED — 2026-11-11T01:34:14.421924+00:00
 
