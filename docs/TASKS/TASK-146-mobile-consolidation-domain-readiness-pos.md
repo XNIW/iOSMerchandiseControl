@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — 416 B2 PASS4,808847; Root9 PASS; ordinario utile PASS; matrice/review/integrazione pendenti |
+| Esito documentale | EXECUTION_ATTIVA — matrice2039PASS/3FAIL; B2PASS4,079; fixselezione/driver e T17 in verifica |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, matrice finale, review e integrazione della composizione qualificata |
 | Creato / aggiornato | 2026-11-04 / 2026-11-11, America/Santiago |
@@ -20,6 +20,16 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — matrice3d:2039PASS/3FAIL; selezione nativa ripristinata prematuramente — 2026-11-11T07:06:29.793192+00:00
+
+**✅ BUILD/SIM/STATIC ESEGUITI**, run42967123187/head3d4578c4,2101selettori reali: **2039PASS,3FAIL,43skipammessi,16fisiciDIFFERITI_USER**. Otto profili/provenienze/discovery/aggregate coerenti; Debug8/Release/Analyze/scanPASS, Shutdown/0booted8. B2 nella composizione corrente **PASS4,078802667s<=5**, quattro fasi originali/cachehit/autorità/PID32957/0scan; non somma dei migliori candidati. FAIL separati: T19repeated-material su Historyselected dopo2,43s (producerCOMPLETE,ledgerPASS; tabssuccessiveNOT_TRAVERSED); T14 dopo600s/cutover/input, primo snapshot rootobservernonunico dopoCancel (snapshotseguenteunico, ACKgiàpresente; terminalequietNOT_TRAVERSED); T18it_max_light_idle suDatabaseselected entro5s, rimanenti celleNOT_TRAVERSED. Receipt `b1/ios-stable-composition-final.ROOT/ACTUAL-FINAL-CLASSIFICATION.ROOT.json`. Nessun merge/REVIEW inferito.
+
+**Causa circoscritta e correzione candidata:** eventoT18nelPID40488 e punto153,944/792corretti. Solo postprocessing del video già acquisito, finestra parziale sottoledger4MB: frame25,9Databaseevidenziato→26,168Cronologiaripristinata, senza nuovo tap/raccolta. ContentView conserva selezione soloinonChange, mentre restoreLocalPresentation può leggereilprecedentevalorenellastessatransazione. Bindingora conserva sottoleistesseguardiegenerazione/autorità prima della pubblicazioneSwiftUI; nessun host/id/nav/bozza/API modificato. Non dimostrata esclusività della callback storica: effetto da verificare conT18/T19/Root9. DriverT19 usa il residuo dell'originaledeadline5s senza retap; T14 ammette osservatore reale dopoCancel e condivide l'originaledeadline20s coldrain, mantenendo unicità/PID/scope/clock/proof/ACK. **✅ parse/diffcheckPASS; nuovoBUILD/SIMNOT_RUN**. Patch/preimage/motivazione `b1/ios-final-native-admission.ROOT`. Non varianteSwiftUI/layouto collector.
+
+**T17 resta richiesto daCA146-09/mandato originale**, quattroupgradeancoraNOT_RUN, nessunaesclusioneinferita. Preflight04 file545PASS; parserruntimehaespostocontrolloerrato sui campiopzionali vuoti conWeChat/Storefrontdisabilitati: primaammissioneSTOPprima diSDK/copiaoutput. Controllercorrente02 conserva8campi/tipi/confrontoesatto, requirednonvuoti/firme/privacygate;35CPU+8profilo+10lifecyclePASS, dueAPKTESTcorrenti8/8uguali. Packagingpredecessore2f32 ammesso separatamente conRegistry/lease/forecast4,5GB+0,5concorrente/riserva30,3GB; esitoSDK/upgrade da leggere, nonPASS. Originali04/01immutati. `b1/t17-upgrade-execution.ROOT`. Android/backend/live/POS/cancellazioni/atomica invariati; non riaperti. Differimenti fisicoiOS/statistiche invariati.
+
+Ordinario416 conSave/ACK/riavvio rimane attribuito a416, tipo **SIM_AUTOMATED_CUA_NOT_HUMAN_MANUAL**, nonverdetto umano. Il nuovo Bindingapp richiede regressioni pertinenti e ordinario finale sulprodottoesatto. Handoff **ACTIVE/EXECUTION**: target12(3FAIL+Root9)→stessa composizionequalificata→matricefinale/controlli→review/PR29mainCI/PR28/cleanup/REVIEW. WIP/indiceprimaria/dati/sessioni/treQCOW2KEEP, nessunDONE. MASTER fase/stato invariati.
 
 ### Execution — composizione416 B2 PASS4,808847 / Root9 PASS / ordinario utile qualificato — 2026-11-11T05:38:21.303890+00:00
 
