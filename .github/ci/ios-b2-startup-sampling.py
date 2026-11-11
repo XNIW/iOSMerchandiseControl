@@ -2,6 +2,7 @@
 """Owned kernel stackshots with deferred offline processing; diagnostic only."""
 import datetime
 import hashlib
+import gzip
 import json
 import os
 from pathlib import Path
@@ -155,6 +156,21 @@ def probe_target_admission(probe):
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+def export_complete_offline_report(data, destination):
+    # Post-recording only. Preserve every thread and image without relying on
+    # the bounded main-thread preview or remote retention for a missing tail.
+    if not data or len(data) > 16000000:
+        return {"complete": False, "reason": "offline_text_empty_or_over_16MB"}
+    encoded = gzip.compress(data, compresslevel=6, mtime=0)
+    if len(encoded) > 2000000:
+        return {"complete": False, "reason": "compressed_offline_text_over_2MB"}
+    assert gzip.decompress(encoded) == data
+    destination.write_bytes(encoded)
+    return {"complete": True, "path": destination.name,
+            "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+            "gzipBytes": len(encoded), "gzipSHA256": hashlib.sha256(encoded).hexdigest(),
+            "scope": "ALL_THREADS_AND_IMAGES_EXACT_BYTES_NOT_A_TRUNCATED_PROJECTION"}
 
 def record_command(pid, duration):
     return ["sudo", "-n", "/usr/sbin/spindump", str(pid), str(duration), "10",
@@ -335,8 +351,10 @@ finally:
             if row["offlineExit"] is None and result == 0 and row["rawReadComplete"]:
                 row["offlineExit"] = offline_report(raw, symbolic)
             row["offlinePath"] = symbolic.name
-            data = symbolic.read_bytes() if symbolic.exists() and symbolic.stat().st_size <= 2000000 else b""
+            data = symbolic.read_bytes() if symbolic.exists() and symbolic.stat().st_size <= 16000000 else b""
             row["offlineComplete"] = bool(data) and row["offlineExit"] == 0
+            row["completeOfflineExport"] = export_complete_offline_report(
+                data, output / (row["label"] + ".all-threads.txt.gz"))
             text = data.decode("utf-8", errors="replace")
             lines = text.splitlines()
             main = next((i for i, line in enumerate(lines) if "com.apple.main-thread" in line), None)
@@ -366,7 +384,8 @@ finally:
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
         row["exitCode"] == 0 and row.get("targetIdentityVerified") and row.get("liveMarkerStreamCreated") is False
-        and row.get("rawReadComplete") and row.get("offlineComplete") and row.get("projectionComplete")
+        and row.get("rawReadComplete") and row.get("offlineComplete")
+        and row.get("completeOfflineExport", {}).get("complete")
         and row.get("projectionScope") == "HEADER_AND_MAIN_THREAD" for row in rows)
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"samplingScope": report["scope"], "markers": len(rows),

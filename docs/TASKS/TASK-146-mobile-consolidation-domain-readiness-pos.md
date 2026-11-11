@@ -8,7 +8,7 @@
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
 | Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_ATTIVA — defaults scartati; factory DEBUG lazy in qualifica, B2 ancora aperto; collector16sSPENT/stop |
+| Esito documentale | EXECUTION_ATTIVA — d3 Root9PASS/B2FAIL5,573; factory ritirate, esportazione kernel completa in verifica; LLDB16sSPENT/stop |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
 | Responsabile della prossima azione | **CODEX ROOT**, causa B2 e correzione pertinente, composizione stabile e integrazione finale |
 | Creato / aggiornato | 2026-11-04 / 2026-11-10, America/Santiago |
@@ -20,6 +20,18 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — d3 Root9 PASS / B2 FAIL5,573112; factory ritirate e sola esportazione kernel corretta — 2026-11-11T00:37:39.388766+00:00
+
+**✅ BUILD/SIM d3 ESEGUITI.** Root42926817465/job130215279606:9PASS,14warning baseline/0nuovi, discovery2101/provenienza/Shutdown0booted; console unit0SQLite/vnode/FD invalido,8seal concluse, primo/max0,407487s. Picco storico1,714519s NON riprodotto, sottocausaUNKNOWN e distinto da B2. B242926823492/job130215299126: **FAIL_LATENCY5,573112s**, unica soglia finale, tutte4fasi/cachehit/presente/autorità/riga/T0 inclusivo/O+vereasserzioniDebug PASS, PID32636/0scan. PreApp1,711308s/init0,483638s/worker0,201790s/worker→Main1,405594s/pub→riga1,600613s. Due intervalli peggiori della base5a1,269697/1,338684; totale inferiore soprattutto preApp, nessun beneficio dedotto da body o migliori candidati.
+
+**✅ Analisi offline SDK esistente ESEGUITA:**artefatto13813424518, SHA7904478e…/manifest/AppTree/config/compiler verificati. Codice macchina conferma rami T14/editor/standard eliminati dal prologo cache: modifier8→2 metadata solo content/cacheoverlay, controls0prima del branch. Beneficio pertinente assente: **RITIRATO**, solo Task144LocalAvailabilityRootFixture ripristinato byte-esatto4a74; tutti fix di correttezza preservati, nessun B2 per rollback. Acquisizione iniziale55s timeout rete, byte non mantenuti addebitati upper45,080704MB; completata con12range durevoli, ZIP canonico verificato prima della rimozione dei soli chunk. Ledger cumulativo separato90,161408MB SDK, nessun reset native/collector. ZIP/eseguibile/reportKEEP per difetto corrente.
+
+**✅ Sola lettura dei log d3 ESEGUITA**,1325462/4MB cumulativi: sessione1399200B SHA c7714088… e stdout2037547B SHA353c4c27…, CRC/digest completi. XCTest attende automation endpoint28,878→31,235UTC (2,357s), sovrapposto a lavoro app; prima query gerarchia dopo render, nessuna attribuzione esclusiva runner. Offset stderr/unified circa0,220s esplicito, verdetto solo monotonic; stackCPU/proprietario assenti in questi log. Storico0c attende0x145bb, owner/fullstackUNKNOWN nel gap scaduto; estensione640KB AUTORIZZATA/nonPENDING e tentativo unico senza build/install/raccolta già registrati. Nessuna causa trasferita a7d2/13,648s. Ordinari SDK5a2,375/2,294 e Databaseforzato2,482 acquisiti/differenzeAuth/target/preAppUNKNOWN, non ripetuti.
+
+**✅ STATIC esportazione collector ESEGUITA PASS; nuovo BUILD/SIM NOT_RUN.** Solo postprocessing .github/ci/ios-b2-startup-sampling.py: testo completo fino16MB (limite raw esistente), gzip lossless<=2MB con SHA/roundtrip; previewMain900KB rimane esplicitamente parziale. Nessun cambiamento al recorder5s/10ms/noIPC/onlyTarget/ownership, compiler/test/renderer/T0/5s/autorità/cache. Prova locale di roundtrip su3,257MB giàdisponibili→208315B, non completa il gap storico. **Una sola raccolta kernel ospitata5s necessaria** per thread atteso/lavoro nelle finestre root: nessuna nuova varianteUI, nessun ulterioreLLDB (16sSPENT/0). Nessun retry automatico o matrice completa se dato assente; budget precedenti mantenuti. SDK d3 differisce dal rollback e manca UITestRunner riusabile sul nuovo host, dunque build ospitata necessaria per questa diagnosi, non per leggere0c. Domanda/cap/stop in `b1/ios-b2-complete-kernel-export.ROOT/ADMISSION.ROOT.json`.
+
+Handoff ACTIVE/EXECUTION: pubblicare checkpoint→unica diagnosi originale4fasi→leggere subito report/testo completo→fix solo dal lavoro osservato. Risultato sotto profiler DIAGNOSTIC_ONLY, non B2 accettazione. Poi stessi gate pertinenti/B2 ordinario nonprofilato, prodotto finale utile/full2101=2042PASS43skip16fisiciDIFFERITI, Debug/Release/Analyze/scan/review/PR29/mainCI/PR28/fixture/cleanup. Android/backend/atomicità/live/cancellazioni/POS acquisiti dove invariati. Main94fb/PR29head082 non avanzati; PRbody aggiornato con FAIL reale. Free38,64GB circa, fonte/WIP/indice/dati/sessioni/bozze/QCOW2 e prodotti necessariKEEP; MASTER fase/stato invariati.
 
 ### Execution — defaults scartati; istanziazione anticipata dei rami DEBUG verificata nel binario — 2026-11-10T23:50:48.528869+00:00
 
