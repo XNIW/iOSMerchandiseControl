@@ -37,6 +37,11 @@ on:
         type: boolean
         required: false
         default: false
+      task146_reuse_native_run:
+        description: "Focused B2 only: admit retained f33f native products, otherwise empty"
+        type: string
+        required: false
+        default: ""
       task146_focused_tests:
         description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
         type: string
@@ -45,6 +50,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ios-product-images-${{ github.ref }}
@@ -63,6 +69,7 @@ jobs:
       TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
       TASK144_A_CAMPAIGN: ${{ inputs.task144_a_campaign || false }}
       TASK146_B2_CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling || false }}
+      TASK146_REUSE_NATIVE_RUN: ${{ inputs.task146_reuse_native_run || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -151,7 +158,37 @@ jobs:
           print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
           PY
 
+      - name: Admit retained native product acquisition
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        env:
+          TASK146_REUSE_SHARD: ${{ matrix.shard }}
+        run: |
+          python3 - <<'PY'
+          import json,os,shutil
+          assert os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
+          assert os.environ['TASK146_REUSE_SHARD']=='focused'
+          assert os.environ['TASK146_REUSE_NATIVE_RUN']=='43024699201'
+          assert json.loads(os.environ['TASK146_FOCUSED_TESTS'])==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld']
+          # Known56.3MB archive plus203.3MB extracted Products; allow1GB
+          # acquisition/extraction growth and500MB concurrent native growth.
+          assert shutil.disk_usage(os.environ['RUNNER_TEMP']).free-1_500_000_000>=30_300_000_000
+          PY
+
+      - name: Acquire retained f33f native products
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: task146-ordinary-app-${{ inputs.task146_reuse_native_run }}-1
+          run-id: ${{ inputs.task146_reuse_native_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/task146-native-reuse-input
+
+      - name: Verify identical native products before reuse
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        run: python3 .github/ci/ios-native-product-reuse.py
+
       - name: Build Debug
+        if: ${{ inputs.task146_reuse_native_run == '' }}
         timeout-minutes: 15
         env:
           TASK146_BUILD_SHARD: ${{ matrix.shard }}
@@ -233,7 +270,7 @@ jobs:
           PYBUILD
 
       - name: Package exact ordinary ARM app
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' && inputs.task146_reuse_native_run == '' }}
         run: |
           python3 - <<'PY'
           import hashlib,json,os,stat,subprocess,tarfile
@@ -302,7 +339,7 @@ jobs:
           PY
 
       - name: Preserve exact ordinary ARM app
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' && inputs.task146_reuse_native_run == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: task146-ordinary-app-${{ github.run_id }}-${{ github.run_attempt }}
@@ -761,6 +798,7 @@ jobs:
             ${{ runner.temp }}/task146-runner-resources.jsonl
             ${{ runner.temp }}/task146-b2-sampling/
             ${{ runner.temp }}/task146-b2-ordinary-launch/
+            ${{ runner.temp }}/task146-native-product-reuse.json
           if-no-files-found: error
           retention-days: 1
           compression-level: 0

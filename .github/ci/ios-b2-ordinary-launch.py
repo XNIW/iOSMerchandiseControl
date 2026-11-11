@@ -158,22 +158,40 @@ def main():
                 app_birth = birth(pid)
                 frames = []
                 for i in range(32):
-                    p = root / ("frame-%02d.jpg" % i)
                     lo = time.monotonic()
-                    subprocess.run(["xcrun", "simctl", "io", device, "screenshot", "--type=jpeg", str(p)],
-                                   check=True, capture_output=True, timeout=5)
-                    hi = time.monotonic()
-                    frames.append({"path": p.name, "loSeconds": lo-t0, "hiSeconds": hi-t0,
-                                   "sha256": hashlib.sha256(p.read_bytes()).hexdigest()})
-                    if hi-t0 >= 6:
+                    if lo >= t0 + 6:
+                        break  # A late launch return never starts post-window capture.
+                    p = root / ("frame-%02d.jpg" % i)
+                    frame = {"path": p.name, "loSeconds": lo-t0}
+                    try:
+                        captured = subprocess.run(["xcrun", "simctl", "io", device, "screenshot", "--type=jpeg", str(p)],
+                            capture_output=True, timeout=min(5, t0+6-lo))
+                        frame.update(status="CAPTURED" if captured.returncode == 0 else "FAILED",
+                                     exitCode=captured.returncode)
+                    except subprocess.TimeoutExpired:
+                        # Optional diagnostic failure must not kill XCTest and
+                        # discard the original row/cache/authority assertions.
+                        frame["status"] = "TIMEOUT"
+                    frame["hiSeconds"] = time.monotonic()-t0
+                    if p.is_file():
+                        frame["sha256"] = hashlib.sha256(p.read_bytes()).hexdigest()
+                    frames.append(frame)
+                # This is the original observation window, not app scheduling
+                # or a shifted clock. Even32 fast frames cannot attach AX early.
+                while True:
+                    remaining = t0+6-time.monotonic()
+                    if remaining <= 0:
                         break
-                assert frames and birth(pid) == app_birth and birth(runner_pid) == runner_birth
+                    time.sleep(min(.05, remaining))
+                assert birth(pid) == app_birth and birth(runner_pid) == runner_birth
                 response = {"schema": 1, "challenge": admission["challenge"], "pid": pid,
                             "runnerPID": runner_pid, "targetUDID": device, "namespace": namespace,
                             "requestUptime": t0, "appBirth": app_birth,
                             "executable": str(app_path), "automationMayAttachAfterUptime": time.monotonic(),
                             "originalT0And5sRetained": True, "profilerOrDebugger": False}
-                write(root / "frames.json", {"pid": pid, "requestUptime": t0, "frames": frames})
+                write(root / "frames.json", {"pid": pid, "requestUptime": t0, "frames": frames,
+                    "scope": "OPTIONAL_DIAGNOSTIC_NOT_THE_ORIGINAL_NATIVE_ROW_OR_5S_ASSERTION",
+                    "windowTraversal": "ATTEMPTED" if frames else "NOT_TRAVERSED_LAUNCH_RETURN_AFTER_WINDOW"})
                 write(root / "response.json", response)
                 write(channel / "response.json", response)
                 handled = True
@@ -192,6 +210,17 @@ def main():
         write(root / "native-result.json", {"exitCode": code, "cacheRequestHandled": handled,
               "scope": "ORIGINAL_FOUR_PHASE_B2_NATIVE_ASSERTIONS_REQUIRED_NOT_A_FRAME_ONLY_PASS"})
         return code if code else (0 if handled else 1)
+    except Exception as error:
+        # Stop broker actions, retain its failure, and let the unchanged test
+        # reach its own16s response guard and write the native result bundle.
+        # The outer CI deadline still bounds this owned xcodebuild process.
+        write(root / "driver-error.json", {"status": "FAIL_DRIVER",
+              "errorClass": type(error).__name__, "cacheRequestHandled": handled,
+              "nativeResult": "AWAITING_ORIGINAL_TEST_COMPLETION"})
+        code = native.wait()
+        write(root / "native-result.json", {"exitCode": code, "cacheRequestHandled": handled,
+              "driverFailure": True, "scope": "NATIVE_RESULT_RETAINED_DRIVER_STILL_FAILS"})
+        return code if code else 1
     finally:
         if native.poll() is None:
             native.terminate()

@@ -151,6 +151,18 @@ def run(shard_id):
             '-scheme', 'iOSMerchandiseControl', '-configuration', 'Debug',
             '-destination', 'platform=iOS Simulator,id=' + os.environ['DEVICE_ID'],
             'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'test-without-building']
+    reuse_plan = os.environ.get('TASK146_NATIVE_REUSE_PLAN')
+    if reuse_plan:
+        # The workflow admits only hash-verified Products with identical native
+        # source trees/profile/toolchain. No SDK compile is claimed in this run.
+        plan = Path(reuse_plan)
+        assert plan.is_file() and not plan.is_symlink()
+        receipt = json.loads((Path(os.environ['RUNNER_TEMP']) / 'task146-native-product-reuse.json').read_text())
+        assert receipt['status'] == 'PASS_IDENTICAL_NATIVE_PRODUCTS' and receipt['plan'] == str(plan)
+        assert receipt['consumerHead'] == record['head']
+        base = ['xcodebuild', 'test-without-building', '-xctestrun', str(plan),
+                '-destination', 'platform=iOS Simulator,id=' + os.environ['DEVICE_ID']]
+        record['nativeProductReuse'] = receipt
     cutoff_seconds = 4200 if shard_id == 'ui-core' else 3600
     cutoff = float((Path(os.environ['RUNNER_TEMP']) / 'ios-ci-start.monotonic').read_text()) + cutoff_seconds
     # Core used 61 minutes including preparation and was killed while finalizing
