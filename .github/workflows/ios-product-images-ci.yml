@@ -22,6 +22,11 @@ on:
       - ".github/ci/**"
   workflow_dispatch:
     inputs:
+      task146_t17_candidate_release:
+        description: "Package frozen normal TEST Release c414 (App f33f); runtime gates remain separate"
+        type: boolean
+        required: false
+        default: false
       task146_b2_arm_memory:
         description: "One exact reused B2 on ARM with more memory; original test and clocks"
         type: boolean
@@ -68,29 +73,53 @@ concurrency:
 
 jobs:
   t17-predecessor-debug:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_t17_predecessor_debug == true }}
-    name: T17 frozen predecessor Debug package only
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.task146_t17_predecessor_debug == true || inputs.task146_t17_candidate_release == true) }}
+    name: T17 frozen normal package only
     runs-on: macos-26
     timeout-minutes: 30
     steps:
+      - name: Validate package-only admission
+        env:
+          PRIOR_DEBUG: ${{ inputs.task146_t17_predecessor_debug }}
+          CANDIDATE_RELEASE: ${{ inputs.task146_t17_candidate_release }}
+          B2_COMPARE: ${{ inputs.task146_b2_arm_memory }}
+          CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling }}
+          NATIVE_REUSE: ${{ inputs.task146_reuse_native_run }}
+          FOCUSED_TESTS: ${{ inputs.task146_focused_tests }}
+        run: |
+          python3 - <<'PY'
+          import os
+          assert sum(os.environ[key]=='true' for key in ['PRIOR_DEBUG','CANDIDATE_RELEASE'])==1
+          assert all(os.environ[key]!='true' for key in ['B2_COMPARE','CPU_SAMPLING'])
+          assert not os.environ['NATIVE_REUSE'] and not os.environ['FOCUSED_TESTS']
+          PY
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 3a24c7ac237eb20f7e279d2deffb2213e77e0e7a
+          ref: ${{ inputs.task146_t17_candidate_release == true && 'c4146a1583fae8e1b25df369a171897c3393da69' || '3a24c7ac237eb20f7e279d2deffb2213e77e0e7a' }}
           path: t17-predecessor-source
           persist-credentials: false
-      - name: Build normal prior Debug with frozen TEST resource before signing
+      - name: Acquire verified public TEST configuration from prior normal package
+        if: ${{ inputs.task146_t17_candidate_release == true }}
+        uses: actions/download-artifact@v4
+        with:
+          name: task146-t17-predecessor-debug-43042791070-1
+          run-id: 43042791070
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/t17-config-source
+      - name: Build normal package with frozen TEST resource before signing
         env:
           TASK146_IOS_CONFIG_154_B64: ${{ secrets.TASK146_IOS_TEST_CONFIG_154_B64 }}
+          TASK146_T17_PACKAGE_KIND: ${{ inputs.task146_t17_candidate_release == true && 'candidate-release' || 'predecessor-debug' }}
         run: python3 .github/ci/ios-t17-predecessor-package.py
       - name: Preserve package, pins and diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: task146-t17-predecessor-debug-${{ github.run_id }}-${{ github.run_attempt }}
+          name: task146-t17-${{ inputs.task146_t17_candidate_release == true && 'candidate-release' || 'predecessor-debug' }}-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: error
           path: |
@@ -101,7 +130,7 @@ jobs:
             ${{ runner.temp }}/task146-t17-predecessor/*.tar.gz
 
   product-images:
-    if: ${{ inputs.task146_t17_predecessor_debug != true }}
+    if: ${{ inputs.task146_t17_predecessor_debug != true && inputs.task146_t17_candidate_release != true }}
     name: XCTest (${{ matrix.shard }})
     strategy:
       fail-fast: false
@@ -914,7 +943,7 @@ jobs:
           PY
 
   complete-coverage:
-    if: ${{ always() && inputs.task146_t17_predecessor_debug != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
+    if: ${{ always() && inputs.task146_t17_predecessor_debug != true && inputs.task146_t17_candidate_release != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
     needs: product-images
     runs-on: ubuntu-latest
     timeout-minutes: 10

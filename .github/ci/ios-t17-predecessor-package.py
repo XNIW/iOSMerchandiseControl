@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package only the frozen normal T17 predecessor; never install or launch it."""
+"""Package a frozen normal T17 input; never install or launch it."""
 import base64
 import hashlib
 import json
@@ -22,11 +22,16 @@ def sha(data):
 
 
 def main():
+    kind = os.environ.get("TASK146_T17_PACKAGE_KIND", "predecessor-debug")
+    assert kind in {"predecessor-debug", "candidate-release"}
+    candidate = kind == "candidate-release"
+    source_head = "c4146a1583fae8e1b25df369a171897c3393da69" if candidate else SOURCE
+    configuration = "Release" if candidate else "Debug"
     source = Path(os.environ["GITHUB_WORKSPACE"])/"t17-predecessor-source"
     out = Path(os.environ["RUNNER_TEMP"])/"task146-t17-predecessor"
     out.mkdir(exist_ok=False)
-    report = {"status": "PREPARING", "source": SOURCE, "tree": TREE,
-              "configuration": "Debug", "signing": "COMMITTED_AUTOMATIC_NO_OVERRIDE",
+    report = {"status": "PREPARING", "source": source_head, "packageKind": kind,
+              "configuration": configuration, "signing": "COMMITTED_AUTOMATIC_NO_OVERRIDE",
               "runtime": "NOT_RUN_PACKAGE_ONLY", "timeoutSeconds": 1200}
     def save():
         (out/"package.json").write_text(json.dumps(report, indent=2)+"\n")
@@ -67,8 +72,21 @@ def main():
             assert code == 0, log+" failed: "+str(code)
     try:
         assert os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
-        assert command(["git", "rev-parse", "HEAD"]) == SOURCE
-        assert command(["git", "rev-parse", "HEAD^{tree}"]) == TREE
+        assert command(["git", "rev-parse", "HEAD"]) == source_head
+        report["tree"] = command(["git", "rev-parse", "HEAD^{tree}"])
+        if not candidate:
+            assert report["tree"] == TREE
+        else:
+            assert report["tree"] == "043c388e70120853771aba7ee4bac68f11987196"
+            trees = {"iOSMerchandiseControl": "af49bfda2014d642f8578bfab6c5e5f63069b04b",
+                     "iOSMerchandiseControl.xcodeproj": "a23a4fc2d626157a73390e83b6f6925222810ee9",
+                     "iOSMerchandiseControlTests": "0c0f87dea5a9a5f3312c990c77a257bf3e8e0d44",
+                     "iOSMerchandiseControlUITests": "d2ff72e0aac83f2c0536c61f5618512abe723ec1",
+                     "contracts": "4343e2eb0d8f5be3da9ed841af76f8eb4fa58b1d",
+                     "Vendor 2": "7f13192c6d31ccfcf9640c20ed5bf6a1ef1af892"}
+            assert all(command(["git", "rev-parse", "HEAD:"+path]) == value for path, value in trees.items())
+            report["nativeTrees"] = trees
+            report["nativeAppSourceCorrespondence"] = "f33f55c15ae01217d308cc6e3dbf48640a816c12"
         assert command(["git", "status", "--porcelain", "--untracked-files=no"]) == ""
         assert command(["uname", "-m"]) == "arm64"
         report["xcode"] = command(["xcodebuild", "-version"])
@@ -82,12 +100,23 @@ def main():
         pins = projection()
         (out/"source-manifest.json").write_text(json.dumps(pins, indent=2)+"\n")
         pbx = (source/"iOSMerchandiseControl.xcodeproj/project.pbxproj").read_bytes()
-        assert sha(pbx) == "a6b1edfa8c227aff0bcbb5d69695bcb2b0d7a1e63b58f82c681eddd342b287bd"
+        assert sha(pbx) == ("3c9ef6835cf5abf7d6bb2316981265ec0975b7ce48f9d52480fa503b59e42b67" if candidate
+                            else "a6b1edfa8c227aff0bcbb5d69695bcb2b0d7a1e63b58f82c681eddd342b287bd")
         assert b"PBXShellScriptBuildPhase" not in pbx
         resolved = source/"iOSMerchandiseControl.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
         resolved_sha = sha(resolved.read_bytes())
         assert resolved_sha == "545d4d0aba273cc38b3e41a5833e56b77513077e4d24ac939d194e5de864a4ec"
-        data = base64.b64decode(os.environ.pop("TASK146_IOS_CONFIG_154_B64"), validate=True)
+        if candidate:
+            # Reuse the already verified client's public TEST resource. Inject
+            # before standard build/sign; never transplant a session or DB.
+            package = Path(os.environ["RUNNER_TEMP"])/"t17-config-source/predecessor-debug.app.tar.gz"
+            assert sha(package.read_bytes()) == "caf5431d686fb6f65f45ae326afe61f5f493aab076f76097be93c4c168f7199b"
+            with tarfile.open(package, "r:gz") as archive:
+                member = archive.getmember("iOSMerchandiseControl.app/SupabaseConfig.plist")
+                assert member.isfile() and member.size == 322
+                data = archive.extractfile(member).read()
+        else:
+            data = base64.b64decode(os.environ.pop("TASK146_IOS_CONFIG_154_B64"), validate=True)
         assert sha(data) == CONFIG
         config = plistlib.loads(data)
         assert set(config) == {"PRODUCT_IMAGE_API_BASE_URL", "SUPABASE_PROJECT_URL", "SUPABASE_PUBLISHABLE_KEY"}
@@ -102,12 +131,12 @@ def main():
         packages = ["-clonedSourcePackagesDirPath", str(out/"SourcePackages")]
         bounded(["xcodebuild", "-resolvePackageDependencies", *project, *packages,
                  "-onlyUsePackageVersionsFromResolvedFile", "-skipPackageUpdates"], "resolve.log")
-        bounded(["xcodebuild", "build", *project, "-configuration", "Debug", "-destination",
+        bounded(["xcodebuild", "build", *project, "-configuration", configuration, "-destination",
                  "generic/platform=iOS Simulator", "-derivedDataPath", str(out/"DerivedData"),
                  *packages, "-disableAutomaticPackageResolution", "-onlyUsePackageVersionsFromResolvedFile",
                  "-skipPackageUpdates"], "build.log")
         assert projection() == pins and sha(resolved.read_bytes()) == resolved_sha
-        app = out/"DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app"
+        app = out/("DerivedData/Build/Products/"+configuration+"-iphonesimulator/iOSMerchandiseControl.app")
         assert sha((app/"SupabaseConfig.plist").read_bytes()) == CONFIG
         info = plistlib.loads((app/"Info.plist").read_bytes())
         assert info["CFBundleIdentifier"] == "com.niwcyber.iOSMerchandiseControl"
@@ -129,12 +158,13 @@ def main():
                 files.append({"path": str(path.relative_to(app)), "bytes": len(payload),
                               "mode": path.stat().st_mode & 0o777, "sha256": sha(payload)})
         (out/"app-manifest.json").write_text(json.dumps(files, indent=2)+"\n")
-        with tarfile.open(out/"predecessor-debug.app.tar.gz", "w:gz") as archive:
+        package_name = kind+".app.tar.gz"
+        with tarfile.open(out/package_name, "w:gz") as archive:
             archive.add(app, arcname="iOSMerchandiseControl.app")
         report.update(status="PASS_PACKAGE_ONLY_PENDING_COMPATIBILITY_REVIEW", configSHA256=CONFIG,
                       sourceFiles=len(pins), appFiles=len(files),
                       executableSHA256=sha((app/info["CFBundleExecutable"]).read_bytes()),
-                      packageSHA256=sha((out/"predecessor-debug.app.tar.gz").read_bytes()))
+                      packageFile=package_name, packageSHA256=sha((out/package_name).read_bytes()))
     except BaseException as error:
         report.update(status="FAIL_PACKAGE", errorType=type(error).__name__, error=str(error))
         raise
