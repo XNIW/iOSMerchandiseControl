@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Owned kernel stackshots with deferred offline processing; diagnostic only."""
+"""Owned process sampling with bounded startup admission; diagnostic only."""
 import datetime
 import hashlib
 import gzip
@@ -191,21 +191,19 @@ def export_complete_offline_report(data, destination):
             "gzipBytes": len(encoded), "gzipSHA256": hashlib.sha256(encoded).hexdigest(),
             "scope": "ALL_THREADS_AND_IMAGES_EXACT_BYTES_NOT_A_TRUNCATED_PROJECTION"}
 
-def record_command(pid, duration):
-    return ["sudo", "-n", "/usr/sbin/spindump", str(pid), str(duration), "10",
-            "-onlyTarget", "-noSymbolicate", "-noProcessingWhileSampling", "-noIPC",
-            "-noText", "-noFile", "-timelimit", str(duration + 10)]
+def record_command(pid, duration, destination):
+    # sample without -mayDie gathers symbols after its bounded recording. The
+    # prior kernel recorder admitted this SwiftUI target only after row render.
+    # Never fall back or retry if this distinct backend also misses startup.
+    return ["/usr/bin/sample", str(pid), str(duration), "10", "-file", str(destination)]
+
 
 def offline_report(raw, destination, inspect_after_render=False):
-    # Live image lookup is allowed only after recording AND the existing physical
-    # row-render marker. It cannot perturb a captured stack or its render time.
-    with destination.with_suffix(".stderr.txt").open("xb") as error:
-        result = subprocess.run(["/usr/sbin/spindump", "-i", str(raw), "-o", str(destination),
-            "-noBinary", "-onlyTarget", "-noIPC", "-aggregateCallTreesByThread",
-            "-timestampsInCallTrees", "machabssec"]
-            + (["-inspectLiveSystem"] if inspect_after_render else []), stdout=subprocess.DEVNULL,
-            stderr=error, timeout=90)
-    return result.returncode
+    # sample already emits every thread and image after recording. Copy exact
+    # bytes without another target query or a new collection.
+    shutil.copyfile(raw, destination)
+    return 0
+
 
 def self_probe():
     probe = output / "self-probe"
@@ -216,19 +214,19 @@ def self_probe():
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
         env={**os.environ, "TASK146_IDENTITY_PROBE": "synthetic-kernel-args-v1"})
     identity = birth(child.pid)
-    raw, report = probe / "self.raw.spindump", probe / "self.symbolicated.txt"
+    raw, report = probe / "self.raw.sample.txt", probe / "self.symbolicated.txt"
     record_exit, reparse_exit = None, None
     try:
         assert child.poll() is None and identity is not None
         assert selected_process_environment(child.pid, {b"TASK146_IDENTITY_PROBE"}) == {b"TASK146_IDENTITY_PROBE": "synthetic-kernel-args-v1"}
-        with raw.open("xb") as out, (probe / "record.stderr.txt").open("xb") as error:
-            record_exit = subprocess.run(record_command(child.pid, 1), stdout=out,
+        with (probe / "record.stderr.txt").open("xb") as error:
+            record_exit = subprocess.run(record_command(child.pid, 1, raw), stdout=subprocess.DEVNULL,
                 stderr=error, timeout=20).returncode
     finally:
         if child.poll() is None:
             child.terminate()
         child.wait(timeout=5)
-    # Decoding after target death proves this path does not require live access.
+    # Exact report copy after target death requires no further live access.
     if record_exit == 0 and 0 < raw.stat().st_size <= 16000000:
         reparse_exit = offline_report(raw, report)
     proof = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
@@ -236,15 +234,16 @@ def self_probe():
         "pid": child.pid, "birth": identity, "targetExitedBeforeReparse": child.poll() is not None,
         "recordExit": record_exit, "offlineExit": reparse_exit, "processEnvironmentProbe": "PASS", "targetAdmissionProbe": admission_probe,
         "rawBytes": raw.stat().st_size, "reportBytes": report.stat().st_size if report.exists() else 0,
-        "scope": "OWNED_PYTHON_PROBE_ONLY_NOT_APP_ACCEPTANCE"}
+        "scope": "OWNED_PYTHON_PROBE_ONLY_NOT_APP_ACCEPTANCE", "backend": "sample-10ms-no-mayDie"}
     proof["status"] = "PASS" if record_exit == reparse_exit == 0 and proof["reportBytes"] > 0 else "FAIL"
     (probe / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
     print(json.dumps(proof), flush=True)
     return 0 if proof["status"] == "PASS" else 87
 
 def after_render_symbol_information(row):
-    # This fixture emits owner-qualification-observed only AFTER the unchanged
-    # ProductRow render boundary. Never query live images before that fact.
+    # The existing marker still records the render/authority boundary. The
+    # completed sample report is copied without another target query. sample
+    # itself resolves symbols after its recording, not necessarily after render.
     process = row["process"]
     try:
         code = process.wait(timeout=25)
@@ -269,7 +268,7 @@ def after_render_symbol_information(row):
                 row["symbolLookupStartedAtMonotonicNs"] = time.monotonic_ns()
                 symbolic = output / (row["label"] + ".symbolicated.txt")
                 row["afterRenderOfflineExit"] = offline_report(row["raw"], symbolic, inspect_after_render=True)
-                row["liveImageLookupScope"] = "AFTER_KERNEL_RECORDING_AND_PHYSICAL_RENDER_ONLY_SAME_PID_BIRTH"
+                row["liveImageLookupScope"] = "SAMPLE_DEFAULT_AFTER_RECORDING; NO_MAYDIE; COPY_AFTER_RENDER_MARKER"
                 return
             stop.wait(0.2)
     except Exception as error:
@@ -290,15 +289,15 @@ def read_cache_process():
                 assert birth(pid) == identity and not observations
                 phase = "cache-process-start"
                 label, duration = phases[phase]
-                raw, stderr = output / (label + ".raw.spindump"), output / (label + ".stderr.txt")
+                raw, stderr = output / (label + ".raw.sample.txt"), output / (label + ".stderr.txt")
                 started = time.monotonic_ns()
-                with raw.open("xb") as data, stderr.open("xb") as err:
-                    process = subprocess.Popen(record_command(pid, duration), stdout=data,
+                with stderr.open("xb") as err:
+                    process = subprocess.Popen(record_command(pid, duration, raw), stdout=subprocess.DEVNULL,
                         stderr=err, start_new_session=True)
                 observations[phase] = {"pid": pid, "phase": phase, "label": label,
                     "durationSeconds": duration, "samplingIntervalMilliseconds": 10,
                     "targetBirth": identity, "targetUID": os.getuid(), "namespace": namespace,
-                    "requestUptime": request, "requestedAtMonotonicNs": started,
+                    "requestUptime": request, "requestedAtMonotonicNs": started, "requestedAtUTC": now(),
                     "requestToCollectorSeconds": started / 1e9 - request,
                     "targetIdentityVerified": True, "liveMarkerStreamCreated": False,
                     "raw": raw, "stderr": stderr, "process": process}
@@ -376,6 +375,11 @@ finally:
                 data, output / (row["label"] + ".all-threads.txt.gz"))
             text = data.decode("utf-8", errors="replace")
             row["sampleTimeCoverage"] = sample_time_coverage(text, row["requestUptime"])
+            row["sampleTimeCoverage"]["limitation"] = "sample call trees aggregate the whole bounded capture; individual sample times and lock owner are not supplied"
+            header = re.search(r"^Date/Time:\s+(.+)$", text, re.MULTILINE)
+            row["sampleHeaderDateTime"] = header.group(1) if header else None
+            row["sampleHeaderPIDMatches"] = bool(re.search(r"^Process:.*\[" + str(row["pid"]) + r"\]$", text, re.MULTILINE))
+            row["backend"] = "sample-10ms-no-mayDie"
             lines = text.splitlines()
             main = next((i for i, line in enumerate(lines) if "com.apple.main-thread" in line), None)
             if main is not None:
@@ -393,9 +397,9 @@ finally:
                        projectionSHA256=hashlib.sha256(projected.read_bytes()).hexdigest())
         rows.append(row)
     report = {"atUTC": now(), "head": os.environ["GITHUB_SHA"],
-        "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION",
+        "scope": "B2_CPU_DIAGNOSTIC_NOT_GATE_QUALIFICATION", "backend": "sample-10ms-no-mayDie",
         "nativeExit": code, "observations": rows, "markers": marker_rows, "errors": errors,
-        "symbolInformation": "Kernel onlyTarget stackshots, noSymbolicate/noProcessingWhileSampling/noIPC during capture; separate -i reparse after recorder exit; live image lookup ONLY after existing physical-render/authority marker with same PID/birth",
+        "symbolInformation": "sample exact owned PID, 5s at10ms, no-mayDie; symbolication after bounded recording, exact all-thread text copied offline; aggregated stacks do not establish per-sample phase or owner",
         "selfProbe": probe,
         "collectorFinalizationLimitSeconds": 120,
         "expectedMarkers": list(phases), "allMarkersObserved": set(observations) == set(phases),
@@ -404,7 +408,7 @@ finally:
         "diagnosticCompleteScope": "TECHNICAL_RECORD_AND_EXPORT_ONLY; sampleTimeCoverage is not qualification of the measured phases or the original5s gate",
         "ownedProfilerProcessesTerminated": all(row["exitCode"] is not None for row in rows)}
     report["diagnosticComplete"] = report["allMarkersObserved"] and not errors and all(
-        row["exitCode"] == 0 and row.get("targetIdentityVerified") and row.get("liveMarkerStreamCreated") is False
+        row["exitCode"] == 0 and row.get("sampleHeaderPIDMatches") and row.get("targetIdentityVerified") and row.get("liveMarkerStreamCreated") is False
         and row.get("rawReadComplete") and row.get("offlineComplete")
         and row.get("completeOfflineExport", {}).get("complete")
         and row.get("projectionScope") == "HEADER_AND_MAIN_THREAD" for row in rows)
