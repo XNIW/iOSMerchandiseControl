@@ -274,10 +274,25 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
         return try? JSONDecoder().decode(SelectedShop.self, from: data)
     }
 
+    func readSelectionStamp(accountHash: String) -> String? {
+        defaults.string(forKey: selectionStampKey(accountHash: accountHash))
+    }
+
+    var localAuthorizationRevision: Int { defaults.integer(forKey: Self.localAuthorizationRevisionKey) }
+
+    private func selectionStampKey(accountHash: String) -> String {
+        key(accountHash: accountHash) + ".selectionStamp"
+    }
+
     @discardableResult
     func save(_ selectedShop: SelectedShop, accountHash: String) -> Bool {
         guard let data = try? JSONEncoder().encode(selectedShop) else { return false }
         Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            let previous = self.selectedShop(accountHash: accountHash)
+            if previous?.shopID != selectedShop.shopID || previous?.selectable != selectedShop.selectable
+                || previous?.status != selectedShop.status {
+                defaults.set(UUID().uuidString, forKey: selectionStampKey(accountHash: accountHash))
+            }
             defaults.set(data, forKey: key(accountHash: accountHash))
             defaults.set(true, forKey: resolutionKey(accountHash: accountHash))
         }
@@ -288,6 +303,9 @@ nonisolated final class SelectedShopStore: @unchecked Sendable {
     @discardableResult
     func clear(accountHash: String) -> Bool {
         Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
+            if defaults.data(forKey: key(accountHash: accountHash)) != nil {
+                defaults.set(UUID().uuidString, forKey: selectionStampKey(accountHash: accountHash))
+            }
             defaults.removeObject(forKey: key(accountHash: accountHash))
             defaults.removeObject(forKey: resolutionKey(accountHash: accountHash))
         }

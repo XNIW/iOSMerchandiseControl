@@ -84,22 +84,26 @@ private struct GeneratedSummaryMetricTile: View {
 struct GeneratedView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @Environment(\.localBusinessReadIsAllowed) private var localReadIsAllowed
+    @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     /// Entry da modificare (passata dal chiamante, es. PreGenerateView o HistoryView)
     let entry: HistoryEntry
     let autoOpenScanner: Bool
     let onDone: (() -> Void)?
+    let allowsEditing: Bool
     
     @State private var isSaving: Bool = false
     @State private var isSyncing: Bool = false
 
     // Init custom con default, così gli altri punti del codice possono continuare a chiamare
     // GeneratedView(entry: entry) senza rompersi.
-    init(entry: HistoryEntry, autoOpenScanner: Bool = false, onDone: (() -> Void)? = nil) {
+    init(entry: HistoryEntry, autoOpenScanner: Bool = false, allowsEditing: Bool = true, onDone: (() -> Void)? = nil) {
         self.entry = entry
         self.autoOpenScanner = autoOpenScanner
         self.onDone = onDone
+        self.allowsEditing = allowsEditing
     }
 
     /// Copie locali dei dati, per lavorare in modo SwiftUI-friendly
@@ -256,8 +260,41 @@ struct GeneratedView: View {
         // Tiene questa schermata reattiva ai cambi lingua senza resettare lo stato locale dell'editor.
         let _ = appLanguage
 
-        ScrollViewReader { proxy in
-            generatedContent(proxy: proxy)
+        if allowsEditing && localWriteIsAllowed() {
+            ScrollViewReader { proxy in
+                generatedContent(proxy: proxy)
+            }
+        } else if localReadIsAllowed(.sessions) {
+            readOnlySession
+        } else {
+            ContentUnavailableView(L("sync.local.qualifying.title"), systemImage: "clock")
+        }
+    }
+
+    @ViewBuilder
+    private var readOnlySession: some View {
+        let snapshot = entry.evaluateJSONDecodeSnapshot()
+        if entry.hasPersistedJSONDecodeFault || snapshot.hasAnyFault {
+            ContentUnavailableView(L("generated.json_fault.title"), systemImage: "exclamationmark.triangle",
+                                   description: Text(L("generated.json_fault.message")))
+        } else if let header = snapshot.dataGrid.first, snapshot.dataGrid.count > 1 {
+            List(snapshot.dataGrid.indices.dropFirst(), id: \.self) { rowIndex in
+                let row = snapshot.dataGrid[rowIndex]
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(row.indices, id: \.self) { column in
+                        if !row[column].isEmpty {
+                            if header.indices.contains(column), !header[column].isEmpty {
+                                LabeledContent(header[column], value: row[column])
+                            } else {
+                                Text(row[column])
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(entry.title)
+        } else {
+            ContentUnavailableView(L("history.empty.title"), systemImage: "clock.arrow.circlepath")
         }
     }
 
@@ -1174,7 +1211,7 @@ struct GeneratedView: View {
 
     @MainActor
     private func autosaveIfNeeded() {
-        guard hasUnsavedChanges, !isSaving, !isSyncing, !gridParallelArraysFault else { return }
+        guard allowsEditing, localWriteIsAllowed(), hasUnsavedChanges, !isSaving, !isSyncing, !gridParallelArraysFault else { return }
         saveChanges() // se va bene, dentro saveChanges azzeriamo hasUnsavedChanges
     }
 

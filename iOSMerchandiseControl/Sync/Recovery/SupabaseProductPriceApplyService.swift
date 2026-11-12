@@ -712,9 +712,7 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if inserted > 0 || remoteIdentityLinked > 0 {
             do {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                    try context.save()
-                }
+                try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
             } catch is CancellationError {
                 context.rollback()
                 throw CancellationError()
@@ -946,9 +944,7 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
                 )
                 do {
                     let saveStartedAt = Date()
-                    try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                        try pageContext.save()
-                    }
+                    try Task126OwnerStoreGate.saveTrackedLocalChanges(pageContext)
                     let saveMS = Int(Date().timeIntervalSince(saveStartedAt) * 1_000)
                     await Task.yield()
                     debugPrint(
@@ -1067,9 +1063,7 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if pruned > 0 {
             do {
-                try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                    try context.save()
-                }
+                try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
             } catch is CancellationError {
                 context.rollback()
                 throw CancellationError()

@@ -160,7 +160,7 @@ enum SupabaseManualSyncReleaseFactory {
 }
 
 @MainActor
-private final class DeviceGuardedManualCatalogPushProvider: SupabaseManualSyncCatalogPushProviding {
+final class DeviceGuardedManualCatalogPushProvider: SupabaseManualSyncCatalogPushProviding {
     private let delegate: any SupabaseManualSyncCatalogPushProviding
     private let deviceAuthorization: any ShopDeviceAuthorizationChecking
 
@@ -188,7 +188,7 @@ private final class DeviceGuardedManualCatalogPushProvider: SupabaseManualSyncCa
 }
 
 @MainActor
-private final class DeviceGuardedManualProductPriceProvider: SupabaseManualSyncProductPriceSyncProviding {
+final class DeviceGuardedManualProductPriceProvider: SupabaseManualSyncProductPriceSyncProviding {
     private let delegate: any SupabaseManualSyncProductPriceSyncProviding
     private let deviceAuthorization: any ShopDeviceAuthorizationChecking
 
@@ -323,27 +323,41 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
         let modelContainer = self.modelContainer
         let remote = self.remote
         let recorder = self.recorder
+        let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID)
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
+            context.autosaveEnabled = false
             let service = HistorySessionSyncService(remote: remote)
+            func save() throws {
+                try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope) {
+                    try Task126OwnerStoreGate.validateCheckpointContainerWithLeaseHeld(modelContainer)
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
+                }
+            }
+            func pull() async throws -> HistorySessionPullResult {
+                try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                    try await service.pullHistorySessionsFromCloud(ownerUserID: ownerUserID, context: context,
+                        automaticScope: scope, onProgress: onProgress)
+                }
+            }
+            func pushCurrent(entries: [HistoryEntry], includeSynced: Bool) async throws -> HistorySessionPushResult {
+                try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                    try await service.pushPendingHistorySessions(entries: entries, ownerUserID: ownerUserID,
+                        context: context, includeSynced: includeSynced, onProgress: onProgress)
+                }
+            }
             if mode == .incremental {
                 let entries = try context.fetch(
                     FetchDescriptor<HistoryEntry>(
                         sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
                     )
                 )
-                let push = try await service.pushPendingHistorySessions(
-                    entries: entries,
-                    ownerUserID: ownerUserID,
-                    context: context,
-                    includeSynced: false,
-                    onProgress: onProgress
-                )
-                try context.save()
+                let push = try await pushCurrent(entries: entries, includeSynced: false)
+                try save()
                 if push.uploadedCount > 0 {
                     try await Self.recordHistorySyncEvent(
                         recorder: recorder,
-                        ownerUserID: ownerUserID,
+                        scope: scope,
                         remoteIDs: push.pushedRemoteIDs,
                         tombstoneRemoteIDs: push.pushedTombstoneRemoteIDs
                     )
@@ -354,35 +368,21 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
                     skippedOversized: push.skippedOversizedCount
                 )
             }
-            let initialPull = try await service.pullHistorySessionsFromCloud(
-                ownerUserID: ownerUserID,
-                context: context,
-                onProgress: onProgress
-            )
-            try context.save()
+            let initialPull = try await pull()
+            try save()
             let entries = try context.fetch(
                 FetchDescriptor<HistoryEntry>(
                     sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
                 )
             )
-            let push = try await service.pushPendingHistorySessions(
-                entries: entries,
-                ownerUserID: ownerUserID,
-                context: context,
-                includeSynced: true,
-                onProgress: onProgress
-            )
-            try context.save()
-            let confirmPull = try await service.pullHistorySessionsFromCloud(
-                ownerUserID: ownerUserID,
-                context: context,
-                onProgress: onProgress
-            )
-            try context.save()
+            let push = try await pushCurrent(entries: entries, includeSynced: true)
+            try save()
+            let confirmPull = try await pull()
+            try save()
             if push.uploadedCount > 0 {
                 try await Self.recordHistorySyncEvent(
                     recorder: recorder,
-                    ownerUserID: ownerUserID,
+                    scope: scope,
                     remoteIDs: push.pushedRemoteIDs,
                     tombstoneRemoteIDs: push.pushedTombstoneRemoteIDs
                 )
@@ -412,7 +412,7 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
 
     private nonisolated static func recordHistorySyncEvent(
         recorder: (any SyncEventRecording)?,
-        ownerUserID: UUID,
+        scope: Task126VerifiedOwnerStoreScope,
         remoteIDs: Set<UUID>,
         tombstoneRemoteIDs: Set<UUID>
     ) async throws {
@@ -423,14 +423,13 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
             ("history_changed", changed.sorted { $0.uuidString < $1.uuidString }),
             ("history_tombstone", tombstones.sorted { $0.uuidString < $1.uuidString })
         ]
-        let sourceDeviceID = try DeviceInstallIDStore().requireDeviceInstallID()
-
         for group in groups where !group.ids.isEmpty {
             for offset in stride(from: 0, to: group.ids.count, by: 25) {
                 let upperBound = min(offset + 25, group.ids.count)
                 let ids = Array(group.ids[offset..<upperBound])
                 let fingerprint = [
-                    ownerUserID.uuidString.lowercased(),
+                    scope.ownerUserID.uuidString.lowercased(),
+                    scope.shopID.uuidString.lowercased(),
                     group.eventType,
                     ids.map { $0.uuidString.lowercased() }.joined(separator: ",")
                 ].joined(separator: "|")
@@ -448,12 +447,16 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
                         "source": .string("ios"),
                         "uploaded_count": .number(Double(ids.count))
                     ]),
+                    shopID: scope.shopID,
                     source: "ios_history_session_push",
-                    sourceDeviceID: sourceDeviceID,
+                    sourceDeviceID: scope.deviceInstallID,
                     batchID: nil,
                     clientEventID: "ios-history:\(group.eventType):\(digest)"
                 )
-                _ = try await recorder.record(request)
+                try Task126OwnerStoreGate.revalidateAutomaticScope(scope)
+                _ = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                    try await recorder.record(request)
+                }
             }
         }
     }
@@ -499,16 +502,19 @@ private extension SyncHistorySessionMode {
 
 @MainActor
 final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
+    private let defaults: UserDefaults
     private let modelContainer: ModelContainer
     private let remote: ProductPriceReleaseRemote
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
 
     init(
         modelContainer: ModelContainer,
-        remote: ProductPriceReleaseRemote
+        remote: ProductPriceReleaseRemote,
+        defaults: UserDefaults = .standard
     ) {
         self.modelContainer = modelContainer
         self.remote = remote
+        self.defaults = defaults
     }
 
     func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
@@ -551,7 +557,8 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
             context: context,
             priceRemoteFetcher: remote,
             includesCatalog: false,
-            includesProductPrice: true
+            includesProductPrice: true,
+            defaults: defaults
         ).makePlan(ownerUserID: ownerUserID)
         guard aggregatedPlan.blockers.isEmpty else {
             stagedPendingBatchesByFingerprint.removeAll()
@@ -572,64 +579,55 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
     func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
         let context = ModelContext(modelContainer)
         let batchFingerprint = productPricePushFingerprint(plan)
-        let pendingBatch = stagedPendingBatchesByFingerprint[batchFingerprint]
-        if let pendingBatch {
-            try LocalPendingAggregatedPushStateStore(context: context).markSent(
-                changeIDs: pendingBatch.changeIDs,
-                ownerUserID: ownerUserID,
-                planFingerprint: batchFingerprint
-            )
+        guard let pendingBatch = stagedPendingBatchesByFingerprint[batchFingerprint],
+              pendingBatch.plan == plan, let original = pendingBatch.dispatchSnapshot,
+              Set(pendingBatch.changeIDs) == Set(original.tokens.map(\.changeID)) else {
+            throw LocalPendingManualDispatchError.staleBatch
         }
+        let admitted = try LocalPendingAggregatedPushStateStore(context: context).markSent(
+            snapshot: original, ownerUserID: ownerUserID, defaults: defaults)
+        // Consume exactly this plan before suspension. A concurrent preview may
+        // stage another plan; completion must not evict that newer snapshot.
+        stagedPendingBatchesByFingerprint.removeValue(forKey: batchFingerprint)
+        let atomic = try ManualPendingAtomicBatchExecution(snapshot: admitted, container: modelContainer,
+            ownerUserID: ownerUserID, defaults: defaults)
         let result: ProductPriceManualPushResult
+        var verifiedPayloads: [ProductPriceManualPushPayload]?
         do {
-            let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: plan)
-            guard snapshot.ownerUserID == ownerUserID else {
+            let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: plan, expectedShopID: admitted.scope?.shopID)
+            guard snapshot.ownerUserID == ownerUserID, let capturedScope = admitted.scope,
+                  snapshot.payloads.allSatisfy({ $0.shopID == capturedScope.shopID }) else {
                 throw ProductPriceManualPushError.invalidPayload
             }
-            result = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
+            result = try await Task126OwnerStoreGate.withAutomaticScope(capturedScope) {
+                try await ManualPendingAtomicDispatchContext.$beforeDispatch.withValue({ try atomic.beforeDispatch($0) }) {
+                    try await SupabaseProductPriceManualPushService(remote: remote,
+                        onVerifiedRows: { try await atomic.captureVerifiedPriceRows($0) }).push(snapshot: snapshot)
+                }
+            }
             if result.isVerifiedSuccess {
-                _ = try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(
-                    snapshot.payloads,
-                    context: context
-                )
-                _ = try await ProductPriceCoveredProductChangeReconciler()
-                    .syncRemoteProductsAndAcknowledgeCoveredProductPriceFieldChanges(
-                        payloads: snapshot.payloads,
-                        ownerUserID: ownerUserID,
-                        remote: remote,
-                        context: context
-                    )
+                try atomic.confirmVerifiedResponses(requiresWrite: !snapshot.payloads.isEmpty)
+                verifiedPayloads = snapshot.payloads
             }
+            // The original price plan admits no active catalog parent. A
+            // catalog intent appearing during HTTP belongs to another writer;
+            // this price batch must never PATCH or acknowledge it.
+
         } catch {
-            if let pendingBatch {
-                try? LocalPendingAggregatedPushStateStore(context: context).markRetryable(
-                    changeIDs: pendingBatch.changeIDs,
-                    ownerUserID: ownerUserID
-                )
-            }
+            try? LocalPendingAggregatedPushStateStore(context: context).finish(
+                snapshot: admitted, ownerUserID: ownerUserID, status: .pending, defaults: defaults)
             throw error
         }
-        if let pendingBatch {
-            if result.isVerifiedSuccess {
-                try LocalPendingAggregatedPushStateStore(context: context).markAcknowledged(
-                    changeIDs: pendingBatch.changeIDs,
-                    ownerUserID: ownerUserID
-                )
-            } else {
-                try LocalPendingAggregatedPushStateStore(context: context).markRetryable(
-                    changeIDs: pendingBatch.changeIDs,
-                    ownerUserID: ownerUserID
-                )
-            }
-            stagedPendingBatchesByFingerprint.removeValue(forKey: batchFingerprint)
+        try LocalPendingAggregatedPushStateStore(context: context).finish(
+            snapshot: admitted, ownerUserID: ownerUserID,
+            status: result.isVerifiedSuccess ? .acknowledged : .pending, defaults: defaults,
+            verifiedPricePayloads: verifiedPayloads, atomicBatchID: atomic.batchID,
+            verifiedPriceRows: atomic.verifiedPriceRows)
+        let telemetryResult = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: modelContainer,
+            ownerUserID: ownerUserID, defaults: defaults, expectedAutomaticScope: admitted.scope) { fresh in
+            SyncEventOutboxEnqueueService(context: fresh).enqueue(.productPriceManualPush(
+                result: result, ownerUserID: ownerUserID, currentOwnerUserID: ownerUserID))
         }
-        let telemetryResult = SyncEventOutboxEnqueueService(context: context).enqueue(
-            .productPriceManualPush(
-                result: result,
-                ownerUserID: ownerUserID,
-                currentOwnerUserID: ownerUserID
-            )
-        )
         if result.isVerifiedSuccess, !telemetryResult.isAggregatedPushSuccess {
             return ProductPriceManualPushResult(
                 insertedCount: result.insertedCount,
@@ -751,6 +749,7 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
 
 @MainActor
 final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
+    private let defaults: UserDefaults
     private let context: ModelContext
     private let manualPushService: SupabaseManualPushService
     private let generatedPriceRemote: (any SupabaseProductPricePushDryRunRemoteFetching)?
@@ -763,20 +762,23 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
         manualPushService: SupabaseManualPushService,
         generatedPriceRemote: (any SupabaseProductPricePushDryRunRemoteFetching)? = nil,
         preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),
-        baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader()
+        baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader(),
+        defaults: UserDefaults = .standard
     ) {
         self.context = context
         self.manualPushService = manualPushService
         self.generatedPriceRemote = generatedPriceRemote
         self.preflightService = preflightService
         self.baselineReader = baselineReader
+        self.defaults = defaults
     }
 
     func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan {
         let aggregatedPlan = try await LocalPendingAggregatedPushPlanner(
             context: context,
             includesCatalog: true,
-            includesProductPrice: false
+            includesProductPrice: false,
+            defaults: defaults
         ).makePlan(ownerUserID: ownerUserID)
         guard aggregatedPlan.blockers.isEmpty else {
             stagedPendingBatchesByFingerprint.removeAll()
@@ -802,48 +804,67 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
     }
 
     func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult {
-        let pendingBatch = stagedPendingBatchesByFingerprint[plan.planFingerprint]
-        if let pendingBatch {
-            do {
-                try LocalPendingAggregatedPushStateStore(context: context).markSent(
-                    changeIDs: pendingBatch.changeIDs,
-                    ownerUserID: ownerUserID,
-                    planFingerprint: plan.planFingerprint
-                )
-            } catch {
-                return .blocked(message: "Local pending state could not be prepared.")
+        guard let pendingBatch = stagedPendingBatchesByFingerprint[plan.planFingerprint],
+              pendingBatch.plan == plan, let original = pendingBatch.dispatchSnapshot,
+              Set(pendingBatch.changeIDs) == Set(original.tokens.map(\.changeID)) else {
+            return .blocked(message: "The original local pending batch is no longer current.")
+        }
+        let admitted: LocalPendingManualDispatchSnapshot
+        let execution: ManualPendingCatalogExecution
+        let atomic: ManualPendingAtomicBatchExecution
+        do {
+            admitted = try LocalPendingAggregatedPushStateStore(context: context).markSent(
+                snapshot: original, ownerUserID: ownerUserID, defaults: defaults)
+            execution = try ManualPendingCatalogExecution(snapshot: admitted, plan: plan,
+                container: context.container, ownerUserID: ownerUserID, defaults: defaults)
+            atomic = try ManualPendingAtomicBatchExecution(snapshot: admitted, container: context.container,
+                ownerUserID: ownerUserID, defaults: defaults)
+        } catch {
+            return .blocked(message: "The original local pending batch is no longer current.")
+        }
+        stagedPendingBatchesByFingerprint.removeValue(forKey: plan.planFingerprint)
+        let dispatchContext = ModelContext(context.container)
+        dispatchContext.autosaveEnabled = false
+        guard let scope = admitted.scope else { return .blocked(message: "Missing captured manual scope.") }
+        let result = await Task126OwnerStoreGate.withAutomaticScope(scope) {
+            await ManualPendingCatalogDispatchContext.$beforeDispatch.withValue({ try execution.beforeRequest() }) {
+                await ManualPendingAtomicDispatchContext.$beforeDispatch.withValue({ wire in
+                    try execution.beforeRequest()
+                    try atomic.beforeDispatch(wire)
+                }) {
+                    await manualPushService.execute(plan: plan, context: dispatchContext,
+                        ownerUserID: ownerUserID, pendingExecution: execution)
+                }
             }
         }
-        let result = await manualPushService.execute(
-            plan: plan,
-            context: context,
-            ownerUserID: ownerUserID
-        )
-        if let pendingBatch {
-            applyPendingStateTransition(
-                result: result,
-                changeIDs: pendingBatch.changeIDs,
-                ownerUserID: ownerUserID
-            )
-            stagedPendingBatchesByFingerprint.removeValue(forKey: plan.planFingerprint)
-        }
+        let restoredUndispatchedAdmission: Bool
+        if result.status == .failedBeforeWrite {
+            restoredUndispatchedAdmission = (try? atomic.restoreUndispatchedAdmission(original: original)) == true
+        } else { restoredUndispatchedAdmission = false }
+        let didCommitPendingOutcome = restoredUndispatchedAdmission || applyPendingStateTransition(
+            result: result, snapshot: admitted, ownerUserID: ownerUserID, atomic: atomic, verifiedReadOnlyChangeIDs: execution.verifiedReadOnlyChangeIDs)
         guard result.confirmedCatalogChangeCount > 0 else {
             return result
         }
-        let telemetryService = SyncEventOutboxEnqueueService(context: context)
-        let telemetryResults = SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(
-                result: result,
-                ownerUserID: ownerUserID,
-                currentOwnerUserID: ownerUserID,
-                planFingerprint: plan.planFingerprint
-            )
-            .map(telemetryService.enqueue)
+        let telemetryResults: [SyncEventOutboxProducerResult]
+        do {
+            telemetryResults = try Task126OwnerStoreGate.withLocalMutationFence(modelContainer: context.container,
+                ownerUserID: ownerUserID, defaults: defaults, expectedAutomaticScope: admitted.scope) { fresh in
+                let service = SyncEventOutboxEnqueueService(context: fresh)
+                return SyncEventOutboxProducerOutcome.catalogManualPushOutcomes(result: result,
+                    ownerUserID: ownerUserID, currentOwnerUserID: ownerUserID,
+                    planFingerprint: plan.planFingerprint).map(service.enqueue)
+            }
+        } catch {
+            telemetryResults = [.init(kind: .blockedContract, errorCode: "manual_catalog_scope_changed")]
+        }
         let generatedPriceTelemetry: SyncEventOutboxProducerResult
         if let generatedPriceRemote {
             do {
                 generatedPriceTelemetry = try await CatalogGeneratedProductPriceSyncEventRecorder(
                     context: context,
-                    remote: generatedPriceRemote
+                    remote: generatedPriceRemote,
+                    expectedScope: admitted.scope, defaults: defaults
                 ).recordIfNeeded(
                     catalogResult: result,
                     ownerUserID: ownerUserID,
@@ -859,7 +880,7 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
             generatedPriceTelemetry = SyncEventOutboxProducerResult(kind: .skippedNoOp)
         }
         if result.status == .completed,
-           !telemetryResults.allSatisfy(\.isAggregatedPushSuccess) {
+           (!didCommitPendingOutcome || !telemetryResults.allSatisfy(\.isAggregatedPushSuccess)) {
             return SupabaseManualPushResult(
                 status: .completedBaselineRefreshFailed,
                 supplierCreates: result.supplierCreates,
@@ -922,17 +943,32 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
 
     private func applyPendingStateTransition(
         result: SupabaseManualPushResult,
-        changeIDs: [String],
-        ownerUserID: UUID
-    ) {
-        let store = LocalPendingAggregatedPushStateStore(context: context)
+        snapshot: LocalPendingManualDispatchSnapshot,
+        ownerUserID: UUID,
+        atomic: ManualPendingAtomicBatchExecution,
+        verifiedReadOnlyChangeIDs: Set<String>
+    ) -> Bool {
+        let status: LocalPendingChangeStatus
         switch result.status {
-        case .completed, .completedBaselineRefreshFailed:
-            try? store.markAcknowledged(changeIDs: changeIDs, ownerUserID: ownerUserID)
-        case .partial, .failedBeforeWrite:
-            try? store.markRetryable(changeIDs: changeIDs, ownerUserID: ownerUserID)
-        case .blockedBeforeWrite:
-            try? store.markBlocked(changeIDs: changeIDs, ownerUserID: ownerUserID)
+        case .completed, .completedBaselineRefreshFailed: status = .acknowledged
+        case .partial, .failedBeforeWrite: status = .pending
+        case .blockedBeforeWrite: status = .blocked
+        }
+        do {
+            if status == .acknowledged {
+                let writes = result.supplierCreates + result.supplierUpdates + result.categoryCreates
+                    + result.categoryUpdates + result.productCreates + result.productUpdates
+                try atomic.confirmVerifiedResponses(requiresWrite: writes > 0 || !result.tombstoneIDs.isEmpty,
+                    verifiedReadOnlyChangeIDs: verifiedReadOnlyChangeIDs)
+            }
+            try LocalPendingAggregatedPushStateStore(context: context).finish(
+                snapshot: snapshot, ownerUserID: ownerUserID, status: status, defaults: defaults,
+                atomicBatchID: atomic.batchID, verifiedReadOnlyChangeIDs: verifiedReadOnlyChangeIDs)
+            return true
+        } catch {
+            // Preserve the mismatched revision and its status. An HTTP result
+            // for A can never acknowledge the current intent B.
+            return false
         }
     }
 

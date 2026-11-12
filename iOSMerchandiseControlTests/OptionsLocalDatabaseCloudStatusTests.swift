@@ -168,6 +168,61 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
         XCTAssertFalse(source.contains("L(\"options.supabase.automaticSync.pending\")"))
     }
 
+    func testR23UnqualifiedZeroDoesNotClaimVerifiedEmptyCatalog() {
+        let input = makeInput(localSummary: .empty, baselineStatus: .absent)
+        XCTAssertNotEqual(LocalDatabaseCloudStatusResolver.resolve(input), .empty,
+                          "Zero in an incomplete first bootstrap is not proof of an empty remote catalog")
+    }
+
+    func testR23EmptySummaryCannotMaskConfirmedDeviceDenial() {
+        let input = makeInput(localSummary: .empty, baselineStatus: .valid,
+                              syncPhase: .blocked(.deviceNotActive))
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .requiresUserAction(.cloudPermissionProblem))
+    }
+
+    func testR23EmptySummaryCannotMaskUnavailableLocalState() {
+        let input = makeInput(localSummary: .empty, baselineStatus: .valid,
+                              syncPhase: .blocked(.localStateUnavailable))
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .requiresUserAction(.localStateUnavailable))
+    }
+
+    func testR23QualifiedEmptyIsDistinctFromBootstrapAndReadFailureWins() {
+        var input = makeInput(localSummary: .empty, baselineStatus: .valid)
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .empty)
+        input.isLocalSummaryQualified = false
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .firstDownloadWaiting)
+        input.hasLocalStateReadFailure = true
+        input.isLoading = true
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .requiresUserAction(.localStateUnavailable))
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
+    }
+
+    func testR23RefreshOfKnownSessionDoesNotAskForSignInButRealLogoutDoes() {
+        var input = makeInput(isSignedIn: false, syncPhase: .blocked(.authRequired))
+        input.isAuthRestoring = true
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .offlineCloudCheckPending)
+        input.isAuthRestoring = false
+        input.isAuthTemporarilyUnavailable = true
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .offlineCloudCheckPending)
+        input.isAuthTemporarilyUnavailable = false
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .requiresUserAction(.signInRequired))
+    }
+
+    func testR23StaleWorkPhaseCannotOverrideVerifiedQuietCatalog() {
+        var input = makeInput(baselineStatus: .valid, needsRemoteCountVerification: false,
+                              syncPhase: .pullingEvents)
+        input.hasLiveInvocation = false
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .upToDate)
+    }
+
+    func testR23TypedRejectionAttentionCannotLookAlignedOrTriggerOrdinaryCheck() {
+        var input = makeInput(baselineStatus: .valid, hasAlignedCounts: true, needsRemoteCountVerification: false)
+        input.hasCatalogConflictAttention = true
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .requiresUserAction(.requiresChoice))
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.isAlignedWithNonBlockingCloudEvent(input))
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
+    }
+
     private func makeInput(
         isSignedIn: Bool = true,
         isAuthFailed: Bool = false,

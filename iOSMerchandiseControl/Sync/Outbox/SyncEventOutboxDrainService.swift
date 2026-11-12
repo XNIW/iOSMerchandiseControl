@@ -126,10 +126,10 @@ struct SyncEventOutboxDrainService {
                 // unaccepted business-body write or a retired generation.
                 if automaticScope != nil {
                     try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(context.container)
-                }
-                try context.save()
-                if automaticScope != nil {
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
                     Task126OwnerStoreGate.finishAcceptedLocalWriteWithLeaseHeld(context.container)
+                } else {
+                    try context.save()
                 }
             },
             rollbackChanges: {

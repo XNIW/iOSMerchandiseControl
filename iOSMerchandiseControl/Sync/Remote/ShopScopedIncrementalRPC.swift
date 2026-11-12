@@ -16,6 +16,61 @@ nonisolated protocol ShopScopedIncrementalRPCAuthorizing: Sendable {
     var usesServerAuthorizedShopScope: Bool { get }
 }
 
+/// A fresh head is eligibility only. The original marker RPC still runs the
+/// complete checkpoint before this capability can authorize no-work.
+nonisolated protocol ShopScopedIncrementalNoWorkVerifying: Sendable {
+    func hasNoEvents(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint
+    ) async throws -> Bool
+    func verifyNoWork(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+        localVerification: ShopSyncRecoveryLocalVerificationReceipt
+    ) async throws
+}
+
+/// No new proof is synthesized from a fresh head or from counts. Both guards
+/// compare with the complete checkpoint persisted by the finalized generation.
+nonisolated enum ShopSyncOrdinaryNoWorkContract {
+    static func validateHead(
+        _ page: ShopSyncEventPageEnvelope, checkpoint: ShopSyncRecoveryCheckpoint,
+        watermark: Int64
+    ) throws -> Bool {
+        guard watermark >= 0, checkpoint.maxEventID == watermark,
+              page.schemaVersion == "shop-sync-event-page-v1",
+              page.shopId == checkpoint.shopId, page.scope == checkpoint.scope,
+              page.asOfEventMaxId == String(watermark), page.pageLimit == 1,
+              page.rows.isEmpty, !page.hasMore, page.nextAfterId == nil,
+              page.asOfDomainEventMaxIds == checkpoint.syncEvents.domainMaxIds else {
+            return false
+        }
+        // asOf is the requested W; scopeEventMaxId is the freshly resolved H.
+        // They must not be confused when a concurrent event has appeared.
+        return try ShopSyncRecoveryCanonical.eventID(page.scopeEventMaxId) == watermark
+    }
+
+    static func validateMarker(
+        _ marker: ShopSyncRecoveryConvergenceMarker,
+        checkpoint: ShopSyncRecoveryCheckpoint, watermark: Int64
+    ) throws {
+        guard watermark >= 0, checkpoint.maxEventID == watermark,
+              marker.schemaVersion == "shop-sync-convergence-marker-v1",
+              marker.status == "ready", marker.serverNoWorkEligible,
+              marker.integrity.totalViolationCount == 0,
+              marker.scope == checkpoint.scope, marker.shopId == checkpoint.shopId,
+              marker.syncEvents.maxId == String(watermark),
+              marker.syncEvents.verifiedBaselineId == String(watermark),
+              !marker.syncEvents.requiresFullRecovery,
+              marker.syncEvents.domainMaxIds == checkpoint.syncEvents.domainMaxIds,
+              marker.checkpointDigest == checkpoint.checkpointDigest,
+              marker.catalog == checkpoint.catalog, marker.prices == checkpoint.prices,
+              marker.history == checkpoint.history, marker.images == checkpoint.images else {
+            throw ShopSyncRecoveryContractError.markerNotVerified
+        }
+    }
+}
+
 nonisolated struct ShopSyncEventPageParameters: Encodable, Sendable {
     let shopID: UUID
     let deviceIdentifier: String
@@ -136,6 +191,12 @@ nonisolated struct ShopSyncRecoveryFenceStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    func persistedWatermark(accountHash: String, storeIdentity: LocalStoreIdentity, deviceIdentityHash: String) -> Int64? {
+        guard let record = validatedRecord(accountHash: accountHash, storeIdentity: storeIdentity,
+                                           deviceIdentityHash: deviceIdentityHash) else { return nil }
+        return try? ShopSyncRecoveryCanonical.eventID(record.watermark)
     }
 
     func scopeKey(
@@ -273,15 +334,14 @@ private actor ShopSyncIncrementalFenceCache {
         let eventMaxID: String
         let domainMaxIDs: ShopSyncRecoveryDomainEventMaxIDs
         let baselineWatermark: Int64
+        let leaseGeneration: UInt64
     }
 
     private var values: [String: Fence] = [:]
 
-    func value(for key: String, baselineWatermark: Int64) -> Fence? {
-        guard let value = values[key], value.baselineWatermark == baselineWatermark else {
-            values.removeValue(forKey: key)
-            return nil
-        }
+    func value(for key: String, baselineWatermark: Int64, leaseGeneration: UInt64) -> Fence? {
+        guard let value = values[key], value.baselineWatermark == baselineWatermark,
+              value.leaseGeneration == leaseGeneration else { return nil }
         return value
     }
 
@@ -371,26 +431,96 @@ nonisolated struct ShopScopedIncrementalRPCClient: Sendable {
         return envelope.rows
     }
 
+    func hasNoEvents(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint
+    ) async throws -> Bool {
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        guard baselineCheckpoint.maxEventID == watermark else { return false }
+        let data = try await execute(
+            "shop_sync_event_page_v1",
+            parameters: ShopSyncEventPageParameters(
+                shopID: scope.shopID, deviceIdentifier: scope.deviceInstallID,
+                afterID: String(watermark), limit: 1,
+                expectedScopeKey: baselineCheckpoint.scope.key,
+                expectedEventMaxID: String(watermark)
+            ),
+            ownerUserID: ownerUserID, scope: scope
+        )
+        try Task.checkCancellation()
+        guard data.count <= Self.maximumEventPageResponseBytes else {
+            throw ShopSyncRecoveryContractError.totalResourceBudgetExceeded
+        }
+        let page = try JSONDecoder().decode(ShopSyncEventPageEnvelope.self, from: data)
+        try page.scope.validate(expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID, expectedOwnerUserID: ownerUserID)
+        return try ShopSyncOrdinaryNoWorkContract.validateHead(
+            page, checkpoint: baselineCheckpoint, watermark: watermark
+        )
+    }
+
+    func verifyNoWork(
+        ownerUserID: UUID, scope: Task126VerifiedOwnerStoreScope, watermark: Int64,
+        baselineCheckpoint: ShopSyncRecoveryCheckpoint,
+        localVerification: ShopSyncRecoveryLocalVerificationReceipt
+    ) async throws {
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        guard baselineCheckpoint.maxEventID == watermark,
+              localVerification.matches(baselineCheckpoint) else {
+            throw ShopSyncRecoveryContractError.markerNotVerified
+        }
+        let marker = try await ShopSyncRecoveryRemoteAdapter(
+            transport: SupabaseShopSyncRecoveryRPCTransport(remote: remote), defaults: defaultsBox.value
+        ).marker(ownerUserID: ownerUserID, scope: scope,
+            baselineCheckpoint: baselineCheckpoint, localVerification: localVerification)
+        try Task.checkCancellation()
+        try validateLocal(ownerUserID: ownerUserID, scope: scope)
+        try ShopSyncOrdinaryNoWorkContract.validateMarker(
+            marker, checkpoint: baselineCheckpoint, watermark: watermark
+        )
+    }
+
     func advanceDurableFence(
         ownerUserID: UUID,
         scope: Task126VerifiedOwnerStoreScope,
         from watermark: Int64,
-        through newWatermark: Int64
+        through newWatermark: Int64,
+        expectedScopeKey: String? = nil
     ) async throws {
         guard watermark >= 0, newWatermark > watermark else {
             throw ShopSyncRecoveryContractError.invalidCursor
         }
         try validateLocal(ownerUserID: ownerUserID, scope: scope)
-        let cacheKey = [
-            scope.accountHash,
-            scope.storeIdentity.rawValue,
-            scope.deviceIdentityHash
-        ].joined(separator: "|")
-        guard let captured = await fenceCache.value(
-            for: cacheKey,
-            baselineWatermark: watermark
-        ) else {
-            throw ShopSyncRecoveryContractError.scopeFenceMissing
+        let defaults = defaultsBox.value
+        let watermarkScope = WatermarkStore.Scope(ownerUserID: ownerUserID, storeIdentity: scope.storeIdentity)
+        let store = ShopSyncRecoveryFenceStore(defaults: defaults)
+        let alreadyWritten = try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            let current = WatermarkStore(defaults: defaults).watermark(for: watermarkScope)
+            guard current == watermark || current == newWatermark else {
+                throw ShopSyncRecoveryContractError.scopeFenceMissing
+            }
+            // A crash can leave the verified fence ahead of its mirror.
+            if let written = store.scopeKey(accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+                                            deviceIdentityHash: scope.deviceIdentityHash, watermark: newWatermark) {
+                guard expectedScopeKey.map({ $0 == written }) ?? true else {
+                    throw ShopSyncRecoveryContractError.fullRecoveryRequired
+                }
+                return true
+            }
+            return false
+        }
+        if alreadyWritten { return }
+        let cacheKey = cacheKey(scope)
+        let captured: ShopSyncIncrementalFenceCache.Fence
+        if let cached = await fenceCache.value(for: cacheKey, baselineWatermark: watermark,
+                                                leaseGeneration: scope.leaseGeneration) {
+            captured = cached
+        } else {
+            guard expectedScopeKey != nil else { throw ShopSyncRecoveryContractError.scopeFenceMissing }
+            // Revalidate the published baseline after restart without replaying business rows.
+            captured = try await fence(ownerUserID: ownerUserID, scope: scope)
         }
         // The actor await above is an identity boundary even though it is
         // local-only.  Never write a fence for a stale account/shop/device
@@ -401,24 +531,46 @@ nonisolated struct ShopScopedIncrementalRPCClient: Sendable {
             expectedDeviceIdentifier: scope.deviceInstallID,
             expectedOwnerUserID: ownerUserID
         )
-        guard ShopSyncRecoveryFenceStore(defaults: defaultsBox.value).saveAuthoritative(
-            scope: captured.scope,
-            watermark: newWatermark,
-            accountHash: scope.accountHash,
-            storeIdentity: scope.storeIdentity,
-            deviceIdentityHash: scope.deviceIdentityHash
-        ) else {
+        if let expectedScopeKey, captured.scope.key != expectedScopeKey {
+            throw ShopSyncRecoveryContractError.fullRecoveryRequired
+        }
+        guard captured.baselineWatermark == watermark,
+              try ShopSyncRecoveryCanonical.eventID(captured.eventMaxID) >= newWatermark else {
             throw ShopSyncRecoveryContractError.scopeFenceMissing
+        }
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+            guard WatermarkStore(defaults: defaults).watermark(for: watermarkScope) == watermark,
+                  store.saveAuthoritative(scope: captured.scope, watermark: newWatermark,
+                    accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
+                    deviceIdentityHash: scope.deviceIdentityHash) else {
+                throw ShopSyncRecoveryContractError.scopeFenceMissing
+            }
         }
         await fenceCache.save(
             ShopSyncIncrementalFenceCache.Fence(
                 scope: captured.scope,
                 eventMaxID: captured.eventMaxID,
                 domainMaxIDs: captured.domainMaxIDs,
-                baselineWatermark: newWatermark
+                baselineWatermark: newWatermark,
+                leaseGeneration: scope.leaseGeneration
             ),
             for: cacheKey
         )
+    }
+
+    func verifiedScopeKey(scope: Task126VerifiedOwnerStoreScope, baseline: Int64, through: Int64) async throws -> String {
+        guard let captured = await fenceCache.value(for: cacheKey(scope), baselineWatermark: baseline,
+                                                     leaseGeneration: scope.leaseGeneration),
+              try ShopSyncRecoveryCanonical.eventID(captured.eventMaxID) >= through else {
+            throw ShopSyncRecoveryContractError.scopeFenceMissing
+        }
+        try validateLocal(ownerUserID: scope.ownerUserID, scope: scope)
+        return captured.scope.key
+    }
+
+    private func cacheKey(_ scope: Task126VerifiedOwnerStoreScope) -> String {
+        [scope.accountHash, scope.shopID.uuidString, scope.storeIdentity.rawValue, scope.deviceIdentityHash]
+            .joined(separator: "|")
     }
 
     func rows<Row: ShopSyncAuthorizedRow>(
@@ -517,14 +669,11 @@ nonisolated struct ShopScopedIncrementalRPCClient: Sendable {
         )
         let baselineWatermark = WatermarkStore(defaults: defaultsBox.value)
             .watermark(for: watermarkScope)
-        let cacheKey = [
-            scope.accountHash,
-            scope.storeIdentity.rawValue,
-            scope.deviceIdentityHash
-        ].joined(separator: "|")
+        let cacheKey = cacheKey(scope)
         if let cached = await fenceCache.value(
             for: cacheKey,
-            baselineWatermark: baselineWatermark
+            baselineWatermark: baselineWatermark,
+            leaseGeneration: scope.leaseGeneration
         ) {
             if let afterID {
                 let maximum = try ShopSyncRecoveryCanonical.eventID(cached.eventMaxID)
@@ -565,7 +714,8 @@ nonisolated struct ShopScopedIncrementalRPCClient: Sendable {
             scope: checkpoint.scope,
             eventMaxID: checkpoint.syncEvents.maxId,
             domainMaxIDs: checkpoint.syncEvents.domainMaxIds,
-            baselineWatermark: baselineWatermark
+            baselineWatermark: baselineWatermark,
+            leaseGeneration: scope.leaseGeneration
         )
         await fenceCache.save(captured, for: cacheKey)
         return captured

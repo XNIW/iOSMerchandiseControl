@@ -188,12 +188,21 @@ nonisolated struct CatalogIncrementalApplyService {
         let relatedCategoryIDs = Set(firstFetch.products.compactMap(\.categoryID))
             .subtracting(Set(firstFetch.categories.map(\.id)))
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
-        let relatedFetch = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
-            try await remote.fetchCatalogByIDs(
-                supplierIDs: relatedSupplierIDs,
-                categoryIDs: relatedCategoryIDs,
-                productIDs: []
-            )
+        let relatedFetch: (
+            suppliers: [RemoteInventorySupplierRow],
+            categories: [RemoteInventoryCategoryRow],
+            products: [RemoteInventoryProductRow]
+        )
+        if relatedSupplierIDs.isEmpty && relatedCategoryIDs.isEmpty {
+            relatedFetch = ([], [], [])
+        } else {
+            relatedFetch = try await Task126OwnerStoreGate.withAutomaticScope(scope) {
+                try await remote.fetchCatalogByIDs(
+                    supplierIDs: relatedSupplierIDs,
+                    categoryIDs: relatedCategoryIDs,
+                    productIDs: []
+                )
+            }
         }
         try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
         try validateRemoteRows(relatedFetch)
@@ -274,7 +283,7 @@ nonisolated struct CatalogIncrementalApplyService {
                     context: context
                 )
                 if result.totalMutations > 0 {
-                    try context.save()
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
                 }
                 return result
             }
@@ -336,7 +345,7 @@ nonisolated struct CatalogIncrementalApplyService {
                     products += 1
                 }
                 if suppliers + categories + products > 0 {
-                    try context.save()
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
                 }
                 return (suppliers, categories, products)
             }

@@ -37,6 +37,9 @@ nonisolated final class DeviceInstallIDStore: @unchecked Sendable {
             ?? (defaults === UserDefaults.standard ? Self.defaultDurableURL() : nil)
     }
 
+    // This mirror may invalidate an already verified identity. It grants no identity by itself.
+    var lastKnownDeviceInstallID: String? { Self.validIdentity(defaults.string(forKey: Self.key)) }
+
     var deviceInstallID: String {
         if let durable = try? requireDeviceInstallID() {
             return durable

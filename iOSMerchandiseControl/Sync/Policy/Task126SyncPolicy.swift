@@ -294,7 +294,15 @@ nonisolated enum Task126OwnerStoreGate {
             }
 
             let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
-            guard defaults.string(forKey: activeAccountKey) == accountHash else {
+            let activeAccountHash = defaults.string(forKey: activeAccountKey)
+            guard activeAccountHash == accountHash else {
+#if DEBUG
+                if ProcessInfo.processInfo.environment["TEST_RUNNER_TASK145_B6_OBSERVE"] == "1" {
+                    // The ORIGINAL guard's single read only. No account values,
+                    // binding/readiness queries or authority/behavior changes.
+                    NSLog("%@", "TASK145_B6_SCOPE_ACCOUNT present.\(activeAccountHash != nil) matches.false")
+                }
+#endif
                 throw Task126OwnerStoreGateError.activeAccountMismatch
             }
 
@@ -470,6 +478,13 @@ nonisolated enum Task126OwnerStoreGate {
         }
     }
 
+    #if DEBUG
+    /// Passive counter only. This creates no scope and never renews a writer lease.
+    static var automaticScopeLeaseGenerationForObservation: UInt64 {
+        leaseStore.withCurrentLease { $0 }
+    }
+    #endif
+
     /// Invalidates already-captured work synchronously. The orchestrator calls
     /// this before asynchronous auth/shop refresh can update persisted state.
     static func invalidateAutomaticScopeLease() {
@@ -489,9 +504,22 @@ nonisolated enum Task126OwnerStoreGate {
         modelContainer: ModelContainer,
         ownerUserID: UUID?,
         defaults: UserDefaults = .standard,
+        expectedAutomaticScope: Task126VerifiedOwnerStoreScope? = nil,
         _ mutation: (ModelContext) throws -> Result
     ) throws -> Result {
-        try leaseStore.withCurrentLease { _ in
+        if let expectedAutomaticScope {
+            guard expectedAutomaticScope.ownerUserID == ownerUserID else {
+                throw Task126OwnerStoreGateError.scopeChanged
+            }
+            try revalidateAutomaticScope(expectedAutomaticScope, defaults: defaults)
+        }
+        return try leaseStore.withCurrentLease { generation in
+            if let expectedAutomaticScope {
+                try Task.checkCancellation()
+                guard expectedAutomaticScope.leaseGeneration == generation else {
+                    throw Task126OwnerStoreGateError.scopeChanged
+                }
+            }
             switch leaseStore.localMutationContainerStateWithLeaseHeld(modelContainer) {
             case .retired:
                 throw Task126OwnerStoreGateError.retiredStoreGeneration
@@ -544,8 +572,20 @@ nonisolated enum Task126OwnerStoreGate {
             }
             let freshContext = ModelContext(modelContainer)
             freshContext.autosaveEnabled = false
+            try leaseStore.markDurableProofDirtyWithLeaseHeld(modelContainer)
+            #if DEBUG
+            let result: Result
+            if PilotCommitTrace.b6ObservationEnabled {
+                // Value-only observation of the lease already held here; never
+                // call capture/revalidate or acquire the same lock from the hook.
+                result = try PilotCommitTrace.B6Context.$localLeaseGeneration.withValue(generation) {
+                    try mutation(freshContext)
+                }
+            } else { result = try mutation(freshContext) }
+            #else
             let result = try mutation(freshContext)
-            leaseStore.finishAcceptedLocalWriteWithLeaseHeld(modelContainer)
+            #endif
+            leaseStore.finishAcceptedLocalWriteWithLeaseHeld(modelContainer, ownerUserID: ownerUserID)
             return result
         }
     }
@@ -566,7 +606,11 @@ nonisolated enum Task126OwnerStoreGate {
     static func permitsSameScopeLocalAccess(
         modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults = .standard
     ) -> Bool {
-        leaseStore.withCurrentLease { _ in
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("gate-access", startedAt: cachedCost) }
+        #endif
+        return leaseStore.withCurrentLease { _ in
             permitsSameScopeLocalAccessWithLeaseHeld(
                 modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults
             )
@@ -576,9 +620,32 @@ nonisolated enum Task126OwnerStoreGate {
     private static func permitsSameScopeLocalAccessWithLeaseHeld(
         modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults
     ) -> Bool {
+        ownerUserID != nil && leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer)
+            && permitsSameScopeLocalAuthorityWithLeaseHeld(
+                modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults)
+    }
+
+    static func permitsSameScopeLocalRead(
+        _ domain: Task126LocalReadDomain, modelContainer: ModelContainer,
+        ownerUserID: UUID?, defaults: UserDefaults = .standard
+    ) -> Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("gate-read", startedAt: cachedCost) }
+        #endif
+        return leaseStore.withCurrentLease { generation in
+            guard permitsSameScopeLocalAuthorityWithLeaseHeld(
+                modelContainer: modelContainer, ownerUserID: ownerUserID, defaults: defaults) else { return false }
+            return leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer)
+                || leaseStore.hasCurrentLocalReadProofWithLeaseHeld(modelContainer, domain: domain, generation: generation)
+        }
+    }
+
+    private static func permitsSameScopeLocalAuthorityWithLeaseHeld(
+        modelContainer: ModelContainer, ownerUserID: UUID?, defaults: UserDefaults
+    ) -> Bool {
         guard let ownerUserID,
-              let manifest = leaseStore.activeManifestWithLeaseHeld(modelContainer),
-              leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(modelContainer) else { return false }
+              let manifest = leaseStore.activeManifestWithLeaseHeld(modelContainer) else { return false }
         let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
         let bindingStore = AccountBindingStore(defaults: defaults)
         guard defaults.string(forKey: activeAccountKey) == accountHash,
@@ -628,20 +695,57 @@ nonisolated enum Task126OwnerStoreGate {
         leaseStore.activeManifestWithLeaseHeld(container)
     }
 
+    static func validateCheckpointContainerWithLeaseHeld(_ container: ModelContainer) throws {
+        guard leaseStore.localMutationContainerStateWithLeaseHeld(container) != .retired else {
+            throw Task126OwnerStoreGateError.retiredStoreGeneration
+        }
+    }
+
     static func configureLocalBodyFence(
         container: ModelContainer, proven: Bool,
+        invalidateDurableProof: (@Sendable () throws -> Void)? = nil,
+        didCommit: (@Sendable (UUID?) -> Void)? = nil,
         provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
     ) {
         leaseStore.withCurrentLease { _ in
-            leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven, provider: provider)
+            leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven,
+                invalidateDurableProof: invalidateDurableProof, didCommit: didCommit, provider: provider)
         }
     }
 
     static func configureLocalBodyFenceWithLeaseHeld(
         container: ModelContainer, proven: Bool,
+        invalidateDurableProof: (@Sendable () throws -> Void)? = nil,
+        didCommit: (@Sendable (UUID?) -> Void)? = nil,
         provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
     ) {
-        leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven, provider: provider)
+        leaseStore.configureLocalBodyFenceWithLeaseHeld(container, proven: proven,
+            invalidateDurableProof: invalidateDurableProof, didCommit: didCommit, provider: provider)
+    }
+
+    static func markDurableProofDirtyWithLeaseHeld(_ container: ModelContainer) throws {
+        try leaseStore.markDurableProofDirtyWithLeaseHeld(container)
+    }
+
+    static func saveTrackedLocalChangesWithLeaseHeld(_ context: ModelContext) throws {
+        if context.hasChanges {
+            try markDurableProofDirtyWithLeaseHeld(context.container)
+        }
+        try context.save()
+    }
+
+    /// For existing manual/batched apply boundaries that arrive without the
+    /// writer lease. Explicitly fenced callers use the lease-held variant.
+    static func saveTrackedLocalChanges(_ context: ModelContext) throws {
+        let save = {
+            try validateCheckpointContainerWithLeaseHeld(context.container)
+            try saveTrackedLocalChangesWithLeaseHeld(context)
+        }
+        if let scope = currentAutomaticScope {
+            try leaseStore.withValidatedLease(expectedGeneration: scope.leaseGeneration, operation: save)
+        } else {
+            try leaseStore.withCurrentLease { _ in try save() }
+        }
     }
 
     static func localBodyProofAdmissionGeneration() -> UInt64 {
@@ -650,6 +754,35 @@ nonisolated enum Task126OwnerStoreGate {
 
     static func hasCurrentLocalBodyProof(_ container: ModelContainer) -> Bool {
         leaseStore.withCurrentLease { _ in leaseStore.hasCurrentLocalBodyProofWithLeaseHeld(container) }
+    }
+
+    static func acceptLocalReadProof(container: ModelContainer, domain: Task126LocalReadDomain,
+                                     ownerUserID: UUID?, defaults: UserDefaults,
+                                     admissionGeneration: UInt64, fence: SyncStoreActiveMutationFence) -> Bool {
+        leaseStore.withCurrentLease { generation in
+            guard generation == admissionGeneration,
+                  permitsSameScopeLocalAuthorityWithLeaseHeld(
+                    modelContainer: container, ownerUserID: ownerUserID, defaults: defaults) else { return false }
+            return leaseStore.acceptLocalReadProofWithLeaseHeld(container, domain: domain, generation: generation, fence: fence)
+        }
+    }
+
+    /// An unchanged local domain readback may outlive a same-scope resolver
+    /// refresh. Recheck its current authority and physical fence under the
+    /// current lease; this grants neither a complete body proof nor a writer.
+    static func acceptCurrentLocalReadProof(container: ModelContainer, domain: Task126LocalReadDomain,
+                                            ownerUserID: UUID?, defaults: UserDefaults,
+                                            fence: SyncStoreActiveMutationFence) -> Bool {
+        leaseStore.withCurrentLease { generation in
+            guard permitsSameScopeLocalAuthorityWithLeaseHeld(
+                modelContainer: container, ownerUserID: ownerUserID, defaults: defaults) else { return false }
+            return leaseStore.acceptLocalReadProofWithLeaseHeld(container, domain: domain,
+                generation: generation, fence: fence)
+        }
+    }
+
+    static func clearLocalReadProofs(_ container: ModelContainer) {
+        leaseStore.withCurrentLease { _ in leaseStore.clearLocalReadProofsWithLeaseHeld(container) }
     }
 
     static func acceptLocalBodyProof(container: ModelContainer, generation: UInt64,
@@ -664,15 +797,20 @@ nonisolated enum Task126OwnerStoreGate {
     /// authorization and the unchanged physical fence are checked atomically;
     /// no captured writer scope or retired container lease is renewed.
     static func acceptLocalBodyProof(container: ModelContainer, fence: SyncStoreActiveMutationFence,
+                                     didAcceptProof: () -> Void = {},
                                      validatingCurrentAuthority: () -> Bool) -> Bool {
         leaseStore.withCurrentLease { _ in
             guard validatingCurrentAuthority() else { return false }
-            return leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence)
+            guard leaseStore.acceptLocalBodyProofWithLeaseHeld(container, fence: fence) else { return false }
+            // Optional physical memo persistence AFTER acceptance, still under
+            // this same lease. Existing callers keep the no-op default.
+            didAcceptProof()
+            return true
         }
     }
 
-    static func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer) {
-        leaseStore.finishAcceptedLocalWriteWithLeaseHeld(container)
+    static func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer, ownerUserID: UUID? = nil) {
+        leaseStore.finishAcceptedLocalWriteWithLeaseHeld(container, ownerUserID: ownerUserID)
     }
 
     /// Continuation authority requires a registered application generation;
@@ -833,6 +971,10 @@ nonisolated enum Task126OwnerStoreGate {
     }
 }
 
+nonisolated enum Task126LocalReadDomain: Hashable, Sendable {
+    case catalog, sessions, priceHistory
+}
+
 private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Sendable {
     enum LocalMutationContainerState {
         case active
@@ -846,6 +988,9 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
         let manifest: SyncStoreGenerationManifest?
         var localBodyFence: SyncStoreActiveMutationFence?
         var localBodyFenceProvider: (@Sendable () -> SyncStoreActiveMutationFence?)?
+        var invalidateDurableProof: (@Sendable () throws -> Void)?
+        var didCommit: (@Sendable (UUID?) -> Void)?
+        var localReadProofs: [Task126LocalReadDomain: (generation: UInt64, fence: SyncStoreActiveMutationFence)] = [:]
 
         init(container: ModelContainer, isRetired: Bool, manifest: SyncStoreGenerationManifest? = nil) {
             self.container = container
@@ -943,17 +1088,49 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
 
     func configureLocalBodyFenceWithLeaseHeld(
         _ container: ModelContainer, proven: Bool,
+        invalidateDurableProof: (@Sendable () throws -> Void)?,
+        didCommit: (@Sendable (UUID?) -> Void)?,
         provider: @escaping @Sendable () -> SyncStoreActiveMutationFence?
     ) {
         guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired else { return }
         registration.localBodyFenceProvider = provider
+        registration.invalidateDurableProof = invalidateDurableProof
+        registration.didCommit = didCommit
         registration.localBodyFence = proven ? provider() : nil
+    }
+
+    func markDurableProofDirtyWithLeaseHeld(_ container: ModelContainer) throws {
+        try containerRegistrations[ObjectIdentifier(container)]?.invalidateDurableProof?()
     }
 
     func hasCurrentLocalBodyProofWithLeaseHeld(_ container: ModelContainer) -> Bool {
         guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
               let fence = registration.localBodyFence, let provider = registration.localBodyFenceProvider else { return false }
         return provider() == fence
+    }
+
+    func hasCurrentLocalReadProofWithLeaseHeld(
+        _ container: ModelContainer, domain: Task126LocalReadDomain, generation: UInt64
+    ) -> Bool {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired else { return false }
+        let required: [Task126LocalReadDomain] = domain == .priceHistory ? [.catalog, .priceHistory] : [domain]
+        guard required.allSatisfy({ registration.localReadProofs[$0]?.generation == generation }),
+              let fence = registration.localBodyFenceProvider?() else { return false }
+        return required.allSatisfy { requiredDomain in
+            registration.localReadProofs[requiredDomain]?.fence == fence
+        }
+    }
+
+    func acceptLocalReadProofWithLeaseHeld(_ container: ModelContainer, domain: Task126LocalReadDomain,
+                                           generation: UInt64, fence: SyncStoreActiveMutationFence) -> Bool {
+        guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
+              registration.localBodyFenceProvider?() == fence else { return false }
+        registration.localReadProofs[domain] = (generation, fence)
+        return true
+    }
+
+    func clearLocalReadProofsWithLeaseHeld(_ container: ModelContainer) {
+        containerRegistrations[ObjectIdentifier(container)]?.localReadProofs.removeAll()
     }
 
     func acceptLocalBodyProofWithLeaseHeld(_ container: ModelContainer, fence: SyncStoreActiveMutationFence) -> Bool {
@@ -963,10 +1140,14 @@ private nonisolated final class Task126AutomaticScopeLeaseStore: @unchecked Send
         return true
     }
 
-    func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer) {
+    func finishAcceptedLocalWriteWithLeaseHeld(_ container: ModelContainer, ownerUserID: UUID?) {
         guard let registration = containerRegistrations[ObjectIdentifier(container)], !registration.isRetired,
-              registration.localBodyFence != nil else { return }
-        registration.localBodyFence = registration.localBodyFenceProvider?()
+              let previousFence = registration.localBodyFence else { return }
+        let currentFence = registration.localBodyFenceProvider?()
+        registration.localBodyFence = currentFence
+        if currentFence != previousFence {
+            registration.didCommit?(ownerUserID)
+        }
     }
 
     func validateLocalMutationContainerWithLeaseHeld(_ container: ModelContainer) throws {

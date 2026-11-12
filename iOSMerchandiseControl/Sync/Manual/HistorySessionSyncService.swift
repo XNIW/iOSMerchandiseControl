@@ -18,8 +18,12 @@ nonisolated final class HistorySessionSyncService {
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void = { _ in }
     ) async throws -> HistorySessionPushResult {
         var result = HistorySessionPushResult()
-        let selectedShopID = ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
-        let storeIdentity = selectedShopID == nil ? LocalStoreIdentity.anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID)
+        let scope = try Task126OwnerStoreGate.currentAutomaticScope.map { _ in
+            try Task126OwnerStoreGate.requireCurrentAutomaticScope(ownerUserID: ownerUserID)
+        }
+        let selectedShopID = scope?.shopID ?? ShopContextSelection.selectedShopID(ownerUserID: ownerUserID)
+        let storeIdentity = scope?.storeIdentity ?? (selectedShopID == nil
+            ? .anonymous : ShopContextSelection.localStoreIdentity(ownerUserID: ownerUserID))
         let scopedEntries = entries.filter {
             $0.isCompatibleWithHistoryScope(
                 ownerUserID: ownerUserID,
@@ -68,9 +72,15 @@ nonisolated final class HistorySessionSyncService {
             ownerUserID: ownerUserID
         )
         try Task.checkCancellation()
+        if let scope {
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope)
+        }
         for row in readBackRows {
             guard row.ownerUserID == ownerUserID else {
                 throw HistorySessionSyncError.ownerMismatch
+            }
+            if let scope {
+                try Task126OwnerStoreGate.validateRemoteIdentity(ownerUserID: row.ownerUserID, shopID: row.shopID, scope: scope)
             }
             try validateRemotePayloadDates(row)
         }
@@ -570,14 +580,12 @@ nonisolated final class HistorySessionSyncService {
         ownerUserID: UUID
     ) throws {
         guard pullScope.automaticScope != nil else {
-            try context.save()
+            try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
             return
         }
         do {
             try revalidate(pullScope, ownerUserID: ownerUserID)
-            try Task126OwnerStoreGate.withCurrentAutomaticScopeLeaseIfPresent {
-                try context.save()
-            }
+            try Task126OwnerStoreGate.saveTrackedLocalChanges(context)
         } catch {
             context.rollback()
             throw error

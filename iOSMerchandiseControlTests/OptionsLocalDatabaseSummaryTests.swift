@@ -54,15 +54,18 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
     }
 
     func testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching() async throws {
-        let context = try makeContext()
+        let fixture = try await OptionsQualifiedSummaryFixture.make(testCase: self, productCount: 0)
+        let context = fixture.context
         var clock = Date(timeIntervalSince1970: 100)
-        let provider = OptionsSyncSummaryProvider(now: { clock })
+        let provider = OptionsSyncSummaryProvider(now: { clock }, defaults: fixture.defaults)
+        fixture.registerProviderTeardown(provider, testCase: self)
         let remoteFetcher = OptionsRemoteCountFetcher(snapshot: .zero)
-        let ownerID = UUID()
+        let ownerID = fixture.owner
 
         provider.refreshAll(
             context: context,
             authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            localOwnerUserID: ownerID,
             remoteCountFetcher: remoteFetcher,
             pendingChanges: []
         )
@@ -74,13 +77,13 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         XCTAssertEqual(provider.syncCountDriftReport?.remote.products, 0)
         XCTAssertFalse(provider.needsRemoteCountVerification)
 
-        context.insert(Product(barcode: "local-only"))
-        try context.save()
+        try fixture.insertLocalProduct(barcode: "local-only")
         clock = clock.addingTimeInterval(30)
 
         provider.refreshAll(
             context: context,
             authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            localOwnerUserID: ownerID,
             remoteCountFetcher: remoteFetcher,
             pendingChanges: []
         )
@@ -97,6 +100,7 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         provider.refreshAll(
             context: context,
             authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            localOwnerUserID: ownerID,
             remoteCountFetcher: remoteFetcher,
             pendingChanges: []
         )

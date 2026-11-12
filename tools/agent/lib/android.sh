@@ -163,26 +163,28 @@ mc_android_serial() {
     MC_NEXT_ACTION="Set MC_ANDROID_DEVICE_SERIAL to the physical device or emulator serial, then rerun."
     return "$MC_EXIT_BLOCKED"
   fi
-  local devices count
+  local devices serial avd matches="" count
   devices="$(mc_android_connected_devices || true)"
-  count="$(printf '%s\n' "$devices" | sed '/^$/d' | wc -l | tr -d ' ')"
-  if [[ "$count" -eq 0 ]]; then
+  while IFS= read -r serial; do
+    [[ "$serial" == emulator-* ]] || continue
+    avd="$(adb -s "$serial" emu avd name 2>/dev/null | tr -d '\r' | sed '/^OK$/d' || true)"
+    if [[ "$avd" == "Medium_Phone_API_35" ]]; then
+      matches="${matches}${serial}"$'\n'
+    fi
+  done <<< "$devices"
+  count="$(printf '%s' "$matches" | sed '/^$/d' | wc -l | tr -d ' ')"
+  if [[ "$count" != "1" ]]; then
     mc_android_set_preflight_detail ""
-    MC_SUMMARY="No Android device/emulator connected."
-    MC_NEXT_ACTION="Connect/unlock one device or start an emulator."
+    MC_SUMMARY="Existing Medium_Phone_API_35 is missing or ambiguous (${count} connected matches)."
+    MC_NEXT_ACTION="Start the existing Medium Phone API 35, or set an explicitly authorized MC_ANDROID_DEVICE_SERIAL. Do not create, clone or select a fallback."
     return "$MC_EXIT_BLOCKED"
   fi
-  if [[ "$count" -gt 1 ]]; then
-    mc_android_set_preflight_detail ""
-    MC_SUMMARY="Multiple Android devices connected."
-    MC_NEXT_ACTION="Set MC_ANDROID_DEVICE_SERIAL to the intended device."
-    return "$MC_EXIT_BLOCKED"
-  fi
-  MC_ANDROID_SELECTED_SERIAL="$devices"
-  MC_ANDROID_TARGET_TYPE="$(mc_android_target_type "$devices")"
+  serial="${matches%$'\n'}"
+  MC_ANDROID_SELECTED_SERIAL="$serial"
+  MC_ANDROID_TARGET_TYPE="emulator"
   export MC_ANDROID_SELECTED_SERIAL MC_ANDROID_TARGET_TYPE
-  mc_android_set_preflight_detail "$devices"
-  printf '%s' "$devices"
+  mc_android_set_preflight_detail "$serial"
+  printf '%s' "$serial"
 }
 
 mc_android_require_unlocked() {
@@ -233,10 +235,12 @@ mc_android_device_state_redacted() {
 }
 
 mc_android_gradle() {
+  MC_ARTIFACT_BATCH_GROWTH_BYTES="${MC_ANDROID_BATCH_GROWTH_BYTES:-2000000000}" \
+    mc_require_disk_space "$MC_ANDROID_REPO" "${GRADLE_USER_HOME:-$HOME/.gradle}" || return $?
   (
     cd "$MC_ANDROID_REPO" || exit 3
     export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djdk.attach.allowAttachSelf=true"
-    ./gradlew "$@"
+    mc_artifact_exec ./gradlew "$@"
   )
 }
 
@@ -672,12 +676,9 @@ mc_android_prefer_emulator_for_task126_ui() {
   if [[ -n "${MC_ANDROID_DEVICE_SERIAL:-}" ]]; then
     return 0
   fi
-  local emulator
-  emulator="$(adb devices | awk '$1 ~ /^emulator-/ && $2 == "device" { print $1; exit }')"
-  if [[ -n "$emulator" ]]; then
-    MC_ANDROID_DEVICE_SERIAL="$emulator"
-    export MC_ANDROID_DEVICE_SERIAL
-  fi
+  mc_android_serial >/dev/null || return $?
+  MC_ANDROID_DEVICE_SERIAL="$MC_ANDROID_SELECTED_SERIAL"
+  export MC_ANDROID_DEVICE_SERIAL
 }
 
 mc_android_task126_ui_smoke() {
@@ -690,7 +691,7 @@ mc_android_task126_ui_smoke() {
   component="${pkg}/.MainActivity"
   run_id="${MC_RUN_ID:-${MC_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}-android-smoke-${kind}-p$$}"
 
-  mc_android_prefer_emulator_for_task126_ui
+  mc_android_prefer_emulator_for_task126_ui || return $?
   mc_android_serial >/dev/null || return $?
   serial="$MC_ANDROID_SELECTED_SERIAL"
   mc_android_require_unlocked "$serial" || return $?
@@ -1109,7 +1110,7 @@ mc_android_test_broad() {
   mc_report_log "$(tail -n 220 "$gradle_log" || true)"
   payload="$(mc_android_broad_assess_results "$code" "$gradle_log" "$started" "broad")"
   mc_android_broad_set_detail "$payload"
-  rm -f "$gradle_log"
+  if mc_preserve_failure_log "$gradle_log" "$code"; then rm -f "$gradle_log"; fi
 
   status="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status","MISCONFIGURED"))' "$payload")"
   tests="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("tests",0))' "$payload")"

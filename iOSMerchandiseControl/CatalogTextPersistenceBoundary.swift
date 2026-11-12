@@ -46,7 +46,9 @@ nonisolated enum CatalogTextPersistenceBoundary {
             supplier.name,
             for: .supplierName
         ).value
-        supplier.name = name
+        if !sameScalars(supplier.name, name) {
+            supplier.name = name
+        }
     }
 
     static func canonicalize(_ category: ProductCategory) throws {
@@ -54,7 +56,9 @@ nonisolated enum CatalogTextPersistenceBoundary {
             category.name,
             for: .categoryName
         ).value
-        category.name = name
+        if !sameScalars(category.name, name) {
+            category.name = name
+        }
     }
 
     static func canonicalize(_ product: Product) throws {
@@ -74,10 +78,18 @@ nonisolated enum CatalogTextPersistenceBoundary {
             product.secondProductName,
             field: .secondProductName
         )
-        product.barcode = barcode
-        product.itemNumber = itemNumber
-        product.productName = productName
-        product.secondProductName = secondProductName
+        if !sameScalars(product.barcode, barcode) {
+            product.barcode = barcode
+        }
+        if !sameScalars(product.itemNumber, itemNumber) {
+            product.itemNumber = itemNumber
+        }
+        if !sameScalars(product.productName, productName) {
+            product.productName = productName
+        }
+        if !sameScalars(product.secondProductName, secondProductName) {
+            product.secondProductName = secondProductName
+        }
     }
 
     static func validateCanonical(_ supplier: Supplier) throws {
@@ -208,6 +220,17 @@ nonisolated enum CatalogTextPersistenceBoundary {
             return value.isEmpty ? nil : value
         case let .rejected(reason):
             throw CatalogTextValidationError(field: field, reason: reason)
+        }
+    }
+
+    private static func sameScalars(_ lhs: String?, _ rhs: String?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case let (.some(lhs), .some(rhs)):
+            return lhs.unicodeScalars.elementsEqual(rhs.unicodeScalars)
+        default:
+            return false
         }
     }
 

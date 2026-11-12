@@ -30,6 +30,8 @@ struct HistoryView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @Environment(\.localBusinessReadIsAllowed) private var localReadIsAllowed
+    @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
     private let historySessionSyncService: HistorySessionSyncService?
     
     // Legge tutte le HistoryEntry ordinate per timestamp decrescente
@@ -418,7 +420,7 @@ struct HistoryView: View {
     // MARK: - Azioni
 
     private func deleteEntry(_ entry: HistoryEntry) {
-        guard let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
+        guard localWriteIsAllowed(), let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
         let baselineFingerprint = HistorySessionPayloadCodec.fingerprintHash(
             for: HistorySessionPayloadSnapshotFactory.snapshot(
                 for: entry,
@@ -461,7 +463,7 @@ struct HistoryView: View {
     }
 
     private func deleteEntries(at offsets: IndexSet) {
-        guard let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
+        guard localWriteIsAllowed(), let pendingOwnerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
         let deletionTargets = offsets.compactMap { index -> (PersistentIdentifier, String)? in
             guard filteredEntries.indices.contains(index) else { return nil }
             let entry = filteredEntries[index]
@@ -531,20 +533,26 @@ struct HistoryView: View {
     
     @MainActor
     private func exportHistoryEntry(_ entry: HistoryEntry) {
+        guard localReadIsAllowed(.sessions) else { return }
+        let owner = supabaseAuthViewModel.localMutationOwnerUserID
+        let sessionOwner = supabaseAuthViewModel.sessionInfo?.userID
+        let entryID = entry.persistentModelID
         let grid = entry.data
         guard !grid.isEmpty else { return }
 
         let name = exportDisplayName(for: entry)
 
         Task {
+            guard localReadIsAllowed(.sessions), supabaseAuthViewModel.localMutationOwnerUserID == owner else { return }
             do {
                 let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
+                guard localReadIsAllowed(.sessions), supabaseAuthViewModel.localMutationOwnerUserID == owner else { return }
                 shareItem = ShareItem(url: url)
+                guard localWriteIsAllowed(), supabaseAuthViewModel.sessionInfo?.userID == sessionOwner else { return }
                 do {
-                    let entryID = entry.persistentModelID
                     try Task126OwnerStoreGate.withLocalMutationFence(
                         modelContainer: context.container,
-                        ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+                        ownerUserID: sessionOwner
                     ) { freshContext in
                         let freshEntry = try Task126OwnerStoreGate.requireLocalModel(
                             HistoryEntry.self,
@@ -579,6 +587,7 @@ struct HistoryView: View {
     }
 
     var body: some View {
+        let allowsEditing = localWriteIsAllowed()
         Group {
             if entries.isEmpty {
                 List {
@@ -636,19 +645,26 @@ struct HistoryView: View {
                             Section {
                                 ForEach(section.entries, id: \.uid) { entry in
                                     NavigationLink(
-                                        destination: GeneratedView(entry: entry)
+                                        destination: GeneratedView(entry: entry, allowsEditing: allowsEditing)
                                     ) {
-                                        HistoryRow(entry: entry, appLanguage: appLanguage)
+                                        HistoryRow(entry: entry, appLanguage: appLanguage, b6LocalAccess: {
+                                            !entry.hasPersistedJSONDecodeFault
+                                                && Task126OwnerStoreGate.permitsSameScopeLocalRead(.sessions,
+                                                    modelContainer: context.container,
+                                                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+                                        })
                                             .padding(.vertical, 2)
                                     }
                                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                        Button {
-                                            editItem = EditItem(entry: entry)
-                                        } label: {
-                                            Label(L("common.edit"), systemImage: "pencil")
+                                        if allowsEditing {
+                                            Button {
+                                                if localWriteIsAllowed() { editItem = EditItem(entry: entry) }
+                                            } label: {
+                                                Label(L("common.edit"), systemImage: "pencil")
+                                            }
+                                            .tint(.blue)
                                         }
-                                        .tint(.blue)
                                     }
                                     .swipeActions(edge: .trailing) {
                                         Button {
@@ -657,10 +673,12 @@ struct HistoryView: View {
                                             Label(L("common.share"), systemImage: "square.and.arrow.up")
                                         }
 
-                                        Button(role: .destructive) {
-                                            activeAlert = .delete(entry)
-                                        } label: {
-                                            Label(L("common.delete"), systemImage: "trash")
+                                        if allowsEditing {
+                                            Button(role: .destructive) {
+                                                if localWriteIsAllowed() { activeAlert = .delete(entry) }
+                                            } label: {
+                                                Label(L("common.delete"), systemImage: "trash")
+                                            }
                                         }
                                     }
                                 }
@@ -728,10 +746,10 @@ struct HistoryView: View {
         }
         // 🔹 nuova sheet per condividere il CSV
         .sheet(item: $shareItem) { item in
-            ShareSheet(items: [item.url])
+            if localReadIsAllowed(.sessions) { ShareSheet(items: [item.url]) }
         }
         .sheet(item: $editItem) { item in
-            EntryInfoEditor(entry: item.entry)
+            if localWriteIsAllowed() { EntryInfoEditor(entry: item.entry) }
         }
     }
 }
@@ -767,6 +785,7 @@ private struct HistoryMonthSectionHeader: View {
 private struct HistoryRow: View {
     let entry: HistoryEntry
     let appLanguage: String
+    var b6LocalAccess: @MainActor () -> Bool = { false }
 
     private var displayLocale: Locale {
         historyDisplayLocale(for: appLanguage)
@@ -846,7 +865,11 @@ private struct HistoryRow: View {
             }
 
             HStack(alignment: .top, spacing: 8) {
-                HistoryStatusBadge(status: entry.syncStatus, deletedPending: entry.isHistorySessionDeletedPendingCloud)
+                HistoryStatusBadge(
+                    status: entry.syncStatus,
+                    deletedPending: entry.isHistorySessionDeletedPendingCloud,
+                    cloudPending: entry.isHistorySessionDirtyForCloud
+                )
 
                 if entry.wasExported {
                     Label(L("history.exported"), systemImage: "square.and.arrow.up")
@@ -898,6 +921,20 @@ private struct HistoryRow: View {
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
+        .task145B6Render(.entity(id: entry.remoteID, kinds: ["history"], route: "history.sessions",
+            visibleFields: b6VisibleFields), validate: b6LocalAccess)
+    }
+
+    // Data-only history edits with unchanged visible summary intentionally produce no matching witness.
+    private var b6VisibleFields: [String: String] {
+        var fields = ["title": displayName, "timestamp": dateString, "totalItems": "\(entry.totalItems)",
+            "orderTotal": formatMoney(entry.orderTotal), "paymentTotal": formatMoney(entry.paymentTotal),
+            "missingItems": "\(entry.missingItems)"]
+        if shouldShowEntryID { fields["secondaryID"] = entry.id }
+        if !entry.supplier.isEmpty { fields["supplier"] = entry.supplier }
+        if !entry.category.isEmpty { fields["category"] = entry.category }
+        if let totalQuantityText { fields["totalQuantity"] = totalQuantityText }
+        return fields
     }
 
     @ViewBuilder
@@ -921,10 +958,19 @@ private struct HistoryRow: View {
 private struct HistoryStatusBadge: View {
     let status: HistorySyncStatus
     let deletedPending: Bool
+    let cloudPending: Bool
+
+    // syncStatus also records local application, not just the current cloud ACK.
+    private var showsCloudPending: Bool {
+        cloudPending && !deletedPending && status != .attemptedWithErrors
+    }
 
     private var title: String {
         if deletedPending {
             return L("history.status.deleted_pending")
+        }
+        if showsCloudPending {
+            return L("history.status.cloud_pending")
         }
         switch status {
         case .notAttempted:
@@ -940,6 +986,9 @@ private struct HistoryStatusBadge: View {
         if deletedPending {
             return "trash.badge.clock"
         }
+        if showsCloudPending {
+            return "icloud.and.arrow.up"
+        }
         switch status {
         case .notAttempted:
             return "arrow.triangle.2.circlepath"
@@ -951,7 +1000,7 @@ private struct HistoryStatusBadge: View {
     }
 
     private var color: Color {
-        if deletedPending {
+        if deletedPending || showsCloudPending {
             return .orange
         }
         switch status {
@@ -967,6 +1016,7 @@ private struct HistoryStatusBadge: View {
     var body: some View {
         Label(title, systemImage: systemName)
             .font(.caption2.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

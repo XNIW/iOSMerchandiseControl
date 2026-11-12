@@ -113,12 +113,15 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         ) else {
             return XCTFail("Production background registration was not found.")
         }
-        let guardPrefix = app[..<registration.lowerBound].suffix(400)
-
+        let guardPrefix = app[..<registration.lowerBound].suffix(900)
         XCTAssertTrue(
-            guardPrefix.contains("if !Self.isRunningHostedXCTest"),
+            guardPrefix.contains("let shouldScheduleBackground = !Self.isRunningHostedXCTest")
+                && guardPrefix.contains("let ordinaryRoot = shouldScheduleBackground")
+                && guardPrefix.contains("if ordinaryRoot { "),
             "Hosted XCTest must not inherit a pending production BGTask lifecycle."
         )
+        XCTAssertTrue(app.contains("if ordinaryRoot, controller.loadFailureCode == nil {\n"
+            + "                SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)"))
     }
 
     func testBackgroundSchedulerFailsClosedBeforeRegistration() throws {
@@ -1199,6 +1202,102 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertFalse(service.contains("catalog-create-v1|barcode"))
     }
 
+    @MainActor
+    func testFacadeRepeatedCancellationDrainsConcurrentWaitersAndResumesAdmission() async throws {
+        let owner = UUID()
+        let defaults = makeVerifiedAutomaticDefaults(owner: owner, prefix: "Task146FacadeDrain")
+        let enteredOrFinished = Task119AsyncGate()
+        let provider = Task119BlockingCatalogProvider()
+        provider.firstRunEntered = enteredOrFinished
+        let facade = AutomaticSyncRuntimeFacade(
+            authViewModel: SupabaseAuthViewModel(authService: nil),
+            catalogPushProvider: provider,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: nil,
+            activityRegistrationProvider: nil,
+            defaults: defaults,
+            authenticatedOwnerProvider: { owner }
+        )
+        let firstRun = Task { @MainActor in
+            let result = await facade.run(action: .pushPending, source: .localMutation)
+            // Also release the entry handshake if admission failed before the provider.
+            await enteredOrFinished.open()
+            return result
+        }
+        addTeardownBlock {
+            // Open the fixture-owned hold before joining any real runtime work.
+            await provider.releaseFirstRun()
+            _ = await firstRun.value
+            await facade.cancelAndWait()
+            await facade.resumeAfterStoreReplacement()
+        }
+        await enteredOrFinished.wait()
+        let initialCalls = await provider.callCount()
+        guard initialCalls == 1 else {
+            XCTFail("The real facade did not admit the held catalog provider")
+            return
+        }
+        facade.cancel()
+        facade.cancel()
+        let competing = await facade.run(action: .pushPending, source: .localMutation)
+        XCTAssertEqual(competing.status, .busy)
+        let callsWhileHeld = await provider.callCount()
+        XCTAssertEqual(callsWhileHeld, 1)
+
+        let completedWaiters = Task119AsyncCounter()
+        var firstWaiter: Task<Void, Never>?
+        await withCheckedContinuation { (entered: CheckedContinuation<Void, Never>) in
+            firstWaiter = Task { @MainActor in
+                // A synchronous entry signal; no claim about the private snapshot phase.
+                entered.resume()
+                await facade.cancelAndWait()
+                _ = await completedWaiters.increment()
+            }
+        }
+        var secondWaiter: Task<Void, Never>?
+        await withCheckedContinuation { (entered: CheckedContinuation<Void, Never>) in
+            secondWaiter = Task { @MainActor in
+                entered.resume()
+                await facade.cancelAndWait()
+                _ = await completedWaiters.increment()
+            }
+        }
+        let drainTasks = [firstWaiter, secondWaiter].compactMap { $0 }
+        XCTAssertEqual(drainTasks.count, 2)
+        addTeardownBlock {
+            await provider.releaseFirstRun()
+            for drain in drainTasks { await drain.value }
+            await facade.resumeAfterStoreReplacement()
+        }
+        let completionsBeforeRelease = await completedWaiters.value
+        XCTAssertEqual(completionsBeforeRelease, 0)
+        // Further admitted cancellation must be drained together with both waiters.
+        facade.cancel()
+        facade.cancel()
+        await provider.releaseFirstRun()
+        let firstResult = await firstRun.value
+        XCTAssertEqual(firstResult.status, .cancelled)
+        for drain in drainTasks { await drain.value }
+        let completionsAfterDrain = await completedWaiters.value
+        XCTAssertEqual(completionsAfterDrain, 2)
+        let flightRunningAfterDrain = await AutomaticSyncSingleFlight.processShared.isRunning
+        XCTAssertFalse(flightRunningAfterDrain)
+        let suspendedAfterDrain = await AutomaticSyncSingleFlight.processShared.isSuspendedForStoreReplacement
+        XCTAssertTrue(suspendedAfterDrain)
+        let closedAdmission = await facade.run(action: .pushPending, source: .localMutation)
+        XCTAssertEqual(closedAdmission.status, .busy)
+        let callsBeforeResume = await provider.callCount()
+        XCTAssertEqual(callsBeforeResume, 1)
+        await facade.resumeAfterStoreReplacement()
+        let nextRun = await facade.run(action: .pushPending, source: .localMutation)
+        XCTAssertEqual(nextRun.status, .success)
+        let callsAfterResume = await provider.callCount()
+        XCTAssertEqual(callsAfterResume, 2)
+        let flightRunningAfterResume = await AutomaticSyncSingleFlight.processShared.isRunning
+        XCTAssertFalse(flightRunningAfterResume)
+    }
+
     private func makeVerifiedAutomaticDefaults(owner: UUID, prefix: String) -> UserDefaults {
         let defaults = UserDefaults(suiteName: "\(prefix)-\(UUID().uuidString)")!
         let accountHash = AccountBindingStore.accountHash(for: owner)
@@ -1226,11 +1325,13 @@ private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {
     private let started = Task119AsyncGate()
     private let release = Task119AsyncGate()
     private let counter = Task119AsyncCounter()
+    var firstRunEntered: Task119AsyncGate? = nil
 
     func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {
         let call = await counter.increment()
         if call == 1 {
             await started.open()
+            if let firstRunEntered { await firstRunEntered.open() }
             await release.wait()
         }
         var result = SyncCatalogPushResult()

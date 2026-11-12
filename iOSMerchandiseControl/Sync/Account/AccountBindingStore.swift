@@ -550,7 +550,8 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
         watermark: Int64,
         recoveryScope: ShopSyncRecoveryScope,
         deviceIdentityHash: String,
-        boundAt: Date
+        boundAt: Date,
+        materialCheckpoint: () throws -> WatermarkStore.MaterialCheckpoint?
     ) -> Bool {
         Task126OwnerStoreGate.withAutomaticScopeLeaseInvalidated {
             guard saveBindingWithLeaseHeld(
@@ -575,6 +576,19 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
                   ),
                   recoveryScope.accountKey == accountHash,
                   recoveryScope.deviceKey == deviceIdentityHash else { return false }
+            // The V6 fence may have survived a crash just before the Defaults
+            // mirror. Recover only what the same generation committed in SQLite.
+            if let advanced = fenceStore.persistedWatermark(accountHash: accountHash,
+                    storeIdentity: storeIdentity, deviceIdentityHash: deviceIdentityHash),
+               advanced > restoredWatermark,
+               let receipt = try? materialCheckpoint(),
+               receipt.from == restoredWatermark, receipt.through == advanced,
+               receipt.generationID == generationID, receipt.verifiedScopeKey == recoveryScope.key,
+               fenceStore.scopeKey(accountHash: accountHash, storeIdentity: storeIdentity,
+                   deviceIdentityHash: deviceIdentityHash, watermark: advanced) == receipt.verifiedScopeKey {
+                watermarkStore.save(advanced, for: watermarkScope)
+                return watermarkStore.matchesRecoveryGeneration(generationID, watermark: advanced, scope: watermarkScope)
+            }
             if restoredWatermark > watermark {
                 // A typed cursor alone cannot recreate an advanced fence.
                 // Keep only the exact fence committed by that continuation.
@@ -857,6 +871,22 @@ nonisolated final class AccountBindingStore: @unchecked Sendable {
     private func persistReplacementJournalWithLeaseHeld(
         _ journal: AccountReplacementJournal
     ) -> Bool {
+        if let durableJournalURL,
+           let existingData = try? Self.boundedJournalData(at: durableJournalURL),
+           let existingJournal = try? JSONDecoder().decode(AccountReplacementJournal.self, from: existingData),
+           existingJournal == journal {
+            // An already-published journal is a sealed representation, not a
+            // request to reserialize identical facts or rename its file.
+            do {
+                try Self.synchronizeFile(durableJournalURL)
+                try Self.synchronizeDirectory(durableJournalURL.deletingLastPathComponent())
+                guard try Self.boundedJournalData(at: durableJournalURL) == existingData else { return false }
+            } catch {
+                return false
+            }
+            defaults.set(existingData, forKey: replacementKey)
+            return defaults.data(forKey: replacementKey) == existingData && replacementJournal == journal
+        }
         guard let data = try? JSONEncoder().encode(journal) else { return false }
         guard data.count <= Self.maximumDurableJournalBytes else { return false }
         if let durableJournalURL {

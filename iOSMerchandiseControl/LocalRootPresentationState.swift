@@ -122,6 +122,16 @@ final class LocalRootPresentationState: ObservableObject {
         var supplierName: String
         var categoryName: String
         var focusedField: String?
+        var selectionLowerBound: Int? = nil
+        var selectionUpperBound: Int? = nil
+        var scrollOffsetX: Double? = nil
+        var scrollOffsetY: Double? = nil
+    }
+
+    struct CatalogConflictReviewRequest: Identifiable, Equatable {
+        let id: UUID
+        let remoteID: UUID
+        let changeID: String
     }
 
     struct Values {
@@ -133,6 +143,7 @@ final class LocalRootPresentationState: ObservableObject {
         var productScrollAnchor: String?
         var editor: EditorDraft?
         var savedProduct: LocalProductSaveReceipt?
+        var catalogConflictReviewRequest: CatalogConflictReviewRequest?
     }
 
     private struct Scope: Equatable {
@@ -147,6 +158,7 @@ final class LocalRootPresentationState: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
     private var presentationID: String?
     private var scope: Scope?
+    private var localAccessAdmitted = false
     private var values = Values()
 
     var currentPresentationID: String? { presentationID }
@@ -157,6 +169,7 @@ final class LocalRootPresentationState: ObservableObject {
 
     func advanceStoreGeneration(presentationID: String) {
         self.presentationID = presentationID
+        localAccessAdmitted = false
     }
 
     func admit(
@@ -166,9 +179,10 @@ final class LocalRootPresentationState: ObservableObject {
         localAccessPermitted: Bool
     ) -> Values? {
         guard self.presentationID == presentationID else { return nil }
-        guard localAccessPermitted, let manifest, let ownerUserID,
+        guard let manifest, let ownerUserID,
               manifest.accountHash == AccountBindingStore.accountHash(for: ownerUserID) else {
             scope = nil
+            localAccessAdmitted = false
             values = Values()
             return nil
         }
@@ -178,22 +192,51 @@ final class LocalRootPresentationState: ObservableObject {
             scope = current
             values = Values()
         }
-        return values
+        // Temporary qualification protects presentation without deleting the
+        // same-scope value draft. A foreign scope was cleared above.
+        localAccessAdmitted = localAccessPermitted
+        return localAccessAdmitted ? values : nil
     }
 
     func update(presentationID: String?, _ mutation: (inout Values) -> Void) {
-        guard let presentationID, presentationID == self.presentationID, scope != nil else { return }
+        guard let presentationID, presentationID == self.presentationID, scope != nil, localAccessAdmitted else { return }
         mutation(&values)
     }
 
     func savedProduct(presentationID: String?) -> LocalProductSaveReceipt? {
-        guard presentationID == self.presentationID, scope != nil else { return nil }
+        guard presentationID == self.presentationID, scope != nil, localAccessAdmitted else { return nil }
         return values.savedProduct
+    }
+
+    /// Navigation carries identifiers only. The destination requalifies the
+    /// record and immutable change against its current model generation.
+    @discardableResult
+    func requestCatalogConflictReview(remoteID: UUID, changeID: String, presentationID: String?) -> Bool {
+        guard let presentationID, presentationID == self.presentationID,
+              scope != nil, localAccessAdmitted, !changeID.isEmpty else { return false }
+        values.catalogConflictReviewRequest = CatalogConflictReviewRequest(
+            id: UUID(), remoteID: remoteID, changeID: changeID)
+        values.selectedTab = 1
+        objectWillChange.send()
+        NotificationCenter.default.post(name: .openDatabaseTabRequested, object: nil)
+        return true
+    }
+
+    func catalogConflictReviewRequest(presentationID: String?) -> CatalogConflictReviewRequest? {
+        guard let presentationID, presentationID == self.presentationID, scope != nil, localAccessAdmitted else { return nil }
+        return values.catalogConflictReviewRequest
+    }
+
+    func clearCatalogConflictReviewRequest(id: UUID, presentationID: String?) {
+        guard let presentationID, presentationID == self.presentationID,
+              scope != nil, localAccessAdmitted, values.catalogConflictReviewRequest?.id == id else { return }
+        values.catalogConflictReviewRequest = nil
+        objectWillChange.send()
     }
 
     /// Called after the guarded writer has committed and released its lease.
     func recordSavedProduct(_ receipt: LocalProductSaveReceipt, presentationID: String?) {
-        guard presentationID == self.presentationID, let scope,
+        guard presentationID == self.presentationID, localAccessAdmitted, let scope,
               scope.accountHash == receipt.accountHash, scope.storeIdentity == receipt.storeIdentity,
               scope.shopID == receipt.shopID, scope.deviceIdentityHash == receipt.deviceIdentityHash else { return }
         values.savedProduct = receipt
@@ -201,7 +244,7 @@ final class LocalRootPresentationState: ObservableObject {
     }
 
     func editor(presentationID: String?, remoteID: UUID?, barcode: String) -> EditorDraft? {
-        guard let presentationID, presentationID == self.presentationID, scope != nil,
+        guard let presentationID, presentationID == self.presentationID, scope != nil, localAccessAdmitted,
               let editor = values.editor,
               editor.remoteID.map({ $0 == remoteID }) ?? (editor.originalBarcode == barcode) else { return nil }
         return editor
@@ -212,8 +255,49 @@ private struct LocalRootPresentationStateKey: EnvironmentKey {
     static let defaultValue: LocalRootPresentationState? = nil
 }
 
+/// UI invalidation only: the actual access predicates still reread authority.
+@MainActor
+final class LocalAuthorizationRevisionState: ObservableObject {
+    @Published private(set) var revision: Int
+
+    init(defaults: UserDefaults = .standard) {
+        revision = defaults.integer(forKey: SelectedShopStore.localAuthorizationRevisionKey)
+    }
+
+    // This value-only observer needs no actor work during destruction. UIKit
+    // may release it outside a Swift task after a hosting transaction commits.
+    nonisolated deinit {}
+
+    func observe(_ revision: Int) {
+        guard revision != self.revision else { return }
+        self.revision = revision
+    }
+}
+
+/// Keep AppStorage's existing observation in a small leaf, so unrelated defaults
+/// notifications cannot reevaluate the whole business root with the same value.
+struct LocalAuthorizationRevisionObservation: View {
+    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var revision = 0
+    let state: LocalAuthorizationRevisionState
+
+    var body: some View {
+        Color.clear.frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onChange(of: revision, initial: true) { _, value in state.observe(value) }
+    }
+}
+
 private struct LocalModelGenerationFenceKey: EnvironmentKey {
     static let defaultValue: () -> Bool = { true }
+}
+
+private struct LocalBusinessReadGateKey: EnvironmentKey {
+    static let defaultValue: @MainActor (Task126LocalReadDomain) -> Bool = { _ in true }
+}
+
+private struct LocalBusinessWriteGateKey: EnvironmentKey {
+    static let defaultValue: @MainActor () -> Bool = { true }
 }
 
 extension EnvironmentValues {
@@ -224,5 +308,15 @@ extension EnvironmentValues {
     var localModelGenerationIsCurrent: () -> Bool {
         get { self[LocalModelGenerationFenceKey.self] }
         set { self[LocalModelGenerationFenceKey.self] = newValue }
+    }
+
+    var localBusinessReadIsAllowed: @MainActor (Task126LocalReadDomain) -> Bool {
+        get { self[LocalBusinessReadGateKey.self] }
+        set { self[LocalBusinessReadGateKey.self] = newValue }
+    }
+
+    var localBusinessWriteIsAllowed: @MainActor () -> Bool {
+        get { self[LocalBusinessWriteGateKey.self] }
+        set { self[LocalBusinessWriteGateKey.self] = newValue }
     }
 }

@@ -7,8 +7,15 @@ import SwiftData
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @StateObject private var productImageStore: ProductImageStore
-    @StateObject private var storefrontAuthoringStore: StorefrontAuthoringStore
-    @StateObject private var syncStoreGenerationController: SyncStoreGenerationController
+    // Own the stable reference without observing list/filter publications at
+    // the App scene. Database and editors observe it through EnvironmentObject.
+    @State private var storefrontAuthoringStore: StorefrontAuthoringStore
+    @StateObject private var storeBootstrap: SyncStoreBootstrap
+    @StateObject private var excelSession: ExcelSessionViewModel
+    @StateObject private var workbookPreparation: LocalWorkbookPreparation
+    @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
+    @State private var selectedTab = 0
+    @StateObject private var localAuthorizationRevisionState = LocalAuthorizationRevisionState()
     @StateObject private var localRootPresentationState: LocalRootPresentationState
     private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
@@ -18,9 +25,18 @@ struct iOSMerchandiseControlApp: App {
 
     init() {
         #if DEBUG
-        let controlledRoot = Task144LocalAvailabilityRootFixture.current
+        Task144RootObservation.performanceEntry() // TASK145_PERF first measurable app entry
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("app-init-entry")
+            NSLog("TASK146_B2_COST39 phase.app-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         if Self.task141ResetUIStateRequested {
             Self.resetTask141UIState()
+        }
+        let controlledRoot = Task144LocalAvailabilityRootFixture.current
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            Task144RootObservation.recordCachedCatalogPhase("fixture-return")
+            NSLog("TASK146_B2_COST39 phase.fixture-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
         }
         let isTask138VisualHarness = Self.task138ProductImageVisualState != nil
         let isTask139AtomicCrashHarness = Self.task139AtomicCrashHarnessRequested
@@ -32,13 +48,15 @@ struct iOSMerchandiseControlApp: App {
         let isTask139PreboundHarness = false
         let isTask140UITest = false
         #endif
+        let initialTab = ContentView.initialSelectedTab()
+        _selectedTab = State(initialValue: initialTab)
         let dependencies: SupabaseAppDependencies
-        let generationController: SyncStoreGenerationController
-        let normalDependencies = { () -> (SupabaseAppDependencies, SyncStoreGenerationController) in
+        let bootstrap: SyncStoreBootstrap
+        let normalDependencies = { () -> (SupabaseAppDependencies, SyncStoreBootstrap) in
             let hosted = Self.isRunningHostedXCTest || isTask138VisualHarness
                 || isTask139AtomicCrashHarness || isTask139PreboundHarness || isTask140UITest
             return (hosted ? Self.makeHostedXCTestDependencies() : Self.makeSupabaseDependencies(),
-                    hosted ? SyncStoreGenerationController.ephemeral() : SyncStoreGenerationController.shared)
+                    hosted ? SyncStoreBootstrap(opened: SyncStoreGenerationController.ephemeral()) : SyncStoreBootstrap.shared)
         }
         #if DEBUG
         if let controlledRoot {
@@ -47,24 +65,73 @@ struct iOSMerchandiseControlApp: App {
                 syncEventSignalWatcher: nil, shopDeviceRegistrationService: nil,
                 productImageStore: ProductImageStore(service: nil),
                 storefrontAuthoringStore: StorefrontAuthoringStore(service: nil))
-            generationController = controlledRoot.controller
+            bootstrap = SyncStoreBootstrap(opened: controlledRoot.controller)
         } else {
-            (dependencies, generationController) = normalDependencies()
+            (dependencies, bootstrap) = normalDependencies()
         }
         #else
-        (dependencies, generationController) = normalDependencies()
+        (dependencies, bootstrap) = normalDependencies()
         #endif
         let productImageStore = dependencies.productImageStore
         let localPresentation = LocalRootPresentationState()
-        localPresentation.advanceStoreGeneration(presentationID: generationController.presentationID)
+        let excelSession = ExcelSessionViewModel()
+        let preparation = LocalWorkbookPreparation()
+        _excelSession = StateObject(wrappedValue: excelSession)
+        _workbookPreparation = StateObject(wrappedValue: preparation)
+        _foregroundActivityCenter = StateObject(wrappedValue: ForegroundCloudWorkflowActivityCenter())
         _localRootPresentationState = StateObject(wrappedValue: localPresentation)
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         _productImageStore = StateObject(wrappedValue: productImageStore)
-        _storefrontAuthoringStore = StateObject(wrappedValue: dependencies.storefrontAuthoringStore)
-        _syncStoreGenerationController = StateObject(wrappedValue: generationController)
-        generationController.setPresentationBoundaryObserver { [weak productImageStore, weak localPresentation] presentationID in
-            localPresentation?.advanceStoreGeneration(presentationID: presentationID)
-            productImageStore?.advanceStoreGeneration(presentationID: presentationID)
+        _storefrontAuthoringStore = State(initialValue: dependencies.storefrontAuthoringStore)
+        _storeBootstrap = StateObject(wrappedValue: bootstrap)
+        let shouldScheduleBackground = !Self.isRunningHostedXCTest && !isTask138VisualHarness
+            && !isTask139AtomicCrashHarness && !isTask139PreboundHarness && !isTask140UITest
+        #if DEBUG
+        let ordinaryRoot = shouldScheduleBackground && controlledRoot == nil
+        #else
+        let ordinaryRoot = shouldScheduleBackground
+        #endif
+        // Registration remains during launch; the handler joins this same opener if invoked early.
+        if ordinaryRoot { SyncBackgroundTaskScheduler.shared.register() }
+        #if DEBUG
+        let qualifiesCachedLocalReadsEarly = ordinaryRoot || (controlledRoot != nil
+            && ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache")
+        #else
+        let qualifiesCachedLocalReadsEarly = ordinaryRoot
+        #endif
+        bootstrap.observeOpened { [weak productImageStore, weak localPresentation, weak excelSession,
+                                   weak auth = dependencies.authViewModel] controller in
+            localPresentation?.advanceStoreGeneration(presentationID: controller.presentationID)
+            productImageStore?.advanceStoreGeneration(presentationID: controller.presentationID)
+            controller.setPresentationBoundaryObserver { [weak productImageStore, weak localPresentation, weak excelSession] presentationID in
+                excelSession?.schedulePersistedEntryWithdrawal()
+                localPresentation?.advanceStoreGeneration(presentationID: presentationID)
+                productImageStore?.advanceStoreGeneration(presentationID: presentationID)
+            }
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("store-opened")
+            #endif
+            // A cached SDK owner is already available before the first SwiftUI
+            // appearance. Start the existing guarded reader while that UI lays
+            // out; later root requests coalesce or see the same completed proof.
+            if qualifiesCachedLocalReadsEarly, controller.loadFailureCode == nil,
+               let owner = auth?.localMutationOwnerUserID,
+               let manifest = controller.activeManifest,
+               manifest.accountHash == AccountBindingStore.accountHash(for: owner),
+               let shop = SelectedShopStore().selectedShop(accountHash: manifest.accountHash),
+               shop.shopID == manifest.shopID, shop.localStoreIdentity == manifest.storeIdentity {
+                #if DEBUG
+                Task144RootObservation.recordCachedCatalogPhase("early-cache-start")
+                #endif
+                controller.preferLocalReadDomain(initialTab == 2 ? .sessions : .catalog)
+                controller.startLocalBodyQualification(ownerUserID: owner)
+            }
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("early-cache-return")
+            #endif
+            if ordinaryRoot, controller.loadFailureCode == nil {
+                SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
+            }
         }
         supabaseTransportClient = dependencies.supabaseTransportClient
         supabasePullPreviewService = dependencies.pullPreviewService
@@ -72,62 +139,96 @@ struct iOSMerchandiseControlApp: App {
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
         shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
         #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            controlledRoot?.prepareIfNeeded()
+            Task144RootObservation.recordCachedCatalogPhase("app-init-return")
+            NSLog("TASK146_B2_COST39 phase.app-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
         if controlledRoot != nil { return }
         #endif
-        if !Self.isRunningHostedXCTest,
-           !isTask138VisualHarness,
-           !isTask139AtomicCrashHarness,
-           !isTask139PreboundHarness,
-           !isTask140UITest,
-           generationController.loadFailureCode == nil {
-            SyncBackgroundTaskScheduler.shared.register()
-            SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
-        }
     }
 
     var body: some Scene {
-        WindowGroup {
-            Group {
-                #if DEBUG
-                if let controlledRoot = Task144LocalAvailabilityRootFixture.current {
-                    Task144ControlledRootAdmission(fixture: controlledRoot) {
-                        standardRootView
-                    }
-                } else if let task138VisualState = Self.task138ProductImageVisualState {
-                    Task138ProductImageVisualHarness(state: task138VisualState)
-                } else if Self.task139AtomicCrashHarnessRequested
-                            || Self.task139PreboundHarnessRequested {
-                    HostedXCTestRootView()
-                } else {
-                    standardRootView
-                }
-                #else
-                standardRootView
-                #endif
+        #if DEBUG
+        let cost = Task144RootObservation.beginCachedCatalogBodyObservation("app-scene-body-inclusive")
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("app-scene-body-inclusive", startedAt: cost) }
+        #endif
+        return WindowGroup {
+            SyncStoreBootstrapGate(bootstrap: storeBootstrap, opened: { controller in
+                openedRoot(controller)
+            }, pending: {
+                SyncStoreOpeningShell(bootstrap: storeBootstrap, preparation: workbookPreparation,
+                    session: excelSession, selectedTab: $selectedTab)
+            })
+            .background(LocalAuthorizationRevisionObservation(state: localAuthorizationRevisionState))
+            .modifier(LocalWorkbookImportHost(preparation: workbookPreparation, session: excelSession,
+                activityCenter: foregroundActivityCenter))
+            .modifier(POSReadPresentationHost(auth: supabaseAuthViewModel, remote: supabaseTransportClient))
+            .environmentObject(supabaseAuthViewModel)
+            .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
+            .task { storeBootstrap.startIfNeeded() }
+            .onOpenURL { url in
+                if url.isFileURL {
+                    selectedTab = 0; workbookPreparation.load([url], session: excelSession)
+                } else { _ = supabaseAuthViewModel.handleOpenURL(url) }
             }
-            .environmentObject(syncStoreGenerationController)
-            .modelContainer(syncStoreGenerationController.modelContainer)
-            .id(syncStoreGenerationController.presentationID)
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
+                _ = supabaseAuthViewModel.handleUniversalLink(userActivity)
+            }
+            .onChange(of: supabaseAuthViewModel.localMutationOwnerUserID) { _, _ in
+                workbookPreparation.contextDidChange(session: excelSession)
+            }
+            .onChange(of: localAuthorizationRevisionState.revision) { _, _ in
+                workbookPreparation.contextDidChange(session: excelSession)
+            }
             #if DEBUG
             .task144ControlledRootControls()
+            .background(Task145PerformanceWindowObservation().allowsHitTesting(false))
             .task { Task144LocalAvailabilityRootFixture.current?.prepareIfNeeded() }
             #endif
         }
     }
 
     @ViewBuilder
-    private var standardRootView: some View {
-        if syncStoreGenerationController.loadFailureCode != nil {
-            SyncStoreGenerationFailureView()
+    private func openedRoot(_ controller: SyncStoreGenerationController) -> some View {
+        Group {
+            #if DEBUG
+            if let controlledRoot = Task144LocalAvailabilityRootFixture.current {
+                if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache",
+                   controlledRoot.isPreparedForRoot {
+                    // Cache App.init already admitted this persisted fixture.
+                    // Ordinary root has no fixture-wide facts observer.
+                    standardRootView(controller)
+                } else {
+                    Task144ControlledRootAdmission(fixture: controlledRoot) { standardRootView(controller) }
+                }
+            } else if let task138VisualState = Self.task138ProductImageVisualState {
+                Task138ProductImageVisualHarness(state: task138VisualState)
+            } else if Self.task139AtomicCrashHarnessRequested || Self.task139PreboundHarnessRequested {
+                HostedXCTestRootView()
+            } else { standardRootView(controller) }
+            #else
+            standardRootView(controller)
+            #endif
+        }
+        .environmentObject(controller)
+        .modelContainer(controller.modelContainer)
+    }
+
+    @ViewBuilder
+    private func standardRootView(_ syncStoreGenerationController: SyncStoreGenerationController) -> some View {
+        if let failureCode = syncStoreGenerationController.loadFailureCode {
+            SyncStoreGenerationFailureView(failure: SafeLocalCatalogFailure(code: failureCode))
+                .environmentObject(supabaseAuthViewModel)
         } else if let task126SmokeKind = Self.task126UISmokeKind {
             Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
         } else {
-            storefrontHarnessOrStandardRoot
+            storefrontHarnessOrStandardRoot(syncStoreGenerationController)
         }
     }
 
     @ViewBuilder
-    private var storefrontHarnessOrStandardRoot: some View {
+    private func storefrontHarnessOrStandardRoot(_ controller: SyncStoreGenerationController) -> some View {
         #if DEBUG
         if Self.task143StorefrontUITestRequested {
             Task143StorefrontUITestHarness()
@@ -135,15 +236,15 @@ struct iOSMerchandiseControlApp: App {
                 .environmentObject(productImageStore)
                 .environmentObject(storefrontAuthoringStore)
         } else {
-            hostedXCTestOrContentRoot
+            hostedXCTestOrContentRoot(controller)
         }
         #else
-        hostedXCTestOrContentRoot
+        hostedXCTestOrContentRoot(controller)
         #endif
     }
 
     @ViewBuilder
-    private var hostedXCTestOrContentRoot: some View {
+    private func hostedXCTestOrContentRoot(_ controller: SyncStoreGenerationController) -> some View {
         if Self.isRunningHostedXCTest {
             HostedXCTestRootView()
         } else {
@@ -154,23 +255,21 @@ struct iOSMerchandiseControlApp: App {
                 syncEventSignalWatcher: syncEventSignalWatcher,
                 shopDeviceRegistrationService: shopDeviceRegistrationService,
                 shopContextOverride: controlledShopContext,
-                syncStateOverride: controlledSyncState
+                syncStateOverride: controlledSyncState,
+                catalogConflictResolutionServiceOverride: controlledConflictResolutionService,
+                excelSessionOverride: excelSession, foregroundActivityCenterOverride: foregroundActivityCenter,
+                selectedTabOverride: $selectedTab, storeGenerationController: controller,
+                workbookPreparationOverride: workbookPreparation
             )
             .environment(\.localRootPresentationState, localRootPresentationState)
-            .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence)
+            .environment(\.localModelGenerationIsCurrent, currentRootGenerationFence(controller))
             .environmentObject(supabaseAuthViewModel)
             .environmentObject(productImageStore)
             .environmentObject(storefrontAuthoringStore)
-            .onOpenURL { url in
-                _ = supabaseAuthViewModel.handleOpenURL(url)
-            }
-            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
-                _ = supabaseAuthViewModel.handleUniversalLink(userActivity)
-            }
         }
     }
 
-    private var currentRootGenerationFence: () -> Bool {
+    private func currentRootGenerationFence(_ syncStoreGenerationController: SyncStoreGenerationController) -> () -> Bool {
         let displayedContainer = syncStoreGenerationController.modelContainer
         return { [weak controller = syncStoreGenerationController, weak displayedContainer] in
             guard let controller, let displayedContainer else { return false }
@@ -185,6 +284,14 @@ struct iOSMerchandiseControlApp: App {
         nil
         #endif
     }
+    private var controlledConflictResolutionService: CatalogConflictResolutionService? {
+        #if DEBUG
+        Task144LocalAvailabilityRootFixture.current?.catalogConflictResolutionService
+        #else
+        nil
+        #endif
+    }
+
     private var controlledSyncState: SyncStateStore? {
         #if DEBUG
         Task144LocalAvailabilityRootFixture.current?.stateStore
@@ -194,7 +301,16 @@ struct iOSMerchandiseControlApp: App {
     }
 
     private static var isRunningHostedXCTest: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        // B6 observes the ordinary root; admission stays in the gated test.
+        if environment["TEST_RUNNER_TASK145_B6_OBSERVE"] == "1",
+           environment["TEST_RUNNER_TASK145_B6_BINDING_PATH"]?.isEmpty == false,
+           environment["TEST_RUNNER_TASK145_B6_MANIFEST_PATH"]?.isEmpty == false {
+            return false
+        }
+        #endif
+        return ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             && ProcessInfo.processInfo.environment["TASK115_REAL_ROOT_LIFECYCLE_TEST"] != "1"
     }
 
@@ -385,13 +501,35 @@ struct iOSMerchandiseControlApp: App {
 }
 
 private struct SyncStoreGenerationFailureView: View {
+    let failure: SafeLocalCatalogFailure
+    @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("appLanguage") private var appLanguage = "system"
+    @State private var selectedTab = 0
+
     var body: some View {
-        ContentUnavailableView(
-            L("options.supabase.automaticSync.phase.recoveryRequired"),
-            systemImage: "externaldrive.badge.exclamationmark",
-            description: Text(L("options.accountDecision.localStateUnavailable.detail"))
-        )
-        .accessibilityIdentifier("sync-store-generation-fail-closed")
+        TabView(selection: $selectedTab) {
+            ForEach(0..<3) { index in
+                NavigationStack {
+                    ContentUnavailableView {
+                        Label(L("sync.local.unavailable.title"), systemImage: "externaldrive.badge.exclamationmark")
+                    } description: {
+                        Text(L("sync.local.unavailable.detail"))
+                    } actions: {
+                        Button(L("common.details")) { selectedTab = 3 }
+                    }
+                    .navigationTitle(L(["tab.inventory", "tab.database", "tab.history"][index]))
+                    .accessibilityIdentifier("sync-store-generation-fail-closed")
+                }
+                .tabItem {
+                    Label(L(["tab.inventory", "tab.database", "tab.history"][index]),
+                          systemImage: ["doc.on.doc", "shippingbox", "clock.arrow.circlepath"][index])
+                }.tag(index)
+            }
+            NavigationStack { SafeOptionsView(failure: failure) }
+                .tabItem { Label(L("tab.options"), systemImage: "gearshape") }.tag(3)
+        }
+        .localeOverride(for: appLanguage)
+        .preferredColorScheme(appTheme == "light" ? .light : appTheme == "dark" ? .dark : nil)
     }
 }
 

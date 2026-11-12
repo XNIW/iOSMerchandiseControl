@@ -1,0 +1,82 @@
+{
+  "at": "2026-11-12T17:30:09.833965-03:00",
+  "status": "ACTIVE_EXECUTION_FINAL_CI_PENDING",
+  "checkpoint": "afc2bb7b",
+  "AppSource": "7241f7d5",
+  "AppTree": "d30dcd36581876ca74c24f5a0562c94b539e619b",
+  "ordinary": "PASS_SIM_CUA_SAVE_ACK_SERVER_REOPEN_MANUAL_CANCEL_SDK27.2_RUNTIME26.1_NO_TIMING",
+  "B2": {
+    "run": 43245839064,
+    "attempt": 2,
+    "job": 131455048162,
+    "result": "FAIL_6.5374306667_SECONDS_VS5",
+    "causalAttribution": "UNKNOWN",
+    "physicalCache": "HIT_0SCAN",
+    "authority": "PASS",
+    "priorCapacityAttempt": "NOT_RUN",
+    "prior7_3356": "FAIL_KEPT"
+  },
+  "T17": "BLOCKED_USB_USER_UNAVAILABLE_NO_NEW_PHYSICAL_TESTS",
+  "helperFix": "two test-fixture MC_IOS_REPO overrides after example config; targeted2/full33PASS; no App change",
+  "firstFinalRun": {
+    "run": 43299839609,
+    "head": "afc2bb7b",
+    "result": "FAIL_UNIT_PREFLIGHT_OWNED_REMAINDER_CANCELLED",
+    "nativeUnit": "NOT_RUN"
+  },
+  "Admin": {
+    "main": "5ff8577fd18e565a8479a809537761b59550a9de",
+    "PR": 152,
+    "CI": 43258018081,
+    "CFBuild": 43258017735,
+    "contracts": "SEVEN_UNCHANGED",
+    "TESTVersion": "cfd6920-bef3-441e-99f6-2a1b83aaf498",
+    "TESTDeployment": "8a732699-a226-40cd-a43c-4868f258826c",
+    "versionEvidence": "REUSED_PR152_DEPLOY_RECEIPT_NOT_NEW_SERVER_SNAPSHOT"
+  },
+  "Android": "0c0ceab5_QUALIFICATIONS_KEPT_NO_RERUN",
+  "cleanup": "0deletions_CUA_COORDINATE_UNAVAILABLE_SHARED_T17_KEEP",
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT/closure-resume-20261112.ROOT",
+  "evidenceFiles": {
+    "ordinary-release/PRESERVATION-CLASSIFICATION.POSTPROCESSED.ROOT.json": {
+      "bytes": 1434,
+      "sha256": "50d8a0003b9ef576dcce21038c2d932fe785a5ade7d0fbe0cff0660b89791a35"
+    },
+    "ordinary-release-continuation/NATIVE-RESULT.ROOT.json": {
+      "bytes": 665,
+      "sha256": "b0c3a9b0da4808a6fb96f78af70dd9387cd02f5f7973c598501a65341d421af3"
+    },
+    "ordinary-release-continuation/LOCAL-PERSISTENCE-READBACK.ROOT.json": {
+      "bytes": 1121,
+      "sha256": "b3e62671386ce9935e219d2ac122c9b774780abca3a2154157b5dae075c650fe"
+    },
+    "ordinary-release-continuation/SERVER-READBACK.ROOT.json": {
+      "bytes": 1549,
+      "sha256": "992ecba8de3e11dca2bf277105e33faef7b7d47e978c7aeb3513c5dbfe36f771"
+    },
+    "b2-attempt2-review/SUMMARY.ROOT.json": {
+      "bytes": 9800,
+      "sha256": "6f3e65bd31888f402a61f418c4448e5b42685934eb0c1eab3f7237851987a989"
+    },
+    "admin-delta-review/SUMMARY.ROOT.json": {
+      "bytes": 5324,
+      "sha256": "30b0b9b7b4f56a39320c63e20da6f382a6861691eb8e7ac74a7caaa3d5f51067"
+    },
+    "final-focused-review/SUMMARY.ROOT.json": {
+      "bytes": 11265,
+      "sha256": "fb8f9322cb51860b98387a93dc22d7d0f4aa5c3ce43547d66f5b4051aa473111"
+    },
+    "HELPER33-FIX.ROOT.log": {
+      "bytes": 3244,
+      "sha256": "b2da50d15b9dda79bf6b668f0b7d7f814b3b33234f869ab089fa5ce0c54fa7de"
+    },
+    "FINAL-UNIT-HELPER-FIRST-FAIL.ROOT.log": {
+      "bytes": 32302,
+      "sha256": "af83e2dd1f1699690567d4efea5945fdd7b82dd1ae887329799ccd0c2f6db08e"
+    },
+    "UI-COORDINATE-CAPABILITY.ROOT.json": {
+      "bytes": 465,
+      "sha256": "8181221d8e8e38ee2e2a0ada92e88b0e84f298abb660bc2710d5dc857ef46e8e"
+    }
+  }
+}

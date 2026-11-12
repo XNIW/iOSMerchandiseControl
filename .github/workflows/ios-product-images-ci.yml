@@ -3,40 +3,199 @@ name: iOS Product Images CI
 on:
   pull_request:
     paths:
+      - "tools/agent/lib/ios.sh"
+      - "tools/agent/lib/android.sh"
+      - "tools/agent/lib/common.sh"
+      - "tools/agent/test_device_reuse.py"
+      - "tools/agent/lib/artifact_lifecycle.py"
+      - "tools/agent/test_artifact_lifecycle.py"
+      - "tools/agent/config.example.env"
       - ".github/workflows/ios-product-images-ci.yml"
       - "contracts/**"
       - "iOSMerchandiseControl/**"
+      - "iOSMerchandiseControl.xcodeproj/**"
       - "iOSMerchandiseControlTests/**"
+      - "iOSMerchandiseControlUITests/**"
+      - ".github/ci/**"
   push:
     branches: [main]
     paths:
+      - "tools/agent/lib/ios.sh"
+      - "tools/agent/lib/android.sh"
+      - "tools/agent/lib/common.sh"
+      - "tools/agent/test_device_reuse.py"
+      - "tools/agent/lib/artifact_lifecycle.py"
+      - "tools/agent/test_artifact_lifecycle.py"
+      - "tools/agent/config.example.env"
       - ".github/workflows/ios-product-images-ci.yml"
       - "contracts/**"
       - "iOSMerchandiseControl/**"
+      - "iOSMerchandiseControl.xcodeproj/**"
       - "iOSMerchandiseControlTests/**"
+      - "iOSMerchandiseControlUITests/**"
+      - ".github/ci/**"
   workflow_dispatch:
     inputs:
+      task146_t17_candidate_release:
+        description: "Package frozen normal TEST Release c414 (App f33f); runtime gates remain separate"
+        type: boolean
+        required: false
+        default: false
+      task146_b2_arm_memory:
+        description: "One exact reused B2 on ARM with more memory; original test and clocks"
+        type: boolean
+        required: false
+        default: false
+      task146_t17_predecessor_debug:
+        description: "Package frozen normal TEST Debug3a24 only; no tests or runtime acceptance"
+        type: boolean
+        required: false
+        default: false
       task144_a_campaign:
         description: "Run five isolated executions of the original TASK-144 A test"
         type: boolean
         required: false
         default: false
+      task146_export_ordinary_app:
+        description: "Focused ARM diagnostic only: export the compiled app with hashes for ordinary TEST reuse"
+        type: boolean
+        required: false
+        default: false
+      task146_b2_cpu_sampling:
+        description: "Focused B2 only: bounded owned process samples; diagnostic, not acceptance"
+        type: boolean
+        required: false
+        default: false
+      task146_reuse_native_run:
+        description: "Focused B2 only: admit retained f33f native products, otherwise empty"
+        type: string
+        required: false
+        default: ""
+      task146_focused_tests:
+        description: "Diagnostic only: JSON array of up to 16 active frozen selectors; never final acceptance"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ios-product-images-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  product-images:
+  t17-predecessor-debug:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.task146_t17_predecessor_debug == true || inputs.task146_t17_candidate_release == true) }}
+    name: T17 frozen normal package only
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 30
     steps:
+      - name: Validate package-only admission
+        env:
+          PRIOR_DEBUG: ${{ inputs.task146_t17_predecessor_debug }}
+          CANDIDATE_RELEASE: ${{ inputs.task146_t17_candidate_release }}
+          B2_COMPARE: ${{ inputs.task146_b2_arm_memory }}
+          CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling }}
+          NATIVE_REUSE: ${{ inputs.task146_reuse_native_run }}
+          FOCUSED_TESTS: ${{ inputs.task146_focused_tests }}
+        run: |
+          python3 - <<'PY'
+          import os
+          assert sum(os.environ[key]=='true' for key in ['PRIOR_DEBUG','CANDIDATE_RELEASE'])==1
+          assert all(os.environ[key]!='true' for key in ['B2_COMPARE','CPU_SAMPLING'])
+          assert not os.environ['NATIVE_REUSE'] and not os.environ['FOCUSED_TESTS']
+          PY
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.task146_t17_candidate_release == true && 'c4146a1583fae8e1b25df369a171897c3393da69' || '3a24c7ac237eb20f7e279d2deffb2213e77e0e7a' }}
+          path: t17-predecessor-source
+          persist-credentials: false
+      - name: Acquire verified public TEST configuration from prior normal package
+        if: ${{ inputs.task146_t17_candidate_release == true }}
+        uses: actions/download-artifact@v4
+        with:
+          name: task146-t17-predecessor-debug-43042791070-1
+          run-id: 43042791070
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/t17-config-source
+      - name: Build normal package with frozen TEST resource before signing
+        env:
+          TASK146_IOS_CONFIG_154_B64: ${{ secrets.TASK146_IOS_TEST_CONFIG_154_B64 }}
+          TASK146_T17_PACKAGE_KIND: ${{ inputs.task146_t17_candidate_release == true && 'candidate-release' || 'predecessor-debug' }}
+        run: python3 .github/ci/ios-t17-predecessor-package.py
+      - name: Preserve package, pins and diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: task146-t17-${{ inputs.task146_t17_candidate_release == true && 'candidate-release' || 'predecessor-debug' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/task146-t17-predecessor/*.json
+            ${{ runner.temp }}/task146-t17-predecessor/*.log
+            ${{ runner.temp }}/task146-t17-predecessor/*.txt
+            ${{ runner.temp }}/task146-t17-predecessor/*.plist
+            ${{ runner.temp }}/task146-t17-predecessor/*.tar.gz
+
+  product-images:
+    if: ${{ inputs.task146_t17_predecessor_debug != true && inputs.task146_t17_candidate_release != true }}
+    name: XCTest (${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.task146_focused_tests != '') && '["focused"]' || (github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true) && '["campaign-a"]' || '["unit-target","ui-core","ui-core-continuation","ui-long-observation","ui-t18-it","ui-t18-en","ui-t18-es","ui-t18-zh"]') }}
+    runs-on: ${{ inputs.task146_b2_arm_memory == true && 'macos-26-xlarge' || 'macos-26' }}
+    timeout-minutes: ${{ inputs.task146_b2_arm_memory == true && 20 || 75 }}
+    env:
+      TASK146_FOCUSED_TESTS: ${{ inputs.task146_focused_tests || '' }}
+      TASK144_A_CAMPAIGN: ${{ inputs.task144_a_campaign || false }}
+      TASK146_B2_CPU_SAMPLING: ${{ inputs.task146_b2_cpu_sampling || false }}
+      TASK146_REUSE_NATIVE_RUN: ${{ inputs.task146_reuse_native_run || '' }}
+    steps:
+      - name: Admit one bounded exact-product ARM comparison
+        if: ${{ inputs.task146_b2_arm_memory == true }}
+        env:
+          COMPARE_EVENT: ${{ github.event_name }}
+          COMPARE_SHARD: ${{ matrix.shard }}
+          COMPARE_SAMPLING: ${{ inputs.task146_b2_cpu_sampling }}
+          COMPARE_EXPORT: ${{ inputs.task146_export_ordinary_app }}
+          COMPARE_CAMPAIGN: ${{ inputs.task144_a_campaign }}
+          COMPARE_PACKAGE: ${{ inputs.task146_t17_predecessor_debug }}
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          assert os.environ['COMPARE_EVENT']=='workflow_dispatch'
+          assert os.environ['COMPARE_SHARD']=='focused'
+          assert os.environ['TASK146_REUSE_NATIVE_RUN']=='43024699201'
+          assert json.loads(os.environ['TASK146_FOCUSED_TESTS'])==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld']
+          assert all(os.environ[key]!='true' for key in ['COMPARE_SAMPLING','COMPARE_EXPORT','COMPARE_CAMPAIGN','COMPARE_PACKAGE'])
+          assert subprocess.check_output(['uname','-m'],text=True).strip()=='arm64'
+          print(json.dumps({'host':{key:int(subprocess.check_output(['sysctl','-n',key],text=True)) for key in ['hw.memsize','hw.logicalcpu']},'scope':'ONE_EXACT_PRODUCT_B2_NO_COLLECTION_NO_COMPILATION_ORIGINAL_T0_5S'}))
+          PY
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Validate explicit focused selection
+        if: ${{ matrix.shard == 'focused' || inputs.task146_export_ordinary_app == true }}
+        run: python3 .github/ci/ios-xctest-shards.py validate-focused focused
+
+      - name: Check canonical local device helpers
+        if: matrix.shard == 'unit-target'
+        run: |
+          python3 -B tools/agent/test_device_reuse.py
+          MC_ARTIFACT_TEST_ROOT="$RUNNER_TEMP/device-reuse-lifecycle-fixtures" python3 -B tools/agent/test_artifact_lifecycle.py
+          bash -n tools/agent/lib/ios.sh tools/agent/lib/android.sh tools/agent/lib/common.sh tools/agent/config.example.env
+
+      - name: Record diagnostic export reservation
+        run: python3 -c 'from pathlib import Path; import os,time; (Path(os.environ["RUNNER_TEMP"])/"ios-ci-start.monotonic").write_text(str(time.monotonic()))'
 
       - name: Verify shared contract hashes
         run: shasum -a 256 -c contracts/product-image-v1.sha256
@@ -76,31 +235,313 @@ jobs:
             DEVICE_ID="$(select_device_id "$DESTINATIONS")"
           fi
           echo "Selected compatible simulator: $DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
-      - name: Record Xcode toolchain
-        run: xcodebuild -version
+      - name: Verify owned sampler admission before SDK compilation
+        if: ${{ inputs.task146_b2_cpu_sampling == true }}
+        run: python3 .github/ci/ios-b2-startup-sampling.py --probe-only
+
+      - name: Record Xcode and SDK resource preflight
+        run: |
+          xcodebuild -version
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='before-sdk'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
+      - name: Admit retained native product acquisition
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        env:
+          TASK146_REUSE_SHARD: ${{ matrix.shard }}
+        run: |
+          python3 - <<'PY'
+          import json,os,shutil
+          assert os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
+          assert os.environ['TASK146_REUSE_SHARD']=='focused'
+          assert os.environ['TASK146_REUSE_NATIVE_RUN']=='43024699201'
+          assert json.loads(os.environ['TASK146_FOCUSED_TESTS'])==['iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld']
+          # Known56.3MB archive plus203.3MB extracted Products; allow1GB
+          # acquisition/extraction growth and500MB concurrent native growth.
+          assert shutil.disk_usage(os.environ['RUNNER_TEMP']).free-1_500_000_000>=30_300_000_000
+          PY
+
+      - name: Acquire retained f33f native products
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: task146-ordinary-app-${{ inputs.task146_reuse_native_run }}-1
+          run-id: ${{ inputs.task146_reuse_native_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/task146-native-reuse-input
+
+      - name: Verify identical native products before reuse
+        if: ${{ inputs.task146_reuse_native_run != '' }}
+        run: python3 .github/ci/ios-native-product-reuse.py
 
       - name: Build Debug
-        run: >-
-          xcodebuild -project iOSMerchandiseControl.xcodeproj
-          -scheme iOSMerchandiseControl
-          -configuration Debug
-          -destination "platform=iOS Simulator,id=$DEVICE_ID"
-          CODE_SIGNING_ALLOWED=NO build
+        if: ${{ inputs.task146_reuse_native_run == '' }}
+        timeout-minutes: 15
+        env:
+          TASK146_BUILD_SHARD: ${{ matrix.shard }}
+        run: |
+          python3 - <<'PYBUILD'
+          import hashlib,json,os,resource,shlex,signal,subprocess,sys
+          from pathlib import Path
+          temporary=Path(os.environ['RUNNER_TEMP'])
+          selected=json.loads(os.environ.get('TASK146_FOCUSED_TESTS')or'[]')
+          # Measure cached startup first in the existing long-observation shard,
+          # before earlier UI cases accumulate runner state. All2101 selectors
+          # stay in the same eight-way matrix; T0/5s and assertions are unchanged.
+          cache_selector='iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld'
+          coverage=json.loads(Path('.github/ci/ios-xctest-coverage.json').read_text())
+          cached_start_suite=next(row for row in coverage['shards']if row['id']=='ui-long-observation')
+          optimized=(os.environ['TASK146_BUILD_SHARD']=='ui-long-observation'or(
+              os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'
+              and os.environ['TASK146_BUILD_SHARD']=='focused'
+              and cache_selector in selected and set(selected)<=set(cached_start_suite['expected'])))
+          argv=['xcodebuild','-project','iOSMerchandiseControl.xcodeproj','-scheme','iOSMerchandiseControl',
+              '-configuration','Debug','-destination','platform=iOS Simulator,id='+os.environ['DEVICE_ID'],
+              'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
+          profile={'name':'DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START'if optimized else'DEBUG_STANDARD',
+              'optimization':'-O'if optimized else'-Onone(project Debug)',
+              'assertConfiguration':'Debug(forced)'if optimized else'Debug(project default)',
+              'scope':'project Debug targets; first cached startup and long regressions'if optimized else'unchanged stock build',
+              'assertionProbe':{'status':'NOT_REQUESTED_ON_STANDARD'}}
+          path=temporary/'task146-debug-build-profile.json'
+          def save():path.write_text(json.dumps(profile,indent=2)+'\n')
+          save()
+          if optimized:
+              # Preserve Debug assertions while optimizing the large DEBUG UI
+              # fixture. Prove the actual SDK compiler retains a real assertion.
+              resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+              probe=temporary/'task146-debug-assertion-probe';probe.mkdir(exist_ok=False)
+              source=probe/'probe.swift';binary=probe/'probe'
+              source.write_text('if !_isDebugAssertConfiguration() { fatalError("TASK146_ASSERT_CONFIG_DISABLED") }\nif CommandLine.arguments.contains("trip") { assert(false, "TASK146_DEBUG_ASSERTION_PROBE") }\nprint("TASK146_DEBUG_ASSERTIONS_ENABLED")\n')
+              command=['xcrun','swiftc','-O','-Xfrontend','-assert-config','-Xfrontend','Debug',str(source),'-o',str(binary)]
+              profile['assertionProbe']={'status':'RUNNING','sourceSHA256':hashlib.sha256(source.read_bytes()).hexdigest(),'compilerArguments':command};save()
+              subprocess.run(command,check=True,timeout=90)
+              positive=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
+              negative=subprocess.run([str(binary),'trip'],capture_output=True,text=True,timeout=15)
+              assert positive.returncode==0 and positive.stdout.strip()=='TASK146_DEBUG_ASSERTIONS_ENABLED'
+              assert negative.returncode in[-signal.SIGILL,-signal.SIGTRAP]and'TASK146_DEBUG_ASSERTION_PROBE'in negative.stderr
+              profile['assertionProbe'].update(status='PASS_REAL_DEBUG_ASSERTION_RETAINED',positiveExit=positive.returncode,
+                  negativeSignal=-negative.returncode,negativeMessageVerified=True,binarySHA256=hashlib.sha256(binary.read_bytes()).hexdigest())
+              # Both owned probe processes have exited; keep the small receipt.
+              (probe/'verification.json').write_text(json.dumps(profile['assertionProbe'],indent=2)+'\n')
+              source.unlink();binary.unlink()
+              # Custom settings are expanded only by this project's Debug
+              # configuration; SPM dependencies keep their stock Debug flags.
+              argv+=['TASK146_NATIVE_OPTIMIZATION_LEVEL=-O',
+                  'TASK146_NATIVE_PROFILE_SWIFT_FLAGS=-Xfrontend -assert-config -Xfrontend Debug -D TASK146_NATIVE_OPTIMIZED_ASSERTS']
+          argv+=['build-for-testing'];profile['buildArguments']=argv;save()
+          print(json.dumps({key:profile[key]for key in['name','optimization','assertConfiguration','scope']}),flush=True)
+          witnesses={}
+          process=subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+          for line in process.stdout:
+              sys.stdout.write(line)
+              if '-module-name 'not in line or('swiftc 'not in line and'swift-frontend 'not in line):continue
+              try:
+                  arguments=shlex.split(line);module=arguments[arguments.index('-module-name')+1]
+              except(ValueError,IndexError):continue
+              witness={'optimization':[x for x in arguments if x in['-O','-Onone','-Osize','-Ounchecked']],
+                  'forcedDebugAssertions':any(arguments[i:i+2]==['-assert-config','Debug']or arguments[i:i+3]==['-assert-config','-Xfrontend','Debug']for i in range(len(arguments))),
+                  'optimizedProfileMacro':'TASK146_NATIVE_OPTIMIZED_ASSERTS'in arguments}
+              if witness not in witnesses.setdefault(module,[]):witnesses[module].append(witness)
+          code=process.wait();profile['SDKBuildExit']=code;profile['compilerWitnesses']=witnesses
+          if optimized and code==0:
+              projectModules=['iOSMerchandiseControl','iOSMerchandiseControlTests','iOSMerchandiseControlUITests']
+              checks={module:bool(witnesses.get(module))and all(row=={'optimization':['-O'],
+                  'forcedDebugAssertions':True,'optimizedProfileMacro':True}for row in witnesses[module])for module in projectModules}
+              checks['IssueReportingStockDebug']=bool(witnesses.get('IssueReporting'))and all(row=={'optimization':['-Onone'],
+                  'forcedDebugAssertions':False,'optimizedProfileMacro':False}for row in witnesses['IssueReporting'])
+              profile['SDKProfileVerification']={'status':'PASS'if all(checks.values())else'FAIL','checks':checks}
+              save();assert all(checks.values()),checks
+          save()
+          raise SystemExit(code)
+          PYBUILD
 
-      - name: XCTest full suite
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.task144_a_campaign != true }}
+      - name: Package exact ordinary ARM app
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' && inputs.task146_reuse_native_run == '' }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,stat,subprocess,tarfile
+          from pathlib import Path
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert head==os.environ['GITHUB_SHA']
+          roots=list((Path.home()/'Library/Developer/Xcode/DerivedData').glob('iOSMerchandiseControl-*/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app'))
+          assert len(roots)==1, 'require the single product compiled by this fresh job'
+          app=roots[0];assert app.is_dir() and not app.is_symlink()
+          rows=[]
+          for path in sorted(app.rglob('*')):
+              assert not path.is_symlink(), 'do not export linked native inputs'
+              info=path.stat();assert stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)
+              if path.is_file():
+                  rows.append({'path':path.relative_to(app).as_posix(),'bytes':info.st_size,
+                      'mode':stat.S_IMODE(info.st_mode),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+          out=Path(os.environ['RUNNER_TEMP'])/'task146-ordinary-app';out.mkdir(exist_ok=False)
+          package=out/'ordinary-app.tar.gz'
+          with tarfile.open(package,'w:gz',compresslevel=1)as archive:archive.add(app,arcname=app.name)
+          for row in rows:
+              path=app/row['path'];assert path.stat().st_size==row['bytes'] and hashlib.sha256(path.read_bytes()).hexdigest()==row['sha256']
+          manifest={'scope':'SDK_PRODUCT_ONLY_NOT_NATIVE_ACCEPTANCE','head':head,'runID':os.environ['GITHUB_RUN_ID'],
+              'runAttempt':os.environ['GITHUB_RUN_ATTEMPT'],'architecture':subprocess.check_output(['uname','-m'],text=True).strip(),
+              'xcode':subprocess.check_output(['xcodebuild','-version'],text=True).strip(),
+              'workflowSHA256':hashlib.sha256(Path('.github/workflows/ios-product-images-ci.yml').read_bytes()).hexdigest(),
+              'appSourceTree':subprocess.check_output(['git','rev-parse','HEAD:iOSMerchandiseControl'],text=True).strip(),
+              'packageBytes':package.stat().st_size,'packageSHA256':hashlib.sha256(package.read_bytes()).hexdigest(),
+              'appBytes':sum(row['bytes']for row in rows),'fileCount':len(rows),'files':rows,
+              'debugBuildProfile':json.loads((Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json').read_text())}
+          assert manifest['architecture']=='arm64'
+          (out/'ordinary-app.manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          # Retain the native test support without a second copy of the app.
+          # A CI-only driver repair can reuse these exact built tests later.
+          products=app.parent.parent
+          plans=list(products.glob('*.xctestrun'))
+          runners=list(app.parent.glob('iOSMerchandiseControlUITests-Runner.app'))
+          assert len(plans)==len(runners)==1, 'native test product custody is required'
+          support=out/'native-test-support.tar.gz'
+          selected=plans+runners+[p for p in app.parent.iterdir()
+              if p.suffix in ('.framework','.bundle','.dylib')]
+          native_pins=[]
+          with tarfile.open(support,'w:gz',compresslevel=1)as archive:
+              for item in selected:
+                  paths=[item]if item.is_file()else sorted(item.rglob('*'))
+                  for p in paths:
+                      assert not p.is_symlink(), 'refuse an unqualified linked test dependency'
+                      if p.is_file():native_pins.append({'path':p.relative_to(products).as_posix(),
+                          'bytes':p.stat().st_size,'mode':stat.S_IMODE(p.stat().st_mode),
+                          'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+                  archive.add(item,arcname=item.relative_to(products).as_posix())
+          source_trees={p:subprocess.check_output(['git','rev-parse','HEAD:'+p],text=True).strip()
+              for p in ['iOSMerchandiseControl','iOSMerchandiseControlTests','iOSMerchandiseControlUITests',
+                        'iOSMerchandiseControl.xcodeproj','contracts']}
+          for dependency in ['Vendor 2','Package.swift','Package.resolved','.gitmodules']:
+              pin=subprocess.run(['git','rev-parse','--verify','HEAD:'+dependency],text=True,capture_output=True)
+              if pin.returncode==0:source_trees[dependency]=pin.stdout.strip()
+          support_manifest={'scope':'NATIVE_TEST_SUPPORT_ONLY_NO_SECOND_APP_COPY_NOT_RUNTIME_ACCEPTANCE',
+              'head':head,'runID':os.environ['GITHUB_RUN_ID'],'runAttempt':os.environ['GITHUB_RUN_ATTEMPT'],
+              'architecture':manifest['architecture'],'xcode':manifest['xcode'],
+              'appManifestSHA256':hashlib.sha256((out/'ordinary-app.manifest.json').read_bytes()).hexdigest(),
+              'sourceTrees':source_trees,'debugBuildProfile':manifest['debugBuildProfile'],
+              'packageBytes':support.stat().st_size,'packageSHA256':hashlib.sha256(support.read_bytes()).hexdigest(),
+              'files':native_pins,'xctestrun':plans[0].relative_to(products).as_posix()}
+          (out/'native-test-support.manifest.json').write_text(json.dumps(support_manifest,indent=2)+'\n')
+          print(json.dumps({key:manifest[key]for key in ['scope','head','architecture','appBytes','packageBytes','fileCount']}))
+          PY
+
+      - name: Preserve exact ordinary ARM app
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.task146_export_ordinary_app == true && matrix.shard == 'focused' && inputs.task146_reuse_native_run == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: task146-ordinary-app-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/task146-ordinary-app/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Release SDK memory before Simulator boot
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-sdk'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          initial,booted=state()
+          # Every action addresses the one UUID claimed by this fresh hosted job.
+          if phase!='after-boot'and initial!='Shutdown':
+              assert initial in ('Booted','Booting'),'unclassified selected Simulator state: '+initial
+              subprocess.run(['xcrun','simctl','shutdown',device],check=True,timeout=20)
+          current,booted=state()
+          assert current==('Booted'if phase=='after-boot'else'Shutdown'),current
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
+      - name: Boot selected Simulator after SDK compilation
+        run: |
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-boot'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=20))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          # boot and bootstatus above are checked functional preconditions.
+          # A resource probe must not reject that successful boot on an AX-busy VM.
+          state_probe_error=None
+          try:
+              initial,booted=state()
+              current=initial
+              assert current=='Booted',current
+          except subprocess.TimeoutExpired:
+              initial=current='UNKNOWN_RESOURCE_PROBE_TIMEOUT'
+              booted=None
+              state_probe_error='simctl list exceeded diagnostic 20s; bootstatus succeeded'
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          row['bootstatusExitCode']=0
+          row['stateProbeError']=state_probe_error
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:assert path.exists(),'missing SDK resource preflight'
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
+      - name: XCTest exact coverage shard
+        if: ${{ matrix.shard != 'campaign-a' }}
         id: xctest
-        run: >-
-          xcodebuild -project iOSMerchandiseControl.xcodeproj
-          -scheme iOSMerchandiseControl
-          -configuration Debug
-          -destination "platform=iOS Simulator,id=$DEVICE_ID"
-          -resultBundlePath "$RUNNER_TEMP/ios-merchandise-control-tests.xcresult"
-          CODE_SIGNING_ALLOWED=NO test
+        run: |
+          if [ "$TASK146_B2_CPU_SAMPLING" = "true" ]; then
+            python3 .github/ci/ios-b2-startup-sampling.py -- python3 .github/ci/ios-xctest-shards.py run '${{ matrix.shard }}'
+          else
+            python3 .github/ci/ios-xctest-shards.py run '${{ matrix.shard }}'
+          fi
 
       - name: XCTest A fixed campaign
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.task144_a_campaign == true }}
@@ -135,7 +576,7 @@ jobs:
               -destination "platform=iOS Simulator,id=$DEVICE_ID" \
               -resultBundlePath "$CAMPAIGN_DIR/iteration-$iteration.xcresult" \
               -only-testing:iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testPreviousShopCallbackCannotInvalidateFreshEmptyRecoveryAdmission \
-              CODE_SIGNING_ALLOWED=NO test \
+              CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- test \
               2>&1 | tee "$CAMPAIGN_DIR/iteration-$iteration.log"
             command_statuses=("${PIPESTATUS[@]}")
             iteration_status=${command_statuses[0]}
@@ -202,20 +643,8 @@ jobs:
           done
           exit "$campaign_status"
 
-      - name: Preserve XCTest result bundle
-        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
-        timeout-minutes: 5
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: task144-first-leaf-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0
-          include-hidden-files: false
-
       - name: Preserve A campaign results
-        if: ${{ !cancelled() && (steps.a_campaign.outcome == 'success' || steps.a_campaign.outcome == 'failure') }}
+        if: ${{ always() && (steps.a_campaign.outcome == 'success' || steps.a_campaign.outcome == 'failure' || steps.a_campaign.outcome == 'cancelled') }}
         timeout-minutes: 5
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -228,11 +657,12 @@ jobs:
 
       - name: Export small XCTest failure summary
         id: xctest_failure_summary
-        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') }}
+        if: ${{ always() && matrix.shard != 'campaign-a' && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure' || steps.xctest.outcome == 'cancelled') }}
         continue-on-error: true
         timeout-minutes: 5
         env:
           XCTEST_OUTCOME: ${{ steps.xctest.outcome }}
+          TASK146_CI_SHARD: ${{ matrix.shard }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, selectors, signal, subprocess, sys, time
@@ -274,11 +704,11 @@ jobs:
                           'selectionStatus': 'NOT_QUALIFIED_METADATA_LIMIT'}) + '\n').encode()
               assert len(data) <= METADATA_RESERVE
               (output / 'provenance.json').write_bytes(data)
-          def export(name, argv):
+          def export(name, argv, timeout=EXPORT_TIMEOUT_SECONDS):
               global retained_bytes
               stdout, stderr = output / name, output / (name + '.stderr')
               result = {'argv': argv, 'stdout': stdout.name, 'stderr': stderr.name,
-                        'timeoutSeconds': EXPORT_TIMEOUT_SECONDS, 'attempted': False,
+                        'timeoutSeconds': timeout, 'attempted': False,
                         'hashScope': 'retained-file-bytes'}
               if retained_bytes >= ARTIFACT_LIMIT - METADATA_RESERVE:
                   result.update(omitted=True, omissionReason='ARTIFACT_BYTE_BUDGET',
@@ -290,7 +720,7 @@ jobs:
                               'truncated': False, 'digest': hashlib.sha256()}
                          for key in ['stdout', 'stderr']}
               process, selector = None, selectors.DefaultSelector()
-              deadline = time.monotonic() + EXPORT_TIMEOUT_SECONDS
+              deadline = time.monotonic() + timeout
               with stdout.open('wb') as out, stderr.open('wb') as err:
                   try:
                       process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -303,7 +733,7 @@ jobs:
                       while selector.get_map():
                           remaining = deadline - time.monotonic()
                           if remaining <= 0:
-                              raise subprocess.TimeoutExpired(argv, EXPORT_TIMEOUT_SECONDS)
+                              raise subprocess.TimeoutExpired(argv, timeout)
                           for ready, _ in selector.select(remaining):
                               key, file, limit = ready.data
                               try:
@@ -358,9 +788,13 @@ jobs:
                       and not result.get('timedOut') and not result.get('errorType'))
           save()
           export('checkout-head.txt', ['git', 'rev-parse', 'HEAD'])
-          export('toolchain.txt', ['xcodebuild', '-version'])
+          export('debug-build-profile.json', ['cat', str(Path(os.environ['RUNNER_TEMP'])/'task146-debug-build-profile.json')])
+          export('toolchain.txt', ['python3', '-c', "import json,subprocess,pathlib,os; commands={'xcode':['xcodebuild','-version'],'os':['sw_vers'],'model':['sysctl','-n','hw.model'],'cpu':['sysctl','-n','hw.ncpu'],'memoryBytes':['sysctl','-n','hw.memsize'],'architecture':['uname','-m']}; result={key:subprocess.check_output(argv,text=True).strip() for key,argv in commands.items()}; profile=pathlib.Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'; result['resourcePhases']=[json.loads(line)for line in profile.read_text().splitlines()] if profile.exists() else []; print(json.dumps(result,sort_keys=True))"])
           base = ['xcrun', 'xcresulttool', 'get', 'test-results']
-          summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)])
+          # This aggregate hit its20s limit on697 while the complete tests/DB
+          # still contained all8 real results. One bounded export, no retry;
+          # byte caps and complete-output qualification remain unchanged.
+          summary_ok = export('summary.json', base + ['summary', '--path', str(bundle)], timeout=60)
           tests_ok = export('tests.json', base + ['tests', '--path', str(bundle)])
           provenance['selectionStatus'] = 'NOT_PARSED_INCOMPLETE_SUMMARY_OR_TESTS'
           if summary_ok and tests_ok:
@@ -370,10 +804,16 @@ jobs:
                   with (output / 'tests.json').open() as source:
                       tests = json.load(source)
                   provenance['failedLeafCount'] = 0
+                  cache_observation = None
+                  cache_result = None
                   def walk(value, module=None):
                       if isinstance(value, dict):
+                          global cache_observation, cache_result
                           if value.get('nodeType') in {'Unit test bundle', 'UI test bundle'}:
                               module = value.get('name')
+                          if value.get('nodeType') == 'Test Case' and value.get('result') in {'Passed','Failed'} and value.get('nodeIdentifier') == 'LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld()' and module == 'iOSMerchandiseControlUITests':
+                              cache_observation = value['nodeIdentifier']
+                              cache_result = value['result']
                           if value.get('nodeType') == 'Test Case' and value.get('result') == 'Failed':
                               provenance['failedLeafCount'] += 1
                               if len(provenance['failedTests']) < MAX_FAILED_LEAVES:
@@ -395,6 +835,22 @@ jobs:
                       for kind in ['test-details', 'activities']:
                           export(f'failure-{index:03d}.{kind}.json',
                                  base + [kind, '--path', str(bundle), '--test-id', case['id']])
+                  if cache_observation:
+                      provenance['cacheObservationTest'] = {'id': cache_observation, 'result': cache_result, 'purpose': 'Existing physical timing attachment; no acceptance override'}
+                      export('cache-observation.activities.json', base + ['activities', '--path', str(bundle), '--test-id', cache_observation])
+                      details_ok = export('cache-observation.test-details.json', base + ['test-details', '--path', str(bundle), '--test-id', cache_observation])
+                      if details_ok:
+                          details = json.loads((output/'cache-observation.test-details.json').read_text())
+                          started, duration = details['startTime'], details['durationInSeconds']
+                          if not isinstance(started, (int,float)) or not isinstance(duration, (int,float)) or not 0 < duration < 4200:
+                              raise ValueError('Invalid closed B2 diagnostic interval')
+                          # The75minute store scan timed out on082 after emitting
+                          # only early cases. Use this actual test's epoch interval,
+                          # preserving the same exporter timeout/byte caps and filter.
+                          export('runtime-cost.log', ['xcrun','simctl','spawn',os.environ['DEVICE_ID'],
+                              'log','show','--style','compact','--info',
+                              '--start','@'+str(int(started)-1),'--end','@'+str(int(started+duration)+2),
+                              '--predicate','(subsystem == "com.niwcyber.iOSMerchandiseControl" AND category == "LocalBodyQualification") OR eventMessage BEGINSWITH "TASK146_B2_COST39" OR eventMessage BEGINSWITH "TASK146_R4_INIT"'])
               except (KeyError, ValueError, OSError, TypeError, RecursionError) as error:
                   provenance['selectionErrorType'] = type(error).__name__
                   provenance['selectionStatus'] = 'NOT_PARSED_SELECTION_ERROR'
@@ -408,19 +864,74 @@ jobs:
                    and not provenance.get('metadataTruncated') else 1)
           PY
 
-      - name: Preserve small XCTest failure summary
-        if: ${{ !cancelled() && (steps.xctest.outcome == 'success' || steps.xctest.outcome == 'failure') && steps.xctest_failure_summary.outputs.artifact_directory != '' }}
+      - name: Account for every selected test
+        if: ${{ always() && matrix.shard != 'campaign-a' }}
+        run: python3 .github/ci/ios-xctest-shards.py qualify '${{ matrix.shard }}'
+
+      - name: Stop selected Simulator after native consumers
+        if: ${{ always() && env.DEVICE_ID != '' }}
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,subprocess
+          from pathlib import Path
+          phase='after-tests'
+          device=os.environ['DEVICE_ID']
+          def state():
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json'],text=True,timeout=60))
+              found=[row for rows in tree['devices'].values()for row in rows if row['udid']==device]
+              assert len(found)==1,'selected Simulator identity changed'
+              return found[0]['state'],sum(row['state']=='Booted'for rows in tree['devices'].values()for row in rows)
+          # Release the claimed native consumer first; metadata must not block shutdown.
+          stopped=subprocess.run(['xcrun','simctl','shutdown',device],capture_output=True,text=True,timeout=60)
+          initial='NOT_PROBED_BEFORE_SHUTDOWN'
+          current,booted=state()
+          assert current=='Shutdown',('selected Simulator shutdown not verified',stopped.returncode,current)
+          row={'phase':phase,'atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'device':device,'initialState':initial,'state':current,'bootedCount':booted,
+               'swap':subprocess.check_output(['sysctl','vm.swapusage'],text=True,timeout=20).strip()[:8192],
+               'vm':subprocess.check_output(['vm_stat'],text=True,timeout=20).strip()[:8192]}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-runner-resources.jsonl'
+          if phase=='before-sdk':assert not path.exists(),'refuse mixed resource observations'
+          else:pass # An earlier preflight failure does not suppress native cleanup evidence.
+          encoded=json.dumps(row,sort_keys=True)+'\n';assert len(encoded.encode())<16384
+          with path.open('x'if phase=='before-sdk'else'a')as stream:stream.write(encoded)
+          assert path.stat().st_size<=65536,'resource observation bound exceeded'
+          print(json.dumps({key:row[key]for key in ['phase','state','bootedCount','swap']}))
+          PY
+
+      - name: Preserve exact shard logs, coverage and XCTest diagnostics
+        if: ${{ always() && matrix.shard != 'campaign-a' }}
         timeout-minutes: 5
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: task144-failure-summary-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ steps.xctest_failure_summary.outputs.artifact_directory }}
+          name: task145-ci-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/task146-debug-build-profile.json
+            ${{ runner.temp }}/task146-debug-assertion-probe/
+            ${{ runner.temp }}/ios-xctest-shard
+            ${{ runner.temp }}/ios-xctest-failure-summary
+            ${{ runner.temp }}/ios-merchandise-control-tests.xcresult
+            ${{ runner.temp }}/task146-runner-resources.jsonl
+            ${{ runner.temp }}/task146-b2-sampling/
+            ${{ runner.temp }}/task146-b2-ordinary-launch/
+            ${{ runner.temp }}/task146-native-product-reuse.json
           if-no-files-found: error
           retention-days: 1
-          compression-level: 9
+          compression-level: 0
           include-hidden-files: false
 
+      - name: Build Release
+        if: ${{ matrix.shard == 'unit-target' }}
+        timeout-minutes: 20
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Release
+          -destination "generic/platform=iOS Simulator"
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
+          CODE_SIGNING_ALLOWED=NO build
+
       - name: Analyze
+        if: ${{ matrix.shard == 'unit-target' || matrix.shard == 'campaign-a' }}
         run: >-
           xcodebuild -project iOSMerchandiseControl.xcodeproj
           -scheme iOSMerchandiseControl
@@ -429,9 +940,55 @@ jobs:
           CODE_SIGNING_ALLOWED=NO analyze
 
       - name: Secret scan
-        run: >-
-          ./tools/agent/mc-agent.sh scan sensitive
-          iOSMerchandiseControl
-          iOSMerchandiseControlTests
-          contracts
-          .github/workflows/ios-product-images-ci.yml
+        if: ${{ matrix.shard == 'unit-target' || matrix.shard == 'campaign-a' }}
+        run: |
+          scan_config="$RUNNER_TEMP/task146-sensitive.env"
+          scan_evidence="$RUNNER_TEMP/task146-sensitive-evidence"
+          cp tools/agent/config.example.env "$scan_config"
+          printf '\nMC_IOS_REPO=%q\n' "$GITHUB_WORKSPACE" >> "$scan_config"
+          MC_AGENT_CONFIG="$scan_config" MC_TASK_ID=TASK-146 MC_EVIDENCE_DIR="$scan_evidence" \
+            ./tools/agent/mc-agent.sh scan sensitive \
+            iOSMerchandiseControl iOSMerchandiseControlTests contracts .github/workflows/ios-product-images-ci.yml
+          python3 - "$scan_evidence/agent-runs" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          reports = list(Path(sys.argv[1]).glob("*.json"))
+          assert len(reports) == 1, "Expected one persisted sensitive-scan report"
+          report = reports[0]
+          assert json.loads(report.read_text())["result"] == "PASS"
+          for suffix in (".json", ".md", ".log"):
+              assert report.with_suffix(suffix).stat().st_size > 0
+          print("Sensitive-scan report and log verified")
+          PY
+
+  complete-coverage:
+    if: ${{ always() && inputs.task146_t17_predecessor_debug != true && inputs.task146_t17_candidate_release != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}
+    needs: product-images
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Collect every shard result
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: task145-ci-shard-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ios-all-shards
+      - name: Require complete original coverage
+        if: ${{ always() }}
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          MATRIX_RESULT: ${{ needs.product-images.result }}
+        run: python3 .github/ci/ios-xctest-shards.py aggregate "$RUNNER_TEMP/ios-all-shards"
+      - name: Preserve aggregate accounting
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task145-ci-aggregate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ios-all-shards/aggregate.json
+          if-no-files-found: error
+          retention-days: 1

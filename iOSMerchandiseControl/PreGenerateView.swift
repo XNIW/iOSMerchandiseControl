@@ -13,6 +13,7 @@ struct PreGenerateView: View {
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @Environment(\.modelContext) private var context
+    @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
 
     @Query(sort: \Supplier.name, order: .forward)
     private var suppliers: [Supplier]
@@ -382,7 +383,7 @@ struct PreGenerateView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(!canGenerate || isGenerating)
+                    .disabled(!canGenerate || isGenerating || !localWriteIsAllowed())
                     .accessibilityHint(Text(L("pregenerate.generated_will_appear")))
                     
                     if let lastID = lastGeneratedEntryID {
@@ -692,6 +693,7 @@ struct PreGenerateView: View {
     }
     
     private func generateInventory() {
+        guard localWriteIsAllowed() else { return }
         let validationSnapshot = excelSession.preGenerateValidationSnapshot
         let supplierState = ExcelSessionViewModel.resolvePendingSupplierState(
             input: excelSession.supplierName,
@@ -709,6 +711,7 @@ struct PreGenerateView: View {
         isGenerating = true
 
         Task {
+            guard localWriteIsAllowed() else { isGenerating = false; return }
             do {
                 let entry = try excelSession.generateHistoryEntry(
                     in: context,

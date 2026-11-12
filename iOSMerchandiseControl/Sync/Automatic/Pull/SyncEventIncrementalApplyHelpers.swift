@@ -338,13 +338,15 @@ nonisolated func pendingRemoteIDs(
     let superseded = LocalPendingChangeStatus.superseded.rawValue
     let acknowledged = LocalPendingChangeStatus.acknowledged.rawValue
     let maximumRows = LocalPendingChangeAccumulator.defaultMaxActiveChanges + 1
+    let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
     var changes: [LocalPendingChange] = []
     var seenChanges: Set<ObjectIdentifier> = []
 
     func append(_ descriptor: FetchDescriptor<LocalPendingChange>) throws {
         var boundedDescriptor = descriptor
-        boundedDescriptor.fetchLimit = maximumRows + 1
+        boundedDescriptor.fetchLimit = maximumRows + resolved.count + 1
         for change in try context.fetch(boundedDescriptor) {
+            if resolved.contains(change.changeID) { continue }
             guard seenChanges.insert(ObjectIdentifier(change)).inserted else { continue }
             changes.append(change)
             guard changes.count <= maximumRows else {
@@ -686,6 +688,23 @@ nonisolated func applyTargetedProduct(
     }
     let existing = byRemoteID ?? byBarcode
     if let product = existing {
+        func sameText(_ current: String?, _ incoming: String?) -> Bool {
+            if let current, let incoming { return current.utf8.elementsEqual(incoming.utf8) }
+            return current == nil && incoming == nil
+        }
+        if product.barcode.utf8.elementsEqual(barcode.utf8), product.remoteID == row.id,
+           product.remoteUpdatedAt == updatedAt, product.remoteDeletedAt == nil,
+           product.primaryImageVersionID == row.primaryImageVersionID,
+           product.primaryImageUpdatedAt == primaryImageUpdatedAt,
+           sameText(product.itemNumber, itemNumber), sameText(product.productName, productName),
+           sameText(product.secondProductName, secondProductName),
+           product.purchasePrice?.bitPattern == row.purchasePrice?.bitPattern,
+           product.retailPrice?.bitPattern == row.retailPrice?.bitPattern,
+           product.stockQuantity?.bitPattern == row.stockQuantity?.bitPattern,
+           product.supplier?.persistentModelID == supplier?.persistentModelID,
+           product.category?.persistentModelID == category?.persistentModelID {
+            return (false, false, false)
+        }
         let wasBarcode = product.barcode
         let wasRemoteID = product.remoteID
         product.barcode = barcode
@@ -795,6 +814,9 @@ nonisolated func applyTargetedProductPriceRow(
     )
 
     if let existingRemote = try fetchProductPrice(remoteID: row.id, context: context) {
+        #if DEBUG
+        let b6BeforePrice = PilotCommitTrace.B6Context.apply == nil ? nil : PilotCommitTrace.b6PriceBody(existingRemote)
+        #endif
         existingRemote.type = priceType(from: type)
         existingRemote.price = canonicalPrice.doubleValue
         existingRemote.effectiveAt = effectiveAt
@@ -802,6 +824,9 @@ nonisolated func applyTargetedProductPriceRow(
         existingRemote.note = SupabasePullPreviewNormalizer.semanticString(row.note)
         existingRemote.createdAt = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.createdAt) ?? existingRemote.createdAt
         existingRemote.product = product
+        #if DEBUG
+        PilotCommitTrace.b6MappedPrice(existingRemote, beforeBody: b6BeforePrice, rawVersion: row.updatedAt)
+        #endif
         return ProductPriceApplyResult(inserted: 0, skippedExisting: 1, totalConsidered: 1)
     }
 
@@ -848,6 +873,9 @@ nonisolated func applyTargetedProductPriceRow(
         product: product
     )
     context.insert(newPrice)
+    #if DEBUG
+    PilotCommitTrace.b6MappedPrice(newPrice, beforeBody: nil, rawVersion: row.updatedAt)
+    #endif
     currentPricesByKey[key] = [
         TargetedProductPriceCurrentInfo(
             canonicalPrice: canonicalPrice,
@@ -1190,9 +1218,11 @@ nonisolated struct SyncEventApplyStatusStore {
     private static let maximumEncodedBytes = 512 * 1_024
     private static let maximumDiagnosticStringLength = 128
     private let defaults: UserDefaults
+    private let fixtureRunID: UUID?
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, fixtureRunID: UUID? = nil) {
         self.defaults = defaults
+        self.fixtureRunID = fixtureRunID
     }
 
     func record(
@@ -1293,7 +1323,10 @@ nonisolated struct SyncEventApplyStatusStore {
     private func scopeKey(ownerUserID: UUID, shopID: UUID) -> String {
         let accountHash = AccountBindingStore.accountHash(for: ownerUserID)
         let shopHash = AccountBindingStore.redactedAccountHash(for: shopID.uuidString)
-        return "\(accountHash).shop.\(shopHash)"
+        let scope = "\(accountHash).shop.\(shopHash)"
+        guard let fixtureRunID else { return scope }
+        // Controlled runs share synthetic owner/shop IDs but persist separate ledgers.
+        return "\(scope).fixture.\(fixtureRunID.uuidString.lowercased())"
     }
 
     private static func pruned(

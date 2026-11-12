@@ -1,8 +1,8 @@
 import XCTest
 import UIKit
 
-/// Proposed Task144 geometry regression. It uses the production root and the
-/// existing held transport; it does not release recovery or mutate business data.
+/// R23 root geometry and scoped-error regression. Retains the original fresh
+/// snapshot/two-sample/5s/1pt oracle. It never releases the held request or Retry.
 final class RootCloudBannerLayoutUITests: XCTestCase {
     private var app: XCUIApplication!
     private let bannerIdentifier = "sync.root.foreground.banner"
@@ -23,95 +23,199 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         super.tearDown()
     }
 
-    func testHeldRecoveryErrorBannerReservesOnlyItsActualHeightAtDefaultTextSize() throws {
-        try verifyRootBannerReservation(category: .large)
+    func testR23QuietRootReservesNoGlobalBannerAndKeepsScopedRecoveryActionsAtDefaultTextSize() throws {
+        try verifyQuietRootAndScopedRecovery(category: .large)
     }
 
-    func testHeldRecoveryErrorBannerReservesOnlyItsActualHeightAtAccessibilityXXXL() throws {
-        try verifyRootBannerReservation(category: .accessibilityExtraExtraExtraLarge)
+    func testR23QuietRootReservesNoGlobalBannerAndKeepsScopedRecoveryActionsAtAccessibilityXXXL() throws {
+        try verifyQuietRootAndScopedRecovery(category: .accessibilityExtraExtraExtraLarge)
     }
 
-    private func verifyRootBannerReservation(category: UIContentSizeCategory) throws {
+    private func verifyQuietRootAndScopedRecovery(category: UIContentSizeCategory) throws {
         app = XCUIApplication()
+        let namespace = UUID().uuidString.lowercased()
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-appLanguage", "en", "-UIPreferredContentSizeCategoryName", category.rawValue]
-        app.launchEnvironment = ["TASK144_LOCAL_AVAILABILITY_FIXTURE": UUID().uuidString.lowercased(),
-                                 "TASK131_INITIAL_TAB": "options"]
+        app.launchEnvironment = ["TASK144_LOCAL_AVAILABILITY_FIXTURE": namespace,
+            "TASK131_INITIAL_TAB": "options", "TASK145_ROOT_PRESENTATION_OBSERVATION": "1"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20),
-                      "The real same-scope recovery transport must be held before measuring the root")
+        try requirePresentation(app.staticTexts["task144.controlled.held"].waitForExistence(timeout: 20), "real-held-recovery")
         if category == .accessibilityExtraExtraExtraLarge {
-            XCTAssertTrue(app.staticTexts["task144.controlled.content-size.accessibility-xxxl"]
-                .waitForExistence(timeout: 5), "The actual UIKit text category must be accessibility XXXL")
+            try requirePresentation(app.staticTexts["task144.controlled.content-size.accessibility-xxxl"].waitForExistence(timeout: 5), "actual-max-font")
         }
+        // Existing fixture control publishes failed outcome followed by checking.
+        // It creates no runtime owner; this tests stale progress, not a new error.
+        let state = app.descendants(matching: .any).matching(identifier: "task144.controlled.state-update").firstMatch
+        try requirePresentation(state.isHittable, "existing-state-control")
+        state.press(forDuration: 1.1)
+        try requirePresentation(app.staticTexts["task144.controlled.state-updated"].waitForExistence(timeout: 5), "state-control-observed")
+        let before = try observePresentation()
+        try requirePresentation(before["namespace"] as? String == namespace
+            && before["hasActivePresentationInvocation"] as? Bool == false
+            && before["phase"] as? String == "checking" && before["outcome"] as? String == "failed",
+            "ordinary-checking-without-owned-flight")
 
-        // Options hides the root banner in the same process and root host.
-        // No scrolling is performed, so navigation-bar collapse cannot supply
-        // the comparison or compensate for a duplicate reservation.
         try selectTab("Options")
         let baseline = try settledGeometry(tab: "Options", showsBanner: false)
         let baselineNavigation = try XCTUnwrap(baseline.navigationBar)
         var measurements = [baseline]
         defer { attach(measurements, category: category) }
-
         for title in ["Database", "History"] {
             try selectTab(title)
-            let measured = try settledGeometry(tab: title, showsBanner: true)
+            let measured = try settledGeometry(tab: title, showsBanner: false)
             measurements.append(measured)
-            let banner = try XCTUnwrap(measured.banner,
-                                       "The real recovery-error banner AX container must have a measured frame")
-            XCTAssertEqual(measured.controls, baseline.controls,
-                           "The shared fixture controls must not change their inset between tabs")
-            let navigation = try XCTUnwrap(measured.navigationBar)
-            try assertVisibleErrorBanner(measured, category: category)
-            XCTAssertGreaterThanOrEqual(navigation.minY, measured.nativeViewport.minY,
-                                       "Native navigation chrome must stay inside its measured viewport")
+            try requirePresentation(measured.banner == nil && measured.nativeViewport == baseline.nativeViewport,
+                title + "-no-global-band-or-phantom-viewport")
+            XCTAssertEqual(measured.controls, baseline.controls)
             XCTAssertEqual(measured.fixtureBand, baseline.fixtureBand)
-            // Compare the actual native viewport edge, not its internal toolbar.
-            // The AX outline includes a 1pt stroke; retain the existing 1pt edge
-            // precision without subtracting empirically observed constants.
-            XCTAssertEqual(banner.minY - measured.fixtureBand.maxY, 4,
-                           accuracy: pointPrecision, "Only the intended top margin may precede the banner")
-            XCTAssertEqual(measured.nativeViewport.minY - banner.maxY, 2,
-                           accuracy: pointPrecision, "Only the intended bottom margin may precede the viewport")
+            XCTAssertEqual(try XCTUnwrap(measured.navigationBar).minY, baselineNavigation.minY, accuracy: pointPrecision)
+            try assertOrdinaryRootQuiet()
         }
-
         try selectTab("Inventory")
-        let inventory = try settledGeometry(tab: "Inventory", showsBanner: true)
+        let inventory = try settledGeometry(tab: "Inventory", showsBanner: false)
         measurements.append(inventory)
         XCTAssertEqual(inventory.controls, baseline.controls)
         XCTAssertEqual(inventory.fixtureBand, baseline.fixtureBand)
-        try assertVisibleErrorBanner(inventory, category: category)
-        let inventoryBanner = try XCTUnwrap(inventory.banner)
-        XCTAssertEqual(inventoryBanner.minY - inventory.fixtureBand.maxY, 4, accuracy: pointPrecision)
-        XCTAssertEqual(inventory.nativeViewport.minY - inventoryBanner.maxY, 2, accuracy: pointPrecision)
-        let inventoryScroll = try XCTUnwrap(inventory.inventoryScroll)
+        XCTAssertEqual(inventory.nativeViewport, baseline.nativeViewport)
         let inventoryTitle = try XCTUnwrap(inventory.inventoryTitle)
-        let visibleInventoryTitle = app.scrollViews
-            .containing(.staticText, identifier: "Inventory").staticTexts["Inventory"]
-        XCTAssertTrue(visibleInventoryTitle.isHittable,
-                      "The real Inventory title must remain reachable with the banner present")
-        XCTAssertGreaterThanOrEqual(inventoryTitle.minY, inventoryBanner.maxY + 2 - pointPrecision,
-                                    "The banner must not cover the Inventory content")
-        XCTAssertLessThanOrEqual(inventoryTitle.maxY, inventory.tabBar.minY + pointPrecision,
-                                 "The complete Inventory title must remain above the tab bar")
-        // Inventory has a manual header inside its root ScrollView, no root
-        // navigationTitle. Its 28pt vertical content padding and preceding shop
-        // header are intentional contributions, not comparable native bars.
+        let inventoryScroll = try XCTUnwrap(inventory.inventoryScroll)
         XCTAssertGreaterThanOrEqual(inventoryTitle.minY, inventoryScroll.minY + 28 - pointPrecision)
+        XCTAssertLessThanOrEqual(inventoryTitle.maxY, inventory.tabBar.minY + pointPrecision)
+        try assertOrdinaryRootQuiet()
 
-        // Returning to the hidden state must remove the entire reservation and
-        // keep the same native baseline; no root replacement or relaunch occurs.
         try selectTab("Options")
-        let hiddenAgain = try settledGeometry(tab: "Options", showsBanner: false)
-        measurements.append(hiddenAgain)
-        let hiddenNavigation = try XCTUnwrap(hiddenAgain.navigationBar)
-        XCTAssertEqual(hiddenNavigation.minY, baselineNavigation.minY,
-                       accuracy: pointPrecision, "Options must retain no phantom banner reservation")
-        XCTAssertEqual(hiddenAgain.controls, baseline.controls)
-        XCTAssertEqual(hiddenAgain.fixtureBand, baseline.fixtureBand)
-        XCTAssertEqual(hiddenAgain.nativeViewport, baseline.nativeViewport,
-                       "Returning to hidden must restore the original native viewport")
+        let returned = try settledGeometry(tab: "Options", showsBanner: false)
+        measurements.append(returned)
+        XCTAssertEqual(returned.nativeViewport, baseline.nativeViewport)
+        XCTAssertEqual(try XCTUnwrap(returned.navigationBar).minY, baselineNavigation.minY, accuracy: pointPrecision)
+        try assertOrdinaryRootQuiet()
+        // A scoped failed outcome is retained in its relevant surface. We do not
+        // generalize the ordinary no-flight case to "every error is silent".
+        let attention = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Automatic sync needs attention")).firstMatch
+        let diagnostics = app.buttons["Diagnostics"]
+        let deadline = ProcessInfo.processInfo.systemUptime + 15
+        var attentionWasReachable = false
+        for drag in 0...5 {
+            if attention.exists && attention.isHittable { attentionWasReachable = true }
+            if attentionWasReachable && diagnostics.isHittable { break }
+            guard drag < 5, ProcessInfo.processInfo.systemUptime < deadline else { break }
+            let snapshot = try app.snapshot()
+            let current = try XCTUnwrap(geometry(from: snapshot, tab: "Options", showsBanner: false).geometry,
+                "Require current same-window Options bounds before a native seek")
+            let viewport = current.nativeViewport.intersection(snapshot.frame)
+            let top = max(viewport.minY, try XCTUnwrap(current.navigationBar).maxY) + 24
+            let bottom = min(viewport.maxY, current.tabBar.minY) - 24
+            try requirePresentation(bottom > top + 40, "usable-Options-drag-viewport")
+            let target = attentionWasReachable ? diagnostics : attention
+            // The cloud card is the first section. A missing title seeks back
+            // toward it; after actually seeing it, seek down for Diagnostics.
+            var fingerDown = !attentionWasReachable
+            if target.exists {
+                let targetFrame = target.frame
+                if targetFrame.width > 0 && targetFrame.height > 0
+                    && [targetFrame.minX, targetFrame.minY, targetFrame.width, targetFrame.height].allSatisfy({ $0.isFinite }) {
+                    if targetFrame.minY < top { fingerDown = true }
+                    else if targetFrame.maxY > bottom { fingerDown = false }
+                }
+            }
+            guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+            let halfTravel = min(CGFloat(160), bottom - top - 2) / 2
+            let center = (top + bottom) / 2
+            let offset = fingerDown ? -halfTravel : halfTravel
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let start = origin.withOffset(CGVector(dx: viewport.midX - snapshot.frame.minX,
+                dy: center + offset - snapshot.frame.minY))
+            let end = origin.withOffset(CGVector(dx: viewport.midX - snapshot.frame.minX,
+                dy: center - offset - snapshot.frame.minY))
+            start.press(forDuration: 0, thenDragTo: end, withVelocity: .fast, thenHoldForDuration: 0)
+        }
+        try requirePresentation(attentionWasReachable && diagnostics.isHittable,
+            "scoped-error-and-diagnostics-reachable-in-Options")
+        diagnostics.tap()
+        try requirePresentation(app.buttons["Hide diagnostics"].waitForExistence(timeout: 5), "real-diagnostics-action-opens")
+        let after = try observePresentation()
+        try requirePresentation(finalPresentationIsQualified(after: after, before: before),
+            "same-presentation-no-invented-owner-no-release")
+    }
+
+    // Initial checking still requires no owner. A later foreground opportunity
+    // is permitted only with fresh, typed evidence of its concrete owned work.
+    private func finalPresentationIsQualified(after: [String: Any], before: [String: Any]) -> Bool {
+        func number(_ value: Any?) -> Double? {
+            guard let value = value as? NSNumber, String(cString: value.objCType) != "c",
+                  value.doubleValue.isFinite else { return nil }
+            return value.doubleValue
+        }
+        guard before["hasActivePresentationInvocation"] as? Bool == false,
+              let pid = number(before["pid"]), pid > 0, pid.rounded() == pid,
+              number(after["pid"]) == pid,
+              let namespace = before["namespace"] as? String, UUID(uuidString: namespace) != nil,
+              after["namespace"] as? String == namespace,
+              let presentation = before["presentationID"] as? String, UUID(uuidString: presentation) != nil,
+              after["presentationID"] as? String == presentation,
+              before["held"] as? Bool == true, before["released"] as? Bool == false,
+              after["held"] as? Bool == true, after["released"] as? Bool == false,
+              let active = after["hasActivePresentationInvocation"] as? Bool else { return false }
+        if !active { return true }
+        guard let startUTC = number(before["observedUTC"]), startUTC > 0,
+              let endUTC = number(after["observedUTC"]), endUTC >= startUTC,
+              let startUptime = number(before["observedUptime"]), startUptime > 0,
+              let endUptime = number(after["observedUptime"]), endUptime > startUptime,
+              let runtime = after["runtime"] as? [String: Any],
+              runtime["status"] as? String == "OBSERVED", runtime["isRunning"] as? Bool == true,
+              runtime["originCurrent"] as? Bool == true,
+              runtime["originPresentationID"] as? String == presentation,
+              let entry = runtime["entry"] as? [String: Any],
+              let id = entry["id"] as? String, UUID(uuidString: id) != nil,
+              let enteredUTC = number(entry["enteredUTC"]), enteredUTC >= startUTC, enteredUTC <= endUTC,
+              let enteredUptime = number(entry["enteredUptime"]), enteredUptime >= startUptime, enteredUptime <= endUptime,
+              let source = entry["source"] as? String,
+              ["rootForeground", "foregroundPoll", "networkReconnect", "localMutation", "remoteSyncEvent"].contains(source),
+              let action = entry["action"] as? String else { return false }
+        let phase: String
+        switch action {
+        case "push", "push-bootstrap", "push-recovery", "push-request-recovery", "push-drain":
+            phase = "pushing"
+        case "reconcile", "bootstrap", "recovery", "reconcile-push-drain":
+            phase = "reconciling"
+        default: return false
+        }
+        return after["phase"] as? String == phase
+    }
+
+    private func assertOrdinaryRootQuiet() throws {
+        try requirePresentation(app.descendants(matching: .any).matching(identifier: bannerIdentifier).count == 0,
+            "no-global-error-checking-banner")
+        try requirePresentation(app.descendants(matching: .any).matching(identifier: "sync-root-significant-work").count == 0,
+            "no-spinner-for-checking-without-flight")
+    }
+
+    private func observePresentation() throws -> [String: Any] {
+        let ledger = app.staticTexts["task145.root-presentation.ledger"]
+        func parse() -> [String: Any]? {
+            guard let value = ledger.value as? String, let bytes = Data(base64Encoded: value) else { return nil }
+            return (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any]
+        }
+        let previous = parse()?["observation"] as? Int ?? 0
+        let observe = app.descendants(matching: .any).matching(identifier: "task145.root-presentation.observe").firstMatch
+        try requirePresentation(observe.isHittable, "read-only-presentation-control")
+        observe.press(forDuration: 1.1)
+        let fresh = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in (parse()?["observation"] as? Int ?? 0) > previous }, object: nil)
+        try requirePresentation(XCTWaiter.wait(for: [fresh], timeout: 5) == .completed, "fresh-presentation-observation")
+        let result = try XCTUnwrap(parse())
+        let attachment = XCTAttachment(data: try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
+        attachment.name = "R23 root current owner and phase"; attachment.lifetime = .keepAlways; add(attachment)
+        return result
+    }
+
+    private func requirePresentation(_ condition: Bool, _ stage: String, file: StaticString = #filePath, line: UInt = #line) throws {
+        if !condition {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "R23 FIRST_FAIL " + stage; hierarchy.lifetime = .keepAlways; add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.lifetime = .keepAlways; add(screenshot)
+        }
+        XCTAssertTrue(condition, stage, file: file, line: line)
+        if !condition { throw NSError(domain: "Task145.RootPresentation", code: 1, userInfo: [NSLocalizedDescriptionKey: stage]) }
     }
 
     private func selectTab(_ title: String) throws {
@@ -233,7 +337,7 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         recordedResult = result
         emitDiagnostics("after-wait")
         XCTAssertEqual(result, .completed,
-                       "Require one native navigation bar for titled roots, the Inventory scroll/title pair, and one .other recovery-error banner container when visible; AX ambiguity is not a layout PASS")
+                       "Require one native navigation bar for titled roots, the Inventory scroll/title pair, and no global banner reservation in this no-owned-flight scenario; AX ambiguity is not a layout PASS")
         return try XCTUnwrap(settled, "No two complete stable root geometry samples were observed")
     }
 
@@ -332,8 +436,16 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
         let diagnostic = "fixture-band=\(fixtureBands);native-viewports=\(viewports);navigation=\(navigation);navigation-ancestors=\(navigationAncestors);control-ancestors=\(controlAncestors);banner-ancestors=\(bannerAncestors);inventory-scroll-title=\(inventoryAnchors);banner-identities=\(bannerIdentities);error-message-frames=\(messageFrames);message-labels=\(messageLabels);retry=\(retries);banner-container=\(banners);controls=\(controls);tabBar=\(tabBars);selected=\(selectedTabs);held=\(held);released=\(released)"
         guard (isInventory || navigation.count == 1), controls.count == 1, tabBars.count == 1,
               fixtureBands.count == 1, fixtureBands[0].width > 0, fixtureBands[0].height > 0,
+              fixtureBands[0].minY == root.frame.minY,
+              root.frame.contains(fixtureBands[0]), fixtureBands[0].contains(controls[0]),
               viewports.count == 1,
-              (showsBanner ? viewports[0] != root.frame : viewports[0] == root.frame),
+              // The synthetic controls occupy their own VStack band above the
+              // app. Only that attested band is excluded from the quiet root.
+              (showsBanner ? viewports[0] != root.frame :
+                abs(viewports[0].minX - root.frame.minX) <= pointPrecision
+                && abs(viewports[0].minY - fixtureBands[0].maxY) <= pointPrecision
+                && abs(viewports[0].width - root.frame.width) <= pointPrecision
+                && abs(viewports[0].height - (root.frame.maxY - fixtureBands[0].maxY)) <= pointPrecision),
               banners.count == (showsBanner ? 1 : 0), selectedTabs == 1, held, !released,
               (isInventory || navigation[0].height > 0), controls[0].height > 0, tabBars[0].height > 0,
               !isInventory || (inventoryAnchors.count == 1 && inventoryAnchors[0].scroll.height > 0
@@ -380,7 +492,7 @@ final class RootCloudBannerLayoutUITests: XCTestCase {
             let title = sample.inventoryTitle.map { String(describing: $0) } ?? "n/a"
             return "tab=\(sample.tab);fixture-band=\(sample.fixtureBand);native-viewport=\(sample.nativeViewport);error-messages=\(sample.messageFrames);message-labels=\(sample.messageLabels);retry=\(String(describing: sample.retryFrame));navigation=\(navigation);banner=\(banner);controls=\(sample.controls);tabBar=\(sample.tabBar);Inventory-scroll=\(scroll);Inventory-title=\(title)"
         }.joined(separator: "\n")
-        let evidence = XCTAttachment(string: "units=points;requested-category=\(category.rawValue);external-top=4;external-bottom=2;tolerance=1;Inventory-manual-vertical-padding=28;Inventory-shop-header-precedes-title;Inventory-native-bar-comparison=not-applicable\n" + frames)
+        let evidence = XCTAttachment(string: "units=points;requested-category=\(category.rawValue);global-banner-reservation=0;tolerance=1;Inventory-manual-vertical-padding=28;Inventory-shop-header-precedes-title;Inventory-native-bar-comparison=not-applicable\n" + frames)
         evidence.name = "Task144 four-tab actual root banner reservation: \(category.rawValue)"
         evidence.lifetime = .keepAlways
         add(evidence)

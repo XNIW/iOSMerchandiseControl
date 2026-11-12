@@ -3,13 +3,20 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct InventoryHomeView: View {
+    let isBusinessContentAvailable: Bool
+    let businessContentIsCurrent: @MainActor () -> Bool
+    let unavailableTitleKey: String
+    let unavailableDetailKey: String
+    let openOptions: (() -> Void)?
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @EnvironmentObject private var shopContextStore: ShopContextStore
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @Environment(\.modelContext) private var context
+    @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
 
-    @State private var showFileImporter = false
+    @StateObject private var workbookPreparation: LocalWorkbookPreparation
+    @State private var businessRequestID = UUID()
     @State private var showPreGenerate = false
     @State private var showShopPicker = false
     @State private var loadError: String?
@@ -17,8 +24,17 @@ struct InventoryHomeView: View {
     /// Serve per dire a GeneratedView se deve aprire subito lo scanner
     @State private var autoOpenScannerInGenerated = false
 
-    private static let allowedUTTypes: Set<UTType> = [.spreadsheet, .html]
-    private static let allowedExtensions: Set<String> = ["xlsx", "xls", "html", "htm"]
+    init(isBusinessContentAvailable: Bool, businessContentIsCurrent: @escaping @MainActor () -> Bool,
+         unavailableTitleKey: String = "sync.local.qualifying.title",
+         unavailableDetailKey: String = "sync.local.qualifying.detail", openOptions: (() -> Void)? = nil,
+         workbookPreparation: LocalWorkbookPreparation? = nil) {
+        self.isBusinessContentAvailable = isBusinessContentAvailable
+        self.businessContentIsCurrent = businessContentIsCurrent
+        self.unavailableTitleKey = unavailableTitleKey
+        self.unavailableDetailKey = unavailableDetailKey
+        self.openOptions = openOptions
+        _workbookPreparation = StateObject(wrappedValue: workbookPreparation ?? LocalWorkbookPreparation())
+    }
 
     private var loadedDataRowCount: Int {
         max(excelSession.rows.count - 1, 0)
@@ -48,76 +64,21 @@ struct InventoryHomeView: View {
         return L("inventory.home.no_file")
     }
 
-    /// Valida il tipo file usando UTType (primario) con fallback su estensione.
-    /// Gestisce file condivisi da altre app con nomi/estensioni poco affidabili.
-    private func isFileTypeSupported(_ url: URL) -> Bool {
-        // Primario: controlla il content type via URLResourceValues
-        if let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey]),
-           let contentType = resourceValues.contentType {
-            return Self.allowedUTTypes.contains(where: { contentType.conforms(to: $0) })
-        }
-        // Fallback: estensione (per file senza metadata o da sandbox restrittive)
-        return Self.allowedExtensions.contains(url.pathExtension.lowercased())
-    }
-
-    private func unsupportedFileDescription(for url: URL) -> String {
-        url.pathExtension.isEmpty
-            ? "\"\(url.lastPathComponent)\""
-            : ".\(url.pathExtension)"
-    }
-
-    private func handleImportFailure(_ error: Error) {
-        let nsError = error as NSError
-        if nsError.domain == NSCocoaErrorDomain, nsError.code == NSUserCancelledError {
-            return
-        }
-
-        loadError = excelSession.lastError ?? error.localizedDescription
-    }
-
-    private func loadSelectedFiles(_ urls: [URL], requiresSecurityScopedAccess: Bool) {
+    private func loadSelectedFiles(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
-
-        Task {
-            let accessFlags = requiresSecurityScopedAccess
-                ? urls.map { $0.startAccessingSecurityScopedResource() }
-                : Array(repeating: false, count: urls.count)
-            defer {
-                for (url, accessing) in zip(urls, accessFlags) where accessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            if let unsupportedURL = urls.first(where: { !isFileTypeSupported($0) }) {
-                loadError = L("inventory.home.error.unsupported_format", unsupportedFileDescription(for: unsupportedURL))
-                return
-            }
-
-            guard !excelSession.isLoading else {
-                loadError = L("inventory.home.error.import_in_progress")
-                return
-            }
-
-            // Reset stato navigazione locale per evitare conflitti
-            navigateToManualGenerated = false
-            autoOpenScannerInGenerated = false
-            showPreGenerate = false
-
-            do {
-                try await excelSession.load(from: urls, in: context)
-                showPreGenerate = true
-            } catch {
-                handleImportFailure(error)
-            }
-        }
+        navigateToManualGenerated = false; autoOpenScannerInGenerated = false; showPreGenerate = false
+        workbookPreparation.load(urls, session: excelSession)
     }
 
     private func loadExternalFile(_ url: URL) {
-        loadSelectedFiles([url], requiresSecurityScopedAccess: true)
+        loadSelectedFiles([url])
     }
 
     private func startManualInventory(autoOpenScanner: Bool) {
+        guard isBusinessContentAvailable, businessContentIsCurrent(), localWriteIsAllowed() else { return }
+        let requestID = businessRequestID
         Task {
+            guard requestID == businessRequestID, businessContentIsCurrent(), localWriteIsAllowed() else { return }
             do {
                 let entry: HistoryEntry
                 if autoOpenScanner,
@@ -144,21 +105,59 @@ struct InventoryHomeView: View {
         // Tiene questa root view reattiva ai cambi lingua anche se i testi passano da L(...).
         let _ = appLanguage
 
-        return ScrollView {
+        return Group {
+            if isBusinessContentAvailable {
+                businessContent
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    shopContextHeader
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                    LocalWorkbookPreparationView(preparation: workbookPreparation, session: excelSession,
+                        statusTitle: L(unavailableTitleKey), statusDetail: L(unavailableDetailKey), openOptions: openOptions)
+                }
+            }
+        }
+        .sheet(isPresented: $showShopPicker) { shopPickerSheet }
+        .onAppear { presentPreparedWorkbookIfAllowed() }
+        .onChange(of: workbookPreparation.completedRequestID) { _, _ in presentPreparedWorkbookIfAllowed() }
+        .onChange(of: isBusinessContentAvailable) { _, available in
+            guard !available else { presentPreparedWorkbookIfAllowed(); return }
+            // Withdraw destinations and invalidate in-flight presentation completions.
+            // The workbook and app-owned draft values are deliberately untouched.
+            businessRequestID = UUID()
+            showPreGenerate = false
+            navigateToManualGenerated = false
+            autoOpenScannerInGenerated = false
+            loadError = nil
+        }
+    }
+
+    private func presentPreparedWorkbookIfAllowed() {
+        guard isBusinessContentAvailable, businessContentIsCurrent(), excelSession.hasData,
+              let request = workbookPreparation.completedRequestID,
+              workbookPreparation.consumedRequestID != request else { return }
+        workbookPreparation.consumedRequestID = request
+        showPreGenerate = true
+    }
+
+    private var businessContent: some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 pageHeader
+                POSReadEntry()
 
                 headerSection
 
                 Button {
-                    showFileImporter = true
+                    workbookPreparation.isPickerPresented = true
                 } label: {
                     Label(L("inventory.home.select_files"), systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(excelSession.isLoading)
+                .disabled(excelSession.isLoading || workbookPreparation.isImporting)
                 .accessibilityHint(Text(L("inventory.home.subtitle")))
 
                 statusSection
@@ -180,66 +179,53 @@ struct InventoryHomeView: View {
             .padding(.vertical, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showShopPicker) {
-            shopPickerSheet
-        }
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .navigationDestination(isPresented: $showPreGenerate) {
-            PreGenerateView(onExitToHome: {
-                showPreGenerate = false
-            })
-            .environmentObject(excelSession)
+            if isBusinessContentAvailable, businessContentIsCurrent() {
+                PreGenerateView(onExitToHome: {
+                    showPreGenerate = false
+                })
+                .environmentObject(excelSession)
+            }
         }
         .navigationDestination(isPresented: $navigateToManualGenerated) {
             Group {
-                if let entry = excelSession.currentHistoryEntry {
-                    GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
-                } else {
-                    Text(L("inventory.home.no_inventory"))
-                        .foregroundStyle(.secondary)
+                if isBusinessContentAvailable, businessContentIsCurrent() {
+                    if let entry = excelSession.currentHistoryEntry {
+                        GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
+                    } else {
+                        Text(L("inventory.home.no_inventory"))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
-        // File picker: .spreadsheet + .html
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.spreadsheet, .html],
-            allowsMultipleSelection: true
-        ) { result in
-            switch result {
-            case .success(let urls):
-                loadSelectedFiles(urls, requiresSecurityScopedAccess: true)
-
-            case .failure(let error):
-                handleImportFailure(error)
-            }
-        }
         .alert(L("inventory.home.error.loading_title"), isPresented: Binding(
-            get: { loadError != nil },
+            get: { loadError != nil || workbookPreparation.errorMessage != nil },
             set: { newValue in
-                if !newValue { loadError = nil }
+                if !newValue { loadError = nil; workbookPreparation.errorMessage = nil }
             }
         )) {
             Button(L("common.ok"), role: .cancel) {
-                loadError = nil
+                loadError = nil; workbookPreparation.errorMessage = nil
             }
         } message: {
-            Text(loadError ?? L("inventory.home.error.unknown"))
+            Text(loadError ?? workbookPreparation.errorMessage ?? L("inventory.home.error.unknown"))
         }
         // Gestione file ricevuto da "Apri con" — warm resume
         .onChange(of: excelSession.pendingOpenURL) { _, newURL in
-            guard let url = newURL else { return }
+            guard businessContentIsCurrent(), let url = newURL else { return }
             excelSession.pendingOpenURL = nil
             loadExternalFile(url)
         }
         // Gestione file ricevuto da "Apri con" — cold launch
         .onAppear {
+            guard businessContentIsCurrent() else { return }
             if let url = excelSession.pendingOpenURL {
                 excelSession.pendingOpenURL = nil
                 loadExternalFile(url)
             }
         }
-        .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading || showFileImporter)
         .foregroundCloudWorkflowActivity(.scanner, isActive: navigateToManualGenerated && autoOpenScannerInGenerated)
         .foregroundCloudWorkflowActivity(.editing, isActive: showPreGenerate || navigateToManualGenerated)
     }
@@ -377,6 +363,13 @@ struct InventoryHomeView: View {
                     .fontWeight(.semibold)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if excelSession.hasData, !excelSession.isLoading, !workbookPreparation.isImporting {
+                    Button(L("pregenerate.title")) {
+                        guard isBusinessContentAvailable, businessContentIsCurrent() else { return }
+                        showPreGenerate = true
+                    }
+                }
+
                 if excelSession.isLoading {
                     if let progress = excelSession.progress {
                         ProgressView(value: progress)
@@ -406,6 +399,7 @@ struct InventoryHomeView: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
+        .disabled(!localWriteIsAllowed())
     }
 
     private var quickScannerButton: some View {
@@ -417,11 +411,12 @@ struct InventoryHomeView: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
+        .disabled(!localWriteIsAllowed())
     }
 }
 
 #Preview {
-    InventoryHomeView()
+    InventoryHomeView(isBusinessContentAvailable: true, businessContentIsCurrent: { true })
         .environmentObject(ExcelSessionViewModel())
         .environmentObject(ShopContextStore())
         .environmentObject(SupabaseAuthViewModel(authService: nil))

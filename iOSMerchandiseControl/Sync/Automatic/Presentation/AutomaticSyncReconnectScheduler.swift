@@ -78,13 +78,20 @@ final class AutomaticSyncReconnectScheduler: @unchecked Sendable {
 
 @MainActor
 final class AutomaticSyncNetworkReachabilityObserver {
-    private let scheduler: AutomaticSyncReconnectScheduler
+    private static var sharedMonitor: NWPathMonitor?
+    private static let monitorQueue = DispatchQueue(label: "AutomaticSyncNetworkReachabilityObserver")
+    private static var monitorID: UUID?
+    private static var lastStatus: AutomaticSyncNetworkStatus?
+    // Passive OS fact from the same monitor; requiresConnection is not OS-offline proof.
+    private(set) static var systemPathIsUnsatisfied: Bool?
+    private static var observers: [UUID: @MainActor (AutomaticSyncNetworkStatus) -> Void] = [:]
+
+    private let scheduler: AutomaticSyncReconnectScheduler?
     private let statusHandler: @MainActor @Sendable (AutomaticSyncNetworkStatus) -> Void
-    private var monitor: NWPathMonitor?
-    private var queue: DispatchQueue?
+    private let id = UUID()
 
     init(
-        scheduler: AutomaticSyncReconnectScheduler,
+        scheduler: AutomaticSyncReconnectScheduler? = nil,
         statusHandler: @escaping @MainActor @Sendable (AutomaticSyncNetworkStatus) -> Void = { _ in }
     ) {
         self.scheduler = scheduler
@@ -92,27 +99,45 @@ final class AutomaticSyncNetworkReachabilityObserver {
     }
 
     func start() {
-        guard monitor == nil else { return }
+        guard Self.observers[id] == nil else { return }
+        Self.observers[id] = { [weak self] status in
+            guard let self else { return }
+            statusHandler(status)
+            scheduler?.receive(status)
+        }
+        if let status = Self.lastStatus { Self.observers[id]?(status) }
+        guard Self.sharedMonitor == nil else { return }
         let monitor = NWPathMonitor()
-        let queue = DispatchQueue(label: "AutomaticSyncNetworkReachabilityObserver")
-        let scheduler = scheduler
-        let statusHandler = self.statusHandler
+        let monitorID = UUID()
         monitor.pathUpdateHandler = { path in
             let status: AutomaticSyncNetworkStatus = path.status == .satisfied ? .satisfied : .unsatisfied
-            Task { @MainActor [scheduler, statusHandler] in
-                statusHandler(status)
-                scheduler.receive(status)
+            let systemPathIsUnsatisfied = path.status == .unsatisfied
+            Task { @MainActor in
+                guard AutomaticSyncNetworkReachabilityObserver.monitorID == monitorID else { return }
+                AutomaticSyncNetworkReachabilityObserver.lastStatus = status
+                AutomaticSyncNetworkReachabilityObserver.systemPathIsUnsatisfied = systemPathIsUnsatisfied
+                let listeners = Array(AutomaticSyncNetworkReachabilityObserver.observers.keys)
+                for id in listeners {
+                    AutomaticSyncNetworkReachabilityObserver.observers[id]?(status)
+                }
             }
         }
-        self.monitor = monitor
-        self.queue = queue
-        monitor.start(queue: queue)
+        Self.sharedMonitor = monitor
+        Self.monitorID = monitorID
+        monitor.start(queue: Self.monitorQueue)
     }
 
     func cancel() {
-        monitor?.cancel()
-        monitor = nil
-        queue = nil
-        scheduler.cancel()
+        Self.observers.removeValue(forKey: id)
+        if Self.observers.isEmpty {
+            Self.sharedMonitor?.cancel()
+            Self.sharedMonitor = nil
+            Self.monitorID = nil
+            Self.lastStatus = nil
+            Self.systemPathIsUnsatisfied = nil
+        }
+        scheduler?.cancel()
     }
+
+    isolated deinit { cancel() }
 }

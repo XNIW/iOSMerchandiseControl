@@ -251,6 +251,62 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
     static var beforeOwnedStagingJournalTransitionForTesting: ((Task126VerifiedOwnerStoreScope) -> Void)?
     #endif
 
+    #if DEBUG
+    // TASK145_UI03_FIRST_FAILURE: finite observation only; no recovery authority.
+    nonisolated enum FirstFailureStage: String, Sendable {
+        case attemptAdmission, checkpointA, prepareStaging, stagingJournal, restoreOrCreateStaging
+        case supplierPages, categoryPages, productPages, pricePages, historyPages, imagePages
+        case ledgerReceipt, stagingFence, checkpointB, receiptVersusB, verifyTail
+        case authorityAndFence, prefixVerification, baselineFinish, storeVerification
+        case marker, verifiedJournal, publication, finalization, summary
+    }
+
+    nonisolated struct FirstFailureObservation: Equatable, Sendable {
+        let invocationID: UUID
+        let attempt: Int
+        let stage: FirstFailureStage
+        let category: String
+        let manifestActivated: Bool
+    }
+
+    private var firstFailureObserverForTesting: (@Sendable (FirstFailureObservation) -> Void)?
+
+    func setFirstFailureObserverForTesting(_ observer: @escaping @Sendable (FirstFailureObservation) -> Void) {
+        firstFailureObserverForTesting = observer
+    }
+
+    private func observeFirstFailure(
+        _ error: Error, attempt: Int, stage: FirstFailureStage, manifestActivated: Bool,
+        invocationID: UUID, firstFailure: inout FirstFailureObservation?
+    ) {
+        guard firstFailure == nil else { return }
+        let category: String
+        switch error as? AtomicGenerationRecoveryError {
+        case .journalTransitionRejected?: category = "AtomicGenerationRecoveryError.journalTransitionRejected"
+        case .journalCompletionRejected?: category = "AtomicGenerationRecoveryError.journalCompletionRejected"
+        case .pendingLocalWorkRequiresDrain?: category = "AtomicGenerationRecoveryError.pendingLocalWorkRequiresDrain"
+        case nil: category = Task144RootObservation.errorCategory(error)
+        }
+        let observation = FirstFailureObservation(invocationID: invocationID, attempt: attempt,
+            stage: stage, category: category, manifestActivated: manifestActivated)
+        firstFailure = observation
+        firstFailureObserverForTesting?(observation)
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAVE_BEFORE_ACTIVATION_UI"] == "name-price",
+              let runID = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) else { return }
+        // The existing observation buffer excludes T10. This one closed record
+        // is emitted through the system log; native capture must be qualified separately.
+        NSLog("%@", "TASK145_UI03_FIRST_FAILURE schema=1 runID=\(runID.uuidString.lowercased()) pid=\(ProcessInfo.processInfo.processIdentifier) invocationID=\(invocationID.uuidString.lowercased()) attempt=\(attempt) stage=\(stage.rawValue) category=\(category) manifestActivated=\(manifestActivated)")
+    }
+    #endif
+    #if DEBUG
+    private func observeT10ActivatedResume(_ stage: String, generationID: UUID, phase: String) {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAVE_BEFORE_ACTIVATION_UI"] == "name-price",
+              let runID = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) else { return }
+        NSLog("%@", "TASK145_UI03_RESUME schema=1 runID=\(runID.uuidString.lowercased()) pid=\(ProcessInfo.processInfo.processIdentifier) stage=\(stage) cancelled=\(Task.isCancelled) generationID=\(generationID.uuidString.lowercased()) phase=\(phase)")
+    }
+    #endif
     private enum ActivatedGenerationCompletion {
         case completed(SyncRecoverySnapshotPullSummary)
         case restage(SyncStoreGenerationManifest, AccountRecoveryJournalSnapshot)
@@ -287,11 +343,38 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         // Reset only for a new top-level invocation so a changing checkpoint
         // cannot multiply the allowed network/memory footprint.
         await recoveryRemote.resetResourceBudget()
+        let legacyContinuation = AutomaticSyncAttemptContext.legacyContinuation
+        let reconciliation = AutomaticSyncAttemptContext.reconciliation
+        if let reconciliation {
+            guard legacyContinuation == nil, AutomaticSyncAttemptContext.publishedFinalization == nil,
+                  AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == reconciliation.journal,
+                  reconciliation.journal.mode == .sameScopeRecovery,
+                  reconciliation.journal.phase == .prepared || reconciliation.journal.phase == .staging else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+        }
+        if let terminal = AutomaticSyncAttemptContext.publishedFinalization {
+            // Hard terminal boundary before ensureRecoveryJournal can create
+            // or mutate any journal. A mismatch never falls into staging.
+            let scope = try captureRecoveryScope(ownerUserID: ownerUserID)
+            guard legacyContinuation == nil else { throw AtomicGenerationRecoveryError.journalTransitionRejected }
+            try await validatePublishedFinalization(terminal, ownerUserID: ownerUserID)
+            guard let completed = try await completeActivatedGenerationIfPossible(ownerUserID: ownerUserID, scope: scope),
+                  case .completed(let summary) = completed else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+            return summary
+        }
+        if legacyContinuation != nil {
+            guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal != nil else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+        }
         var scope = try await ensureRecoveryJournal(ownerUserID: ownerUserID)
         try await reportProgress(.preparing, scope: scope)
         var restagingFloor: SyncStoreGenerationManifest?
         var restagingJournal: AccountRecoveryJournalSnapshot?
-        if let resumed = try await completeActivatedGenerationIfPossible(
+        if legacyContinuation == nil, let resumed = try await completeActivatedGenerationIfPossible(
             ownerUserID: ownerUserID,
             scope: scope
         ) {
@@ -309,22 +392,63 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         try validateJournal(scope: scope)
         try await requireDrainedActiveStoreForSameScopeRecovery(scope: scope)
 
+        let reconciliationAdmission: ReconciliationAdmission?
+        if let reconciliation {
+            reconciliationAdmission = try await qualifyReconciliation(reconciliation, scope: scope)
+        } else { reconciliationAdmission = nil }
+        let legacyAdmission: LegacyPrefixAdmission?
+        if let legacyContinuation {
+            legacyAdmission = try await qualifyLegacyPrefix(legacyContinuation, scope: scope)
+        } else { legacyAdmission = nil }
+        let admittedAttempts = legacyContinuation != nil || reconciliation?.isLegacyOrigin == true ? 1 : maximumAttempts
         var lastCheckpointError: Error?
-        for attempt in 1...maximumAttempts {
+        #if DEBUG
+        let firstFailureInvocationID = UUID()
+        var firstFailure: FirstFailureObservation?
+        #endif
+        for attempt in 1...admittedAttempts {
             var staging: SyncStoreGenerationHandle?
             var ledger: ShopSyncRecoveryLedger?
             var manifestActivated = false
             var activatedManifest: SyncStoreGenerationManifest?
             var activatedJournal: AccountRecoveryJournalSnapshot?
+            var verifiedSnapshotChange = false
+            #if DEBUG
+            var firstFailureStage = FirstFailureStage.attemptAdmission
+            #endif
             do {
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try validateJournal(scope: scope)
                 try await reportProgress(.checkpoint, scope: scope)
+                if let legacyAdmission {
+                    try await revalidateLegacyPrefix(legacyAdmission, scope: scope)
+                    guard let begin = AutomaticSyncAttemptContext.begin, await begin() else {
+                        throw AtomicGenerationRecoveryError.journalTransitionRejected
+                    }
+                    try await revalidateLegacyPrefix(legacyAdmission, scope: scope)
+                }
+                if attempt == 1, let reconciliationAdmission {
+                    try await revalidateReconciliation(reconciliationAdmission, scope: scope)
+                    guard let begin = AutomaticSyncAttemptContext.begin, await begin() else {
+                        throw AtomicGenerationRecoveryError.journalTransitionRejected
+                    }
+                    try await revalidateReconciliation(reconciliationAdmission, scope: scope)
+                    if reconciliationAdmission.unacceptedStage != nil {
+                        try await quarantineUnacceptedReconciliationStage(reconciliationAdmission, scope: scope)
+                    }
+                }
+                #if DEBUG
+                firstFailureStage = .checkpointA
+                #endif
                 let freshAdmission = try await recoveryRemote.checkpoint(
                     ownerUserID: ownerUserID,
                     scope: scope
                 )
+                #if DEBUG
+                firstFailureStage = .authorityAndFence
+                #endif
                 try revalidate(scope, ownerUserID: ownerUserID)
+                if let legacyAdmission { try await revalidateLegacyPrefix(legacyAdmission, scope: scope) }
                 if let restagingFloor {
                     guard let restagingJournal else {
                         throw AtomicGenerationRecoveryError.journalTransitionRejected
@@ -332,22 +456,34 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     try await validateRestagingCheckpoint(freshAdmission, scope: scope,
                         manifest: restagingFloor, journal: restagingJournal)
                 }
+                #if DEBUG
+                firstFailureStage = .prepareStaging
+                #endif
                 let resumeID = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal?.generationID
-                let prepared = try await storeGenerationController.prepareStaging(
-                    accountHash: scope.accountHash,
-                    shopID: scope.shopID,
-                    storeIdentity: scope.storeIdentity,
-                    deviceIdentityHash: scope.deviceIdentityHash,
-                    resumeGenerationID: resumeID
-                )
+                let prepared: SyncStoreGenerationHandle
+                if let legacyAdmission { prepared = legacyAdmission.staging }
+                else {
+                    prepared = try await storeGenerationController.prepareStaging(
+                        accountHash: scope.accountHash, shopID: scope.shopID, storeIdentity: scope.storeIdentity,
+                        deviceIdentityHash: scope.deviceIdentityHash, resumeGenerationID: resumeID)
+                }
                 staging = prepared
+                #if DEBUG
+                firstFailureStage = .stagingJournal
+                #endif
                 let bindingStore = AccountBindingStore(defaults: defaultsBox.value)
-                guard let stagedJournal = await recordStagingJournal(scope: scope,
-                    generationID: prepared.generationID, expectedJournal: restagingJournal) else {
+                let stagedJournal: AccountRecoveryJournalSnapshot?
+                if let legacyAdmission { stagedJournal = legacyAdmission.journal }
+                else { stagedJournal = await recordStagingJournal(scope: scope,
+                    generationID: prepared.generationID, expectedJournal: restagingJournal) }
+                guard let stagedJournal else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
                 if restagingFloor != nil { restagingJournal = stagedJournal }
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
+                #if DEBUG
+                firstFailureStage = .restoreOrCreateStaging
+                #endif
                 let progress = try AtomicRecoveryPageProgress.read(staging: prepared)
                 let checkpointA: ShopSyncRecoveryCheckpoint
                 let state: AtomicRecoveryStagingState
@@ -368,6 +504,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                         mode: .resumeAccepted(byteOffsets: offsets))
                     try restoreAcceptedRelationships(state: state, staging: prepared, ledger: persistedLedger)
                 } else {
+                    guard legacyAdmission == nil else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
                     checkpointA = freshAdmission
                     try await storeGenerationController.resetStaging(prepared)
                     state = AtomicRecoveryStagingState()
@@ -379,6 +516,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 }
                 ledger = persistedLedger
 
+                #if DEBUG
+                firstFailureStage = .supplierPages
+                #endif
                 try await stageSuppliers(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -387,6 +527,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     ledger: persistedLedger,
                     state: state
                 )
+                #if DEBUG
+                firstFailureStage = .categoryPages
+                #endif
                 try await stageCategories(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -395,6 +538,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     ledger: persistedLedger,
                     state: state
                 )
+                #if DEBUG
+                firstFailureStage = .productPages
+                #endif
                 try await stageProducts(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -405,6 +551,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 )
                 state.supplierModelIDs.removeAll(keepingCapacity: false)
                 state.categoryModelIDs.removeAll(keepingCapacity: false)
+                #if DEBUG
+                firstFailureStage = .pricePages
+                #endif
                 try await stagePrices(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -414,6 +563,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     state: state
                 )
                 state.productModelIDs.removeAll(keepingCapacity: false)
+                #if DEBUG
+                firstFailureStage = .historyPages
+                #endif
                 try await stageHistory(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -422,6 +574,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     ledger: persistedLedger,
                     state: state
                 )
+                #if DEBUG
+                firstFailureStage = .imagePages
+                #endif
                 try await stageImages(
                     checkpoint: checkpointA,
                     ownerUserID: ownerUserID,
@@ -436,6 +591,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 // version. Keep the bounded tombstone identity set until
                 // image rows have consumed that explicit tombstone semantic.
                 state.tombstonedProductIDs.removeAll(keepingCapacity: false)
+                #if DEBUG
+                firstFailureStage = .ledgerReceipt
+                #endif
                 try await reportProgress(.verifying, scope: scope)
                 try persistedLedger.closeWrites()
                 let receipt = try persistedLedger.receipt(
@@ -452,15 +610,24 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 // boundary.  Checkpoint B and the event-tail proof must not
                 // be allowed to hide a concurrent staging mutation by merely
                 // recapturing a later fence.
+                #if DEBUG
+                firstFailureStage = .stagingFence
+                #endif
                 let stagingFenceBeforeCheckpointB = try await storeGenerationController
                     .captureMutationFence(for: prepared)
                 try revalidate(scope, ownerUserID: ownerUserID)
+                #if DEBUG
+                firstFailureStage = .checkpointB
+                #endif
                 let checkpointB = try await recoveryRemote.checkpoint(
                     ownerUserID: ownerUserID,
                     scope: scope,
                     verifiedBaselineID: checkpointA.syncEvents.maxId,
                     expectedBaselineScopeKey: checkpointA.syncEvents.maxId == "0" ? nil : checkpointA.scope.key
                 )
+                #if DEBUG
+                firstFailureStage = .receiptVersusB
+                #endif
                 if let restagingFloor {
                     guard let restagingJournal else {
                         throw AtomicGenerationRecoveryError.journalTransitionRejected
@@ -468,16 +635,48 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     try await validateRestagingCheckpoint(checkpointB, scope: scope,
                         manifest: restagingFloor, journal: restagingJournal)
                 }
-                guard Self.isMonotonicRecoveryFence(checkpointB, from: checkpointA),
-                      receipt.matches(checkpointB) else {
+                guard Self.isMonotonicRecoveryFence(checkpointB, from: checkpointA) else {
                     throw ShopSyncRecoveryContractError.checkpointChanged
                 }
+                if !receipt.matches(checkpointB) {
+                    if Self.isMonotonicAdvance(checkpointB, from: checkpointA) {
+                        // Only a scoped monotonic remote advance, a complete
+                        // tail and an unchanged physically valid staged body
+                        // distinguish snapshot drift from corruption.
+                        #if DEBUG
+                        firstFailureStage = .verifyTail
+                        #endif
+                        try await recoveryRemote.verifyTail(ownerUserID: ownerUserID, scope: scope,
+                            from: checkpointA, through: checkpointB)
+                        #if DEBUG
+                        firstFailureStage = .authorityAndFence
+                        #endif
+                        try revalidate(scope, ownerUserID: ownerUserID)
+                        try await storeGenerationController.validateMutationFence(stagingFenceBeforeCheckpointB, for: prepared)
+                        #if DEBUG
+                        firstFailureStage = .prefixVerification
+                        #endif
+                        try verifyPersistedStore(state: state, checkpoint: checkpointA,
+                            container: prepared.container, ownerUserID: ownerUserID, acceptedPrefixOnly: true)
+                        verifiedSnapshotChange = true
+                    }
+                    #if DEBUG
+                    firstFailureStage = .receiptVersusB
+                    #endif
+                    throw ShopSyncRecoveryContractError.checkpointChanged
+                }
+                #if DEBUG
+                firstFailureStage = .verifyTail
+                #endif
                 try await recoveryRemote.verifyTail(
                     ownerUserID: ownerUserID,
                     scope: scope,
                     from: checkpointA,
                     through: checkpointB
                 )
+                #if DEBUG
+                firstFailureStage = .authorityAndFence
+                #endif
                 try revalidate(scope, ownerUserID: ownerUserID)
                 try await storeGenerationController.validateMutationFence(
                     stagingFenceBeforeCheckpointB,
@@ -486,12 +685,18 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 // Baseline metadata is published into the staging generation
                 // only after B and its complete tail have proven the live
                 // receipt.  It must therefore carry B's counts, never A's.
+                #if DEBUG
+                firstFailureStage = .baselineFinish
+                #endif
                 try finishBaselineRun(
                     state: state,
                     checkpoint: checkpointB,
                     container: prepared.container,
                     scope: scope
                 )
+                #if DEBUG
+                firstFailureStage = .storeVerification
+                #endif
                 try verifyPersistedStore(
                     state: state,
                     checkpoint: checkpointB,
@@ -501,15 +706,24 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 // Capture the physical generation fence after the final local
                 // metadata write.  Marker is an async boundary; activation
                 // compares this fence before publishing the pointer.
+                #if DEBUG
+                firstFailureStage = .stagingFence
+                #endif
                 let mutationFence = try await storeGenerationController
                     .captureMutationFence(for: prepared)
                 try revalidate(scope, ownerUserID: ownerUserID)
+                #if DEBUG
+                firstFailureStage = .marker
+                #endif
                 _ = try await recoveryRemote.marker(
                     ownerUserID: ownerUserID,
                     scope: scope,
                     baselineCheckpoint: checkpointB,
                     localVerification: receipt
                 )
+                #if DEBUG
+                firstFailureStage = .verifiedJournal
+                #endif
                 try revalidate(scope, ownerUserID: ownerUserID)
                 guard let verifiedJournal = await recordVerifiedJournal(scope: scope,
                     generationID: prepared.generationID, checkpointDigest: checkpointB.checkpointDigest,
@@ -523,6 +737,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                       restagingFloor == nil || journal == restagingJournal else {
                     throw AtomicGenerationRecoveryError.journalTransitionRejected
                 }
+                #if DEBUG
+                firstFailureStage = .publication
+                #endif
                 try await reportProgress(.activating, scope: scope)
                 let publishedManifest = try await storeGenerationController.activate(
                     prepared,
@@ -538,6 +755,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 activatedManifest = publishedManifest
                 activatedJournal = journal
 
+                #if DEBUG
+                firstFailureStage = .finalization
+                #endif
                 scope = try captureRecoveryScope(ownerUserID: ownerUserID)
                 try revalidate(scope, ownerUserID: ownerUserID)
                 try await reportProgress(.finalizing, scope: scope)
@@ -546,19 +766,30 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     throw AtomicGenerationRecoveryError.journalCompletionRejected
                 }
 
+                #if DEBUG
+                firstFailureStage = .summary
+                #endif
                 return try await makeSummary(
                     checkpoint: checkpointB,
                     generationID: prepared.generationID,
                     finalizedManifest: finalizedManifest
                 )
             } catch is CancellationError {
+                #if DEBUG
+                observeFirstFailure(CancellationError(), attempt: attempt, stage: firstFailureStage,
+                    manifestActivated: manifestActivated, invocationID: firstFailureInvocationID, firstFailure: &firstFailure)
+                #endif
                 if let ledger { try? ledger.closeWrites() }
                 // Accepted pages belong only to this scoped staging generation.
                 // Their durable cursor can be reused after cancellation/reopen.
                 throw CancellationError()
             } catch ShopSyncRecoveryContractError.checkpointChanged {
+                #if DEBUG
+                observeFirstFailure(ShopSyncRecoveryContractError.checkpointChanged, attempt: attempt, stage: firstFailureStage,
+                    manifestActivated: manifestActivated, invocationID: firstFailureInvocationID, firstFailure: &firstFailure)
+                #endif
                 if let ledger { try? ledger.closeWrites() }
-                await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
+                if legacyAdmission == nil { await quarantineIfUnpublished(staging, manifestActivated: manifestActivated) }
                 // The convergence marker is obtained before the pointer is
                 // published.  A checkpoint failure after publication can no
                 // longer be retried by treating a changed cloud as complete:
@@ -567,10 +798,16 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 if manifestActivated {
                     throw ShopSyncRecoveryContractError.checkpointChanged
                 }
-                lastCheckpointError = ShopSyncRecoveryContractError.checkpointChanged
-                guard attempt < maximumAttempts else { break }
+                lastCheckpointError = verifiedSnapshotChange
+                    ? AutomaticSyncFailure(disposition: .reconciliation, category: .snapshotChanged)
+                    : ShopSyncRecoveryContractError.checkpointChanged
+                guard attempt < admittedAttempts else { break }
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000)
             } catch let error as Task126OwnerStoreGateError where error == .scopeChanged && manifestActivated {
+                #if DEBUG
+                observeFirstFailure(error, attempt: attempt, stage: firstFailureStage,
+                    manifestActivated: manifestActivated, invocationID: firstFailureInvocationID, firstFailure: &firstFailure)
+                #endif
                 if let ledger { try? ledger.closeWrites() }
                 guard let activatedManifest, let activatedJournal,
                       let resumed = try await completePublishedSameScopeGenerationAfterLeaseRefresh(
@@ -582,7 +819,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     // This publication consumed one of the existing attempts.
                     // Reverify a fresh, changed archive only within that budget;
                     // all active-generation/journal/fence guards still apply.
-                    guard attempt < maximumAttempts else {
+                    guard attempt < admittedAttempts else {
                         throw ShopSyncRecoveryContractError.markerNotVerified
                     }
                     restagingFloor = manifest
@@ -590,8 +827,12 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                     lastCheckpointError = ShopSyncRecoveryContractError.markerNotVerified
                 }
             } catch {
+                #if DEBUG
+                observeFirstFailure(error, attempt: attempt, stage: firstFailureStage,
+                    manifestActivated: manifestActivated, invocationID: firstFailureInvocationID, firstFailure: &firstFailure)
+                #endif
                 if let ledger { try? ledger.closeWrites() }
-                if !Self.isResumableTransportFailure(error) {
+                if legacyAdmission == nil && !Self.isResumableTransportFailure(error) {
                     await quarantineIfUnpublished(staging, manifestActivated: manifestActivated)
                 }
                 throw error
@@ -672,6 +913,160 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         ))
         // Presentation is an async boundary. Never carry authorization across
         // it into a write or publication without the existing scope fence.
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+    }
+
+    private struct ReconciliationAdmission {
+        let descriptor: SyncRecoveryReconciliation
+        let prefix: LegacyPrefixAdmission?
+        let unacceptedStage: SyncStoreGenerationHandle?
+        let fence: SyncStoreGenerationMutationFence?
+    }
+
+    private func qualifyReconciliation(_ descriptor: SyncRecoveryReconciliation,
+        scope: Task126VerifiedOwnerStoreScope) async throws -> ReconciliationAdmission {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard let journal = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal,
+              journal == descriptor.journal, journal.mode == .sameScopeRecovery,
+              await SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == descriptor.identity else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        if journal.phase == .prepared {
+            guard journal.generationID == nil,
+                  journal.watermark == nil, journal.baselineRunID == nil else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+            return ReconciliationAdmission(descriptor: descriptor, prefix: nil, unacceptedStage: nil, fence: nil)
+        }
+        guard journal.phase == .staging, let generationID = journal.generationID else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        let staging = try await storeGenerationController.existingStaging(scope: scope,
+            generationID: generationID, requiresAcceptedPrefix: false)
+        let directory = staging.storeURL.deletingLastPathComponent()
+        let progressExists = FileManager.default.fileExists(atPath: directory
+            .appendingPathComponent(AtomicRecoveryPageProgress.fileName).path)
+        let hasUnacceptedPage = FileManager.default.fileExists(atPath: directory
+            .appendingPathComponent(AtomicRecoveryPageProgress.preparedFileName).path)
+        if progressExists && !hasUnacceptedPage {
+            let prefix = try await qualifyLegacyPrefix(SyncLegacyRecoveryContinuation(identity: descriptor.identity,
+                legacySHA256: descriptor.sourceDigest, generationID: generationID), scope: scope,
+                requiresAcceptedRows: false)
+            return ReconciliationAdmission(descriptor: descriptor, prefix: prefix, unacceptedStage: nil, fence: nil)
+        }
+        // An absent accepted cursor or a prepared-but-unaccepted page cannot
+        // attest this stage. Keep its bytes and only quarantine this exact
+        // unpublished generation. Any local business intent makes even that
+        // operation inadmissible; the authoritative store is never touched.
+        let context = ModelContext(staging.container)
+        context.autosaveEnabled = false
+        guard try context.fetchCount(FetchDescriptor<LocalPendingChange>()) == 0,
+              try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()) == 0 else {
+            throw SyncStoreGenerationError.activationReadBackFailed
+        }
+        let fence = try await storeGenerationController.captureMutationFence(for: staging)
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == journal else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        return ReconciliationAdmission(descriptor: descriptor, prefix: nil, unacceptedStage: staging, fence: fence)
+    }
+
+    @MainActor
+    private func quarantineUnacceptedReconciliationStage(_ admission: ReconciliationAdmission,
+        scope: Task126VerifiedOwnerStoreScope) throws {
+        try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaultsBox.value) {
+            guard let stage = admission.unacceptedStage, let fence = admission.fence,
+                  AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == admission.descriptor.journal,
+                  storeGenerationController.activeManifest?.generationID != stage.generationID else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+            try storeGenerationController.validateMutationFence(fence, for: stage)
+            storeGenerationController.quarantine(stage)
+        }
+    }
+
+    private func revalidateReconciliation(_ admission: ReconciliationAdmission,
+        scope: Task126VerifiedOwnerStoreScope) async throws {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == admission.descriptor.journal else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        if let prefix = admission.prefix { try await revalidateLegacyPrefix(prefix, scope: scope) }
+        if let stage = admission.unacceptedStage, let fence = admission.fence {
+            try await storeGenerationController.validateMutationFence(fence, for: stage)
+        }
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+    }
+
+    private struct LegacyPrefixAdmission {
+        let staging: SyncStoreGenerationHandle
+        let journal: AccountRecoveryJournalSnapshot
+        let progressBytes: Data
+        let fence: SyncStoreGenerationMutationFence
+    }
+
+    private func qualifyLegacyPrefix(_ continuation: SyncLegacyRecoveryContinuation,
+        scope: Task126VerifiedOwnerStoreScope, requiresAcceptedRows: Bool = true) async throws -> LegacyPrefixAdmission {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard let journal = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal,
+              journal.mode == .sameScopeRecovery, journal.phase == .staging,
+              journal.generationID == continuation.generationID,
+              await SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == continuation.identity else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        let staging = try await storeGenerationController.existingStaging(scope: scope, generationID: continuation.generationID)
+        guard let progress = try AtomicRecoveryPageProgress.read(staging: staging) else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+        try progress.validate(staging: staging, scope: scope, pageLimit: pageLimit)
+        try progress.checkpointA.validate(expectedShopID: scope.shopID,
+            expectedDeviceIdentifier: scope.deviceInstallID, expectedOwnerUserID: scope.ownerUserID)
+        guard !requiresAcceptedRows || progress.domains.values.contains(where: { $0.processed > 0 }) else {
+            throw ShopSyncRecoveryContractError.invalidCheckpoint
+        }
+        let ledger = try ShopSyncRecoveryLedger(generationStoreURL: staging.storeURL, mode: .readExisting)
+        let offsets = try ledger.acceptedByteOffsets()
+        for domain in ShopSyncRecoveryDomain.allCases {
+            guard offsets[domain, default: 0] == (progress.domains[domain.rawValue]?.ledgerBytes ?? 0) else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+            }
+        }
+        let state = AtomicRecoveryStagingState(baselineRunID: progress.baselineRunID)
+        state.pageProgress = progress
+        try progress.proofs.restore(state)
+        try restoreAcceptedRelationships(state: state, staging: staging, ledger: ledger)
+        // Pages are live: their accepted proof may differ from checkpoint A.
+        // Validate ledger structure now; terminal B/tail still qualifies it.
+        _ = try ledger.receipt(relationshipViolationCount: 0, pendingLocalCount: 0, outboxCount: 0)
+        for domain in ShopSyncRecoveryDomain.allCases {
+            let cursor = progress.domains[domain.rawValue]
+            var lastID: String?
+            try ledger.forEachRecord(for: domain) { lastID = $0.orderingID }
+            guard cursor?.afterID == (cursor?.complete == true ? nil : lastID) else {
+                throw ShopSyncRecoveryContractError.persistedLedgerInvalid(domain: domain)
+            }
+        }
+        try verifyPersistedStore(state: state, checkpoint: progress.checkpointA,
+            container: staging.container, ownerUserID: scope.ownerUserID, acceptedPrefixOnly: true)
+        let progressBytes = try AtomicRecoveryPageProgress.boundedRead(staging.storeURL.deletingLastPathComponent()
+            .appendingPathComponent(AtomicRecoveryPageProgress.fileName), limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes)
+        let fence = try await storeGenerationController.captureMutationFence(for: staging)
+        let admission = LegacyPrefixAdmission(staging: staging, journal: journal, progressBytes: progressBytes, fence: fence)
+        try await revalidateLegacyPrefix(admission, scope: scope)
+        return admission
+    }
+
+    private func revalidateLegacyPrefix(_ admission: LegacyPrefixAdmission,
+        scope: Task126VerifiedOwnerStoreScope) async throws {
+        try revalidate(scope, ownerUserID: scope.ownerUserID)
+        guard AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal == admission.journal else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
+        let current = try AtomicRecoveryPageProgress.boundedRead(admission.staging.storeURL.deletingLastPathComponent()
+            .appendingPathComponent(AtomicRecoveryPageProgress.fileName), limit: ShopSyncRecoveryLimits.maximumGenerationManifestBytes)
+        guard current == admission.progressBytes else { throw ShopSyncRecoveryContractError.invalidCheckpoint }
+        try await storeGenerationController.validateMutationFence(admission.fence, for: admission.staging)
         try revalidate(scope, ownerUserID: scope.ownerUserID)
     }
 
@@ -758,9 +1153,28 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
 
     @MainActor
     private func completeRecoveryJournal(scope: Task126VerifiedOwnerStoreScope) throws -> Bool {
-        try AccountBindingStore(defaults: defaultsBox.value).completePendingReplacementRecovery(
+        let completed = try AccountBindingStore(defaults: defaultsBox.value).completePendingReplacementRecovery(
             accountHash: scope.accountHash, storeIdentity: scope.storeIdentity,
             expectedLeaseGeneration: scope.leaseGeneration)
+        guard completed else { return false }
+        // Cleanup invalidates the old pending-journal context. Re-attest only
+        // the already qualified, unchanged live body against the durable final
+        // context; a failed optional seal still takes the real startup fallback.
+        storeGenerationController.sealFinalizedLocalBodyProof(ownerUserID: scope.ownerUserID)
+        return true
+    }
+
+    @MainActor
+    private func validatePublishedFinalization(_ terminal: SyncPublishedRecoveryFinalization,
+        ownerUserID: UUID) throws {
+        guard let manifest = storeGenerationController.activeManifest,
+              let journal = AccountBindingStore(defaults: defaultsBox.value).pendingRecoveryJournal,
+              SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal) == terminal.identity,
+              terminal.matches(manifest: manifest, journal: journal),
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: storeGenerationController.modelContainer,
+                ownerUserID: ownerUserID, defaults: defaultsBox.value) else {
+            throw AtomicGenerationRecoveryError.journalTransitionRejected
+        }
     }
 
     private func completeActivatedGenerationIfPossible(
@@ -777,11 +1191,26 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
               journal.phase == .verified || journal.phase == .activated else {
             return nil
         }
+        #if DEBUG
+        observeT10ActivatedResume("matched-enter", generationID: manifest.generationID, phase: journal.phase.rawValue)
+        defer {
+            // Exit also runs on throw; it is not a successful completion claim.
+            observeT10ActivatedResume("matched-exit", generationID: manifest.generationID, phase: journal.phase.rawValue)
+        }
+        #endif
+        if let terminal = AutomaticSyncAttemptContext.publishedFinalization {
+            guard terminal.matches(manifest: manifest, journal: journal) else {
+                throw AtomicGenerationRecoveryError.journalTransitionRejected
+            }
+        }
         let isAlreadyFinalized = try await storeGenerationController
             .isActiveRecoveryFinalized(scope: scope)
         _ = try await storeGenerationController.restoreActivatedMetadataIfAuthorized(scope: scope)
         let refreshedScope = try captureRecoveryScope(ownerUserID: ownerUserID)
         try await reportProgress(.finalizing, scope: refreshedScope)
+        if let terminal = AutomaticSyncAttemptContext.publishedFinalization {
+            try await validatePublishedFinalization(terminal, ownerUserID: ownerUserID)
+        }
         if isAlreadyFinalized {
             guard try await completeRecoveryJournal(scope: refreshedScope) else {
                 throw AtomicGenerationRecoveryError.journalCompletionRejected
@@ -800,6 +1229,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
                 localVerification: manifest.localVerification
             )
         } catch ShopSyncRecoveryContractError.markerNotVerified {
+            guard AutomaticSyncAttemptContext.publishedFinalization == nil else {
+                throw ShopSyncRecoveryContractError.markerNotVerified
+            }
             try revalidate(refreshedScope, ownerUserID: ownerUserID)
             guard journal.mode == .sameScopeRecovery, journal.phase == .activated else {
                 throw ShopSyncRecoveryContractError.markerNotVerified
@@ -810,6 +1242,9 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
             return .restage(manifest, journal)
         }
         try revalidate(refreshedScope, ownerUserID: ownerUserID)
+        if let terminal = AutomaticSyncAttemptContext.publishedFinalization {
+            try await validatePublishedFinalization(terminal, ownerUserID: ownerUserID)
+        }
         let finalizedManifest = try await storeGenerationController.markRecoveryFinalized(scope: refreshedScope)
         guard try await completeRecoveryJournal(scope: refreshedScope) else {
             throw AtomicGenerationRecoveryError.journalCompletionRejected
@@ -1926,7 +2361,8 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
         state: AtomicRecoveryStagingState,
         checkpoint: ShopSyncRecoveryCheckpoint,
         container: ModelContainer,
-        ownerUserID: UUID
+        ownerUserID: UUID,
+        acceptedPrefixOnly: Bool = false
     ) throws {
         let context = ModelContext(container)
         context.autosaveEnabled = false
@@ -2083,7 +2519,7 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
               try context.fetchCount(FetchDescriptor<SyncEventOutboxEntry>()) == 0 else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
-        guard state.expectedImageRelationships.isEmpty else {
+        guard acceptedPrefixOnly || state.expectedImageRelationships.isEmpty else {
             throw ShopSyncRecoveryContractError.relationViolation
         }
         let runID = state.baselineRunID
@@ -2150,15 +2586,15 @@ actor AtomicGenerationRecoverySnapshotPullService: SyncRecoverySnapshotPullProvi
               ),
               baseline.fingerprintSchemaVersion == SupabaseCatalogFingerprintSchema.currentVersion,
               baseline.source == SupabaseCatalogBaselineSource.fullPullApply.rawValue,
-              baseline.status == SupabaseCatalogBaselineStatus.valid.rawValue,
-              baseline.appliedAt != nil,
+              baseline.status == (acceptedPrefixOnly ? SupabaseCatalogBaselineStatus.building.rawValue : SupabaseCatalogBaselineStatus.valid.rawValue),
+              acceptedPrefixOnly ? baseline.appliedAt == nil : baseline.appliedAt != nil,
               baselineRecordCount == expectedBaselineCount,
               actualSupplierBaseline.finalize() == expectedSupplierBaseline,
               actualCategoryBaseline.finalize() == expectedCategoryBaseline,
               actualProductBaseline.finalize() == expectedProductBaseline,
-              baselineRecordCount == (try total(checkpoint.catalog.suppliers, domain: .suppliers))
-                + (try total(checkpoint.catalog.categories, domain: .categories))
-                + (try total(checkpoint.catalog.products, domain: .products)) else {
+              try (acceptedPrefixOnly || baselineRecordCount == total(checkpoint.catalog.suppliers, domain: .suppliers)
+                + total(checkpoint.catalog.categories, domain: .categories)
+                + total(checkpoint.catalog.products, domain: .products)) else {
             throw SyncStoreGenerationError.activationReadBackFailed
         }
     }

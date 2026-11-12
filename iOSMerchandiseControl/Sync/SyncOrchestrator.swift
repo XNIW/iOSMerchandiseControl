@@ -35,7 +35,7 @@ nonisolated struct SyncRootPresentationState: Equatable, Sendable {
 
     static let checking = SyncRootPresentationState(
         kind: .checking,
-        titleKey: "options.supabase.automaticSync.root.checking.title",
+        titleKey: "sync.local.significantWork.title",
         detailKey: "options.supabase.automaticSync.root.checking.detail",
         primaryActionTitleKey: nil,
         primaryActionID: nil,
@@ -82,7 +82,14 @@ nonisolated enum AccountStoreReplacementRuntimeError: Error, Equatable {
 
 @MainActor
 private final class ForegroundRecoveryInvocation {
+    let progressInvocationID: UUID
+    let recoveryIdentity: String?
     var claim: SyncAutomaticRecoveryAttemptClaim?
+
+    init(progressInvocationID: UUID, recoveryIdentity: String?) {
+        self.progressInvocationID = progressInvocationID
+        self.recoveryIdentity = recoveryIdentity
+    }
     nonisolated deinit {}
 }
 
@@ -106,6 +113,7 @@ final class SyncOrchestrator: ObservableObject {
     private var foregroundInvocationID: UUID?
     private var foregroundObservationSource: SyncAutomaticRunObservationSource?
     private var foregroundOwnerStoreScope: Task126VerifiedOwnerStoreScope?
+    private var foregroundRecoveryInvocation: ForegroundRecoveryInvocation?
     private var didReachInteractiveUI = false
     private var hasDeferredForegroundCheck = false
     private var deferredForegroundSource: SyncAutomaticTriggerSource?
@@ -128,6 +136,7 @@ final class SyncOrchestrator: ObservableObject {
     private let foregroundRetryDelay: @Sendable (TimeInterval) async -> Void
     private let maximumForegroundBusyRetryAttempts: Int
     private let now: @Sendable () -> Date
+    private let monotonicNow: @Sendable () -> TimeInterval
 
     init(
         automaticRuntime: any SyncAutomaticRuntimeProviding,
@@ -142,6 +151,7 @@ final class SyncOrchestrator: ObservableObject {
         backgroundScheduler: (any SyncBackgroundTaskScheduling)? = nil,
         maximumForegroundBusyRetryAttempts: Int = 3,
         now: @escaping @Sendable () -> Date = { Date() },
+        monotonicNow: @escaping @Sendable () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
         foregroundRetryDelay: @escaping @Sendable (TimeInterval) async -> Void = { delay in
             let nanoseconds = UInt64(max(0, delay) * 1_000_000_000)
             try? await Task.sleep(nanoseconds: nanoseconds)
@@ -151,7 +161,7 @@ final class SyncOrchestrator: ObservableObject {
         self.authViewModel = authViewModel
         self.activityCenter = activityCenter
         self.syncEventSignalWatcher = syncEventSignalWatcher
-        self.stateStore = stateStore ?? SyncStateStore(defaults: defaults)
+        self.stateStore = stateStore ?? SyncStateStore(defaults: defaults, storeGenerationController: storeGenerationController)
         self.storeGenerationController = storeGenerationController
         self.storeGenerationLease = storeGenerationLease
         self.defaults = defaults
@@ -160,6 +170,7 @@ final class SyncOrchestrator: ObservableObject {
         self.maximumForegroundBusyRetryAttempts = max(0, maximumForegroundBusyRetryAttempts)
         self.foregroundRetryDelay = foregroundRetryDelay
         self.now = now
+        self.monotonicNow = monotonicNow
         lastResumedLocalQualificationRevision = storeGenerationController?.localBodyQualificationRevision ?? 0
         localQualificationSubscription = storeGenerationController?.objectWillChange.sink { [weak self] _ in
             self?.scheduleLocalQualificationReadback()
@@ -195,7 +206,7 @@ final class SyncOrchestrator: ObservableObject {
                   ) else { return }
             if self.pendingPopulatedQualificationScope != nil {
                 self.deferForegroundCheck(source: .rootForeground, forceIncremental: true)
-                guard self.foregroundTask == nil, !self.activityCenter.isBusy else { return }
+                guard self.foregroundTask == nil, !self.activityCenter.blocksAutomaticSync else { return }
                 self.pendingPopulatedQualificationScope = nil
             }
             self.lastResumedLocalQualificationRevision = controller.localBodyQualificationRevision
@@ -223,33 +234,62 @@ final class SyncOrchestrator: ObservableObject {
         )
     }
 
+    var hasCurrentPresentationInvocation: Bool {
+        guard automaticRuntime.isRunning, let foregroundInvocationID else { return false }
+        return stateStore.ownsPresentationInvocation(foregroundInvocationID)
+    }
+
+    /// Keep the hidden host of this already-admitted recovery until its real
+    /// result settles. The retired lease still denies every new request.
+    var retainedSameScopeRecoveryHostPresentationID: String? {
+        guard !isStopped, !isAccountStoreReplacementInProgress, currentScenePhase != .background,
+              let controller = storeGenerationController, let retiringLease = storeGenerationLease,
+              let publication = controller.sameScopeRecoveryHostPublication,
+              let currentLease = controller.captureLease(for: controller.modelContainer),
+              let invocationID = foregroundInvocationID, let scope = foregroundOwnerStoreScope,
+              let recovery = foregroundRecoveryInvocation, let recoveryIdentity = recovery.recoveryIdentity,
+              let claim = recovery.claim,
+              let task = foregroundTask,
+              let presentationID = publication.retainedPresentationID(
+                progressInvocationID: recovery.progressInvocationID, retiringLease: retiringLease,
+                currentLease: currentLease, presentationInvocationID: invocationID,
+                recoveryIdentity: recoveryIdentity, claim: claim, task: task, stateStore: stateStore) else { return nil }
+        if stateStore.pendingRecoveryJournal != nil {
+            guard publishedRecoveryFinalization(identity: recoveryIdentity, scope: scope) != nil else { return nil }
+        } else {
+            guard isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: true) else { return nil }
+        }
+        return presentationID
+    }
+
+    var visibleWorkInvocationID: UUID? {
+        guard hasCurrentPresentationInvocation,
+              stateStore.state.phase.isSignificantAutomaticWork else { return nil }
+        return foregroundInvocationID
+    }
+
     static func makeRootPresentationState(
         isTransitioning: Bool,
         isSignedIn: Bool,
         isAutomaticRuntimeRunning: Bool,
         phase: SyncPhase
     ) -> SyncRootPresentationState {
-        if isTransitioning || isAutomaticRuntimeRunning {
-            return .checking
-        }
-        if !isSignedIn {
-            return .blockedAuth
-        }
+        if case .blocked(.deviceNotActive) = phase { return .deviceBlocked }
+        if isTransitioning { return .hidden }
+        if !isSignedIn { return .blockedAuth }
+        if isAutomaticRuntimeRunning && phase.isSignificantAutomaticWork { return .checking }
         switch phase {
-        case .recoveryRequired, .failed:
-            return .recoverableError
-        case .blocked(.authRequired):
-            return .blockedAuth
-        case .blocked(.deviceNotActive):
-            return .deviceBlocked
-        case .checking, .pushing, .pullingEvents, .reconciling:
-            return .checking
-        case .idle, .blocked:
-            return .hidden
+        case .recoveryRequired, .failed: return .recoverableError
+        case .blocked(.authRequired): return .blockedAuth
+        default: return .hidden
         }
     }
 
     func bootstrap(scenePhase: ScenePhase) async {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("bootstrap.entry")
+        defer { Task144RootObservation.recordScopeReplacementPhase("bootstrap.exit") }
+        #endif
         guard !isStopped else { return }
         currentScenePhase = scenePhase
         recordRuntimeDiagnostic("rootHost.taskStartedAt", Date().timeIntervalSince1970)
@@ -313,9 +353,12 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func resumeDeferredForegroundCheckIfReady() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("resume-check.interactive.\(didReachInteractiveUI).deferred.\(hasDeferredForegroundCheck).busy.\(activityCenter.blocksAutomaticSync)")
+        #endif
         guard didReachInteractiveUI,
               hasDeferredForegroundCheck,
-              !activityCenter.isBusy else { return }
+              !activityCenter.blocksAutomaticSync else { return }
         if pendingPopulatedQualificationScope != nil {
             scheduleLocalQualificationReadback()
             return
@@ -335,6 +378,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func stop() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("stop.entry")
+        #endif
         isStopped = true
         localQualificationSubscription?.cancel()
         localQualificationSubscription = nil
@@ -348,16 +394,23 @@ final class SyncOrchestrator: ObservableObject {
         syncEventSignalWatcher?.stop()
     }
 
+    #if DEBUG
+    /// Test fixture teardown must also join the outer terminal-result handler.
+    /// A provider's return alone does not mean this task has released its scope.
+    func awaitStoppedForegroundTaskForTesting() async {
+        precondition(isStopped)
+        if let foregroundTask { await foregroundTask.value }
+    }
+    #endif
+
     func shouldShowRootBanner(
         _ state: SyncRootPresentationState,
         selectedTab: Int
     ) -> Bool {
-        guard state.kind != .hidden else { return false }
-        guard state.kind != .blockedAuth else { return false }
-        guard state.primaryActionID != nil || state.kind == .checking else { return false }
-        guard selectedTab != 3 else { return false }
-        guard !activityCenter.isBusy else { return false }
-        return true
+        // Ordinary checking and waiting stay quiet. Persistent problems remain
+        // on their contextual surface and in Options; no repeated global alert.
+        state.kind == .checking && visibleWorkInvocationID != nil
+            && selectedTab != 3 && !activityCenter.blocksAutomaticSync
     }
 
     func retryRootActionIfPossible() {
@@ -381,11 +434,38 @@ final class SyncOrchestrator: ObservableObject {
 
     private func requestForegroundTrigger(source: SyncAutomaticTriggerSource,
         forceIncremental: Bool, isDeferredReplay: Bool) {
-        guard !isStopped else { return }
-        let startsNewRetryWindow = source == .releaseCard && !isDeferredReplay
-        if source == .releaseCard {
-            pendingPopulatedQualificationScope = nil
+        #if DEBUG
+        observeT10ForegroundAdmission("entry", source: source)
+        #endif
+// TASK145_C2_ADMISSION_BEGIN request.entry
+#if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("request.entry")
+#endif
+// TASK145_C2_ADMISSION_END request.entry
+// TASK145_C2_ADMISSION_BEGIN request-exit
+#if DEBUG
+        defer { Task144RootObservation.recordScopeReplacementPhase("request.exit") }
+#endif
+// TASK145_C2_ADMISSION_END request-exit
+        guard !isStopped else {
+// TASK145_C2_ADMISSION_BEGIN request.return.stopped
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("request.return.stopped")
+#endif
+// TASK145_C2_ADMISSION_END request.return.stopped
+            return
         }
+        // A retired root cannot start new work or retire another generation's
+        // retry bookkeeping. In-flight publication completion keeps its own
+        // qualified completion path; never recapture authority here.
+        if let controller = storeGenerationController {
+            guard let lease = storeGenerationLease,
+                  (try? controller.validateLease(lease)) != nil else {
+                recordRuntimeDiagnostic("foreground.outcome", "foreground_generation_unavailable")
+                return
+            }
+        }
+        let startsNewRetryWindow = source == .releaseCard && !isDeferredReplay
         recordRuntimeDiagnostic("foreground.requestedAt", Date().timeIntervalSince1970)
         recordRuntimeDiagnostic("foreground.source", source.diagnosticsName)
         recordRuntimeDiagnostic("foreground.forceIncremental", forceIncremental)
@@ -399,14 +479,28 @@ final class SyncOrchestrator: ObservableObject {
             recordRuntimeDiagnostic("foreground.outcome", "deferred_store_replacement")
             return
         }
-        if (source == .rootForeground || source == .networkReconnect),
+        if (source == .rootForeground || source == .networkReconnect || source == .releaseCard),
            let waitingScope = pendingPopulatedQualificationScope {
+            #if DEBUG
+            // Every existing branch below returns; do not re-read the scope.
+            observeT10ForegroundAdmission("waiting-scope-return", source: source)
+            #endif
             guard currentPopulatedRecoveryScope() == waitingScope else {
+// TASK145_C2_ADMISSION_BEGIN request.return.waiting-scope-mismatch
+#if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("request.return.waiting-scope-mismatch")
+#endif
+// TASK145_C2_ADMISSION_END request.return.waiting-scope-mismatch
                 discardPopulatedQualificationWait()
                 return
             }
             deferForegroundCheck(source: .rootForeground, forceIncremental: forceIncremental)
             scheduleLocalQualificationReadback()
+// TASK145_C2_ADMISSION_BEGIN request.return.waiting-scope-qualification
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("request.return.waiting-scope-qualification")
+#endif
+// TASK145_C2_ADMISSION_END request.return.waiting-scope-qualification
             return
         }
         guard foregroundTask == nil else {
@@ -414,7 +508,7 @@ final class SyncOrchestrator: ObservableObject {
             recordRuntimeDiagnostic("foreground.outcome", "deferred_existing_task")
             return
         }
-        guard !activityCenter.isBusy else {
+        guard !activityCenter.blocksAutomaticSync else {
             deferForegroundCheck(source: source, forceIncremental: forceIncremental, startsNewRetryWindow: startsNewRetryWindow)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_busy")
             return
@@ -422,18 +516,26 @@ final class SyncOrchestrator: ObservableObject {
 
         let capturedPopulatedScope: Task126VerifiedOwnerStoreScope?
         let beganWithoutBodyProof: Bool
-        if (source == .rootForeground || source == .networkReconnect),
+        if (source == .rootForeground || source == .networkReconnect || source == .releaseCard),
            stateStore.state.phase == .recoveryRequired,
            storeGenerationController?.activeManifest != nil,
            stateStore.pendingRecoveryJournal?.mode == .sameScopeRecovery {
             guard let scope = currentPopulatedRecoveryScope(),
                   let controller = storeGenerationController else {
+                #if DEBUG
+                observeT10ForegroundAdmission("captured-scope-unavailable-return", source: source)
+                Task144RootObservation.recordScopeReplacementPhase("request.return.captured-scope-unavailable")
+                #endif
                 discardPopulatedQualificationWait(includingUnstartedRequest: true)
                 return
             }
             capturedPopulatedScope = scope
             beganWithoutBodyProof = !Task126OwnerStoreGate.hasCurrentLocalBodyProof(controller.modelContainer)
             guard !beganWithoutBodyProof || currentScenePhase == .active else {
+                #if DEBUG
+                observeT10ForegroundAdmission("captured-scope-scene-return", source: source)
+                Task144RootObservation.recordScopeReplacementPhase("request.return.captured-scope-scene")
+                #endif
                 discardPopulatedQualificationWait(includingUnstartedRequest: true)
                 return
             }
@@ -443,12 +545,18 @@ final class SyncOrchestrator: ObservableObject {
         }
 
         let isExplicitRecoveryRetry = source == .releaseCard
-        if isExplicitRecoveryRetry {
+        let automaticRecoveryJournal = automaticRecoveryResumeJournalIfAllowed(source: source)
+        let automaticRecoveryIdentity = automaticRecoveryJournal.map(Self.automaticRecoveryResumeIdentity(for:))
+        let isManualPreparedReplacement = isExplicitRecoveryRetry
+            && automaticRecoveryJournal?.mode == .accountOrShopReplacement
+            && automaticRecoveryJournal?.phase == .prepared
+        if isExplicitRecoveryRetry, automaticRecoveryIdentity == nil {
             cancelScheduledForegroundRetry(resetBusyBudget: startsNewRetryWindow)
-            if startsNewRetryWindow { stateStore.resetAutomaticRecoveryAttemptBudget() }
         }
-        let automaticRecoveryIdentity = automaticRecoveryResumeIdentityIfAllowed(source: source)
+        let legacyContinuation: SyncLegacyRecoveryContinuation?
+        let reconciliation: SyncRecoveryReconciliation?
         let automaticRecoveryScope: Task126VerifiedOwnerStoreScope?
+        let publishedFinalization: SyncPublishedRecoveryFinalization?
         let isAutomaticRecoveryResume: Bool
         if let automaticRecoveryIdentity {
             guard let owner = authViewModel.sessionInfo?.userID, authViewModel.isSignedIn,
@@ -459,11 +567,46 @@ final class SyncOrchestrator: ObservableObject {
                 return
             }
             automaticRecoveryScope = scope
-            switch stateStore.automaticRecoveryAttemptEligibility(
-                identity: automaticRecoveryIdentity, now: now()
-            ) {
+            publishedFinalization = publishedRecoveryFinalization(identity: automaticRecoveryIdentity, scope: scope)
+                .flatMap { stateStore.publishedRecoveryAttemptEligibility($0, now: now()) == .exhausted ? nil : $0 }
+            let eligibility: SyncAutomaticRecoveryAttemptEligibility
+            if let publishedFinalization {
+                reconciliation = nil
+                legacyContinuation = nil
+                eligibility = stateStore.publishedRecoveryAttemptEligibility(publishedFinalization, now: now())
+            } else if automaticRecoveryJournal?.mode == .accountOrShopReplacement {
+                reconciliation = nil
+                legacyContinuation = nil
+                eligibility = isManualPreparedReplacement
+                    ? stateStore.manualReplacementRecoveryAttemptEligibility(identity: automaticRecoveryIdentity, now: now())
+                    : stateStore.automaticRecoveryAttemptEligibility(identity: automaticRecoveryIdentity, now: now())
+            } else {
+                switch stateStore.recoveryReconciliationOpportunity(identity: automaticRecoveryIdentity, now: now()) {
+                case .ready(let descriptor):
+                    reconciliation = descriptor
+                    legacyContinuation = nil
+                    eligibility = .ready
+                case .cooldown(let remaining):
+                    reconciliation = nil
+                    legacyContinuation = nil
+                    eligibility = .cooldown(remaining)
+                case .blocked:
+                    recordRuntimeDiagnostic("foreground.outcome", "recovery_reconciliation_blocked")
+                    recordRuntimeDiagnostic("foreground.reconciliationReason",
+                        stateStore.recoveryReconciliationBlockReason ?? "unavailable")
+                    return
+                case .none:
+                    reconciliation = nil
+                    legacyContinuation = stateStore.legacyRecoveryContinuation(identity: automaticRecoveryIdentity, now: now())
+                    eligibility = stateStore.automaticRecoveryAttemptEligibility(identity: automaticRecoveryIdentity, now: now())
+                }
+            }
+            switch eligibility {
             case .ready:
-                isAutomaticRecoveryResume = true
+                isAutomaticRecoveryResume = !isManualPreparedReplacement
+                if isManualPreparedReplacement {
+                    cancelScheduledForegroundRetry(resetBusyBudget: startsNewRetryWindow)
+                }
             case .cooldown(let remaining):
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                 if scheduleDeferredForegroundRetry(after: remaining, recoveryIdentity: automaticRecoveryIdentity) {
@@ -474,11 +617,17 @@ final class SyncOrchestrator: ObservableObject {
                 }
                 return
             case .exhausted:
-                recordRuntimeDiagnostic("foreground.outcome", "recovery_resume_exhausted")
-                return
+                guard legacyContinuation != nil else {
+                    recordRuntimeDiagnostic("foreground.outcome", "recovery_resume_exhausted")
+                    return
+                }
+                isAutomaticRecoveryResume = true
             }
         } else {
             automaticRecoveryScope = nil
+            publishedFinalization = nil
+            reconciliation = nil
+            legacyContinuation = nil
             isAutomaticRecoveryResume = false
         }
         let isRecoveryRetry = isExplicitRecoveryRetry || isAutomaticRecoveryResume
@@ -507,23 +656,55 @@ final class SyncOrchestrator: ObservableObject {
         // Install before the decision's first await. A later owner B must
         // never be replaced by A merely because A's decision finishes late.
         stateStore.beginPresentationInvocation(invocationID)
+// TASK145_C2_ADMISSION_BEGIN request.task-enqueue
+#if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("request.task-enqueue")
+#endif
+// TASK145_C2_ADMISSION_END request.task-enqueue
         foregroundTask = Task { @MainActor in
+// TASK145_C2_ADMISSION_BEGIN foreground.decision.enter
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("foreground.decision.enter")
+#endif
+// TASK145_C2_ADMISSION_END foreground.decision.enter
             let (decidedAction, hasPendingLocalChanges) = await decideAction(
                 source: source,
                 forceLightReconcile: forceIncremental
             )
+// TASK145_C2_ADMISSION_BEGIN foreground.decision.exit
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("foreground.decision.exit")
+#endif
+// TASK145_C2_ADMISSION_END foreground.decision.exit
             guard foregroundInvocationID == invocationID,
                   stateStore.ownsPresentationInvocation(invocationID) else {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.stale-invocation-after-decision
+#if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("foreground.return.stale-invocation-after-decision")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.stale-invocation-after-decision
                 completeForegroundTask(invocationID: invocationID)
                 return
             }
             guard !Task.isCancelled else {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.cancelled
+#if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("foreground.return.cancelled")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.cancelled
                 completeForegroundTask(invocationID: invocationID)
                 return
             }
             if let automaticRecoveryScope, !isRecoveryTimerScopeCurrent(automaticRecoveryScope) {
                 recordRuntimeDiagnostic("foreground.outcome", "recovery_scope_changed_before_runtime")
-                completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                let canReplay = permitsFreshRequestAfterScopeRenewal(automaticRecoveryScope)
+                if canReplay {
+                    // Keep intent, never the old authority. A deferred replay
+                    // gets no further immediate replay if authority moves again.
+                    deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                }
+                completeForegroundTask(invocationID: invocationID,
+                    runDeferred: canReplay && !isDeferredReplay)
                 return
             }
             if let completedRecoveryScope,
@@ -537,12 +718,22 @@ final class SyncOrchestrator: ObservableObject {
                 // change. Reject stale authority before recording any attempt.
                 guard currentPopulatedRecoveryScope() == capturedPopulatedScope,
                       let controller = storeGenerationController else {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.populated-scope-changed
+#if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("foreground.return.populated-scope-changed")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.populated-scope-changed
                     discardPopulatedQualificationWait(includingUnstartedRequest: true)
                     completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     if deferredForegroundSource == .releaseCard { runDeferredForegroundCheckIfNeeded() }
                     return
                 }
                 if deferredForegroundSource == .releaseCard {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.redirect-release-card
+#if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("foreground.return.redirect-release-card")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.redirect-release-card
                     pendingPopulatedQualificationScope = nil
                     completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     runDeferredForegroundCheckIfNeeded()
@@ -557,26 +748,48 @@ final class SyncOrchestrator: ObservableObject {
                     controller.requestLocalBodyQualificationAfterShopContextChange(ownerUserID: capturedPopulatedScope.ownerUserID)
                     completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     scheduleLocalQualificationReadback()
+// TASK145_C2_ADMISSION_BEGIN foreground.return.pending-local-qualification
+#if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("foreground.return.pending-local-qualification")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.pending-local-qualification
                     return
                 }
                 guard !beganWithoutBodyProof || currentScenePhase == .active else {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.populated-scene
+#if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("foreground.return.populated-scene")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.populated-scene
                     completeForegroundTask(invocationID: invocationID, runDeferred: false)
                     return
                 }
-                if activityCenter.isBusy || automaticRuntime.isRunning || decidedAction == .retryAfterBusy {
+                if activityCenter.blocksAutomaticSync || automaticRuntime.isRunning || decidedAction == .retryAfterBusy {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.populated-busy
+#if DEBUG
+                    Task144RootObservation.recordScopeReplacementPhase("foreground.return.populated-busy")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.populated-busy
                     deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                     completeForegroundTask(invocationID: invocationID, runDeferred: false)
-                    if !activityCenter.isBusy, !automaticRuntime.isRunning {
+                    if !activityCenter.blocksAutomaticSync, !automaticRuntime.isRunning {
                         resumeDeferredForegroundCheckIfReady()
                     }
                     return
                 }
             }
-            // Explicit retry normalization requires release-card authority.
-            // An admitted automatic resume retains its gated bootstrap plan.
-            let action = isExplicitRecoveryRetry
-                ? Self.explicitRecoveryAction(afterGates: decidedAction)
-                : decidedAction
+            // Every admitted recovery source retains the same gated plan.
+            // Phase reconciliation and terminal finalization own fullRecovery.
+            let action: SyncAction
+            if legacyContinuation != nil || reconciliation != nil || publishedFinalization != nil {
+                switch decidedAction {
+                case .blocked, .retryAfterBusy: action = decidedAction
+                default: action = .fullRecovery
+                }
+            } else {
+                action = isExplicitRecoveryRetry && !isAutomaticRecoveryResume
+                    ? Self.explicitRecoveryAction(afterGates: decidedAction) : decidedAction
+            }
             stateStore.recordDecision(trigger: source.syncTrigger, action: action,
                 presentationInvocationID: invocationID)
             switch action {
@@ -613,9 +826,27 @@ final class SyncOrchestrator: ObservableObject {
             }
             recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
             let progressInvocationID = stateStore.beginRecoveryProgressReporting(presentationInvocationID: invocationID)
-            let recoveryInvocation = ForegroundRecoveryInvocation()
+            let recoveryInvocation = ForegroundRecoveryInvocation(progressInvocationID: progressInvocationID,
+                recoveryIdentity: automaticRecoveryIdentity)
+            foregroundRecoveryInvocation = recoveryInvocation
+            let beginPublishedFinalization: (@Sendable () async -> SyncPublishedRecoveryAdmission)?
+            if let terminal = publishedFinalization, let automaticRecoveryScope {
+                beginPublishedFinalization = { @Sendable [weak orchestrator = self] in
+                    await MainActor.run { [weak orchestrator] in
+                        guard let orchestrator, !orchestrator.isStopped,
+                              orchestrator.foregroundInvocationID == invocationID,
+                              orchestrator.stateStore.ownsPresentationInvocation(invocationID),
+                              orchestrator.isRecoveryTimerScopeCurrent(automaticRecoveryScope),
+                              orchestrator.publishedRecoveryFinalization(identity: terminal.identity,
+                                scope: automaticRecoveryScope) == terminal else { return .rejected }
+                        let admission = orchestrator.stateStore.admitPublishedRecoveryAttempt(terminal, now: orchestrator.now())
+                        recoveryInvocation.claim = admission.claim
+                        return admission.admission
+                    }
+                }
+            } else { beginPublishedFinalization = nil }
             let beginAttempt: (@Sendable () async -> Bool)?
-            if let identity = automaticRecoveryIdentity {
+            if publishedFinalization == nil, let identity = automaticRecoveryIdentity {
                 beginAttempt = { @Sendable [weak orchestrator = self] in
                     await MainActor.run { [weak orchestrator] in
                         guard let orchestrator, !orchestrator.isStopped, orchestrator.foregroundInvocationID == invocationID,
@@ -634,7 +865,14 @@ final class SyncOrchestrator: ObservableObject {
                         }
                         guard orchestrator.isRecoveryTimerScopeCurrent(automaticRecoveryScope),
                               orchestrator.stateStore.pendingRecoveryJournal.map(Self.automaticRecoveryResumeIdentity(for:)) == identity else { return false }
-                        recoveryInvocation.claim = orchestrator.stateStore.claimAutomaticRecoveryAttempt(identity: identity, now: orchestrator.now())
+                        if isManualPreparedReplacement {
+                            // Recheck the same validated due under the existing flight,
+                            // after the decision's await and before the engine's first RPC.
+                            return orchestrator.stateStore.manualReplacementRecoveryAttemptEligibility(
+                                identity: identity, now: orchestrator.now()) == .ready
+                        }
+                        recoveryInvocation.claim = orchestrator.stateStore.claimAutomaticRecoveryAttempt(identity: identity,
+                            now: orchestrator.now(), legacyContinuation: legacyContinuation, reconciliation: reconciliation)
                         return recoveryInvocation.claim != nil
                     }
                 }
@@ -643,12 +881,52 @@ final class SyncOrchestrator: ObservableObject {
             }
             guard foregroundInvocationID == invocationID,
                   stateStore.ownsPresentationInvocation(invocationID) else {
+// TASK145_C2_ADMISSION_BEGIN foreground.return.stale-invocation-before-runtime
+#if DEBUG
+                Task144RootObservation.recordScopeReplacementPhase("foreground.return.stale-invocation-before-runtime")
+#endif
+// TASK145_C2_ADMISSION_END foreground.return.stale-invocation-before-runtime
                 completeForegroundTask(invocationID: invocationID)
                 return
             }
-            let result = await AutomaticSyncAttemptContext.$begin.withValue(beginAttempt) {
-                await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
-                    await automaticRuntime.run(action: action, source: source)
+            let result = await AutomaticSyncAttemptContext.$publishedFinalization.withValue(publishedFinalization) {
+                await AutomaticSyncAttemptContext.$beginPublishedFinalization.withValue(beginPublishedFinalization) {
+                    await AutomaticSyncAttemptContext.$legacyContinuation.withValue(legacyContinuation) {
+                        await AutomaticSyncAttemptContext.$reconciliation.withValue(reconciliation) {
+                            await AutomaticSyncAttemptContext.$begin.withValue(beginAttempt) {
+                                await SyncRecoveryProgressContext.$invocationID.withValue(progressInvocationID) {
+// TASK145_C2_ADMISSION_BEGIN foreground.runtime.enter
+#if DEBUG
+                                    Task144RootObservation.recordScopeReplacementPhase("foreground.runtime.enter")
+#endif
+// TASK145_C2_ADMISSION_END foreground.runtime.enter
+// TASK145_C2_ADMISSION_BEGIN runtime-exit
+#if DEBUG
+                                    // Exit of the same await, never a success or B qualification claim.
+                                    defer { Task144RootObservation.recordScopeReplacementPhase("foreground.runtime.exit") }
+#endif
+// TASK145_C2_ADMISSION_END runtime-exit
+                                    return await automaticRuntime.run(action: action, source: source)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            var recoveryCompletionAccepted = false
+            defer {
+                // Settled stale work releases its live claim, never another entity's retry metadata.
+                let mayPersistMetadata = recoveryCompletionAccepted
+                    && (automaticRecoveryScope.map {
+                        isRecoveryCompletionEntityCurrent($0, verifiedConvergence: result.verifiedConvergence)
+                    } ?? false)
+                if let claim = recoveryInvocation.claim {
+                    stateStore.releaseAutomaticRecoveryAttempt(claim, now: now(),
+                        allowsPersistentMetadata: mayPersistMetadata)
+                }
+                if mayPersistMetadata, let automaticRecoveryIdentity {
+                    stateStore.completeRecoveryReconciliationIfJournalRetired(identity: automaticRecoveryIdentity,
+                        finalization: result.verifiedFinalization, now: now())
                 }
             }
             guard foregroundInvocationID == invocationID,
@@ -674,6 +952,33 @@ final class SyncOrchestrator: ObservableObject {
                 completeForegroundTask(invocationID: invocationID)
                 return
             }
+            recoveryCompletionAccepted = true
+            if result.status == .cancelled, let claim = recoveryInvocation.claim,
+               let identity = automaticRecoveryIdentity, let scope = automaticRecoveryScope,
+               let terminal = publishedRecoveryFinalization(identity: identity, scope: scope),
+               let origin = observationSource?.origin,
+               (origin.generationID != terminal.generationID || publishedFinalization == terminal) {
+                // Actual cancellation is bookkeeping only. Publication has
+                // invalidated the old physical lease, never the new authority.
+                // Do not pass its old-origin observation into presentation.
+                let recorded = stateStore.recordPublishedRecoveryCancellation(claim, now: now())
+                if recorded, origin.generationID == terminal.generationID {
+                    // A terminal retry did not change generation. Its actual
+                    // current-origin cancellation may retain the recovery UI
+                    // latch; no old-origin observation is admitted above.
+                    stateStore.recordRunResult(result, preserveRecoveryRequired: true,
+                        presentationInvocationID: invocationID, automaticRecoveryAuthority: completionAuthority, now: now())
+                    if !Task.isCancelled,
+                       case .cooldown(let remaining) = stateStore.publishedRecoveryAttemptEligibility(terminal, now: now()) {
+                        deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                        if !scheduleDeferredForegroundRetry(after: remaining, recoveryIdentity: identity) {
+                            clearDeferredForegroundCheck()
+                        }
+                    }
+                }
+                completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                return
+            }
             guard !Task.isCancelled || result.verifiedConvergence else {
                 completeForegroundTask(invocationID: invocationID)
                 return
@@ -690,17 +995,41 @@ final class SyncOrchestrator: ObservableObject {
                 return
             }
             guard foregroundInvocationID == invocationID else { return }
+            if let deferral = result.localWorkReplan {
+                // Observers of recordRunResult may synchronously retire scope.
+                // A replan carries no continuation or recovery authority.
+                guard acceptsLocalWorkReplan(deferral, result: result, scope: ownerScope) else {
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                    return
+                }
+                if !isDeferredReplay {
+                    deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                    recordRuntimeDiagnostic("foreground.outcome", "local_work_replan")
+                    completeForegroundTask(invocationID: invocationID)
+                    return
+                }
+                // A repeated race uses the existing finite retry budget below.
+            }
+            if prepareAutomaticRecoveryAfterIncrementalGap(result: result, action: action,
+                source: source, scope: ownerScope) {
+                // The current drain has finished and its precomputed push never
+                // runs. Re-enter the existing journal/claim/budget admission once.
+                deferForegroundCheck(source: .rootForeground, forceIncremental: true)
+                completeForegroundTask(invocationID: invocationID)
+                return
+            }
             if result.status == .busy || result.status == .scheduledRetry {
                 stateStore.abandonPresentationInvocation(invocationID)
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                 var requestedDelay = result.scheduledRetryAfter ?? 2
-                if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending {
+                if publishedFinalization == nil, let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending {
                     requestedDelay = stateStore.extendAutomaticRecoveryAttemptCooldown(
                         identity: automaticRecoveryIdentity,
-                        requestedDelay: requestedDelay
+                        requestedDelay: requestedDelay, now: now()
                     )
                 }
-                if scheduleDeferredForegroundRetry(after: requestedDelay) {
+                if scheduleDeferredForegroundRetry(after: requestedDelay,
+                    recoveryIdentity: publishedFinalization != nil || reconciliation != nil ? automaticRecoveryIdentity : nil) {
                     recordRuntimeDiagnostic("foreground.outcome", "deferred_runtime_busy")
                 } else {
                     clearDeferredForegroundCheck()
@@ -714,13 +1043,10 @@ final class SyncOrchestrator: ObservableObject {
                 completeForegroundTask(invocationID: invocationID, runDeferred: false)
                 return
             }
-            if !stateStore.recoveryJournalIsPending {
-                stateStore.resetAutomaticRecoveryAttemptBudget()
-            }
             resetForegroundBusyRetryBudget()
             if let automaticRecoveryIdentity, stateStore.recoveryJournalIsPending,
-               case .cooldown(let remaining) = stateStore.automaticRecoveryAttemptEligibility(
-                identity: automaticRecoveryIdentity, now: now()) {
+               case .cooldown(let remaining) = recoveryRetryEligibility(identity: automaticRecoveryIdentity,
+                    publishedFinalization: publishedFinalization) {
                 deferForegroundCheck(source: source, forceIncremental: forceIncremental)
                 if scheduleDeferredForegroundRetry(after: remaining, recoveryIdentity: automaticRecoveryIdentity) {
                     recordRuntimeDiagnostic("foreground.outcome", "recovery_transient_retry_scheduled")
@@ -735,6 +1061,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func cancelForegroundCheck() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("cancel-foreground.deferred.\(hasDeferredForegroundCheck).task.\(foregroundTask != nil)")
+        #endif
         pendingPopulatedQualificationScope = nil
         let preserveRecoveryRequired = foregroundStartedFromRecoveryRequired
             && !isAccountStoreReplacementInProgress
@@ -754,6 +1083,7 @@ final class SyncOrchestrator: ObservableObject {
             stateStore.abandonPresentationInvocation(invocationID)
         }
         foregroundStartedFromRecoveryRequired = false
+        clearForegroundRecoveryHost()
         objectWillChange.send()
     }
 
@@ -763,7 +1093,16 @@ final class SyncOrchestrator: ObservableObject {
     func performAccountStoreReplacement(
         _ operation: @MainActor () throws -> AccountStoreReplacementResult
     ) async throws -> AccountStoreReplacementResult {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.enter")
+        #endif
+        #if DEBUG
+        defer { Task144RootObservation.recordScopeReplacementPhase("orchestrator.exit") }
+        #endif
         guard !isAccountStoreReplacementInProgress else {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.reject.already-in-progress")
+            #endif
             throw AccountStoreReplacementRuntimeError.alreadyInProgress
         }
         isAccountStoreReplacementInProgress = true
@@ -773,10 +1112,28 @@ final class SyncOrchestrator: ObservableObject {
         objectWillChange.send()
 
         let runningTask = foregroundTask
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.foreground-cancel.enter")
+        #endif
         runningTask?.cancel()
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.foreground-cancel.exit")
+        #endif
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.automatic-cancel-await.enter")
+        #endif
         await automaticRuntime.cancelAndWait()
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.automatic-cancel-await.exit")
+        #endif
         if let runningTask {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.foreground-await.enter")
+            #endif
             await runningTask.value
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.foreground-await.exit")
+            #endif
         }
         if let invocationID = foregroundInvocationID {
             stateStore.abandonPresentationInvocation(invocationID)
@@ -784,18 +1141,31 @@ final class SyncOrchestrator: ObservableObject {
         foregroundTask = nil
         foregroundInvocationID = nil
         foregroundOwnerStoreScope = nil
+        clearForegroundRecoveryHost()
 
         do {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.real-operation.enter")
+            #endif
             let result = try operation()
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.real-operation.return")
+            #endif
             await finishAccountStoreReplacementAndResumeSync()
             return result
         } catch {
+            #if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("orchestrator.real-operation.throw")
+            #endif
             await finishAccountStoreReplacementAndResumeSync()
             throw error
         }
     }
 
     private func finishAccountStoreReplacementAndResumeSync() async {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.resume.enter")
+        #endif
         await automaticRuntime.resumeAfterStoreReplacement()
         isAccountStoreReplacementInProgress = false
         stateStore.reconcilePendingRecoveryJournal()
@@ -807,6 +1177,9 @@ final class SyncOrchestrator: ObservableObject {
         )
         objectWillChange.send()
         runDeferredForegroundCheckIfNeeded()
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("orchestrator.resume.exit")
+        #endif
     }
 
     private func syncAuthPresentationContext() {
@@ -935,6 +1308,9 @@ final class SyncOrchestrator: ObservableObject {
            ) {
             preferredSource = pendingSource
         }
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("defer.source." + preferredSource.rawValue)
+        #endif
         hasDeferredForegroundCheck = true
         deferredForegroundSource = preferredSource
         deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
@@ -952,6 +1328,9 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     private func clearDeferredForegroundCheck() {
+        #if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("clear-deferred.was.\(hasDeferredForegroundCheck)")
+        #endif
         hasDeferredForegroundCheck = false
         deferredForegroundSource = nil
         deferredForegroundForceIncremental = false
@@ -1017,6 +1396,12 @@ final class SyncOrchestrator: ObservableObject {
         scheduledForegroundRetryIdentity = recoveryIdentity
         let delay = foregroundRetryDelay
         let recoveryDeadline = recoveryIdentity == nil ? nil : now().addingTimeInterval(delaySeconds)
+        let monotonicDeadline = recoveryIdentity == nil ? nil : monotonicNow() + delaySeconds
+        guard monotonicDeadline?.isFinite ?? true else {
+            scheduledForegroundRetryToken = nil
+            scheduledForegroundRetryIdentity = nil
+            return false
+        }
         scheduledForegroundRetryTask = Task { @MainActor [weak self] in
             if let recoveryDeadline {
                 while true {
@@ -1029,10 +1414,18 @@ final class SyncOrchestrator: ObservableObject {
                         self.clearDeferredForegroundCheck()
                         return
                     }
-                    let remaining = recoveryDeadline.timeIntervalSince(self.now())
+                    guard let monotonicDeadline else { return }
+                    let monotonicTime = self.monotonicNow()
+                    guard monotonicTime.isFinite else {
+                        self.cancelScheduledForegroundRetry()
+                        self.clearDeferredForegroundCheck()
+                        return
+                    }
+                    let remaining = max(recoveryDeadline.timeIntervalSince(self.now()), monotonicDeadline - monotonicTime)
                     guard remaining > 0 else { break }
-                    // The server deadline is unchanged. Only each individual
-                    // sleep is bounded, so nanosecond conversion cannot trap.
+                    // The persisted UTC/server due remains unchanged. The
+                    // active monotonic floor is captured once, so a wall-clock
+                    // jump cannot shorten it and each sleep stays bounded.
                     await delay(min(remaining, 300))
                 }
             } else {
@@ -1052,6 +1445,56 @@ final class SyncOrchestrator: ObservableObject {
             }
             self.runDeferredForegroundCheckIfNeeded()
         }
+        return true
+    }
+
+    private func recoveryRetryEligibility(identity: String,
+        publishedFinalization: SyncPublishedRecoveryFinalization?) -> SyncAutomaticRecoveryAttemptEligibility {
+        if let publishedFinalization {
+            return stateStore.publishedRecoveryAttemptEligibility(publishedFinalization, now: now())
+        }
+        switch stateStore.recoveryReconciliationOpportunity(identity: identity, now: now()) {
+        case .ready: return .ready
+        case .cooldown(let remaining): return .cooldown(remaining)
+        case .blocked: return .exhausted
+        case .none: return stateStore.automaticRecoveryAttemptEligibility(identity: identity, now: now())
+        }
+    }
+
+    /// Read-only current publication qualification. In the cancelled callback
+    /// the old physical lease is intentionally NOT resurrected; the mounted
+    /// controller's current body and logical authority must qualify instead.
+    private func publishedRecoveryFinalization(identity: String,
+        scope: Task126VerifiedOwnerStoreScope) -> SyncPublishedRecoveryFinalization? {
+        guard isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: false),
+              let controller = storeGenerationController, controller.loadFailureCode == nil,
+              let manifest = controller.activeManifest, let journal = stateStore.pendingRecoveryJournal,
+              Self.automaticRecoveryResumeIdentity(for: journal) == identity,
+              manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+              manifest.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+              manifest.deviceIdentityHash == scope.deviceIdentityHash,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: scope.ownerUserID, defaults: defaults) else { return nil }
+        let descriptor = SyncPublishedRecoveryFinalization(identity: identity, generationID: manifest.generationID,
+            checkpointDigest: manifest.checkpoint.checkpointDigest, baselineRunID: manifest.baselineRunID)
+        return descriptor.matches(manifest: manifest, journal: journal) ? descriptor : nil
+    }
+
+    private func permitsFreshRequestAfterScopeRenewal(_ previous: Task126VerifiedOwnerStoreScope) -> Bool {
+        guard !isStopped, !Task.isCancelled, currentScenePhase == .active,
+              authViewModel.isSignedIn, !authViewModel.isTransitioning,
+              authViewModel.sessionInfo?.userID == previous.ownerUserID,
+              authViewModel.localMutationOwnerUserID == previous.ownerUserID,
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              (try? controller.validateLease(lease)) != nil,
+              let current = try? Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: previous.ownerUserID,
+                defaults: defaults, allowsPendingReplacement: true),
+              current.accountHash == previous.accountHash, current.shopID == previous.shopID,
+              current.storeIdentity == previous.storeIdentity,
+              current.deviceInstallID == previous.deviceInstallID,
+              current.deviceIdentityHash == previous.deviceIdentityHash,
+              !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: current.accountHash,
+                shopID: current.shopID, deviceIdentityHash: current.deviceIdentityHash) else { return false }
         return true
     }
 
@@ -1116,8 +1559,33 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     private func runDeferredForegroundCheckIfNeeded() {
-        guard !isStopped, hasDeferredForegroundCheck else { return }
+// TASK145_C2_ADMISSION_BEGIN replay.entry
+#if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("replay.entry")
+#endif
+// TASK145_C2_ADMISSION_END replay.entry
+        guard !isStopped else {
+// TASK145_C2_ADMISSION_BEGIN replay.return.stopped
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("replay.return.stopped")
+#endif
+// TASK145_C2_ADMISSION_END replay.return.stopped
+            return
+        }
+        guard hasDeferredForegroundCheck else {
+// TASK145_C2_ADMISSION_BEGIN replay.return.no-deferred
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("replay.return.no-deferred")
+#endif
+// TASK145_C2_ADMISSION_END replay.return.no-deferred
+            return
+        }
         if pendingPopulatedQualificationScope != nil {
+// TASK145_C2_ADMISSION_BEGIN replay.return.pending-local-qualification
+#if DEBUG
+            Task144RootObservation.recordScopeReplacementPhase("replay.return.pending-local-qualification")
+#endif
+// TASK145_C2_ADMISSION_END replay.return.pending-local-qualification
             scheduleLocalQualificationReadback()
             return
         }
@@ -1125,8 +1593,18 @@ final class SyncOrchestrator: ObservableObject {
         let forceIncremental = deferredForegroundForceIncremental
         let startsNewRetryWindow = deferredStartsNewRetryWindow
         clearDeferredForegroundCheck()
+// TASK145_C2_ADMISSION_BEGIN replay.forward-request
+#if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("replay.forward-request")
+#endif
+// TASK145_C2_ADMISSION_END replay.forward-request
         requestForegroundTrigger(source: source, forceIncremental: forceIncremental,
             isDeferredReplay: !startsNewRetryWindow)
+// TASK145_C2_ADMISSION_BEGIN replay.request-return
+#if DEBUG
+        Task144RootObservation.recordScopeReplacementPhase("replay.request-return")
+#endif
+// TASK145_C2_ADMISSION_END replay.request-return
     }
 
     private func completeForegroundTask(invocationID: UUID, runDeferred: Bool = true) {
@@ -1138,9 +1616,21 @@ final class SyncOrchestrator: ObservableObject {
         foregroundObservationSource = nil
         foregroundOwnerStoreScope = nil
         foregroundStartedFromRecoveryRequired = false
+        clearForegroundRecoveryHost()
         objectWillChange.send()
         if runDeferred, !isStopped {
             runDeferredForegroundCheckIfNeeded()
+        }
+    }
+
+    private func clearForegroundRecoveryHost() {
+        guard foregroundRecoveryInvocation != nil else { return }
+        foregroundRecoveryInvocation = nil
+        // ContentView already observes this store, even when the old banner
+        // remains hidden. A settled/revoked cutover must remount on every exit.
+        if let controller = storeGenerationController, let lease = storeGenerationLease,
+           lease.presentationID != controller.presentationID {
+            stateStore.objectWillChange.send()
         }
     }
 
@@ -1152,7 +1642,7 @@ final class SyncOrchestrator: ObservableObject {
             triggerSource: source,
             isAuthenticated: authViewModel.isSignedIn,
             ownerUserID: authViewModel.sessionInfo?.userID,
-            isSyncBusy: activityCenter.isBusy || automaticRuntime.isRunning
+            isSyncBusy: activityCenter.blocksAutomaticSync || automaticRuntime.isRunning
         )
         let action = SyncDecisionEngine.decide(snapshot.input)
         // A foreground safety/reconnect request must reach the server-side
@@ -1163,6 +1653,71 @@ final class SyncOrchestrator: ObservableObject {
             return (.lightReconcile, snapshot.hasPendingLocalChanges)
         }
         return (action, snapshot.hasPendingLocalChanges)
+    }
+
+    private func acceptsLocalWorkReplan(_ deferral: SyncIncrementalLocalWorkDeferral,
+        result: SyncAutomaticRunResult, scope: Task126VerifiedOwnerStoreScope?) -> Bool {
+        guard !Task.isCancelled, !isStopped, currentScenePhase != .background,
+              result.status == .scheduledRetry, !result.verifiedConvergence,
+              result.continuationReceipt == nil, result.verifiedFinalization == nil,
+              result.errorCode == nil, result.blockReason == nil,
+              deferral.isBound(to: defaults), let scope, scope.pendingReplacement == nil,
+              let observation = result.observation,
+              observation.hasValidPersistentFacts, observation.matches(result),
+              observation.origin.isCurrent(defaults: defaults, ownerUserID: scope.ownerUserID),
+              isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: false),
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              observation.origin.generationID == controller.activeManifest?.generationID else { return false }
+        do {
+            try controller.validateLease(lease)
+            try deferral.validateForPush()
+            return true
+        } catch { return false }
+    }
+
+    private func prepareAutomaticRecoveryAfterIncrementalGap(
+        result: SyncAutomaticRunResult, action: SyncAction,
+        source: SyncAutomaticTriggerSource, scope: Task126VerifiedOwnerStoreScope?
+    ) -> Bool {
+        guard !Task.isCancelled, source != .releaseCard,
+              result.status == .recoveryRequired, !result.verifiedConvergence,
+              result.errorCode == nil, result.blockReason == nil,
+              action == .drainEvents || action == .lightReconcile
+                || action == .sequence([.pushPending, .drainEvents])
+                || action == .sequence([.drainEvents, .pushPending, .drainEvents])
+                || action == .sequence([.lightReconcile, .pushPending, .drainEvents]),
+              let scope, scope.pendingReplacement == nil,
+              stateStore.state.phase == .recoveryRequired,
+              let observation = result.observation,
+              observation.hasValidPersistentFacts, observation.matches(result),
+              observation.origin.isCurrent(defaults: defaults, ownerUserID: scope.ownerUserID),
+              isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: false),
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              let manifest = controller.activeManifest,
+              observation.origin.generationID == manifest.generationID,
+              manifest.accountHash == scope.accountHash, manifest.shopID == scope.shopID,
+              manifest.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+              manifest.deviceIdentityHash == scope.deviceIdentityHash,
+              Task126OwnerStoreGate.permitsSameScopeLocalAccess(modelContainer: controller.modelContainer,
+                ownerUserID: scope.ownerUserID, defaults: defaults) else { return false }
+        let binding = AccountBindingStore(defaults: defaults)
+        guard !binding.hasPendingReplacementJournal else { return false }
+        do {
+            try controller.validateLease(lease)
+            try Task126OwnerStoreGate.revalidateAutomaticScope(scope, defaults: defaults)
+            // No await between the fresh authority check and the existing
+            // same-scope transaction. It preserves binding and all local data.
+            guard binding.beginSameScopeRecovery(accountHash: scope.accountHash,
+                storeIdentity: scope.storeIdentity, reason: "ordinary_incremental_recovery_required",
+                deviceIdentityHash: scope.deviceIdentityHash, now: now()),
+                  let journal = binding.pendingRecoveryJournal,
+                  journal.mode == .sameScopeRecovery, journal.phase == .prepared,
+                  journal.replacement.accountHash == scope.accountHash,
+                  journal.replacement.storeIdentity.hasSameProvenance(as: scope.storeIdentity),
+                  journal.deviceIdentityHash == scope.deviceIdentityHash else { return false }
+            stateStore.reconcilePendingRecoveryJournal(now: now())
+            return true
+        } catch { return false }
     }
 
     private func currentPopulatedRecoveryScope() -> Task126VerifiedOwnerStoreScope? {
@@ -1208,12 +1763,19 @@ final class SyncOrchestrator: ObservableObject {
         source: SyncAutomaticTriggerSource,
         hasDecodableJournal: Bool
     ) -> Bool {
-        hasDecodableJournal && (source == .rootForeground || source == .networkReconnect)
+        hasDecodableJournal && (source == .rootForeground || source == .networkReconnect || source == .releaseCard)
     }
 
     private func automaticRecoveryResumeIdentityIfAllowed(
         source: SyncAutomaticTriggerSource
     ) -> String? {
+        automaticRecoveryResumeJournalIfAllowed(source: source)
+            .map(Self.automaticRecoveryResumeIdentity(for:))
+    }
+
+    private func automaticRecoveryResumeJournalIfAllowed(
+        source: SyncAutomaticTriggerSource
+    ) -> AccountRecoveryJournalSnapshot? {
         guard !isStopped,
               stateStore.state.phase == .recoveryRequired,
               let journal = stateStore.pendingRecoveryJournal,
@@ -1221,7 +1783,7 @@ final class SyncOrchestrator: ObservableObject {
                 source: source,
                 hasDecodableJournal: true
               ) else { return nil }
-        return Self.automaticRecoveryResumeIdentity(for: journal)
+        return journal
     }
 
     /// A remounted root may inherit recoveryRequired after the previous root's
@@ -1296,9 +1858,42 @@ final class SyncOrchestrator: ObservableObject {
         }
     }
 
+    #if DEBUG
+    private func observeT10ForegroundAdmission(_ stage: String,
+        source: SyncAutomaticTriggerSource? = nil, outcome: String? = nil) {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAVE_BEFORE_ACTIVATION_UI"] == "name-price",
+              let runID = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) else { return }
+        let generationID = storeGenerationLease.flatMap { UUID(uuidString: $0.presentationID) }?.uuidString.lowercased() ?? "none"
+        let sourceName = source?.diagnosticsName ?? "none"
+        let closedOutcome = outcome ?? "none"
+        // Admission or dispatch selection only; never successful completion.
+        NSLog("%@", "TASK145_UI03_FOREGROUND schema=1 runID=\(runID.uuidString.lowercased()) pid=\(ProcessInfo.processInfo.processIdentifier) generationID=\(generationID) source=\(sourceName) isStopped=\(isStopped) stage=\(stage) outcome=\(closedOutcome)")
+    }
+    #endif
+
     private func recordRuntimeDiagnostic(_ key: String, _ value: String) {
         #if DEBUG
         UserDefaults.standard.set(value, forKey: "sync.runtime.\(key)")
+        if key == "foreground.outcome" {
+            observeT10ForegroundAdmission("outcome", outcome: value)
+            // The existing producers are closed literals/SyncAction names or
+            // the five payloadless SyncBlockReason cases; never arbitrary errors.
+            Task144RootObservation.recordScopeReplacementPhase("foreground.outcome." + value)
+        } else if key == "foreground.reconciliationReason" {
+            // Forward only the already-computed closed reason to the same C2 sink.
+            let closedReason: String
+            switch value {
+            case "clock_precedes_recorded_attempt", "current_process_owner_running", "journal_or_scope_unavailable",
+                 "legacy_claim_generation_mismatch", "legacy_metadata_invalid_or_incomplete", "origin_payload_exceeds_bound",
+                 "owner_release_not_proved", "reconciliation_persistence_not_verified", "reconciliation_state_requires_review",
+                 "retry_metadata_invalid_or_foreign", "retry_metadata_unavailable", "stable_failure_requires_qualified_change", "unavailable":
+                closedReason = value
+            default:
+                closedReason = "unknown"
+            }
+            Task144RootObservation.recordScopeReplacementPhase("foreground.reconciliation-reason." + closedReason)
+        }
         #endif
     }
 

@@ -153,7 +153,7 @@ nonisolated struct SyncStoreGenerationHandle: @unchecked Sendable {
 }
 
 nonisolated struct SyncStoreGenerationMutationFence: Equatable, Sendable {
-    nonisolated struct FileState: Equatable, Sendable {
+    nonisolated struct FileState: Codable, Equatable, Sendable {
         let relativePath: String
         let fileSize: Int
         let allocatedSize: Int
@@ -187,6 +187,36 @@ nonisolated struct SyncStoreGenerationLease: Equatable, @unchecked Sendable {
     let containerIdentity: ObjectIdentifier
 }
 
+/// In-memory identity of the one owned recovery that published this generation.
+/// This retains only a UI host lifetime; it never grants a model/write lease.
+nonisolated struct SyncSameScopeRecoveryHostPublication: Sendable {
+    let progressInvocationID: UUID
+    let retiringLease: SyncStoreGenerationLease
+    let publishedLease: SyncStoreGenerationLease
+    let recoveryIdentity: String
+
+    @MainActor
+    func retainedPresentationID(
+        progressInvocationID: UUID,
+        retiringLease: SyncStoreGenerationLease,
+        currentLease: SyncStoreGenerationLease,
+        presentationInvocationID: UUID,
+        recoveryIdentity: String,
+        claim: SyncAutomaticRecoveryAttemptClaim,
+        task: Task<Void, Never>,
+        stateStore: SyncStateStore
+    ) -> String? {
+        guard !task.isCancelled,
+              self.progressInvocationID == progressInvocationID,
+              self.retiringLease == retiringLease, publishedLease == currentLease,
+              retiringLease.presentationID != currentLease.presentationID,
+              self.recoveryIdentity == recoveryIdentity,
+              stateStore.ownsPresentationInvocation(presentationInvocationID),
+              stateStore.ownsAutomaticRecoveryAttempt(claim) else { return nil }
+        return retiringLease.presentationID
+    }
+}
+
 nonisolated enum SyncStoreGenerationError: Error, Equatable, Sendable {
     case baseDirectoryUnavailable
     case invalidManifest
@@ -213,6 +243,18 @@ nonisolated enum SyncStoreActivationBoundary: Equatable, Sendable {
     case afterLocalWorkPreparation
     case beforeManifestRename
     case afterManifestRename
+}
+
+/// Selected authority keeps every stored field except its refresh timestamp.
+/// Values remain exact: do not route through LinkedShop's normalizing initializer.
+private nonisolated struct PhysicalBodyProofSelectedShopAuthority: Encodable {
+    let shopID: UUID
+    let code: String?
+    let name: String
+    let role: String
+    let status: String
+    let selectable: Bool
+    let canWrite: Bool
 }
 
 /// Owns the file-level generation protocol. It never unlinks a store opened in
@@ -367,7 +409,8 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         if isRecoveryFinalized, let recoveryFinalization {
             try restoreFinalizedMetadata(
                 manifest: manifest,
-                finalization: recoveryFinalization
+                finalization: recoveryFinalization,
+                container: container
             )
         }
         let active = SyncStoreActiveGeneration(
@@ -381,7 +424,8 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
 
     private func restoreFinalizedMetadata(
         manifest: SyncStoreGenerationManifest,
-        finalization: SyncStoreRecoveryFinalization
+        finalization: SyncStoreRecoveryFinalization,
+        container: ModelContainer
     ) throws {
         guard finalization.exactlyMatches(manifest),
               DeviceInstallIDStore.identityHash(
@@ -395,10 +439,56 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
                 watermark: finalization.watermark,
                 recoveryScope: manifest.checkpoint.scope,
                 deviceIdentityHash: finalization.deviceIdentityHash,
-                boundAt: manifest.activatedAt
+                boundAt: manifest.activatedAt,
+                materialCheckpoint: {
+                    try WatermarkStore.MaterialCheckpoint.read(in: ModelContext(container), finalizedManifest: manifest)
+                }
               ) else {
             throw SyncStoreGenerationError.defaultsConfigurationMismatch
         }
+    }
+
+    /// Opens only the named persisted stage. Never creates, resets, quarantines
+    /// or publishes a generation while qualifying a legacy continuation.
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID,
+        requiresAcceptedPrefix: Bool = true) throws -> SyncStoreGenerationHandle {
+        lock.lock()
+        defer { lock.unlock() }
+        guard try decodeAndValidateManifestIfPresent()?.generationID != generationID else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        let relative = "generations/\(generationID.uuidString.lowercased())/store.store"
+        let url = baseDirectory.appendingPathComponent(relative)
+        let directory = url.deletingLastPathComponent()
+        let directoryValues = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        let fileValues = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        let progress = directory.appendingPathComponent("recovery-page-progress-v1.json")
+        let progressExists = fileManager.fileExists(atPath: progress.path)
+        let progressValues = progressExists ? try progress.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) : nil
+        guard directoryValues.isDirectory == true, directoryValues.isSymbolicLink != true,
+              fileValues.isRegularFile == true, fileValues.isSymbolicLink != true,
+              (!progressExists || (progressValues?.isRegularFile == true && progressValues?.isSymbolicLink != true)),
+              !requiresAcceptedPrefix || progressExists,
+              !fileManager.fileExists(atPath: directory.appendingPathComponent("quarantined").path),
+              !requiresAcceptedPrefix || !fileManager.fileExists(atPath: directory.appendingPathComponent("recovery-page-prepared-v1.json").path) else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        let handle: SyncStoreGenerationHandle
+        if let currentStaging, currentStaging.generationID == generationID {
+            guard currentStaging.accountHash == scope.accountHash, currentStaging.shopID == scope.shopID,
+                  currentStaging.storeIdentity == scope.storeIdentity,
+                  currentStaging.deviceIdentityHash == scope.deviceIdentityHash else { throw SyncStoreGenerationError.invalidManifest }
+            handle = currentStaging
+        } else {
+            guard currentStaging == nil else { throw SyncStoreGenerationError.stagingAlreadyOpen }
+            handle = SyncStoreGenerationHandle(generationID: generationID, storeURL: url,
+                relativeStorePath: relative, accountHash: scope.accountHash, shopID: scope.shopID,
+                storeIdentity: scope.storeIdentity, deviceIdentityHash: scope.deviceIdentityHash,
+                container: try SyncStoreSchema.makeFileBackedContainer(at: url))
+        }
+        try validateResourceBudget(for: handle)
+        currentStaging = handle
+        return handle
     }
 
     func prepareStaging(
@@ -548,6 +638,233 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
             guard !files.isEmpty else { throw SyncStoreGenerationError.activeStoreMissing }
         }
         return SyncStoreActiveMutationFence(presentationID: active.presentationID, files: files)
+    }
+
+    /// Optional optimization only. Failure must never replace full validation.
+    /// Capture AFTER SwiftData has opened the store: WAL/SHM changes, migration,
+    /// metadata changes and every unknown writer conservatively cause a miss.
+    func capturePhysicalBodyProof(
+        for active: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence
+    ) throws -> LocalCatalogPhysicalProofStore.Snapshot {
+// TASK145_CAPTURE_FRONTIER_BEGIN capture-start
+#if DEBUG
+        enum CaptureFrontier: String {
+            case manifest, initialFence, membership, storeURL, rootLayout
+            case contextBefore, generationBudget, generationPath, generationDigest
+            case finalFence, contextAfter, contextEquality, complete
+        }
+        var captureFrontier = CaptureFrontier.manifest
+        var captureCompleted = false
+        defer {
+            if !captureCompleted {
+                Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.capture-failure frontier.\(captureFrontier.rawValue, privacy: .public)")
+            }
+        }
+#endif
+// TASK145_CAPTURE_FRONTIER_END capture-start
+        guard let manifest = active.manifest else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN initial-fence
+#if DEBUG
+        captureFrontier = .initialFence
+#endif
+// TASK145_CAPTURE_FRONTIER_END initial-fence
+        guard try captureActiveMutationFence(for: active) == fence else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN membership
+#if DEBUG
+        captureFrontier = .membership
+#endif
+// TASK145_CAPTURE_FRONTIER_END membership
+        guard !fence.files.isEmpty, fence.files.count <= 32 else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN store-url
+#if DEBUG
+        captureFrontier = .storeURL
+#endif
+// TASK145_CAPTURE_FRONTIER_END store-url
+        let directory = try storeURLForLocalBodyReadback(manifest).deletingLastPathComponent()
+// TASK145_CAPTURE_FRONTIER_BEGIN rootLayout
+#if DEBUG
+        captureFrontier = .rootLayout
+#endif
+// TASK145_CAPTURE_FRONTIER_END rootLayout
+        for root in [directory, generationsDirectory, baseDirectory] {
+            guard try root.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN contextBefore
+#if DEBUG
+        captureFrontier = .contextBefore
+#endif
+// TASK145_CAPTURE_FRONTIER_END contextBefore
+        let context = try physicalBodyProofContext(manifest: manifest)
+        var files: [LocalCatalogPhysicalProofStore.File] = []
+        var total = 0
+        for state in fence.files {
+// TASK145_CAPTURE_FRONTIER_BEGIN generationBudget
+#if DEBUG
+            captureFrontier = .generationBudget
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationBudget
+            let (next, overflow) = total.addingReportingOverflow(state.fileSize)
+            guard !overflow, next <= ShopSyncRecoveryLimits.maximumGenerationDirectoryBytes else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+            total = next
+// TASK145_CAPTURE_FRONTIER_BEGIN generationPath
+#if DEBUG
+            captureFrontier = .generationPath
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationPath
+            let url = directory.appendingPathComponent(state.relativePath).standardizedFileURL
+            guard url.path.hasPrefix(directory.standardizedFileURL.path + "/") else {
+                throw LocalCatalogPhysicalProofStore.Failure.unavailable
+            }
+// TASK145_CAPTURE_FRONTIER_BEGIN generationDigest
+#if DEBUG
+            captureFrontier = .generationDigest
+#endif
+// TASK145_CAPTURE_FRONTIER_END generationDigest
+            files.append(try LocalCatalogPhysicalProofStore.fileDigest(url, expected: state))
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN final-fence
+#if DEBUG
+        captureFrontier = .finalFence
+#endif
+// TASK145_CAPTURE_FRONTIER_END final-fence
+        guard try captureActiveMutationFence(for: active) == fence else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN context-after
+#if DEBUG
+        captureFrontier = .contextAfter
+#endif
+// TASK145_CAPTURE_FRONTIER_END context-after
+        let finalContext = try physicalBodyProofContext(manifest: manifest)
+// TASK145_CAPTURE_FRONTIER_BEGIN context-equality
+#if DEBUG
+        captureFrontier = .contextEquality
+#endif
+// TASK145_CAPTURE_FRONTIER_END context-equality
+        guard finalContext == context else {
+            throw LocalCatalogPhysicalProofStore.Failure.unavailable
+        }
+// TASK145_CAPTURE_FRONTIER_BEGIN complete
+#if DEBUG
+        captureFrontier = .complete
+        captureCompleted = true
+#endif
+// TASK145_CAPTURE_FRONTIER_END complete
+        return .init(version: LocalCatalogPhysicalProofStore.version,
+            keyAccount: LocalCatalogPhysicalProofStore.keyAccount(baseDirectory: baseDirectory,
+                deviceIdentityHash: manifest.deviceIdentityHash),
+            generationID: manifest.generationID, contextSHA256: LocalCatalogPhysicalProofStore.hash(context), files: files)
+    }
+
+    var physicalBodyProofURL: URL {
+        // Never included in the generation's own digest or used as authority.
+        baseDirectory.appendingPathComponent("local-body-physical-proof-v1.json")
+    }
+
+    func reusesPhysicalBodyProof(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot) -> Bool {
+        LocalCatalogPhysicalProofStore.matches(snapshot, capsuleURL: physicalBodyProofURL)
+    }
+
+    func physicalBodyProofReuseToken(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot) -> LocalCatalogPhysicalProofStore.ReuseToken? {
+        LocalCatalogPhysicalProofStore.reuseToken(snapshot, capsuleURL: physicalBodyProofURL)
+    }
+
+    /// Called under the existing active-store writer lease. The same bounded
+    /// control file represents either dirty or a validated, sealed snapshot.
+    func invalidatePhysicalBodyProof(for manifest: SyncStoreGenerationManifest) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        guard try decodeAndValidateManifestIfPresent() == manifest else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        try LocalCatalogPhysicalProofStore.markDirty(generationID: manifest.generationID,
+                                                     capsuleURL: physicalBodyProofURL)
+    }
+
+    /// Called only AFTER full validation and the ORIGINAL current publication.
+    /// A failed optional seal leaves the accepted RAM proof intact.
+    func sealPhysicalBodyProof(_ snapshot: LocalCatalogPhysicalProofStore.Snapshot,
+                              for active: SyncStoreActiveGeneration,
+                              fence: SyncStoreActiveMutationFence) -> Bool {
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-recapture
+#if DEBUG
+        var sealFrontier = "recapture", sealCompleted = false, sealThrew = false
+        defer {
+            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.seal frontier.\(sealFrontier, privacy: .public) completed.\(sealCompleted, privacy: .public) threw.\(sealThrew, privacy: .public)")
+        }
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-recapture
+        do {
+            guard try capturePhysicalBodyProof(for: active, fence: fence) == snapshot else { return false }
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-persist
+#if DEBUG
+            sealFrontier = "persist"
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-persist
+            try LocalCatalogPhysicalProofStore.seal(snapshot, capsuleURL: physicalBodyProofURL)
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-success
+#if DEBUG
+            sealFrontier = "success"; sealCompleted = true
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-success
+            return true
+        } catch {
+// TASK145_PHYSICAL_FRONTIER_BEGIN seal-catch
+#if DEBUG
+            sealThrew = true
+#endif
+// TASK145_PHYSICAL_FRONTIER_END seal-catch
+            return false
+        }
+    }
+
+    private func physicalBodyProofContext(manifest: SyncStoreGenerationManifest) throws -> Data {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let binding = AccountBindingStore(defaults: defaults)
+        let shops = SelectedShopStore(defaults: defaults)
+        // Full manifest covers account/shop/device/store/generation/schema,
+        // protocol, checkpoint, baseline and immutable verification metadata.
+        // selectedAt refreshes do not change authority. Every other selected
+        // field remains attested exactly, and publication rechecks live authority.
+        // Discovery loading is not body provenance. Publication still requires
+        // current resolution readiness under the original scope lease.
+        var parts: [Data?] = [try encoder.encode(manifest),
+            try encoder.encode(binding.currentBinding),
+            try encoder.encode(shops.selectedShop(accountHash: manifest.accountHash).map { selected in
+                PhysicalBodyProofSelectedShopAuthority(shopID: selected.shopID,
+                    code: selected.code, name: selected.name, role: selected.role,
+                    status: selected.status, selectable: selected.selectable, canWrite: selected.canWrite)
+            }),
+            try encoder.encode(defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1")),
+            try encoder.encode(binding.hasPendingReplacementJournal),
+            try encoder.encode(shops.hasConfirmedDeviceDenial(accountHash: manifest.accountHash,
+                shopID: manifest.shopID, deviceIdentityHash: manifest.deviceIdentityHash))]
+        for url in [manifestURL, recoveryJournalURL, recoveryFinalizationURL] {
+            // Missing versus empty is distinct. Permission/layout/read errors
+            // cannot be converted into an absent journal or finalization.
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+                guard !isDirectory.boolValue else { throw LocalCatalogPhysicalProofStore.Failure.unavailable }
+                parts.append(try LocalCatalogPhysicalProofStore.readData(url, maximumBytes: 512 * 1_024))
+            } else {
+                let parent = url.deletingLastPathComponent()
+                guard try fileManager.contentsOfDirectory(atPath: parent.path).contains(url.lastPathComponent) == false else {
+                    throw LocalCatalogPhysicalProofStore.Failure.unavailable
+                }
+                parts.append(nil)
+            }
+        }
+        return try encoder.encode(parts)
     }
 
     func activate(
@@ -1280,11 +1597,23 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
 private nonisolated struct LocalBodyQualificationReadbackFailure: Error, Sendable {
     let stage: String // Only fixed literals assigned by the existing worker.
     let underlying: any Error
+    let performedFullValidation: Bool
+    init(stage: String, underlying: any Error, performedFullValidation: Bool = false) {
+        self.stage = stage; self.underlying = underlying
+        self.performedFullValidation = performedFullValidation
+    }
+}
+
+private nonisolated struct LocalBodyQualificationReadback: Sendable {
+    let fence: SyncStoreActiveMutationFence
+    let reusableSnapshot: LocalCatalogPhysicalProofStore.Snapshot?
+    let verifiedSnapshot: LocalCatalogPhysicalProofStore.Snapshot?
+    let reuseToken: LocalCatalogPhysicalProofStore.ReuseToken?
+    var reusedPhysicalProof: Bool { reuseToken != nil }
 }
 
 @MainActor
 final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable {
-    static let shared = SyncStoreGenerationController()
     private static let qualificationLogger = Logger(
         subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification"
     )
@@ -1314,17 +1643,26 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     @Published private(set) var active: SyncStoreActiveGeneration
     @Published private(set) var loadFailureCode: String?
     @Published private(set) var localBodyQualificationRevision = 0
+    private(set) var sameScopeRecoveryHostPublication: SyncSameScopeRecoveryHostPublication?
     private let repository: SyncStoreGenerationRepository?
     private let defaults: UserDefaults
     private var presentationBoundaryObserver: ((String) -> Void)?
     private var localBodyQualificationTask: Task<Bool, Never>?
+    private var durableQualificationRefreshTask: Task<Void, Never>?
     private var manifestQualificationID: UUID?
     private var manifestQualificationRequested = false
     private var manifestQualificationOwner: UUID?
+    private var manifestQualificationStartedOwner: UUID?
+    private var manifestQualificationLaunch: (id: UUID, started: Bool, drainsPredecessor: Bool)?
     #if DEBUG
     private var rootQualificationObservationTicket: UInt64 = 0
     // Tests hold the real detached readback before its existing publication guards.
     var localBodyQualificationBeforePublicationForTesting: (@MainActor () async -> Void)?
+    var localBodyQualificationDidEnterForTesting: (@MainActor () -> Void)?
+    var localBodyQualificationBeforeDomainForTesting: (@MainActor @Sendable (Task126LocalReadDomain) async throws -> Void)?
+    private(set) var localBodyFullReadbackCountForTesting = 0
+    private(set) var localBodyPhysicalReuseCountForTesting = 0
+    private(set) var localBodyPhysicalSealCountForTesting = 0
     #endif
     private struct EmptyRootProof {
         let scope: Task126VerifiedOwnerStoreScope
@@ -1357,13 +1695,16 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         }
     }
 
-    private init() {
-        let defaults = UserDefaults.standard
+    // The isolated DEBUG opening retains its existing repository load/catch.
+    // Normal startup uses the preloaded adoption path and has no fallback container.
+    private init(recoveringRepository repository: SyncStoreGenerationRepository?, defaults: UserDefaults) {
         self.defaults = defaults
-        let repository = try? SyncStoreGenerationRepository(defaults: defaults)
         self.repository = repository
         do {
             guard let repository else { throw SyncStoreGenerationError.unavailable }
+            #if DEBUG
+            Task145StoreLoadFailureObservation.record(.repositoryLoad)
+            #endif
             let loaded = try repository.loadActive()
             self.active = loaded
             self.loadFailureCode = nil
@@ -1377,19 +1718,75 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             self.active = fallback
             self.loadFailureCode = "sync_store_generation_load_failed"
             Task126OwnerStoreGate.registerActiveGenerationContainer(fallback.container)
+            #if DEBUG
+            Task145StoreLoadFailureObservation.record(error as? SyncStoreGenerationError == .invalidManifest
+                ? .invalidManifestCaught : .otherLoadFailureCaught)
+            #endif
         }
     }
+
+    #if DEBUG
+    static func openingControlledRepositoryForTesting(
+        _ repository: SyncStoreGenerationRepository, runID: UUID, defaults: UserDefaults = .standard
+    ) throws -> SyncStoreGenerationController {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAFE_STORE_FAILURE_UI"] == "malformed-manifest",
+              environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) == runID,
+              repository.defaults === defaults,
+              let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            throw SyncStoreGenerationError.defaultsConfigurationMismatch
+        }
+        let expected = support.appendingPathComponent("task144-root-fixtures", isDirectory: true)
+            .appendingPathComponent(runID.uuidString.lowercased(), isDirectory: true)
+            .appendingPathComponent("generation-root", isDirectory: true)
+            .standardizedFileURL
+        guard repository.baseDirectory.standardizedFileURL == expected,
+              repository.baseDirectory.resolvingSymlinksInPath() == expected.resolvingSymlinksInPath(),
+              repository.manifestURL.standardizedFileURL == expected.appendingPathComponent("active-generation.json"),
+              try Data(contentsOf: repository.manifestURL) == Task145StoreLoadFailureObservation.malformedManifest else {
+            throw SyncStoreGenerationError.invalidManifest
+        }
+        return SyncStoreGenerationController(recoveringRepository: repository, defaults: defaults)
+    }
+    #endif
 
     init(
         repository: SyncStoreGenerationRepository,
         defaults: UserDefaults = .standard
     ) throws {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-init-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
         guard repository.defaults === defaults else {
             throw SyncStoreGenerationError.defaultsConfigurationMismatch
         }
         self.defaults = defaults
         self.repository = repository
         let loaded = try repository.loadActive()
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-load-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
+        self.active = loaded
+        self.loadFailureCode = nil
+        Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container, manifest: loaded.manifest)
+        startLocalBodyQualification()
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+            NSLog("TASK146_B2_COST39 phase.controller-init-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+        }
+        #endif
+    }
+
+    /// Adopts the exact container already opened by the one physical bootstrap worker.
+    /// Explicit synchronous repository/test initializers above remain unchanged.
+    init(adopting opened: SyncStoreOpenedGeneration) throws {
+        let (repository, loaded, defaults) = try opened.claimForAdoption()
+        self.defaults = defaults
+        self.repository = repository
         self.active = loaded
         self.loadFailureCode = nil
         Task126OwnerStoreGate.registerActiveGenerationContainer(loaded.container, manifest: loaded.manifest)
@@ -1427,6 +1824,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
     private func finishManifestQualification(_ identity: UUID, published: Bool, cancelled: Bool) {
         guard manifestQualificationID == identity else { return }
         manifestQualificationID = nil
+        manifestQualificationStartedOwner = nil
         localBodyQualificationRevision &+= 1
         let retry = manifestQualificationRequested && !published && !cancelled
         let owner = manifestQualificationOwner
@@ -1453,7 +1851,30 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
 
     /// Full current catalog readback is deliberately outside MainActor. The
     /// result cannot authorize another scope, changed file or newer generation.
-    func startLocalBodyQualification(ownerUserID: UUID? = nil) {
+    private var preferredLocalReadDomain: Task126LocalReadDomain = .catalog
+
+    func preferLocalReadDomain(_ domain: Task126LocalReadDomain) {
+        preferredLocalReadDomain = domain
+    }
+
+    private func scheduleDurableQualificationRefresh(generationID: UUID, ownerUserID: UUID?) {
+        guard active.manifest?.generationID == generationID else { return }
+        durableQualificationRefreshTask?.cancel()
+        durableQualificationRefreshTask = Task { [weak self] in
+            // Wait for the last local/ACK commit in a short burst. If the
+            // process exits first, the durable dirty marker forces a miss.
+            do { try await Task.sleep(for: .milliseconds(500)) }
+            catch { return }
+            if self?.manifestQualificationID != nil, let running = self?.localBodyQualificationTask {
+                _ = await running.value
+            }
+            guard let self, !Task.isCancelled, self.active.manifest?.generationID == generationID,
+                  self.manifestQualificationID == nil else { return }
+            self.startLocalBodyQualification(ownerUserID: ownerUserID, refreshingDurableProof: true)
+        }
+    }
+
+    func startLocalBodyQualification(ownerUserID: UUID? = nil, refreshingDurableProof: Bool = false) {
         guard let repository else {
             #if DEBUG
             Task144RootObservation.record("body-start", "branch.repository-absent", callsite: "SyncStoreGeneration.startLocalBodyQualification")
@@ -1469,23 +1890,54 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             return
         }
         emptyRootProof = nil
-        guard !Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container) else {
+        let hasCurrentBodyProof = Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container)
+        let needsDurableRefresh = refreshingDurableProof &&
+            LocalCatalogPhysicalProofStore.isDirty(generationID: manifest.generationID, capsuleURL: repository.physicalBodyProofURL)
+        guard !hasCurrentBodyProof || needsDurableRefresh else {
             #if DEBUG
             Task144RootObservation.record("body-start", "branch.manifest-body-already-proven", callsite: "SyncStoreGeneration.startLocalBodyQualification")
             #endif
             return
         }
+        // Phase/presentation events do not revoke a current owner's scan.
+        // Keep its physical readback alive and coalesce one successor request.
+        // A real owner change still follows the cancellation path below.
+        if manifestQualificationID != nil, manifestQualificationStartedOwner == ownerUserID {
+            manifestQualificationRequested = true
+            manifestQualificationOwner = ownerUserID
+            return
+        }
         #if DEBUG
         Task144RootObservation.record("body-start", "branch.manifest-body-qualification", callsite: "SyncStoreGeneration.startLocalBodyQualification")
         #endif
-        localBodyQualificationTask?.cancel()
+        let retiringQualification = localBodyQualificationTask
+        // Only a still-queued populated task has no worker to drain. An empty
+        // root task, started task or queued task draining an older predecessor
+        // retains the original join (including owner -> nil -> new owner).
+        let retiringQualificationNotStarted = manifestQualificationLaunch.map {
+            $0.id == manifestQualificationID && !$0.started && !$0.drainsPredecessor
+        } ?? false
+        retiringQualification?.cancel()
         let captured = active
         let container = captured.container
-        Task126OwnerStoreGate.configureLocalBodyFence(container: container, proven: false,
-            provider: { [weak container] in
-                guard let container else { return nil }
-                return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
-            })
+        if !hasCurrentBodyProof {
+            Task126OwnerStoreGate.configureLocalBodyFence(container: container, proven: false,
+                invalidateDurableProof: { [weak repository] in
+                    guard let repository else { throw SyncStoreGenerationError.unavailable }
+                    try repository.invalidatePhysicalBodyProof(for: manifest)
+                },
+                didCommit: { [weak self] owner in
+                    // This maintenance job outlives the writer invocation. Do
+                    // not inherit its TaskLocal scope or dispatch callbacks.
+                    Task.detached { @MainActor [weak self] in
+                        self?.scheduleDurableQualificationRefresh(generationID: manifest.generationID, ownerUserID: owner)
+                    }
+                },
+                provider: { [weak container, weak repository] in
+                    guard let container, let repository else { return nil }
+                    return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
+                })
+        }
         let bindingStore = AccountBindingStore(defaults: defaults)
         let expectedBinding = bindingStore.currentBinding
         let expectedJournal = bindingStore.pendingRecoveryJournal
@@ -1494,18 +1946,41 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         let device = try? DeviceInstallIDStore(defaults: defaults).requireDeviceInstallID()
         let identity = UUID()
         manifestQualificationID = identity
+        manifestQualificationLaunch = (identity, false, retiringQualification != nil && !retiringQualificationNotStarted)
+        manifestQualificationStartedOwner = ownerUserID
         manifestQualificationRequested = false
         manifestQualificationOwner = ownerUserID
         #if DEBUG
         if Task144RootObservation.enabled { rootQualificationObservationTicket &+= 1 }
         #endif
-        localBodyQualificationTask = Task { [weak self] in
+        // Initial local reads depend on this qualification. Preserve the caller's
+        // priority for maintenance of a store whose body proof is already current.
+        let foregroundQualificationPriority: TaskPriority? = hasCurrentBodyProof ? nil : .userInitiated
+// TASK145_COST39_BEGIN qualification-start
+#if DEBUG
+        let qualificationCostStartNS = DispatchTime.now().uptimeNanoseconds
+#endif
+// TASK145_COST39_END qualification-start
+        let operation: @MainActor @Sendable () async -> Bool = { [weak self] in
+            if self?.manifestQualificationLaunch?.id == identity {
+                self?.manifestQualificationLaunch?.started = true
+            }
+            #if DEBUG
+            self?.localBodyQualificationDidEnterForTesting?()
+            #endif
+// TASK145_COST39_BEGIN qualification-attempts
+#if DEBUG
+            var qualificationCostAttempts: UInt64 = 0
+#endif
+// TASK145_COST39_END qualification-attempts
             var published = false
             var firstFailureStage = "none"
             var firstFailureReason = "none"
             var firstPublicationFailure = "none"
             var authorityClosureEntered = false
             var authorityClosurePassed = false
+            var reusedPhysicalProof = false
+            var sealedPhysicalProof = false
             func noteFailure(_ stage: String, _ reason: String) {
                 if firstFailureStage == "none" { firstFailureStage = stage; firstFailureReason = reason }
             }
@@ -1527,31 +2002,181 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let currentTask = self?.manifestQualificationID == identity
                 let currentContainer = self?.active.container === container
                 let currentManifest = self?.active.manifest == manifest
-                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED")
+                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification published.\(published, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) first-stage.\(firstFailureStage, privacy: .public) first-reason.\(firstFailureReason, privacy: .public) first-publication.\(firstPublicationFailure, privacy: .public) authority-entered.\(authorityClosureEntered, privacy: .public) authority-passed.\(authorityClosurePassed, privacy: .public) owner-argument-present.\(ownerPresent, privacy: .public) owner-argument-matches.\(ownerMatches, privacy: .public) captured-binding-matches.\(bindingMatches, privacy: .public) captured-shop-matches.\(shopMatches, privacy: .public) captured-pending-journal.\(expectedPendingJournal, privacy: .public) captured-journal-present.\(expectedJournal != nil, privacy: .public) task-current.\(currentTask, privacy: .public) container-current.\(currentContainer, privacy: .public) manifest-current.\(currentManifest, privacy: .public) sdk-owner.NOT_OBSERVED physical-reused.\(reusedPhysicalProof, privacy: .public) physical-sealed.\(sealedPhysicalProof, privacy: .public)")
+// TASK145_COST39_BEGIN qualification-terminal
+#if DEBUG
+                let elapsed = DispatchTime.now().uptimeNanoseconds &- qualificationCostStartNS
+                SyncStoreGenerationController.qualificationLogger.notice("populated-qualification-cost kind.qualification start_ns.\(qualificationCostStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) attempts.\(qualificationCostAttempts, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public)")
+#endif
+// TASK145_COST39_END qualification-terminal
                 self?.finishManifestQualification(identity, published: published, cancelled: Task.isCancelled)
             }
+            // Publish the new owner's task immediately, but wait for the old
+            // worker to terminate before starting another validation.
+            if let retiringQualification, !retiringQualificationNotStarted { _ = await retiringQualification.value }
+            #if DEBUG
+            // This fixture observes the one qualification carrying real owner authority.
+            if ownerUserID == nil, self?.localBodyQualificationBeforeDomainForTesting != nil { return false }
+            #endif
             for _ in 0..<2 {
                 guard !Task.isCancelled else { noteFailure("capture-before", "cancelled"); return false }
-                let work = Task.detached(priority: .utility) {
+                // A synchronous observer can replace an immediate launch before
+                // its handle is assigned. Its identity must still be current
+                // before it submits any physical worker.
+                guard self?.manifestQualificationID == identity else {
+                    noteFailure("capture-before", "qualification-replaced"); return false
+                }
+// TASK145_COST39_BEGIN worker-attempt-ordinal
+#if DEBUG
+                qualificationCostAttempts &+= 1
+                let qualificationCostAttempt = qualificationCostAttempts
+#endif
+// TASK145_COST39_END worker-attempt-ordinal
+                let work = Task.detached(priority: foregroundQualificationPriority ?? .utility) { [weak self] in
                     var stage = "capture-before"
+                    var performedFullValidation = false
+// TASK145_COST39_BEGIN worker-start
+#if DEBUG
+                    let workerCostStartNS = DispatchTime.now().uptimeNanoseconds
+                    var workerCostReturnedNormally = false
+                    defer {
+                        let elapsed = DispatchTime.now().uptimeNanoseconds &- workerCostStartNS
+                        Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.worker start_ns.\(workerCostStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) attempt.\(qualificationCostAttempt, privacy: .public) returned.\(workerCostReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_stage.\(stage, privacy: .public)")
+                    }
+#endif
+// TASK145_COST39_END worker-start
                     do {
                         try Task.checkCancellation()
                         let before = try repository.captureActiveMutationFence(for: captured)
-                        stage = "body-validation"
-                        try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
-                            storeURL: repository.storeURLForLocalBodyReadback(manifest))
+                        // Optimization failures are misses, never swallowed body errors.
+                        let physicalBefore = try? repository.capturePhysicalBodyProof(for: captured, fence: before)
+                        let reuseToken = physicalBefore.flatMap(repository.physicalBodyProofReuseToken)
+                        let reused = reuseToken != nil
+                        if !reused {
+                            stage = "body-validation"
+                            performedFullValidation = true
+                            let storeURL = try repository.storeURLForLocalBodyReadback(manifest)
+                            var pending: Set<Task126LocalReadDomain> = [.catalog, .sessions, .priceHistory]
+                            var rejected: Set<Task126LocalReadDomain> = []
+                            while !pending.isEmpty {
+                                try Task.checkCancellation()
+                                let preferred = await MainActor.run { [weak self] in self?.preferredLocalReadDomain ?? .catalog }
+                                // Price history depends on catalog. It must not
+                                // delay the independent sessions publication.
+                                let domain: Task126LocalReadDomain
+                                if preferred != .priceHistory, pending.contains(preferred) { domain = preferred }
+                                else if pending.contains(.catalog) { domain = .catalog }
+                                else if pending.contains(.sessions) { domain = .sessions }
+                                else { domain = .priceHistory }
+                                pending.remove(domain)
+                                if domain == .priceHistory, rejected.contains(.catalog) { continue }
+                                #if DEBUG
+                                try await self?.localBodyQualificationBeforeDomainForTesting?(domain)
+                                #endif
+                                do {
+                                    try LocalCatalogBodyProofStore.validate(container: container, manifest: manifest,
+                                        storeURL: storeURL, domain: domain)
+                                } catch SyncStoreGenerationError.activationReadBackFailed {
+                                    rejected.insert(domain)
+                                    continue
+                                } catch {
+                                    // An unclassified storage failure is not a
+                                    // proven isolated data mismatch.
+                                    await MainActor.run { [weak self] in
+                                        guard let self, self.manifestQualificationID == identity else { return }
+                                        Task126OwnerStoreGate.clearLocalReadProofs(container)
+                                        self.localBodyQualificationRevision &+= 1
+                                    }
+                                    throw error
+                                }
+                                guard try repository.captureActiveMutationFence(for: captured) == before else {
+                                    throw ShopSyncRecoveryContractError.checkpointChanged
+                                }
+                                await MainActor.run { [weak self] in
+                                    guard let self, !Task.isCancelled, self.manifestQualificationID == identity,
+                                          self.active.container === container, self.active.manifest == manifest else { return }
+                                    #if DEBUG
+                                    // The controlled qualification hold covers every read capability.
+                                    // These tests publish only through the existing awaited boundary below.
+                                    guard self.localBodyQualificationBeforePublicationForTesting == nil else { return }
+                                    #endif
+                                    guard Task126OwnerStoreGate.acceptCurrentLocalReadProof(container: container, domain: domain,
+                                            ownerUserID: ownerUserID, defaults: self.defaults,
+                                            fence: before) else { return }
+                                    self.localBodyQualificationRevision &+= 1
+                                }
+                            }
+                            guard rejected.isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
+                        }
                         stage = "capture-after"
                         let after = try repository.captureActiveMutationFence(for: captured)
                         guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
-                        return after
+                        var physicalAfter: LocalCatalogPhysicalProofStore.Snapshot?
+                        if physicalBefore != nil {
+                            physicalAfter = try? repository.capturePhysicalBodyProof(for: captured, fence: after)
+                        }
+                        if reused, physicalBefore != physicalAfter {
+                            throw ShopSyncRecoveryContractError.checkpointChanged
+                        }
+                        let sealCandidate = !reused && physicalBefore == physicalAfter ? physicalAfter : nil
+// TASK145_PHYSICAL_FRONTIER_BEGIN eligibility
+#if DEBUG
+                        var contextSame = -1, identitySame = -1, membershipSame = -1
+                        var metadataChangedKinds = -1, digestChangedKinds = -1
+                        if let earlier = physicalBefore, let later = physicalAfter {
+                            contextSame = earlier.contextSHA256 == later.contextSHA256 ? 1 : 0
+                            identitySame = earlier.version == later.version && earlier.keyAccount == later.keyAccount
+                                && earlier.generationID == later.generationID ? 1 : 0
+                            membershipSame = earlier.files.map { $0.state.relativePath }
+                                == later.files.map { $0.state.relativePath } ? 1 : 0
+                            if membershipSame == 1 {
+                                metadataChangedKinds = 0; digestChangedKinds = 0
+                                for pair in zip(earlier.files, later.files) {
+                                    let path = pair.0.state.relativePath
+                                    let kind: Int
+                                    if path.hasSuffix("-wal") { kind = 2 }
+                                    else if path.hasSuffix("-shm") { kind = 4 }
+                                    else if path.hasPrefix("recovery-ledger-v1/") { kind = 8 }
+                                    else if path == "store.store" { kind = 1 }
+                                    else { kind = 16 }
+                                    if pair.0.state != pair.1.state || pair.0.deviceID != pair.1.deviceID
+                                        || pair.0.changeTimeSeconds != pair.1.changeTimeSeconds
+                                        || pair.0.changeTimeNanoseconds != pair.1.changeTimeNanoseconds {
+                                        metadataChangedKinds |= kind
+                                    }
+                                    if pair.0.sha256 != pair.1.sha256 { digestChangedKinds |= kind }
+                                }
+                            }
+                        }
+                        // Only already-computed snapshots; -1 means unavailable, masks use
+                        // main=1/WAL=2/SHM=4/ledger=8/other=16. No paths or hashes are logged.
+                        Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-physical kind.eligibility before_present.\(physicalBefore != nil, privacy: .public) after_present.\(physicalAfter != nil, privacy: .public) reused.\(reused, privacy: .public) candidate_present.\(sealCandidate != nil, privacy: .public) context_same.\(contextSame, privacy: .public) identity_same.\(identitySame, privacy: .public) membership_same.\(membershipSame, privacy: .public) metadata_changed_kinds.\(metadataChangedKinds, privacy: .public) digest_changed_kinds.\(digestChangedKinds, privacy: .public)")
+#endif
+// TASK145_PHYSICAL_FRONTIER_END eligibility
+// TASK145_COST39_BEGIN worker-returned
+#if DEBUG
+                        workerCostReturnedNormally = true
+#endif
+// TASK145_COST39_END worker-returned
+                        return LocalBodyQualificationReadback(fence: after,
+                            reusableSnapshot: sealCandidate, verifiedSnapshot: physicalAfter, reuseToken: reuseToken)
                     } catch {
-                        throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error)
+                        throw LocalBodyQualificationReadbackFailure(stage: stage, underlying: error,
+                            performedFullValidation: performedFullValidation)
                     }
                 }
                 do {
-                    let fence = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                    let readback = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                     #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("readback-resumed")
+                    #endif
+                    let fence = readback.fence
+                    reusedPhysicalProof = readback.reusedPhysicalProof
+                    #if DEBUG
+                    if readback.reusedPhysicalProof { self?.localBodyPhysicalReuseCountForTesting += 1 }
+                    else { self?.localBodyFullReadbackCountForTesting += 1 }
                     await self?.localBodyQualificationBeforePublicationForTesting?()
+                    Task144RootObservation.recordCachedCatalogPhase("publication-hook-return")
                     #endif
                     guard let self,
                           observeAuthority(!Task.isCancelled, "cancelled"),
@@ -1565,12 +2190,35 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                     // lock, so an old async writer gains no renewed authority.
                     authorityClosureEntered = false
                     authorityClosurePassed = false
-                    published = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence) {
+                    var cachedReadsPublished = false
+                    #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("publication-authority-entry")
+                    #endif
+                    published = LocalCatalogPhysicalProofStore.withLatestBinding(readback.reuseToken) {
+                        var canPublishCachedReads = false
+                        let acceptedBody = Task126OwnerStoreGate.acceptLocalBodyProof(container: container, fence: fence, didAcceptProof: {
+                            if let snapshot = readback.reusableSnapshot {
+                                sealedPhysicalProof = repository.sealPhysicalBodyProof(snapshot, for: captured, fence: fence)
+                                #if DEBUG
+                                if sealedPhysicalProof { self.localBodyPhysicalSealCountForTesting += 1 }
+                                #endif
+                            }
+                        }) {
                         authorityClosureEntered = true
+                        if readback.reuseToken != nil {
+                            guard let verified = readback.verifiedSnapshot,
+                                  (try? repository.capturePhysicalBodyProof(for: captured, fence: fence)) == verified else {
+                                _ = observeAuthority(false, "complete-physical-proof-changed-at-publication")
+                                return false
+                            }
+                        }
                         let selectedStore = SelectedShopStore(defaults: self.defaults)
                         let currentBinding = AccountBindingStore(defaults: self.defaults)
                         let currentJournal = currentBinding.pendingRecoveryJournal
                         guard observeAuthority(!Task.isCancelled, "cancelled"),
+                              observeAuthority(readback.reuseToken.map {
+                                  LocalCatalogPhysicalProofStore.capsuleStillMatches($0, capsuleURL: repository.physicalBodyProofURL)
+                              } ?? true, "physical-proof-invalidated"),
                               observeAuthority(self.active.container === container, "active-container-changed"),
                               observeAuthority(self.active.manifest == manifest, "active-manifest-changed"),
                               observeAuthority(self.defaults.string(forKey: "mobile.shopContext.activeAccountHash.v1") == manifest.accountHash, "active-account-mismatch"),
@@ -1585,7 +2233,6 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                               observeAuthority(currentJournal?.deviceIdentityHash == expectedJournal?.deviceIdentityHash, "journal-device-changed"),
                               observeAuthority(expectedBinding?.accountHash == manifest.accountHash, "captured-binding-account-mismatch"),
                               observeAuthority(expectedBinding?.storeIdentity == manifest.storeIdentity, "captured-binding-store-mismatch"),
-                              observeAuthority(selectedStore.isResolutionReady(accountHash: manifest.accountHash), "resolution-unready"),
                               let currentShop = observeOptional(selectedStore.selectedShop(accountHash: manifest.accountHash), "selected-shop-absent"),
                               observeAuthority(ownerUserID != nil || currentShop == expectedShop, "ownerless-selection-changed"),
                               observeAuthority(currentShop.shopID == expectedShop?.shopID, "selected-shop-changed"),
@@ -1608,16 +2255,44 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                                   observeAuthority(journal.replacement.storeIdentity == manifest.storeIdentity, "journal-store-mismatch"),
                                   observeAuthority(journal.deviceIdentityHash == manifest.deviceIdentityHash, "journal-device-manifest-mismatch") else { return false }
                         }
+                        guard observeAuthority(selectedStore.isResolutionReady(accountHash: manifest.accountHash), "resolution-unready") else {
+                            canPublishCachedReads = readback.reuseToken != nil && ownerUserID != nil
+                            return false
+                        }
                         authorityClosurePassed = true
                         return true
                     }
+                        // The exact local archive can serve reads during shop
+                        // discovery. The full proof and writers still require
+                        // a resolved shop. Recheck the current lease and fence.
+                        if canPublishCachedReads {
+                            for domain in [Task126LocalReadDomain.catalog, .sessions, .priceHistory] {
+                                if Task126OwnerStoreGate.acceptCurrentLocalReadProof(container: container, domain: domain,
+                                        ownerUserID: ownerUserID, defaults: self.defaults,
+                                        fence: fence) {
+                                    cachedReadsPublished = true
+                                }
+                            }
+                        }
+                        return acceptedBody
+                    }
+                    #if DEBUG
+                    Task144RootObservation.recordCachedCatalogPhase("publication-authority-return")
+                    #endif
                     if published { return true }
+                    if readback.reuseToken != nil && !authorityClosureEntered && firstPublicationFailure == "none" {
+                        _ = observeAuthority(false, "physical-proof-latest-binding-changed")
+                    }
                     noteFailure("publication", authorityClosurePassed
                         ? "registered-container-or-current-physical-fence"
                         : firstPublicationFailure)
+                    if cachedReadsPublished { return false }
                 } catch {
                     let failure = error as? LocalBodyQualificationReadbackFailure
                     let underlying = failure?.underlying ?? error
+                    #if DEBUG
+                    if failure?.performedFullValidation == true { self?.localBodyFullReadbackCountForTesting += 1 }
+                    #endif
                     noteFailure(failure?.stage ?? "publication", Self.qualificationErrorReason(underlying))
                     // Preserve the original two-attempt checkpointChanged behavior exactly.
                     if underlying as? ShopSyncRecoveryContractError == .checkpointChanged { continue }
@@ -1626,6 +2301,18 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             return false
         }
+        let task: Task<Bool, Never>
+        if !hasCurrentBodyProof, ownerUserID != nil {
+            // Submit the detached reader before first layout holds MainActor.
+            // No file work moves onto this actor; execution suspends at the
+            // same worker/join awaits and retains every publication guard.
+            task = Task.immediate(priority: foregroundQualificationPriority, operation: operation)
+        } else {
+            task = Task(priority: foregroundQualificationPriority, operation: operation)
+        }
+        // An immediate body may complete and synchronously request a successor.
+        // Never overwrite that successor's handle with this older result.
+        if manifestQualificationLaunch?.id == identity { localBodyQualificationTask = task }
     }
 
     /// Presentation-only admission for a physically empty first bootstrap.
@@ -1971,6 +2658,12 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         return active.manifest == nil || Task126OwnerStoreGate.hasCurrentLocalBodyProof(active.container)
     }
 
+    func existingStaging(scope: Task126VerifiedOwnerStoreScope, generationID: UUID,
+        requiresAcceptedPrefix: Bool = true) throws -> SyncStoreGenerationHandle {
+        guard let repository else { throw SyncStoreGenerationError.unavailable }
+        return try repository.existingStaging(scope: scope, generationID: generationID, requiresAcceptedPrefix: requiresAcceptedPrefix)
+    }
+
     func prepareStaging(
         accountHash: String,
         shopID: UUID,
@@ -2038,7 +2731,8 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 let before = try repository.captureActiveMutationFence(for: capturedActive)
                 repository.observeLocalWorkBoundary(.beforeLocalWorkTransfer)
                 try SameScopeRecoveryLocalWorkTransfer.apply(
-                    from: activeContainer, to: staging.container, scope: scope, stagingGenerationID: staging.generationID
+                    from: activeContainer, to: staging.container, scope: scope,
+                    sourceGenerationID: capturedActive.manifest?.generationID, stagingGenerationID: staging.generationID
                 )
                 let after = try repository.captureActiveMutationFence(for: capturedActive)
                 guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
@@ -2059,9 +2753,15 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
         // container switch, retired-container registration, journal/binding/
         // watermark publication and lease invalidation must all happen before
         // a queued user writer can enter the non-recursive gate.
+        #if DEBUG
+        defer { Task144RootObservation.performanceMark("cutoverReleased", facts: "lease-invalidating-call-returned") }
+        #endif
         return try Task126OwnerStoreGate.withValidatedAutomaticScopeLeaseInvalidated(
             expectedGeneration: scope.leaseGeneration
         ) {
+            #if DEBUG
+            Task144RootObservation.performanceMark("cutoverEntered", facts: "inside-physical-publication-lease")
+            #endif
             try Task.checkCancellation()
             guard active.container === activeContainer,
                   active.presentationID == capturedActive.presentationID else {
@@ -2090,8 +2790,17 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                 manifest: manifest
             )
             Task126OwnerStoreGate.configureLocalBodyFenceWithLeaseHeld(container: activated.container, proven: true,
-                provider: { [weak container = activated.container] in
-                    guard let container else { return nil }
+                invalidateDurableProof: { [weak repository] in
+                    guard let repository else { throw SyncStoreGenerationError.unavailable }
+                    try repository.invalidatePhysicalBodyProof(for: manifest)
+                },
+                didCommit: { [weak self] owner in
+                    Task.detached { @MainActor [weak self] in
+                        self?.scheduleDurableQualificationRefresh(generationID: manifest.generationID, ownerUserID: owner)
+                    }
+                },
+                provider: { [weak container = activated.container, weak repository] in
+                    guard let container, let repository else { return nil }
                     return try? repository.captureActiveMutationFence(for: .init(container: container, manifest: manifest))
                 })
             #if DEBUG
@@ -2101,6 +2810,7 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             }
             #endif
             manifestQualificationID = nil
+            manifestQualificationStartedOwner = nil
             manifestQualificationRequested = false
             manifestQualificationOwner = nil
             emptyPublicationSuccessorBudget = 0
@@ -2109,11 +2819,24 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             // Never roll back to the retired container after the durable
             // pointer rename. A metadata failure leaves the new generation
             // active and the durable recovery journal fail-closed for retry.
+            sameScopeRecoveryHostPublication = nil
             presentationBoundaryObserver?(activated.presentationID)
             active = activated
             guard AccountBindingStore(defaults: defaults)
                 .commitActivatedGenerationWithLeaseHeld(manifest) else {
                 throw SyncStoreGenerationError.activationReadBackFailed
+            }
+            // Bind the actual committed cutover before this MainActor turn yields.
+            // No scope recapture, callback or durable write is added inside the lease.
+            if journal.mode == .sameScopeRecovery,
+               let progressInvocationID = SyncRecoveryProgressContext.invocationID {
+                sameScopeRecoveryHostPublication = SyncSameScopeRecoveryHostPublication(
+                    progressInvocationID: progressInvocationID,
+                    retiringLease: .init(presentationID: capturedActive.presentationID,
+                                         containerIdentity: ObjectIdentifier(capturedActive.container)),
+                    publishedLease: .init(presentationID: activated.presentationID,
+                                          containerIdentity: ObjectIdentifier(activated.container)),
+                    recoveryIdentity: SyncOrchestrator.automaticRecoveryResumeIdentity(for: journal))
             }
             loadFailureCode = nil
             return manifest
@@ -2145,6 +2868,66 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
             try repository.markRecoveryFinalized(manifest)
         }
         return manifest
+    }
+
+    /// Recovery completion changes provenance outside the generation's body:
+    /// finalization is fsynced, then the journal mirror/file are removed and
+    /// fsynced by AccountBindingStore. Preserve those guards and seal the FINAL
+    /// context only while the same live, already qualified body remains current.
+    /// A crash before this optional seal leaves an ordinary authenticated miss.
+    @discardableResult
+    func sealFinalizedLocalBodyProof(ownerUserID: UUID) -> Bool {
+        var sealed = false
+        #if DEBUG
+        let sealBeganNS = DispatchTime.now().uptimeNanoseconds
+        var sealAuthorityNS: UInt64 = 0, sealBodyNS: UInt64 = 0, sealFenceNS: UInt64 = 0
+        var sealSnapshotNS: UInt64 = 0, sealPersistNS: UInt64 = 0
+        defer {
+            Self.qualificationLogger.notice("populated-qualification-physical kind.finalization-seal completed.\(sealed, privacy: .public) elapsed_ns.\(DispatchTime.now().uptimeNanoseconds &- sealBeganNS, privacy: .public)")
+            NSLog("TASK146_FINAL_SEAL_TIMING pid.%d start_ns.%llu authority_ns.%llu body_ns.%llu fence_ns.%llu snapshot_ns.%llu persist_ns.%llu", ProcessInfo.processInfo.processIdentifier, sealBeganNS, sealAuthorityNS, sealBodyNS, sealFenceNS, sealSnapshotNS, sealPersistNS)
+        }
+        #endif
+        guard let repository, let manifest = active.manifest else { return false }
+        do {
+            // Journal cleanup invalidated its captured lease. This fresh scope
+            // must independently prove ordinary owner/shop/device authority.
+            let scope = try Task126OwnerStoreGate.captureAutomaticScope(ownerUserID: ownerUserID, defaults: defaults)
+            guard scope.pendingReplacement == nil,
+                  scope.accountHash == manifest.accountHash, scope.shopID == manifest.shopID,
+                  scope.storeIdentity == manifest.storeIdentity,
+                  scope.deviceIdentityHash == manifest.deviceIdentityHash else { return false }
+            sealed = try Task126OwnerStoreGate.withValidatedAutomaticScopeLease(scope, defaults: defaults) {
+                guard Task126OwnerStoreGate.activeManifestWithLeaseHeld(active.container) == manifest,
+                      !SelectedShopStore(defaults: defaults).hasConfirmedDeviceDenial(accountHash: scope.accountHash,
+                        shopID: scope.shopID, deviceIdentityHash: scope.deviceIdentityHash),
+                      try repository.isRecoveryFinalized(manifest) else { return false }
+                #if DEBUG
+                sealAuthorityNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                // This original guard requires the registered active container's
+                // accepted RAM body fence to still equal its actual file fence.
+                try Task126OwnerStoreGate.validateLocalMutationContainerWithLeaseHeld(active.container)
+                #if DEBUG
+                sealBodyNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                let fence = try repository.captureActiveMutationFence(for: active)
+                #if DEBUG
+                sealFenceNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                let snapshot = try repository.capturePhysicalBodyProof(for: active, fence: fence)
+                #if DEBUG
+                sealSnapshotNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                // Recapture and existing capsule-fsync/latest-Keychain ordering
+                // remain unchanged; no old context, file or anchor is copied.
+                let persisted = repository.sealPhysicalBodyProof(snapshot, for: active, fence: fence)
+                #if DEBUG
+                sealPersistNS = DispatchTime.now().uptimeNanoseconds
+                #endif
+                return persisted
+            }
+            return sealed
+        } catch { return false }
     }
 
     func isActiveRecoveryFinalized(
@@ -2221,11 +3004,13 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
     static func isContinuationDrained(container: ModelContainer) throws -> Bool {
         let context = ModelContext(container)
         context.autosaveEnabled = false
+        guard try ManualPendingAtomicRequestStore.protectedChangeIDs(context: context).isEmpty else { return false }
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
         var pending = FetchDescriptor<LocalPendingChange>(predicate: #Predicate {
             $0.statusRaw != "superseded" && $0.statusRaw != "acknowledged"
         })
-        pending.fetchLimit = 1
-        guard try context.fetch(pending).isEmpty else { return false }
+        pending.fetchLimit = resolved.count + 1
+        guard try context.fetch(pending).allSatisfy({ resolved.contains($0.changeID) }) else { return false }
         let terminalOutboxStatuses: [String] = [
             "sent", "blockedContract", "blockedAuth", "blockedSchema", "dead", "localOnly"
         ]
@@ -2251,7 +3036,9 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
         context.autosaveEnabled = false
         let expectedOwner = scope.ownerUserID.uuidString.lowercased()
         let expectedStore = scope.storeIdentity.storeId
-        var activePending = 0
+        let resolved = try LocalCatalogConflictResolutionStore.resolvedChangeIDs(context: context)
+        let manualRequests = try ManualPendingAtomicRequestStore.blockingChangeIDs(context: context, scope: scope)
+        var activePending = manualRequests.isEmpty ? 0 : 1
 
         for change in try context.fetch(FetchDescriptor<LocalPendingChange>()) {
             guard let status = LocalPendingChangeStatus(rawValue: change.statusRaw) else {
@@ -2262,6 +3049,7 @@ nonisolated enum SameScopeRecoveryActiveWorkInspector {
                   Task126OwnerStoreScope.normalizedStoreId(change.storeId) == expectedStore else {
                 throw SyncStoreGenerationError.activationReadBackFailed
             }
+            if resolved.contains(change.changeID) { continue }
             activePending += 1
         }
 

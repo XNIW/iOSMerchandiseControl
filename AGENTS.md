@@ -186,3 +186,68 @@ Sezioni fisse:
 - Non espandere a moduli non richiesti
 - Non mascherare incertezza
 - Non fare refactor opportunistici
+
+## Gestione dello spazio disco e pulizia obbligatoria
+
+La pulizia ordinaria degli artefatti di sviluppo obsoleti e dei duplicati verificati prodotti dalle esecuzioni è autorizzata dall'utente. Non richiedere conferme ripetute per i lotti che soddisfano queste regole. La manutenzione non cambia task, fase, criteri applicativi o risultati dei test.
+
+### Prima di una run che produce molti dati
+
+- Misurare lo spazio libero sul volume effettivo di repository, evidenze e output, verificando le unità del runner: il minimo di preflight è **30 GB decimali (30.000.000.000 byte)**. Convertire correttamente eventuali KiB/GiB; non abbassare la soglia per avviare una build.
+- Stimare il picco del prossimo batch, la crescita dei processi concorrenti e la riserva che resterà durante l'esecuzione. Il solo superamento dei 30 GB non basta se il batch previsto non ha margine; rispettare anche i limiti motivati del runner esistente, senza inventare nuove soglie arbitrarie.
+- Riutilizzare sorgenti, cache, toolchain e artefatti validi quando appropriato. Evitare copie complete ridondanti di Source, Products e restore e nuovi backup completi sullo stesso volume quasi pieno.
+- Se il budget è insufficiente, sospendere i nuovi avvii voluminosi ed eseguire prima il cleanup autorizzato. Salvare un checkpoint leggero nel registro esistente; non interrompere indiscriminatamente processi o sessioni altrui.
+- Usare runner/helper, manifest, journal e policy di retention già previsti dal task, comprese le protezioni dei consumer nativi; non creare una nuova infrastruttura o agganciare nuove dipendenze.
+
+### Durante l'esecuzione e prima di ogni cancellazione
+
+- Attribuire gli artefatti a una run e a un proprietario; controllare lo spazio prima delle fasi con maggiore crescita. Non cancellare file posseduti da processi attivi: attendere la conclusione o cancellare in modo controllato soltanto i processi propri e verificare il rilascio effettivo delle risorse.
+- Coordinare le altre sessioni di manutenzione attraverso i registri accessibili: assegnare lotti disgiunti per percorso oppure serializzare le rimozioni. Registrare anche gli originali canonici da mantenere, evitando che due sessioni eliminino ciascuna la copia conservata dall'altra.
+- Per ogni lotto usare un manifest incrementale leggero con percorsi esatti, proprietario, contenuto utile esclusivo, beneficio atteso, motivo della rimozione e originale/successore o ricostruzione verificata. Per i duplicati verificare hash e dimensione e registrare il collegamento rimosso → canonico mantenuto.
+- Ricontrollare immediatamente prima della rimozione identità e contenuto dei percorsi, uso corrente, assegnazioni concorrenti e disponibilità degli originali. Fermare quel lotto in caso di cambiamenti, riuso del percorso o proprietà non chiarita. Se il registro dell'altra sessione non è accessibile, limitarsi inizialmente ai propri lotti verificabili e non contesi.
+- Eliminare effettivamente soltanto i lotti qualificati nel mandato, quindi verificare gli originali mantenuti e annotare l'esito nel journal esistente. Non riscrivere receipt storiche per fingere che il vecchio percorso esista ancora: registrare la destinazione canonica e aggiornare i riferimenti correnti.
+
+### Alla conclusione di ogni run o batch
+
+Il postflight è obbligatorio per **PASS, FAIL e annullamento controllato**:
+
+1. Attendere la terminazione e il rilascio delle risorse dei processi posseduti.
+2. Raccogliere risultati, manifest e prove necessarie; distinguere gli artefatti richiesti dai test successivi o dai difetti aperti.
+3. Eliminare temporanei conclusi, duplicati e output superati verificati come inutili, applicando le qualifiche e il coordinamento sopra.
+4. Verificare gli originali mantenuti e misurare lo spazio libero risultante.
+5. Registrare brevemente rimozioni e conservazioni, motivi e prossime condizioni di rilascio nel tracking esistente.
+
+Un prodotto necessario al prossimo test non è eliminabile solo perché la compilazione è terminata. Se un'interruzione impedisce il postflight, completarlo alla ripresa **prima di produrre altri artefatti voluminosi**. Non ricreare automaticamente tutti gli output appena eliminati.
+
+`mc-agent` usa il registro locale `agent-runs/managed-artifacts` dell'evidence. Prima di Xcode o Gradle riconcilia le interruzioni, ritira gli output registrati idonei e sottrae la crescita prevista dallo spazio disponibile prima di confrontarlo con la riserva di 30 GB. Il postflight ripete il controllo a fine run e su interruzione gestita. Per iOS conserva un prodotto riuscito per scheme, piattaforma, configurazione, architettura e toolchain. `reuse-products` registra un consumer quando sorgenti e dipendenze coincidono, per eseguire i test sul prodotto esistente. Verificare il descriptor e gli hash della prova prima del riuso. Gradle riusa `app/build` e le proprie cache. I batch esterni usano il medesimo registro esplicito e stimano separatamente crescita, copie ed eventuali nuovi target.
+
+Per ricompilare lo stesso target iOS con sorgenti modificati, `rebuild-products` trasferisce il DerivedData registrato alla nuova run dopo la chiusura dei consumer e l'acquisizione della lease Xcode. Richiede una copia verificata dei soli `Build/Products` necessari alla prima failure, con manifest completo di identità e hash, proprietario e condizione di rilascio. Il journal lega le copie storiche ai nuovi output e protegge un trasferimento interrotto. La nuova attribuzione richiede una compilazione effettiva riuscita sullo stesso DerivedData e sorgenti invariati durante la run. Dichiarare il `dependency-root` realmente usato da Xcode e usare la stessa etichetta di configurazione per piattaforma, target, configurazione, architettura e toolchain in tutte le run equivalenti.
+
+Il cleanup dei risultati registrati riconosce anche `database.sqlite3` dei bundle `.xcresult` Xcode 3.60, con formato `fileBacked2`, riferimento radice e schema di 40 tabelle verificati in sola lettura. Per i componenti `Build/Intermediates.noindex` registrati verifica le tre tabelle dei metadati `XCBuildData/build.db`. La qualifica richiede il Registry concreto e le corrispondenti assegnazioni di percorso e tipo. I database applicativi conservano le protezioni ordinarie. Formati o schemi diversi mantengono il lotto in HOLD.
+
+### Conservazione e limiti
+
+- Preservare sorgenti/WIP, indice e riferimenti Git, patch utili con preimage, manifest dei candidati correnti, dati applicativi e commerciali, database/WAL/SHM, Keychain, autenticazioni, credenziali e sessioni. Dati e sessioni non sono cache; questo cleanup ordinario non ne autorizza la cancellazione.
+- Conservare il primo FAIL significativo e il risultato pertinente più recente, con le prove uniche, i binari/simboli e gli input necessari a comprenderli o riprodurli. Per tentativi superati preferire report, diff e log essenziali alle copie complete ridondanti.
+- Ogni artefatto protetto deve avere **motivo verificabile, proprietario e condizione di rilascio**. Riesaminarlo alla chiusura del difetto o requisito; separare le componenti ancora necessarie da quelle eliminabili. Non eliminare per sola età e non conservare intere build indefinitamente senza una dipendenza concreta.
+- Conservare un originale canonico verificato per ogni contenuto equivalente ancora necessario e le cache/toolchain utili al prossimo batch. Non cancellare ambienti, emulatori o simulatori operativi né fare erase delle sessioni per recuperare spazio.
+- Vietati cleanup globali o prune indiscriminati su home, repository, evidence, DerivedData, simulatori, emulatori, Docker o volumi database. Non usare `git clean`, reset o rimozione indiscriminata degli untracked come scorciatoia; worktree e copie di repository richiedono la qualifica specifica già prevista.
+- Non includere contenuti personali o estranei allo sviluppo, backup non qualificati, configurazioni, credenziali o cronologie dell'agent. Non svuotare globalmente il Cestino. Spostare file nel Cestino o in un'altra cartella sullo stesso volume non equivale a liberare spazio.
+
+### Resoconto
+
+Distinguere dimensione logica del lotto, blocchi allocati e spazio libero effettivo prima/dopo sul volume. Riportare separatamente il contributo verificato della propria pulizia e le variazioni dovute ad altre sessioni: blocchi allocati e variazione APFS non provano da soli lo spazio fisico esclusivo recuperato. Indicare gli elementi mantenuti con motivo e condizione di rilascio e il budget del prossimo batch.
+
+## Dispositivi locali canonici e rilascio delle risorse
+
+Preferenza utente del 2026-11-11, valida anche per le esecuzioni successive:
+
+- iOS Simulator: **iPhone 15 Pro Max** esistente, UDID `459C668B-7CE8-443B-BAB3-7D3D5FFC9143`, runtime attuale iOS 26.1.
+- iOS fisico: **iPhone di Min**, UDID `00008130-001644523A2A001C`, soltanto quando disponibile e pertinente. I test fisici differiti restano differiti.
+- Android: **Medium Phone API 35**, AVD `Medium_Phone_API_35`, registry `~/.android/avd/Medium_Phone_API_35.ini`, dati `~/.android/avd/Medium_Phone.avd`. Il seriale osservato `emulator-5554` è di sessione: risolverlo tramite identità AVD, senza assumerlo stabile.
+
+Non creare/clonare target per task, retry o agente, né come fallback di lookup/boot. In caso di identità ambigua, target mancante o runtime incompatibile, fermare quel batch con errore esplicito. Una versione richiesta dal test resta vincolante; i target effimeri CI ospitati sono distinti. Un target locale eccezionale richiede motivo concreto, proprietario, dipendenze e condizione di rimozione nel registro.
+
+Serializzare installazioni/test sul medesimo dispositivo con l'esclusione esistente; non concorrere con sessioni manuali dell'utente. Gli helper nativi condividono il lock di piattaforma fra task e rilasciano le proprie risorse tramite il postflight anche per errore/annullamento. Non effettuare erase, wipe, uninstall distruttivi o reset sui canonici; non spegnere un dispositivo preesistente per il solo cleanup.
+
+Prima di ritirare target/snapshot: verificarne proprietario, processi, dati unici e dipendenze; usare gli strumenti ufficiali e preservare solo il contenuto utile necessario, senza archivi integrali di ogni VM. Valutare runtime/system image separatamente. I tre QCOW2 contenenti dati/sessioni restano protetti finché non ne siano dimostrate superfluità e recuperabilità. Nel postflight registrare dispositivi conservati, temporanei rimossi/protetti con motivo e spazio effettivo prima/dopo.

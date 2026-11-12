@@ -193,9 +193,16 @@ final class HistorySessionAutomaticPushServiceTests: XCTestCase {
         XCTAssertEqual(pending.first { $0.changeID == laterID }?.idempotencyKey, laterKey)
         XCTAssertEqual(remote.persistedRow(remoteID: remoteID)?.data, [["value"], ["Later durable history intent"]])
         XCTAssertTrue(try read.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter(LocalPendingBusinessAttemptStore.isSealed).isEmpty)
+        let announcements = try read.fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "history" }
+        XCTAssertEqual(announcements.count, 2)
+        let eventIDs = Set(announcements.map(\.clientEventID))
+        XCTAssertEqual(eventIDs.count, 2)
         _ = try await HistorySessionPushService(modelContainer: reopened, remote: remote,
             recorder: nil, defaults: fixture.defaults).syncHistorySessions(ownerUserID: owner, mode: .incremental)
         XCTAssertEqual(try remote.attemptedPayloads().count, attempts.count)
+        let afterRetry = try ModelContext(reopened).fetch(FetchDescriptor<SyncEventOutboxEntry>()).filter { $0.domain == "history" }
+        XCTAssertEqual(afterRetry.count, 2)
+        XCTAssertEqual(Set(afterRetry.map(\.clientEventID)), eventIDs)
     }
 
     func testHistoryRequestsAreChunkedAndEachAckHasDurableLocalEvent() async throws {

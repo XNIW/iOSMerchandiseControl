@@ -29,6 +29,10 @@ nonisolated struct ForegroundCloudWorkflowActivityStore: Equatable {
         !activeTokens.isEmpty
     }
 
+    var blocksAutomaticSync: Bool {
+        activeTokens.values.contains { $0 != .editing }
+    }
+
     func isExclusivelyActive(
         _ reason: ForegroundCloudWorkflowActivityReason,
         token: UUID
@@ -58,6 +62,8 @@ final class ForegroundCloudWorkflowActivityCenter: ObservableObject {
     var isBusy: Bool {
         store.isBusy
     }
+
+    var blocksAutomaticSync: Bool { store.blocksAutomaticSync }
 
     func isExclusivelyActive(
         _ reason: ForegroundCloudWorkflowActivityReason,
@@ -124,21 +130,45 @@ struct ContentView: View {
     private let historySessionSyncService: HistorySessionSyncService?
     private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
     private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
+    private let catalogConflictResolutionService: CatalogConflictResolutionService?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
-    @AppStorage(SelectedShopStore.localAuthorizationRevisionKey) private var localAuthorizationRevision = 0
+    @StateObject private var localAuthorizationRevisionState = LocalAuthorizationRevisionState()
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @EnvironmentObject private var syncStoreGenerationController: SyncStoreGenerationController
     @EnvironmentObject private var productImageStore: ProductImageStore
     @Environment(\.localRootPresentationState) private var localPresentation
     @Environment(\.localModelGenerationIsCurrent) private var modelGenerationIsCurrent
-    @StateObject private var excelSession = ExcelSessionViewModel()
-    @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
+    @StateObject private var excelSession: ExcelSessionViewModel
+    @StateObject private var foregroundActivityCenter: ForegroundCloudWorkflowActivityCenter
+    @StateObject private var workbookPreparation: LocalWorkbookPreparation
     @StateObject private var syncStateStore: SyncStateStore
     @StateObject private var shopContextStore: ShopContextStore
-    @State private var selectedTab = Self.initialSelectedTab()
+    @State private var currentSyncOrchestrator: SyncOrchestrator?
+    @State private var runtimePresentationID: String?
+    @State private var rootIndicatorState: SyncRootPresentationState = .hidden
+    @State private var fallbackSelectedTab = Self.initialSelectedTab()
+    @State private var openedTabs: Set<Int>
+    @State private var hasAdmittedBusinessNavigation = false
+    private let selectedTabOverride: Binding<Int>?
+    private var selectedTab: Int {
+        get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
+        nonmutating set {
+            // Persist the actual choice before SwiftUI publishes it. A same-scope
+            // authorization/readability update can restore presentation in the
+            // same transaction, before onChange has observed the new selection.
+            if isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery {
+                localPresentation?.update(presentationID: mountedPresentationID) { $0.selectedTab = newValue }
+            }
+            if let selectedTabOverride { selectedTabOverride.wrappedValue = newValue }
+            else { fallbackSelectedTab = newValue }
+        }
+    }
+    private var selectedTabBinding: Binding<Int> {
+        Binding(get: { selectedTab }, set: { selectedTab = $0 })
+    }
     @State private var mountedPresentationID: String?
     @State private var isCorruptJournalReviewPresented = false
     @State private var corruptJournalReplacementTask: Task<Void, Never>?
@@ -151,14 +181,31 @@ struct ContentView: View {
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil,
         shopDeviceRegistrationService: ShopDeviceRegistrationService? = nil,
         shopContextOverride: ShopContextStore? = nil,
-        syncStateOverride: SyncStateStore? = nil
+        syncStateOverride: SyncStateStore? = nil,
+        catalogConflictResolutionServiceOverride: CatalogConflictResolutionService? = nil,
+        excelSessionOverride: ExcelSessionViewModel? = nil,
+        foregroundActivityCenterOverride: ForegroundCloudWorkflowActivityCenter? = nil,
+        selectedTabOverride: Binding<Int>? = nil,
+        storeGenerationController: SyncStoreGenerationController? = nil,
+        workbookPreparationOverride: LocalWorkbookPreparation? = nil
     ) {
+        #if DEBUG
+        Task145StoreLoadFailureObservation.record(.businessRootConstructed)
+        #endif
         self.supabaseTransportClient = supabaseTransportClient
         self.supabasePullPreviewService = supabasePullPreviewService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
-        _syncStateStore = StateObject(wrappedValue: syncStateOverride ?? SyncStateStore())
+        self.catalogConflictResolutionService = catalogConflictResolutionServiceOverride ?? supabaseTransportClient.map {
+            CatalogConflictResolutionService(remote: CatalogRemoteSupabaseAdapter(remote: $0))
+        }
+        _excelSession = StateObject(wrappedValue: excelSessionOverride ?? ExcelSessionViewModel())
+        _foregroundActivityCenter = StateObject(wrappedValue: foregroundActivityCenterOverride ?? ForegroundCloudWorkflowActivityCenter())
+        _workbookPreparation = StateObject(wrappedValue: workbookPreparationOverride ?? LocalWorkbookPreparation())
+        self.selectedTabOverride = selectedTabOverride
+        _openedTabs = State(initialValue: [selectedTabOverride?.wrappedValue ?? Self.initialSelectedTab()])
+        _syncStateStore = StateObject(wrappedValue: syncStateOverride ?? SyncStateStore(storeGenerationController: storeGenerationController))
         _shopContextStore = StateObject(
             wrappedValue: shopContextOverride ?? ShopContextStore(
                 fetcher: supabaseTransportClient.map { MobileLinkedShopService(remote: $0) } ?? EmptyLinkedShopFetcher()
@@ -185,7 +232,7 @@ struct ContentView: View {
         }
     }
 
-    private static func initialSelectedTab() -> Int {
+    static func initialSelectedTab() -> Int {
         #if DEBUG
         let value = ProcessInfo.processInfo.environment["TASK131_INITIAL_TAB"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -201,119 +248,158 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if isCurrentModelGeneration {
-                activeRoot
-            }
-        }
+        #if DEBUG
+        let cost = Task144RootObservation.beginCachedCatalogBodyObservation("content-body-inclusive")
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-body-inclusive", startedAt: cost) }
+        #endif
+        return activeRoot
+    }
+
+    private var scopedSyncOrchestrator: SyncOrchestrator? {
+        runtimePresentationID == syncStoreGenerationController.presentationID ? currentSyncOrchestrator : nil
+    }
+
+    private var scopedRootIndicator: SyncRootPresentationState {
+        runtimePresentationID == syncStoreGenerationController.presentationID ? rootIndicatorState : .hidden
     }
 
     private var activeRoot: some View {
-        AppSyncRootHost(
-            context: modelContext,
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-active-root", startedAt: cachedCost) }
+        #endif
+        let presentationID = syncStoreGenerationController.presentationID
+        let hostPresentationID = currentSyncOrchestrator?.retainedSameScopeRecoveryHostPresentationID ?? presentationID
+        let runtimeModelContainer = syncStoreGenerationController.modelContainer
+        let hidesBusinessData = hidesBusinessDataForPendingRecovery
+        return ZStack {
+            tabContent(syncOrchestrator: scopedSyncOrchestrator, hidesBusinessData: hidesBusinessData)
+            AppSyncRootHost(
+            modelContainer: runtimeModelContainer,
+            presentationID: hostPresentationID,
             authViewModel: supabaseAuthViewModel,
             supabaseTransportClient: supabaseTransportClient,
             activityRecorder: syncEventOutboxDrainRecorder,
             syncEventSignalWatcher: syncEventSignalWatcher,
             syncStateStore: syncStateStore,
-            selectedTab: $selectedTab,
+            selectedTab: selectedTabBinding,
             activityCenter: foregroundActivityCenter,
             shopContextStore: shopContextStore,
             syncStoreGenerationController: syncStoreGenerationController,
-            shopDeviceRegistrationService: shopDeviceRegistrationService
-        ) { syncOrchestrator in
-            let hidesBusinessData = hidesBusinessDataForPendingRecovery
-            Group {
-                if hidesBusinessData {
-                    SyncReplacementPrivacyGate(
-                        state: syncStateStore.state,
-                        isSignedIn: supabaseAuthViewModel.isSignedIn,
-                        canSignIn: supabaseAuthViewModel.canSignIn,
-                        isBusy: supabaseAuthViewModel.isTransitioning
-                            || syncOrchestrator.rootPresentationState.kind == .checking
-                            || corruptJournalReplacementTask != nil,
-                        requiresManualReview: requiresManualRecoveryReview,
-                        signIn: supabaseAuthViewModel.signInWithGoogle,
-                        retry: syncOrchestrator.retryPendingRecoveryRootAction,
-                        review: { isCorruptJournalReviewPresented = true }
-                    )
-                    .accountSyncDecisionDialog(
-                        isPresented: $isCorruptJournalReviewPresented,
-                        decision: Self.interruptedRecoveryDecision,
-                        isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
-                        onChoose: { choice in
-                            switch choice {
-                            case .discardLocalAndBind:
-                                beginCorruptJournalReplacement(using: syncOrchestrator)
-                            default:
-                                // Cancel/back/keep-local deliberately leave the raw
-                                // latch, database, binding and network untouched.
-                                isCorruptJournalReviewPresented = false
-                            }
-                        }
-                    )
-                    .alert(
-                        L("options.accountDecision.error.title"),
-                        isPresented: Binding(
-                            get: { corruptJournalReplacementError != nil },
-                            set: { if !$0 { corruptJournalReplacementError = nil } }
-                        )
-                    ) {
-                        Button(L("common.ok"), role: .cancel) {}
-                    } message: {
-                        Text(corruptJournalReplacementError ?? "")
-                    }
-                } else {
-                    tabContent(syncOrchestrator: syncOrchestrator)
-                }
+            shopDeviceRegistrationService: shopDeviceRegistrationService,
+            publishPresentation: { orchestrator, state in
+                guard syncStoreGenerationController.presentationID == hostPresentationID else { return }
+                currentSyncOrchestrator = orchestrator
+                runtimePresentationID = hostPresentationID
+                rootIndicatorState = state
             }
-            .onChange(of: hidesBusinessData) { _, hidden in
-                if hidden, syncStoreGenerationController.activeManifest == nil {
-                    syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
-                }
+        ) { _ in Color.clear }
+        .id(hostPresentationID)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+        }
+        .background(LocalAuthorizationRevisionObservation(state: localAuthorizationRevisionState))
+        .accountSyncDecisionDialog(
+            isPresented: $isCorruptJournalReviewPresented,
+            decision: Self.interruptedRecoveryDecision,
+            isCloudReplacementEnabled: isCorruptJournalReplacementEnabled,
+            onChoose: { choice in
+                if case .discardLocalAndBind = choice, let orchestrator = scopedSyncOrchestrator {
+                    beginCorruptJournalReplacement(using: orchestrator)
+                } else { isCorruptJournalReviewPresented = false }
+            }
+        )
+        .alert(L("options.accountDecision.error.title"), isPresented: Binding(
+            get: { corruptJournalReplacementError != nil },
+            set: { if !$0 { corruptJournalReplacementError = nil } }
+        )) { Button(L("common.ok"), role: .cancel) {} }
+        message: { Text(corruptJournalReplacementError ?? "") }
+        .onChange(of: hidesBusinessData) { _, hidden in
+            restoreLocalPresentation()
+            if hidden, syncStoreGenerationController.activeManifest == nil {
+                syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
             }
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
+        .environment(\.catalogConflictResolutionService, catalogConflictResolutionService)
+        .environment(\.localBusinessReadIsAllowed, canReadLocalDomain)
+        .environment(\.localBusinessWriteIsAllowed, canWriteLocalStore)
         .environmentObject(shopContextStore)
-        .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
-        .onAppear { restoreLocalPresentation() }
+        .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task144RootObservation.recordCachedCatalogPhase("content-on-appear-entry")
+                NSLog("TASK146_B2_COST39 phase.content-on-appear-entry uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            }
+            #endif
+            restoreLocalPresentation()
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache" {
+                Task144RootObservation.recordCachedCatalogPhase("content-on-appear-return")
+                NSLog("TASK146_B2_COST39 phase.content-on-appear-return uptime_ns.%llu", DispatchTime.now().uptimeNanoseconds)
+            }
+            #endif
+        }
+        .onChange(of: syncStoreGenerationController.presentationID) { _, _ in restoreLocalPresentation() }
         .onChange(of: selectedTab) { _, value in
+            syncStoreGenerationController.preferLocalReadDomain(value == 2 ? .sessions : .catalog)
+            guard isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery else { return }
             localPresentation?.update(presentationID: mountedPresentationID) { $0.selectedTab = value }
         }
         .onChange(of: supabaseAuthViewModel.localMutationOwnerUserID) { _, _ in
             restoreLocalPresentation()
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         }
-        .onChange(of: localAuthorizationRevision) { _, _ in restoreLocalPresentation() }
-        .task { syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID) }
+        .onChange(of: localAuthorizationRevisionState.revision) { _, _ in restoreLocalPresentation() }
+        .task {
+            syncStoreGenerationController.preferLocalReadDomain(selectedTab == 2 ? .sessions : .catalog)
+            syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
+        }
         .onChange(of: syncStateStore.state.phase) { _, _ in
             syncStoreGenerationController.startLocalBodyQualification(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID)
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
             selectedTab = 1
         }
-        .onOpenURL { url in
-            guard url.isFileURL else { return }
-            // Policy URL singolo: se c'è già un URL pendente o un import in corso, scarta
-            guard excelSession.pendingOpenURL == nil, !excelSession.isLoading else {
-                // L'errore verrà mostrato da loadExternalFile quando consuma il pendingOpenURL,
-                // oppure qui se isLoading è true. Per semplicità, ignoriamo silenziosamente
-                // il secondo URL a livello di ContentView — il blocco con errore user-friendly
-                // è già gestito in loadExternalFile per il caso isLoading.
-                return
-            }
-            selectedTab = 0
-            excelSession.pendingOpenURL = url
-        }
+
     }
 
     private var isCurrentModelGeneration: Bool {
-        modelGenerationIsCurrent() && (localPresentation?.isCurrent(presentationID: mountedPresentationID) ?? true)
+        modelGenerationIsCurrent()
+    }
+
+    private func canReadLocalDomain(_ domain: Task126LocalReadDomain) -> Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-can-read", startedAt: cachedCost) }
+        #endif
+        guard isCurrentModelGeneration else { return false }
+        let owner = supabaseAuthViewModel.localMutationOwnerUserID
+        if domain != .priceHistory, syncStoreGenerationController.permitsScopedEmptyRoot(ownerUserID: owner) {
+            return true
+        }
+        return Task126OwnerStoreGate.permitsSameScopeLocalRead(
+            domain, modelContainer: modelContext.container, ownerUserID: owner)
+    }
+
+    private func canWriteLocalStore() -> Bool {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-can-write", startedAt: cachedCost) }
+        #endif
+        guard isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery else { return false }
+        guard syncStoreGenerationController.activeManifest != nil else { return true }
+        guard let owner = supabaseAuthViewModel.localMutationOwnerUserID else { return false }
+        return SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner))?.canWrite == true
     }
 
     private func restoreLocalPresentation() {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-restore-presentation", startedAt: cachedCost) }
+        #endif
         guard isCurrentModelGeneration else { return }
         mountedPresentationID = syncStoreGenerationController.presentationID
         let values = localPresentation?.admit(
@@ -330,10 +416,14 @@ struct ContentView: View {
 
     private var hidesBusinessDataForPendingRecovery: Bool {
         #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-privacy-choice", startedAt: cachedCost) }
+        #endif
+        #if DEBUG
         if Task144RootObservation.enabled { return observeTask144RootPrivacyChoice() }
         #endif
-        _ = localAuthorizationRevision
-        if let owner = supabaseAuthViewModel.sessionInfo?.userID,
+        _ = localAuthorizationRevisionState.revision
+        if let owner = supabaseAuthViewModel.localMutationOwnerUserID,
            let shop = SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)),
            let device = try? DeviceInstallIDStore().requireDeviceInstallID(),
            SelectedShopStore().hasConfirmedDeviceDenial(accountHash: AccountBindingStore.accountHash(for: owner),
@@ -343,16 +433,15 @@ struct ContentView: View {
         if syncStoreGenerationController.activeManifest != nil {
             return !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
                 modelContainer: modelContext.container,
-                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID
             )
         }
         if syncStoreGenerationController.permitsScopedEmptyRoot(ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID) {
             return false
         }
-        return AccountBindingStore().hasPendingReplacementJournal
-            && !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+        return !Task126OwnerStoreGate.permitsSameScopeLocalAccess(
                 modelContainer: modelContext.container,
-                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID
+                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID
             )
     }
 
@@ -362,8 +451,8 @@ struct ContentView: View {
         var hidden = false
         var branch = "NOT_SELECTED"
         defer { observation.finish(hidden, branch: branch, firstFalseLabel: "first-false-branch-condition") }
-        _ = localAuthorizationRevision
-        if let owner = observation.optional(supabaseAuthViewModel.sessionInfo?.userID, "owner"),
+        _ = localAuthorizationRevisionState.revision
+        if let owner = observation.optional(supabaseAuthViewModel.localMutationOwnerUserID, "owner"),
            let shop = observation.optional(SelectedShopStore().selectedShop(accountHash: AccountBindingStore.accountHash(for: owner)), "selected-shop"),
            let device = observation.attempt("device", { try DeviceInstallIDStore().requireDeviceInstallID() }),
            observation.check(SelectedShopStore().hasConfirmedDeviceDenial(accountHash: AccountBindingStore.accountHash(for: owner),
@@ -375,7 +464,7 @@ struct ContentView: View {
             branch = "active-local-access"
             hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
                 modelContainer: modelContext.container,
-                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "existing-local-access")
+                ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID), "existing-local-access")
             return hidden
         }
         if observation.check(syncStoreGenerationController.permitsScopedEmptyRoot(
@@ -383,15 +472,11 @@ struct ContentView: View {
             branch = "scoped-empty"; hidden = false
             return false
         }
-        if observation.check(AccountBindingStore().hasPendingReplacementJournal, "pending-journal") {
-            branch = "pending-local-access"
-            hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
-                modelContainer: modelContext.container,
-                ownerUserID: supabaseAuthViewModel.sessionInfo?.userID), "fallback-local-access")
-            return hidden
-        }
-        branch = "no-pending-journal"; hidden = false
-        return false
+        branch = "unqualified-local-access"
+        hidden = !observation.check(Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: modelContext.container,
+            ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID), "fallback-local-access")
+        return hidden
     }
     #endif
 
@@ -415,6 +500,10 @@ struct ContentView: View {
             // remains disabled until authenticated shop discovery is verified.
             return true
         }
+        guard Task126OwnerStoreGate.permitsSameScopeLocalAccess(
+            modelContainer: syncStoreGenerationController.modelContainer,
+            ownerUserID: ownerUserID
+        ) else { return true }
         guard let work = try? SameScopeRecoveryActiveWorkInspector.snapshot(
             container: syncStoreGenerationController.modelContainer,
             scope: scope
@@ -509,110 +598,197 @@ struct ContentView: View {
         }
     }
 
+    private var unavailableReason: LocalCatalogUnavailableReason {
+        if case .blocked(.deviceNotActive) = syncStateStore.state.phase { return .restricted }
+        if let owner = supabaseAuthViewModel.localMutationOwnerUserID,
+           let manifest = syncStoreGenerationController.activeManifest,
+           AccountBindingStore.accountHash(for: owner) != manifest.accountHash { return .restricted }
+        return syncStoreGenerationController.activeManifest == nil ? .firstDownload : .qualifying
+    }
+
+    private func businessPrivacyGate(syncOrchestrator: SyncOrchestrator?) -> some View {
+        #if DEBUG
+        let cachedCost = Task144RootObservation.beginCachedCatalogSynchronousCost()
+        defer { Task144RootObservation.finishCachedCatalogSynchronousCost("content-privacy-view", startedAt: cachedCost) }
+        #endif
+        return SyncReplacementPrivacyGate(
+            reason: unavailableReason,
+            state: syncStateStore.state,
+            isBusy: syncOrchestrator?.hasCurrentPresentationInvocation == true
+                && syncStateStore.state.phase.isSignificantAutomaticWork,
+            requiresManualReview: requiresManualRecoveryReview,
+            openOptions: { selectedTab = 3 },
+            review: { isCorruptJournalReviewPresented = true }
+        )
+    }
+
+    @ToolbarContentBuilder
+    private var syncToolbar: some ToolbarContent {
+        if scopedRootIndicator.kind != .hidden {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { selectedTab = 3 } label: {
+                    ProgressView().controlSize(.small)
+                }
+                .accessibilityLabel(L(scopedRootIndicator.titleKey))
+                .accessibilityHint(L("sync.local.openOptions"))
+                .accessibilityIdentifier("sync-root-significant-work")
+            }
+        }
+    }
+
     @ViewBuilder
-    private func tabContent(syncOrchestrator: SyncOrchestrator) -> some View {
-        TabView(selection: $selectedTab) {
-            // TAB 1: Inventario
-            NavigationStack {
-                InventoryHomeView()
-                    .environmentObject(excelSession)
-                    .environmentObject(shopContextStore)
+    private func tabContent(syncOrchestrator: SyncOrchestrator?, hidesBusinessData: Bool) -> some View {
+        let presentationID = syncStoreGenerationController.presentationID
+        let catalogAvailable = !hidesBusinessData || canReadLocalDomain(.catalog)
+        let sessionsAvailable = !hidesBusinessData || canReadLocalDomain(.sessions)
+        TabView(selection: selectedTabBinding) {
+            Group {
+                if selectedTab == 0 || openedTabs.contains(0) {
+                    NavigationStack {
+                        InventoryHomeView(isBusinessContentAvailable: catalogAvailable,
+                            businessContentIsCurrent: { canReadLocalDomain(.catalog) },
+                            unavailableTitleKey: unavailableReason.titleKey, unavailableDetailKey: unavailableReason.detailKey,
+                            openOptions: { selectedTab = 3 }, workbookPreparation: workbookPreparation)
+                            .environmentObject(excelSession)
+                            .environmentObject(shopContextStore)
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
+                    }
+                } else { Color.clear }
             }
-            .tabItem {
-                Label(L("tab.inventory"), systemImage: "doc.on.doc")
-            }
+            .tabItem { Label(L("tab.inventory"), systemImage: "doc.on.doc") }
             .tag(0)
 
-            // TAB 2: Database
-            NavigationStack {
-                DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
-                    ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+            Group {
+                if selectedTab == 1 || openedTabs.contains(1) {
+                    if catalogAvailable || hasAdmittedBusinessNavigation {
+                        NavigationStack {
+                            Group {
+                                #if DEBUG
+                                let _ = Task144RootObservation.recordCachedCatalogPhase("database-navigation-content")
+                                #endif
+                                if !catalogAvailable {
+                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                        .navigationTitle(L("tab.database"))
+                                } else {
+                                    DatabaseView(isFirstSnapshotPreparing: syncStoreGenerationController.permitsScopedEmptyRoot(
+                                        ownerUserID: supabaseAuthViewModel.localMutationOwnerUserID))
+                                }
+                            }
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
+                        }
+                    } else {
+                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                    }
+                } else { Color.clear }
             }
-            .tabItem {
-                Label(L("tab.database"), systemImage: "shippingbox")
-            }
+            .tabItem { Label(L("tab.database"), systemImage: "shippingbox") }
             .tag(1)
 
-            // TAB 3: Cronologia
-            NavigationStack {
-                HistoryView(historySessionSyncService: historySessionSyncService)
+            Group {
+                if selectedTab == 2 || openedTabs.contains(2) {
+                    if sessionsAvailable || hasAdmittedBusinessNavigation {
+                        NavigationStack {
+                            Group {
+                                if !sessionsAvailable {
+                                    businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                                        .navigationTitle(L("tab.history"))
+                                } else {
+                                    HistoryView(historySessionSyncService: historySessionSyncService)
+                                }
+                            }
+                            .id(presentationID)
+                            .toolbar { syncToolbar }
+                        }
+                    } else {
+                        businessPrivacyGate(syncOrchestrator: syncOrchestrator)
+                    }
+                } else { Color.clear }
             }
-            .tabItem {
-                Label(L("tab.history"), systemImage: "clock.arrow.circlepath")
-            }
+            .tabItem { Label(L("tab.history"), systemImage: "clock.arrow.circlepath") }
             .tag(2)
 
-            // TAB 4: Opzioni
-            NavigationStack {
-                OptionsView(
-                    remoteCountFetcher: remoteCountFetcher,
-                    supabasePullPreviewService: supabasePullPreviewService,
-                    syncStateStore: syncStateStore,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    deviceAuthorization: shopDeviceRegistrationService,
-                    accountStoreReplacementRuntime: syncOrchestrator
-                )
+            Group {
+                if selectedTab == 3 || openedTabs.contains(3) {
+                    NavigationStack {
+                        OptionsView(remoteCountFetcher: remoteCountFetcher,
+                            supabasePullPreviewService: supabasePullPreviewService, syncStateStore: syncStateStore,
+                            syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                            deviceAuthorization: shopDeviceRegistrationService,
+                            accountStoreReplacementRuntime: syncOrchestrator)
+                    }
+                } else { Color.clear }
             }
-            .tabItem {
-                Label(L("tab.options"), systemImage: "gearshape")
-            }
+            .tabItem { Label(L("tab.options"), systemImage: "gearshape") }
             .tag(3)
+            .task145PerformanceRender("optionsRender")
+        }
+        // Mount the visible section first. A visited section stays mounted so
+        // switching tabs keeps its navigation, workbook and editor state.
+        .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
+        .task {
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry")
+            #endif
+            guard !hasAdmittedBusinessNavigation else { return }
+            // The task may start after readability has already published.
+            // Latch navigation immediately; never suspend this admission on a
+            // captured earlier capability, another domain or the network.
+            guard !Task.isCancelled, isCurrentModelGeneration else { return }
+            // Once admitted, retain navigation even if a capability is later
+            // withdrawn; the existing inner privacy gates remain authoritative.
+            #if DEBUG
+            Task144RootObservation.recordCachedCatalogPhase("navigation-admission")
+            #endif
+            hasAdmittedBusinessNavigation = true
+        }
+        .task145PerformanceRender("tabsRender")
+    }
+}
+
+nonisolated enum LocalCatalogUnavailableReason {
+    case qualifying, firstDownload, restricted
+    var titleKey: String {
+        switch self {
+        case .qualifying: "sync.local.qualifying.title"
+        case .firstDownload: "sync.local.firstDownload.title"
+        case .restricted: "sync.local.restricted.title"
+        }
+    }
+    var detailKey: String {
+        switch self {
+        case .qualifying: "sync.local.qualifying.detail"
+        case .firstDownload: "sync.local.firstDownload.waiting"
+        case .restricted: "sync.local.restricted.detail"
         }
     }
 }
 
 private struct SyncReplacementPrivacyGate: View {
+    let reason: LocalCatalogUnavailableReason
     let state: SyncState
-    let isSignedIn: Bool
-    let canSignIn: Bool
     let isBusy: Bool
     let requiresManualReview: Bool
-    let signIn: () -> Void
-    let retry: () -> Void
+    let openOptions: () -> Void
     let review: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
-            if isBusy { ProgressView() }
-            Text(L("options.supabase.automaticSync.phase.recoveryRequired"))
-                .font(.headline)
-                .multilineTextAlignment(.center)
-            Text(L(SyncRecoveryGatePresentation.statusKey(state: state, isBusy: isBusy)))
-                .multilineTextAlignment(.center)
+            Text(L(reason.titleKey)).font(.headline).multilineTextAlignment(.center)
+            Text(L(reason.detailKey)).multilineTextAlignment(.center)
                 .accessibilityIdentifier("sync-recovery-phase")
             if isBusy, let progress = state.recoveryProgress, let domain = progress.domain {
                 Text(String(format: L("options.supabase.automaticSync.recovery.counts"),
-                    L(SyncRecoveryGatePresentation.domainKey(domain)),
-                    progress.pages, progress.persistedRows))
-                    .font(.subheadline.monospacedDigit())
-                    .multilineTextAlignment(.center)
+                    L(SyncRecoveryGatePresentation.domainKey(domain)), progress.pages, progress.persistedRows))
+                    .font(.subheadline.monospacedDigit()).multilineTextAlignment(.center)
                     .accessibilityIdentifier("sync-recovery-counts")
             }
-            if isBusy, let startedAt = state.startedAt {
-                HStack {
-                    Text(L("options.supabase.automaticSync.recovery.elapsed"))
-                    Text(startedAt, style: .timer).monospacedDigit()
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("sync-recovery-elapsed")
-            }
-            if !isBusy, isSignedIn {
-                Button(
-                    L(requiresManualReview
-                        ? "options.accountDecision.review"
-                        : "options.supabase.automaticSync.action.retry"),
-                    action: requiresManualReview ? review : retry
-                )
-                    .buttonStyle(.borderedProminent)
-            } else if !isBusy {
-                Button(L("options.supabase.automaticSync.root.action.signIn"), action: signIn)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canSignIn)
-            }
+            Button(L(requiresManualReview ? "options.accountDecision.review" : "sync.local.openOptions"),
+                   action: requiresManualReview ? review : openOptions)
+                .buttonStyle(.borderedProminent)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
         .accessibilityIdentifier("sync-replacement-business-data-gate")
     }
@@ -630,9 +806,15 @@ private struct AppSyncRootHost<Content: View>: View {
 
     private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     private let content: (SyncOrchestrator) -> Content
+    private let publishPresentation: (SyncOrchestrator, SyncRootPresentationState) -> Void
+    #if DEBUG
+    private let t10PresentationGenerationID: UUID?
+    #endif
+    @State private var significantWorkVisible = false
 
     init(
-        context: ModelContext,
+        modelContainer: ModelContainer,
+        presentationID: String,
         authViewModel: SupabaseAuthViewModel,
         supabaseTransportClient: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?,
@@ -643,12 +825,13 @@ private struct AppSyncRootHost<Content: View>: View {
         shopContextStore: ShopContextStore,
         syncStoreGenerationController: SyncStoreGenerationController,
         shopDeviceRegistrationService: ShopDeviceRegistrationService?,
+        publishPresentation: @escaping (SyncOrchestrator, SyncRootPresentationState) -> Void,
         @ViewBuilder content: @escaping (SyncOrchestrator) -> Content
     ) {
         _syncOrchestrator = StateObject(
             wrappedValue: SyncOrchestrator(
                 automaticRuntime: SyncAutomaticRuntimeFactory.make(
-                    modelContainer: context.container,
+                    modelContainer: modelContainer,
                     authViewModel: authViewModel,
                     supabaseTransportClient: supabaseTransportClient,
                     activityRecorder: activityRecorder,
@@ -661,8 +844,8 @@ private struct AppSyncRootHost<Content: View>: View {
                 syncEventSignalWatcher: syncEventSignalWatcher,
                 stateStore: syncStateStore,
                 storeGenerationController: syncStoreGenerationController,
-                storeGenerationLease: syncStoreGenerationController.captureLease(for: context.container),
-                decisionInputProvider: SyncDecisionInputProvider(modelContainer: context.container)
+                storeGenerationLease: syncStoreGenerationController.captureLease(for: modelContainer),
+                decisionInputProvider: SyncDecisionInputProvider(modelContainer: modelContainer)
             )
         )
         _selectedTab = selectedTab
@@ -671,23 +854,43 @@ private struct AppSyncRootHost<Content: View>: View {
         _shopContextStore = ObservedObject(wrappedValue: shopContextStore)
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.content = content
+        self.publishPresentation = publishPresentation
+        #if DEBUG
+        t10PresentationGenerationID = UUID(uuidString: presentationID)
+        #endif
     }
 
     var body: some View {
         let rootBannerState = syncOrchestrator.rootPresentationState
         let showsRootBanner = syncOrchestrator.shouldShowRootBanner(rootBannerState, selectedTab: selectedTab)
 
-        VStack(spacing: 0) {
-            rootBanner(state: rootBannerState, isVisible: showsRootBanner)
-            content(syncOrchestrator)
-        }
+        let published = showsRootBanner && significantWorkVisible ? rootBannerState : .hidden
+        content(syncOrchestrator)
+            .onChange(of: published, initial: true) { _, state in publishPresentation(syncOrchestrator, state) }
+            .task(id: syncOrchestrator.visibleWorkInvocationID) {
+                significantWorkVisible = false
+                guard syncOrchestrator.visibleWorkInvocationID != nil else { return }
+                do { try await Task.sleep(for: .milliseconds(700)) } catch { return }
+                guard !Task.isCancelled, syncOrchestrator.visibleWorkInvocationID != nil else { return }
+                significantWorkVisible = true
+            }
             .task {
+                #if DEBUG
+                observeT10Lifecycle("host-task-start")
+                #endif
                 await refreshShopContextAndResumeSync()
                 #if DEBUG
                 Task144LocalAvailabilityRootFixture.current?.startIfNeeded()
                 #endif
             }
             .onChange(of: scenePhase) { _, phase in
+                #if DEBUG
+                if phase == .background { Task144RootObservation.performanceBackground() }
+                if phase == .active {
+                    Task144RootObservation.performanceActivate()
+                    Task144LocalAvailabilityRootFixture.current?.beginPerformanceWarmRecoveryIfArmed()
+                }
+                #endif
                 syncOrchestrator.handleScenePhaseChanged(phase)
                 if phase == .active {
                     registerShopDevice(reason: "foreground")
@@ -753,25 +956,25 @@ private struct AppSyncRootHost<Content: View>: View {
                 }
             }
             .onDisappear {
+                #if DEBUG
+                observeT10Lifecycle("host-disappear-stop-enter")
+                #endif
                 syncOrchestrator.stop()
+                #if DEBUG
+                observeT10Lifecycle("host-stop-return")
+                #endif
             }
     }
 
-    @ViewBuilder
-    private func rootBanner(state: SyncRootPresentationState, isVisible: Bool) -> some View {
-        if isVisible {
-            SyncRootForegroundBanner(
-                state: state,
-                reduceMotion: reduceMotion,
-                action: { handleRootAction(state.primaryActionID) }
-            )
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 2)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        }
+    #if DEBUG
+    private func observeT10Lifecycle(_ stage: String) {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TASK145_SAVE_BEFORE_ACTIVATION_UI"] == "name-price",
+              let runID = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) else { return }
+        let generationID = t10PresentationGenerationID?.uuidString.lowercased() ?? "none"
+        NSLog("%@", "TASK145_UI03_LIFECYCLE schema=1 runID=\(runID.uuidString.lowercased()) pid=\(ProcessInfo.processInfo.processIdentifier) stage=\(stage) cancelled=\(Task.isCancelled) generationID=\(generationID)")
     }
-
+    #endif
     private func handleRootAction(_ actionID: SyncRootPresentationActionID?) {
         switch actionID {
         case .reviewChanges:
@@ -799,6 +1002,13 @@ private struct AppSyncRootHost<Content: View>: View {
     }
 
     private func refreshShopContextAndResumeSync() async {
+        #if DEBUG
+        observeT10Lifecycle("bootstrap-enter")
+        #endif
+        await syncOrchestrator.bootstrap(scenePhase: scenePhase)
+        #if DEBUG
+        observeT10Lifecycle("bootstrap-return")
+        #endif
         await shopContextStore.refresh(
             ownerUserID: authViewModel.localMutationOwnerUserID
         )
@@ -808,11 +1018,8 @@ private struct AppSyncRootHost<Content: View>: View {
         ) {
             await shopDeviceRegistrationService?.registerHeartbeatAndCheck(reason: "app_sync_bootstrap")
         }
-        // Bootstrap also owns reachability and lifecycle observation. It must
-        // start while auth/shop discovery is blocked; the decision/runtime
-        // gates still prevent every business call until the exact scope is
-        // authenticated and resolved.
-        await syncOrchestrator.bootstrap(scenePhase: scenePhase)
+        // Discovery may have become ready after the first gated attempt.
+        syncOrchestrator.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
     }
 }
 

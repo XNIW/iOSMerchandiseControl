@@ -5,6 +5,8 @@ import SwiftData
 struct ProductPriceHistoryView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.localBusinessReadIsAllowed) private var localReadIsAllowed
+    @Environment(\.localBusinessWriteIsAllowed) private var localWriteIsAllowed
 
     let product: Product
     let pendingOwnerUserID: UUID?
@@ -50,6 +52,16 @@ struct ProductPriceHistoryView: View {
     }
 
     var body: some View {
+        if localReadIsAllowed(.priceHistory) {
+            qualifiedHistory
+        } else {
+            ContentUnavailableView(L("sync.local.qualifying.title"), systemImage: "clock")
+                .navigationTitle(L("product.history.title"))
+        }
+    }
+
+    @ViewBuilder
+    private var qualifiedHistory: some View {
         let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
         let currentList = selectedType == .purchase ? purchasePrices : retailPrices
 
@@ -79,6 +91,7 @@ struct ProductPriceHistoryView: View {
                 } label: {
                     Label(L("product.history.action.update_current"), systemImage: "plus.circle")
                 }
+                .disabled(!localWriteIsAllowed())
             }
 
             if currentList.isEmpty {
@@ -116,6 +129,14 @@ struct ProductPriceHistoryView: View {
                         }
                         .padding(.vertical, 4)
                         .accessibilityElement(children: .combine)
+                        .task145B6Render(.entity(id: price.remoteID, kinds: ["price"],
+                            route: "database.product-prices.\(product.remoteID?.uuidString.lowercased() ?? "unbound").\(selectedType.rawValue)",
+                            visibleFields: b6VisibleFields(price)), validate: {
+                                price.product?.remoteID == product.remoteID && product.remoteID != nil
+                                    && price.type == selectedType
+                                    && Task126OwnerStoreGate.permitsSameScopeLocalRead(
+                                        .priceHistory, modelContainer: context.container, ownerUserID: pendingOwnerUserID)
+                            })
                     }
                 }
             }
@@ -149,6 +170,12 @@ struct ProductPriceHistoryView: View {
                 )
             }
         }
+    }
+
+    private func b6VisibleFields(_ price: ProductPrice) -> [String: String] {
+        var fields = ["amount": formatMoney(price.price), "effectiveAt": formatDate(price.effectiveAt)]
+        if let source = price.source, !source.isEmpty { fields["source"] = displaySource(source) }
+        return fields
     }
 
     private func currentPriceLabel(for type: PriceType) -> String {

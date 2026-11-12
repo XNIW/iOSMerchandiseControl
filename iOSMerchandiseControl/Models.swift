@@ -66,9 +66,10 @@ final class ProductCategory {
 
 @Model
 final class Product {
+    #Index<Product>([\.remoteID])
     @Attribute(.unique) var barcode: String
 
-    var remoteID: UUID?
+    @Attribute(hashModifier: "task145-product-remoteID-readback-index-v1") var remoteID: UUID?
     var remoteUpdatedAt: Date?
     var remoteDeletedAt: Date?
     var primaryImageVersionID: UUID?

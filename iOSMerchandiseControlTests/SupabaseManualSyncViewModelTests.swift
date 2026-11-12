@@ -1092,6 +1092,24 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.string(forKey: "task114.runtime.incremental.lastOutcome"), "completed")
     }
 
+    func testForegroundIncrementalPendingCheckpointPublicationDoesNotStartRecovery() async {
+        var committed = SyncIncrementalPullSummary(syncType: .eventIncremental, eventsFetched: 1,
+            watermarkBefore: 42, watermarkAfter: 43, productsUpdated: 1)
+        committed.checkpointPublicationPending = true
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let provider = ManualSyncIncrementalPullProviderFake(mode: .summary(.init(committed)))
+        let viewModel = makeSemiAutomaticViewModel(fake: fake, supportsForegroundCloudCheck: true,
+            incrementalPullProvider: provider)
+
+        _ = await viewModel.startForegroundIncrementalCheckNow(now: Date(), source: .remoteSyncEvent)
+
+        XCTAssertEqual(provider.callCount, 1)
+        XCTAssertFalse(fake.calls.contains(.remotePreview))
+        XCTAssertEqual(viewModel.semiAutomaticState, .recoverableError)
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "task114.runtime.incremental.lastError"),
+                       "checkpoint_publication_pending")
+    }
+
     func testTask114ForegroundIncrementalRecoveryBackoffPreventsSamePageLoop() async {
         let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
         let watermarkKey = SupabaseSyncEventIncrementalApplyService.watermarkKey(ownerUserID: owner)
@@ -1340,6 +1358,23 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         XCTAssertFalse(store.isBusy)
         XCTAssertTrue(store.activeReasons.isEmpty)
+    }
+
+    func testR23EditorPresenceDoesNotBlockAutomaticWorkButCriticalTokenDoes() {
+        var store = ForegroundCloudWorkflowActivityStore()
+        let editor = UUID(), writer = UUID(), scanner = UUID()
+        store.setActive(.editing, true, token: editor)
+        XCTAssertTrue(store.isBusy, "Manual replacement remains protected while editing")
+        XCTAssertFalse(store.blocksAutomaticSync)
+        store.setActive(.localProgress, true, token: writer)
+        XCTAssertTrue(store.blocksAutomaticSync)
+        store.setActive(.localProgress, false, token: writer)
+        XCTAssertFalse(store.blocksAutomaticSync)
+        store.setActive(.scanner, true, token: scanner)
+        XCTAssertTrue(store.blocksAutomaticSync)
+        store.setActive(.scanner, false, token: scanner)
+        XCTAssertFalse(store.blocksAutomaticSync)
+        XCTAssertTrue(store.isBusy)
     }
 
     func testForegroundActivityExclusiveTokenRejectsConcurrentLocalWorkflow() {

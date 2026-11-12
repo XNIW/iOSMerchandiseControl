@@ -27,6 +27,9 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     var suppliersMissingRemoteTombstoned: Int = 0
     var categoriesMissingRemoteTombstoned: Int = 0
     var requiresFullRecoveryReason: String?
+    /// Business rows and the local cursor committed. Retry the V6 mirror
+    /// before issuing new incremental reads or claiming convergence.
+    var checkpointPublicationPending = false
     /// True only when a scope-fenced backend checkpoint and the local
     /// generation digest/count proof were compared successfully in this run.
     /// Event-page emptiness and count parity alone must leave this false.

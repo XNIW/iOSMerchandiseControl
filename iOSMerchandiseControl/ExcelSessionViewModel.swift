@@ -100,6 +100,7 @@ final class ExcelSessionViewModel: ObservableObject {
     @Published var lastError: String? = nil
     /// URL ricevuto da "Apri con" / Share Sheet — consumato da InventoryHomeView
     @Published var pendingOpenURL: URL? = nil
+    private var workbookLoadID: UUID?
 
     // Metriche di analisi del file corrente
     @Published var analysisConfidence: Double?
@@ -210,7 +211,25 @@ final class ExcelSessionViewModel: ObservableObject {
 
     // MARK: - Gestione stato
 
+    func invalidatePendingWorkbookLoad() {
+        workbookLoadID = nil
+        isLoading = false; progress = nil; pendingOpenURL = nil
+    }
+
+    /// RAM workbook values survive physical adoption; old SwiftData objects do not.
+    func withdrawPersistedEntry() { currentHistoryEntry = nil }
+
+    /// Activation observers run under the publication lease: defer ObservableObject notification.
+    func schedulePersistedEntryWithdrawal() {
+        let retired = currentHistoryEntry
+        Task { @MainActor [weak self, weak retired] in
+            guard let self, let retired, self.currentHistoryEntry === retired else { return }
+            self.currentHistoryEntry = nil
+        }
+    }
+
     func resetState() {
+        workbookLoadID = nil
         originalHeader = []
         normalizedHeader = []
         headerSource = []
@@ -365,9 +384,17 @@ final class ExcelSessionViewModel: ObservableObject {
     /// Carica e analizza uno o più file (Excel HTML-export) e popola header/rows.
     /// È l'equivalente iOS di loadFromMultipleUris + readAndAnalyzeExcel su Android.
     func load(from urls: [URL], in context: ModelContext) async throws {
+        try await load(from: urls)
+    }
+
+    /// Parsing/mapping has no physical-store prerequisite. Persistence APIs below still require a context.
+    func load(from urls: [URL]) async throws {
         guard !urls.isEmpty else { return }
+        try Task.checkCancellation()
 
         resetState()
+        let request = UUID(); workbookLoadID = request
+        defer { if workbookLoadID == request { workbookLoadID = nil; isLoading = false; progress = nil } }
         isLoading = true
         progress = 0
 
@@ -386,6 +413,8 @@ final class ExcelSessionViewModel: ObservableObject {
                 )
             }
 
+            try Task.checkCancellation()
+            guard workbookLoadID == request else { throw CancellationError() }
             // Torniamo sul MainActor
             self.originalHeader = loaded.originalHeader
             self.normalizedHeader = loaded.normalizedHeader
@@ -405,6 +434,9 @@ final class ExcelSessionViewModel: ObservableObject {
 
             progress = 1
         } catch {
+            guard workbookLoadID == request else { throw CancellationError() }
+            workbookLoadID = nil
+            if error is CancellationError { isLoading = false; progress = nil; throw error }
             let message: String
             if let le = error as? LocalizedError, let desc = le.errorDescription {
                 message = desc
@@ -417,6 +449,7 @@ final class ExcelSessionViewModel: ObservableObject {
             throw error
         }
 
+        workbookLoadID = nil
         isLoading = false
         progress = nil
     }
@@ -425,12 +458,15 @@ final class ExcelSessionViewModel: ObservableObject {
     /// Valida che gli header normalizzati siano compatibili con il dataset iniziale.
     func appendRows(from urls: [URL]) async throws {
         guard !urls.isEmpty else { return }
+        try Task.checkCancellation()
         guard !initialNormalizedHeader.isEmpty, !rows.isEmpty else {
             throw ExcelLoadError.invalidFormat("Nessun dato presente. Carica prima un file.")
         }
 
         try ExcelImportResourcePolicy.validateSourceFilesForSession(urls)
 
+        let request = UUID(); workbookLoadID = request
+        defer { if workbookLoadID == request { workbookLoadID = nil; isLoading = false; progress = nil } }
         isLoading = true
         progress = 0
         lastError = nil
@@ -441,6 +477,8 @@ final class ExcelSessionViewModel: ObservableObject {
                     try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
                 }
 
+                try Task.checkCancellation()
+                guard workbookLoadID == request else { throw CancellationError() }
                 if newHeader != initialNormalizedHeader {
                     throw ExcelLoadError.incompatibleHeader
                 }
@@ -449,10 +487,10 @@ final class ExcelSessionViewModel: ObservableObject {
                 progress = Double(index + 1) / Double(urls.count)
             }
 
-            if let metrics = await Self.computeAnalysisMetricsInBackground(
-                header: normalizedHeader,
-                rows: rows
-            ) {
+            let metrics = await Self.computeAnalysisMetricsInBackground(header: normalizedHeader, rows: rows)
+            try Task.checkCancellation()
+            guard workbookLoadID == request else { throw CancellationError() }
+            if let metrics {
                 analysisMetrics = metrics
                 analysisConfidence = metrics.confidenceScore
             } else {
@@ -462,10 +500,12 @@ final class ExcelSessionViewModel: ObservableObject {
 
             progress = 1
         } catch {
-            if let metrics = await Self.computeAnalysisMetricsInBackground(
-                header: normalizedHeader,
-                rows: rows
-            ) {
+            guard workbookLoadID == request else { throw CancellationError() }
+            if error is CancellationError { workbookLoadID = nil; isLoading = false; progress = nil; throw error }
+            let metrics = await Self.computeAnalysisMetricsInBackground(header: normalizedHeader, rows: rows)
+            try Task.checkCancellation()
+            guard workbookLoadID == request else { throw CancellationError() }
+            if let metrics {
                 analysisMetrics = metrics
                 analysisConfidence = metrics.confidenceScore
             } else {
@@ -485,6 +525,7 @@ final class ExcelSessionViewModel: ObservableObject {
             throw error
         }
 
+        workbookLoadID = nil
         isLoading = false
         progress = nil
     }

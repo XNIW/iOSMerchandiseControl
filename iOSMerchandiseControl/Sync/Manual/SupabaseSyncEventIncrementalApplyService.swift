@@ -26,6 +26,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplySummary: Sendable, Equatable
     var suppliersMissingRemoteTombstoned: Int = 0
     var categoriesMissingRemoteTombstoned: Int = 0
     var requiresFullRecoveryReason: String?
+    var checkpointPublicationPending = false
     var eventPageFetchMs: Int = 0
     var catalogFetchMs: Int = 0
     var catalogApplyMs: Int = 0
@@ -166,6 +167,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplySummary: Sendable, Equatable
             historyApplyMs: summary.historyApplyMs,
             totalElapsedMs: summary.totalElapsedMs
         )
+        checkpointPublicationPending = summary.checkpointPublicationPending
     }
 }
 

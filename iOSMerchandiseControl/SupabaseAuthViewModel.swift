@@ -15,11 +15,20 @@ final class SupabaseAuthViewModel: ObservableObject {
 
     @Published private(set) var state: State
     @Published private(set) var sessionInfo: SupabaseAuthSessionInfo?
+    @Published private(set) var hasResolvedInitialSession: Bool
 
     private let authService: SupabaseAuthService?
     private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     private var authEventsTask: Task<Void, Never>?
     private var authOperationID = UUID()
+
+    /// A value from an accepted SDK session, not a cloud session or a local
+    /// capability. Task126 still qualifies the exact active store on every use.
+    private struct LocalIdentity {
+        let ownerUserID: UUID
+        let witness: SupabaseLocalAuthReadWitness
+    }
+    private var localIdentity: LocalIdentity?
 
     init(
         authService: SupabaseAuthService?,
@@ -30,6 +39,8 @@ final class SupabaseAuthViewModel: ObservableObject {
         self.authService = authService
         self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.sessionInfo = initialSessionInfo
+        self.hasResolvedInitialSession = authService == nil || initialError != nil
+            || (initialSessionInfo.map { !$0.isExpired } ?? false)
 
         if authService == nil {
             self.state = .unconfigured
@@ -41,6 +52,7 @@ final class SupabaseAuthViewModel: ObservableObject {
             self.state = .signedOut
         }
 
+        rememberLocalIdentity(initialSessionInfo)
         startAuthListener()
         registerShopDeviceIfReady(reason: "auth_initial")
     }
@@ -51,7 +63,8 @@ final class SupabaseAuthViewModel: ObservableObject {
 
     var isSignedIn: Bool {
         if case .signedIn = state,
-           let sessionInfo {
+           let sessionInfo, let localIdentity,
+           authService?.acceptsLocalIdentityReadWitness(localIdentity.witness) == true {
             return !sessionInfo.isExpired
         }
         return false
@@ -64,6 +77,18 @@ final class SupabaseAuthViewModel: ObservableObject {
         case .unconfigured, .signedOut, .signedIn, .failed:
             return false
         }
+    }
+
+    /// Presentation only. Cloud and local authority still use their existing gates.
+    var requiresSignInForPresentation: Bool {
+        hasResolvedInitialSession && sessionInfo == nil && localMutationOwnerUserID == nil
+            && canSignIn && !isTransitioning
+    }
+
+    var isRestoringSessionForPresentation: Bool { !hasResolvedInitialSession }
+
+    var isSessionTemporarilyUnavailableForPresentation: Bool {
+        hasResolvedInitialSession && localMutationOwnerUserID != nil && !isSignedIn && !isTransitioning
     }
 
     var canSignIn: Bool {
@@ -93,7 +118,9 @@ final class SupabaseAuthViewModel: ObservableObject {
             if !isTransitioning { state = authService == nil ? .unconfigured : .signedOut }
             return
         }
+        if hasUnchangedAcceptedSession(currentSession) { return }
         sessionInfo = currentSession
+        rememberLocalIdentity(currentSession)
         if currentSession.isExpired {
             if !isTransitioning {
                 state = .signedOut
@@ -103,10 +130,30 @@ final class SupabaseAuthViewModel: ObservableObject {
         }
     }
 
+    /// Suppress only a proven no-op presentation update. A changed SDK read
+    /// epoch/generation, missing session or expired session takes the original
+    /// publication path, even when the displayed user happens to be unchanged.
+    private func hasUnchangedAcceptedSession(_ info: SupabaseAuthSessionInfo) -> Bool {
+        guard state == .signedIn, !info.isExpired, sessionInfo == info,
+              let authService, let localIdentity,
+              localIdentity.ownerUserID == info.userID,
+              authService.localIdentityReadWitness == localIdentity.witness else { return false }
+        return authService.acceptsLocalIdentityReadWitness(localIdentity.witness)
+    }
+
     /// Identity supplied to the local mutation fence. That fence, rather
     /// than this presentation value, owns authorization for the active store.
     var localMutationOwnerUserID: UUID? {
-        sessionInfo?.userID
+        guard !isTransitioning, let localIdentity, let authService,
+              authService.acceptsLocalIdentityReadWitness(localIdentity.witness) else { return nil }
+        return localIdentity.ownerUserID
+    }
+
+    private func rememberLocalIdentity(_ info: SupabaseAuthSessionInfo?) {
+        guard let info, let authService, let witness = authService.localIdentityReadWitness,
+              witness.ownerUserID == info.userID,
+              authService.acceptsAuthGeneration(witness.generation) else { return }
+        localIdentity = LocalIdentity(ownerUserID: info.userID, witness: witness)
     }
 
     func signInWithGoogle() {
@@ -123,6 +170,8 @@ final class SupabaseAuthViewModel: ObservableObject {
                       authService.acceptsAuthGeneration(result.generation) else { return }
                 let info = result.info
                 sessionInfo = info
+                rememberLocalIdentity(info)
+                hasResolvedInitialSession = true
                 state = info.isExpired ? .signedOut : .signedIn
                 if !info.isExpired {
                     registerShopDeviceIfReady(reason: "auth_sign_in")
@@ -149,6 +198,8 @@ final class SupabaseAuthViewModel: ObservableObject {
                       authService.acceptsAuthGeneration(result.generation) else { return }
                 let info = result.info
                 sessionInfo = info
+                rememberLocalIdentity(info)
+                hasResolvedInitialSession = true
                 state = info.isExpired ? .signedOut : .signedIn
                 if !info.isExpired {
                     registerShopDeviceIfReady(reason: "auth_sign_in_wechat")
@@ -173,7 +224,9 @@ final class SupabaseAuthViewModel: ObservableObject {
             do {
                 let generation = try await authService.signOut()
                 guard authOperationID == operationID, authService.authGeneration == generation else { return }
+                localIdentity = nil
                 sessionInfo = nil
+                hasResolvedInitialSession = true
                 state = .signedOut
             } catch let failure as SupabaseAuthOperationFailure {
                 guard authOperationID == operationID, authService.authGeneration == failure.generation else { return }
@@ -207,10 +260,28 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     func apply(_ change: SupabaseScopedAuthEvent) {
+        if case .reauthenticationRequired = change.event {
+            guard authService?.requiresReauthentication(generation: change.generation) == true else { return }
+            localIdentity = nil
+            sessionInfo = nil
+            hasResolvedInitialSession = true
+            state = .failed(.sessionMissing)
+            return
+        }
         guard authService?.acceptsAuthGeneration(change.generation) == true else { return }
         switch change.event {
+        case .initialSession, .tokenRefreshed, .signedIn, .signedOut:
+            if !hasResolvedInitialSession { hasResolvedInitialSession = true }
+        case .other, .reauthenticationRequired: break
+        }
+        switch change.event {
         case .initialSession(let info), .tokenRefreshed(let info), .other(let info):
+            if let info, hasUnchangedAcceptedSession(info) {
+                registerShopDeviceIfReady(reason: "auth_event")
+                return
+            }
             sessionInfo = info
+            rememberLocalIdentity(info)
             if let info, !info.isExpired {
                 state = .signedIn
                 registerShopDeviceIfReady(reason: "auth_event")
@@ -219,13 +290,16 @@ final class SupabaseAuthViewModel: ObservableObject {
             }
         case .signedIn(let info):
             sessionInfo = info
+            rememberLocalIdentity(info)
             state = info.isExpired ? .signedOut : .signedIn
             if !info.isExpired {
                 registerShopDeviceIfReady(reason: "auth_signed_in")
             }
         case .signedOut:
+            localIdentity = nil
             sessionInfo = nil
             state = .signedOut
+        case .reauthenticationRequired: break
         }
     }
 
@@ -240,6 +314,8 @@ final class SupabaseAuthViewModel: ObservableObject {
             guard authOperationID == operationID,
                   authService.acceptsAuthGeneration(failure.generation) else { return }
             sessionInfo = currentSession
+            rememberLocalIdentity(currentSession)
+            hasResolvedInitialSession = true
             state = .signedIn
             registerShopDeviceIfReady(reason: "auth_recovered")
             return
@@ -247,6 +323,7 @@ final class SupabaseAuthViewModel: ObservableObject {
 
         guard authOperationID == operationID, authService.authGeneration == failure.generation else { return }
         sessionInfo = authService.currentSession
+        rememberLocalIdentity(sessionInfo)
         state = .failed(failure.error)
     }
 

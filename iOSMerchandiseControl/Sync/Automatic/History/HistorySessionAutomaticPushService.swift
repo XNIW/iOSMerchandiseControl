@@ -225,12 +225,18 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 guard requestBytes + separatorBytes + rowBytes <= maximumHistoryRequestBytes else {
                     break
                 }
+                #if DEBUG
+                let b6Original = PilotCommitTrace.b6ObservationEnabled ? LocalPendingChangeCASToken(change) : nil
+                #endif
                 change.lastAttemptAt = Date()
                 let token = LocalPendingChangeCASToken(change)
                 let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
                 try LocalPendingBusinessAttemptStore.seal(StoredHistoryUpload(localUID: entry.uid,
                     row: row, revision: entry.localChangeRevision, payloadFingerprint: fingerprint),
                     pending: token, kind: "history", context: context, scope: scope)
+                #if DEBUG
+                if let b6Original { PilotCommitTrace.b6SourcePrepared(original: b6Original, sealed: token, scope: scope) }
+                #endif
                 prepared.uploads.append(HistorySessionAutomaticPreparedUpload(
                     localUID: entry.uid,
                     row: row,
@@ -251,7 +257,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         // Persist generated remote identities and oversized blockers before the
         // async RPC. A crash or concurrent local edit can then retry the same
         // remote identity without creating a duplicate session.
-        try context.save()
+        try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
         return prepared
     }
 
@@ -265,6 +271,9 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
         var result = HistorySessionAutomaticPushResult()
+        #if DEBUG
+        var b6OwnAcks: [(LocalPendingChangeCASToken, UUID, String?, UUID, Int)] = []
+        #endif
         for upload in prepared.uploads {
             guard let readBack = readBackByRemoteID[upload.row.remoteID],
                   readBack.ownerUserID == ownerUserID,
@@ -361,6 +370,9 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
             )
             try LocalCatalogBodyProofStore.record(readBack, context: context, scope: scope)
             if entry.localChangeRevision == upload.revision { entry.syncStatus = .syncedSuccessfully }
+            #if DEBUG
+            if PilotCommitTrace.b6ObservationEnabled { b6OwnAcks.append((upload.pending, readBack.remoteID, readBack.updatedAt, upload.localUID, upload.revision)) }
+            #endif
             pending.status = .acknowledged
             pending.updatedAt = Date()
             for dependent in dependents {
@@ -374,9 +386,16 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
             ownerUserID: ownerUserID,
             pushedRemoteIDs: Array(result.pushedRemoteIDs),
             tombstoneRemoteIDs: Array(result.pushedTombstoneRemoteIDs),
+            attemptedUploads: prepared.uploads,
             scope: scope
         )
-        try context.save()
+        try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
+        #if DEBUG
+        for (pending, remoteID, version, uid, revision) in b6OwnAcks {
+            PilotCommitTrace.b6SourceIdentityAcknowledged(pending: pending, remoteID: remoteID,
+                rawVersion: version, scope: scope, localID: uid, localRevision: revision)
+        }
+        #endif
         return result
     }
 
@@ -385,6 +404,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         ownerUserID: UUID,
         pushedRemoteIDs: [UUID],
         tombstoneRemoteIDs: [UUID],
+        attemptedUploads: [HistorySessionAutomaticPreparedUpload],
         scope: Task126VerifiedOwnerStoreScope
     ) throws {
         guard !pushedRemoteIDs.isEmpty else { return }
@@ -397,6 +417,12 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         ]
 
         for group in groups where !group.ids.isEmpty {
+            let groupIDs = Set(group.ids)
+            // A retry of the same sealed revision reuses its announcement.
+            // A later edit of the same session must publish a new event.
+            let revisionFingerprint = attemptedUploads.filter { groupIDs.contains($0.row.remoteID) }
+                .map { "\($0.row.remoteID.uuidString.lowercased()):\($0.pending.idempotencyKey)" }
+                .sorted().joined(separator: ",")
             try AutomaticSyncEventOutboxWriter.enqueueWithValidatedScopeLeaseHeld(
                 context: context,
                 ownerUserID: ownerUserID,
@@ -415,7 +441,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 metadataShape: "source=ios_history_automatic_push;eventType=\(group.eventType);sessions=\(group.ids.count)",
                 clientEventFingerprint: [
                     group.eventType,
-                    group.ids.map { $0.uuidString.lowercased() }.joined(separator: ",")
+                    revisionFingerprint
                 ].joined(separator: "|"),
                 scope: scope
             )

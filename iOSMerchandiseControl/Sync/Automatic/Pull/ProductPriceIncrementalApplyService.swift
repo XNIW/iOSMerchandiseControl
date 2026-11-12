@@ -191,7 +191,7 @@ nonisolated struct ProductPriceIncrementalApplyService {
                 )
                 for row in priceRows { try LocalCatalogBodyProofStore.record(row, context: context, scope: scope) }
                 if context.hasChanges {
-                    try context.save()
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
                 }
                 return result
             }
@@ -228,7 +228,7 @@ nonisolated struct ProductPriceIncrementalApplyService {
                     pruned += 1
                 }
                 if pruned > 0 {
-                    try context.save()
+                    try Task126OwnerStoreGate.saveTrackedLocalChangesWithLeaseHeld(context)
                 }
                 return pruned
             }
