@@ -1,0 +1,264 @@
+{
+  "atUTC": "2026-11-12T04:17:44.317089+00:00",
+  "status": "BLOCKED_B2_AND_IOS_T17_PREREQUISITES_NOT_REVIEW",
+  "sourceCheckpointParent": "38d3eb81833a5aa6b091709968af80ad05a30577",
+  "sourceAppTree": "af49bfda2014d642f8578bfab6c5e5f63069b04b",
+  "nativeAppPatchThisCheckpoint": false,
+  "ios": {
+    "main": "94fb03a5fd3b770f866655154874723192ebc390",
+    "PR29Head": "3d4578c4e204b7976fe4d07600f203e683bd1622",
+    "PR29": "OPEN_NOT_MERGED",
+    "PR28": "OPEN_DRAFT_PRESERVE_UNTIL_MAIN_QUALIFIED",
+    "DebugSource": "f33f55c15ae01217d308cc6e3dbf48640a816c12",
+    "ReleaseSource": "c4146a1583fae8e1b25df369a171897c3393da69",
+    "ReleaseSDKCI": 43048122134,
+    "ReleaseRuntime": "PASS_NORMAL_AUTH_RESTORE_AND_OWN_ROW_READ",
+    "DebugOrdinary": {
+      "atUTC": "2026-11-12T03:56:34.809406+00:00",
+      "sourceHead": "f33f55c15ae01217d308cc6e3dbf48640a816c12",
+      "sourceAppTree": "af49bfda2014d642f8578bfab6c5e5f63069b04b",
+      "configSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+      "target": "459C668B-7CE8-443B-BAB3-7D3D5FFC9143",
+      "runtime": "iOS26.1",
+      "B2": "ORIGINAL_FAIL7.335606833s_UNCHANGED",
+      "noNewBuildOrCPUCollector": true,
+      "status": "PASS_OBSERVED_ORDINARY_VALID_CACHE_AND_REAL_MANUAL_INTERACTION",
+      "pid": 93947,
+      "firstFullInventoryUpperSeconds": 2.142655625,
+      "firstFullInventoryFrame": "ordinary-reopen-01/frame-03.jpg",
+      "previousFrame": "1.688524958s still catalog preparing; originalT0 unchanged includes termination, no preApp subtraction",
+      "cache": "HIT_physical-reused.true_0scan_frontier.complete",
+      "authority": "publishedtrue authority-entered/passedtrue current binding/shop/container/manifest and no pendingjournal",
+      "qualificationSeconds": 0.191439375,
+      "SHM": "32768bytes exact before authenticated saved capsule and after normal process open; no offsets changed",
+      "actualInteraction": "Inventory -> New manual inventory -> Add row -> Cancel; zero rows/errors, no new persistent row Save claimed",
+      "notAStatisticalCampaign": true,
+      "earlierFailuresRetained": true
+    },
+    "postRecoveryReseal": {
+      "atUTC": "2026-11-12T03:56:34.809406+00:00",
+      "sourceHead": "f33f55c15ae01217d308cc6e3dbf48640a816c12",
+      "sourceAppTree": "af49bfda2014d642f8578bfab6c5e5f63069b04b",
+      "configSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+      "target": "459C668B-7CE8-443B-BAB3-7D3D5FFC9143",
+      "runtime": "iOS26.1",
+      "B2": "ORIGINAL_FAIL7.335606833s_UNCHANGED",
+      "noNewBuildOrCPUCollector": true,
+      "status": "PASS_FUNCTIONAL_SEARCH_BUT_NOT_VALID_CACHE_PERFORMANCE",
+      "pid": 92646,
+      "cache": "MISS_SHM_ONLY_kindbit4_not_four_domains",
+      "qualificationSeconds": 11.663365833,
+      "productValidationSeconds": 2.163124916,
+      "priceDetailSeconds": 8.932850708,
+      "observedFrames": "Manual controls still disabled through6.074292166s; Excel/POS links visible earlier. Do not claim complete manual <=5seconds.",
+      "physicalSeal": "Actual seal success + authority-passed + publishedtrue at03:47:16.956Z",
+      "usefulInteraction": "Actual Database own barcode search after this launch PASS; row/name/prices unchanged",
+      "rootCauseLimit": "Same context/generation/membership; SHM persisted digest mismatch only. Exact earlier changed SHM bytes unavailable; later sealed reopen byte-identical. No systematic defect or new normalization patch inferred."
+    },
+    "B2": {
+      "status": "FAIL",
+      "seconds": 7.335606833,
+      "thresholdSeconds": 5,
+      "run": 43035888191,
+      "controller": "b3ec16500f8b229355ef6e6868484b8122fe5f58",
+      "nativeSource": "f33f55c15ae01217d308cc6e3dbf48640a816c12",
+      "cause": "UNKNOWN",
+      "cache": "HIT_ZERO_SCAN"
+    },
+    "comparison": {
+      "status": "BLOCKED_EXTERNAL_BILLING",
+      "run": 43045019447,
+      "source": "c4146a1583fae8e1b25df369a171897c3393da69",
+      "build": "NOT_RUN",
+      "sim": "NOT_RUN",
+      "noRetryWithoutChangedEvidence": true
+    },
+    "T17": {
+      "DebugRelease": "NOT_RUN",
+      "ReleaseRelease": "NOT_RUN",
+      "normalAuthAndDataReadPrerequisite": "PASS",
+      "missing": "Controlled pending baseline without accidental sync; no per-device network isolation exposed on canonical Simulator, physical device unavailable. No global Mac network change, new privileges or fixture session import.",
+      "waiver": "NONE"
+    },
+    "finalMatrix": {
+      "status": "NOT_RUN",
+      "selectors": 2101,
+      "expectedPass": 2042,
+      "allowedSkip": 43,
+      "physicalDeferred": 16
+    },
+    "finalReviewAndMainCI": "NOT_RUN_PENDING_GATES"
+  },
+  "android": {
+    "main": "0c0ceab55dd0f57956791d91def6e3b59b804a69",
+    "PR34": "MERGED",
+    "CI": {
+      "run": 43118457806,
+      "status": "SUCCESS",
+      "exactSHA": true
+    },
+    "nativeSource": "5b4d2155fbad15730328e55553d79b427421f4e8",
+    "APK": "2f38cac4eb2513e44bca00534b3bd0044866c757d8a434862aed60428a0f1d85",
+    "DebugRelease": {
+      "atUTC": "2026-11-12T02:27:52.076784+00:00",
+      "status": "PASS_LOCAL_REAL_DEBUG_RELEASE_UPGRADE_AND_NORMAL_RESUME_SERVER_CLEANUP_PENDING",
+      "sameAPKAndManifest": "2f38cac4eb2513e44bca00534b3bd0044866c757d8a434862aed60428a0f1d85",
+      "originalDebugAPK": "de3c687a63bec18e7b326c742ca1113ae35cd25fa6fbee3ac84f8687a52211e7",
+      "originalSource": "UNKNOWN_ACTUAL_ORIGINAL_INSTALLED_BINARY",
+      "preexistingOutbox61ExactPreserved": true,
+      "preexistingBlockedOutcome": "Unknown/blocked preserved, not retried or reset; no claim that whole outbox empty",
+      "newProductRevision": 8,
+      "newHistoryRevision": 7,
+      "bothExactACK": true,
+      "idsStable": true,
+      "fixturePrices": 2,
+      "coherentReadback": "ACK-05",
+      "archiveSHA256": "0744f159bf0bd04be044d8b114b031f558b6e6b94f0558ac89e294810356945e",
+      "noNewBuild": true,
+      "recipeCanonical": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/medium-and-dr.ROOT/recipe-qualified-case18.ROOT.py",
+      "recipeSHA256": "70da7c6faeedc93719f4d099efd00a1713451b58f01b3aedb9e9573b1604cc3d",
+      "journalCoverage": "empty_absence_only",
+      "newStartPerformance": "NOT_MEASURED",
+      "allEarlierNegativeReceiptsRetained": true
+    },
+    "ReleaseRelease": {
+      "atUTC": "2026-11-12T02:45:32.704468+00:00",
+      "status": "PASS_REAL_RELEASE_IDEMPOTENT_UPGRADE_AND_NORMAL_RESUME_SERVER_CLEANUP_PENDING",
+      "originalAndFinalRelease": "2f38cac4eb2513e44bca00534b3bd0044866c757d8a434862aed60428a0f1d85",
+      "source": "4c1e2a3419c221ac4f8ad64d141939bafec0d9a8",
+      "nativeCodeAndGradleInputsEquivalentToPreviousMain": "d3b82d36179e3fa3f9fc9c80c2e033fcc512d3a7",
+      "coverage": "Idempotent in-place Release to identical Release with real pending. No earlier-code or schema migration claimed.",
+      "B0": "PASS",
+      "B1": "PASS",
+      "B2": "PASS_REAL_OS_OFFLINE_ORDINARY_RELEASE_UI_AND_TYPED_READBACK",
+      "B3": "PASS_BOTH_EXACT_ACK_COHERENT_COPY_WITHIN_FIXED_DEADLINE",
+      "captureDeadlineMarginSeconds": 15.681121207999979,
+      "maximumPhaseSeconds": 120,
+      "preexistingOutbox61ExactPreserved": true,
+      "preexistingBlockedOutcome": "Unknown/blocked still preserved; not retried/reset; whole outbox not empty",
+      "newProductRevision": 10,
+      "newHistoryRevision": 9,
+      "idsStable": true,
+      "fixturePrices": 2,
+      "coherentReadback": "ACK-06",
+      "archiveSHA256": "059f5dcd543f1091ecc65f66d02429a7da90a059d50b14acd708b8196b49ec10",
+      "recipeCanonical": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/medium-and-dr.ROOT/recipe-qualified-case20.ROOT.py",
+      "recipeSHA256": "fbba34104541028de21e0c51b40547288ccdb2d0731725994278ec0fbf287aed",
+      "journalCoverage": "empty_absence_only",
+      "newStartPerformance": "NOT_MEASURED",
+      "case19EffectiveResult": "FAIL_PHASE_DEADLINE_preserved",
+      "cleanup": "KEEP_ONE_SYNTHETIC_FIXTURE_PENDING_NAMED_IOS_CONSUMER_OR_NATIVE_CLEANUP"
+    },
+    "case19": "FAIL_PHASE_DEADLINE_KEPT",
+    "cleanup": "ONE_OWN_PRODUCT_AND_INCOMPLETE_NONEMPTY_HISTORY_KEPT_FOR_NAMED_IOS_T17_CONSUMER_OR_NATIVE_CLEANUP",
+    "budgetAllocationSeconds": 3750,
+    "budgetConsumedSeconds": 3675,
+    "budgetRemainingSeconds": 75,
+    "nativeBuildSourceCommit": "4c1e2a3419c221ac4f8ad64d141939bafec0d9a8"
+  },
+  "admin": {
+    "main": "d20233220d451c4c8be4ffff5170e45ca224c7e6",
+    "mobileCode": "9016054_UNCHANGED",
+    "CIAt9016054": [
+      42641653938,
+      42641652917
+    ],
+    "CIAtMain": "NOT_REQUALIFIED_NOT_ATTRIBUTED"
+  },
+  "deferred": [
+    "iOS16 physical offline cases USER_DEFERRED",
+    "extended statistical campaigns USER_DEFERRED"
+  ],
+  "retention": {
+    "thisCheckpointLogicalBytes": 291383512,
+    "thisCheckpointAllocatedBytes": 291454976,
+    "priorOwnAllocatedBytes": 2080215040,
+    "freeBytes": 161885773824,
+    "exclusivePhysicalRecovery": "UNKNOWN",
+    "kept": [
+      "original canonical ZIPs",
+      "first significant FAILs and useful binaries",
+      "current normal Debug154 and Release154 products",
+      "all device data/session/Keychain/QCOW2",
+      "foreign WIP/index/PR28 worktrees",
+      "one named synthetic iOS T17 fixture"
+    ]
+  },
+  "references": [
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/medium-and-dr.ROOT/continuation18/QUALIFICATION-SCOPE.ROOT.json",
+      "sha256": "2e683717557123ef7c6cdd6e5134d8bdebd12e558854feefba36fd8a79c9d76b",
+      "bytes": 1239
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/medium-and-dr.ROOT/continuation20/QUALIFICATION-SCOPE.ROOT.json",
+      "sha256": "3d140e8e247aa3b15b3f0ac64cb3685779709ba5c741d908d13e8ea1a5e26c24",
+      "bytes": 1678
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/medium-and-dr.ROOT/continuation19/RESULT-SCOPE-CLASSIFICATION.ROOT.json",
+      "sha256": "dd0496cdbbf2a80f1b6058def7c7ffa29c36095cb932e52c4ecfb585e82f96b8",
+      "bytes": 1006
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-debug154-install.ROOT/SERVER-SAVE-WITNESS.ROOT.json",
+      "sha256": "71f5d6cbf221268dffd5135688606cb28173cc90cf445d1ba0db76820dba5c24",
+      "bytes": 610
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-ordinary.ROOT/CLASSIFICATION-AND-POSTFLIGHT.ROOT.json",
+      "sha256": "3a7bf1db4df030167de52be9d4ddfc40a0b9482245b708a6f4adf970fb2f02fb",
+      "bytes": 2989
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-ordinary.ROOT/RECOVERY-CAUSE-ATTRIBUTION-CORRECTION.ROOT.json",
+      "sha256": "8608337db31041544514098174fb0e16212a9e3bfdb72529ee3c955ce86adae4",
+      "bytes": 1572
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-ordinary.ROOT/SERVER-TIMEOUT-WITNESS.ROOT.json",
+      "sha256": "febd4b9f5186743be52a66b98dfd85ef503006b216119bdeeef356c126e44636",
+      "bytes": 3230
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-verified-cache-ordinary.ROOT/QUALIFICATION-SCOPE.ROOT.json",
+      "sha256": "55a6708792af65180192b30e6a9e91aa0351acc3c288634dd117852ef6d5d222",
+      "bytes": 1264
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-sealed-cache-reopen.ROOT/QUALIFICATION-SCOPE.ROOT.json",
+      "sha256": "b94dfb4a4dea7ccf3bae82d301758489203bd9032a521789332b0b308986a784",
+      "bytes": 1294
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-release-continuation.ROOT/PRESERVATION-SCOPE.POSTPROCESSED.ROOT.json",
+      "sha256": "6a65131432b8cd967218025076d3e8f988a884ff6723fc958ec21b3a3ac56e37",
+      "bytes": 1954
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/ios-current-release-continuation.ROOT/UI-DONE.ROOT.json",
+      "sha256": "dcf7a7ff7d1e05846e6075e9cc755c200f8b7c62f3c2e380691f7bbcc34235c1",
+      "bytes": 1195
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/postflight-20261112.ROOT/FINALIZATION.POSTPROCESSED.ROOT.json",
+      "sha256": "b788d4183c661a433d06398c3513846105184ee55b1cef7783a3e3c9bb1301c4",
+      "bytes": 713
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/android-original-apk-postflight.ROOT/RESULT.ROOT.json",
+      "sha256": "3bba248015f821358aee48dd5e6cea178551e1b40d09fdfc5ede2df673291cc5",
+      "bytes": 402
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/TERMINAL-REGISTRY-POSTFLIGHT.ROOT.json",
+      "sha256": "34ea187a5f8e4427c19903b189d5e1c85da59e25379ccec65c3a93ad508cfe47",
+      "bytes": 2711
+    },
+    {
+      "path": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/REMOTE-RECHECK.ROOT.json",
+      "sha256": "b3dcd3b30b4c7a31ca2bd3b45fca5f4fb8e2b9c07a6baf165e162202e9b0ba19",
+      "bytes": 2720
+    }
+  ]
+}
