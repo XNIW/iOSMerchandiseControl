@@ -115,6 +115,21 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
     private var dropped = 0
     private var cachedCatalogRenderedAt: TimeInterval?
     private var cachedCatalogPhases: [String: TimeInterval] = [:]
+    // The existing RAM observation now distinguishes wall time from cumulative
+    // process/main CPU at five closed boundaries; no sampling task is added.
+    private var cachedCatalogResources: [String: [String: UInt64]] = [:]
+    private static let cachedCatalogResourcePhases: Set<String> = [
+        "app-init-entry", "app-init-return", "readback-resumed", "publication-authority-return"
+    ]
+
+    private static func captureCachedCatalogResources() -> [String: UInt64] {
+        let started = DispatchTime.now().uptimeNanoseconds
+        var values = Task145PerformanceResourceSnapshot.capture(prefix: "")
+        values.merge(Task145PerformanceResourceSnapshot.captureCurrentMainThreadCPU(prefix: "")) { _, new in new }
+        values["capture_start_uptime_ns"] = started
+        values["capture_end_uptime_ns"] = DispatchTime.now().uptimeNanoseconds
+        return values
+    }
     // B2 diagnostic only: inclusive synchronous MainActor costs, frozen at the
     // unchanged real ProductRow render. Nested costs are not additive.
     private static let observesCachedCatalogCosts = ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache"
@@ -160,6 +175,9 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
         shared.lock.lock(); defer { shared.lock.unlock() }
         guard shared.cachedCatalogPhases.count < 32, shared.cachedCatalogPhases[phase] == nil else { return }
         shared.cachedCatalogPhases[phase] = now
+        if cachedCatalogResourcePhases.contains(phase) {
+            shared.cachedCatalogResources[phase] = captureCachedCatalogResources()
+        }
     }
 
     static func recordCachedCatalogRender() {
@@ -167,6 +185,7 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
         shared.lock.lock(); defer { shared.lock.unlock() }
         if shared.cachedCatalogRenderedAt == nil {
             shared.cachedCatalogRenderedAt = ProcessInfo.processInfo.systemUptime
+            shared.cachedCatalogResources["real-row-render"] = captureCachedCatalogResources()
         }
     }
 
@@ -187,7 +206,8 @@ nonisolated final class Task144RootObservation: @unchecked Sendable {
             "debugAssertionsEnabled": _isDebugAssertConfiguration(),
             "optimizedNativeProfile": optimizedNativeProfile,
             "phases": shared.cachedCatalogPhases,
-            "mainSynchronousCostsInclusive": shared.cachedCatalogSynchronousCosts]
+            "mainSynchronousCostsInclusive": shared.cachedCatalogSynchronousCosts,
+            "cumulativeResourceSnapshots": shared.cachedCatalogResources]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
         return String(decoding: data, as: UTF8.self)
     }
@@ -6604,18 +6624,33 @@ private struct Task144ControlledRootControls: View {
                     .padding(8).contentShape(Rectangle())
                     .onLongPressGesture(minimumDuration: 1) {
                         Task144ControlGestureObservation.record("perform-entry", control: "\(controlPrefix).release")
+                        Task145T18ControlInputObservation.recordPerform(control: "\(controlPrefix).release")
                         fixture.release()
                         Task144ControlGestureObservation.record(
                             "returned.fact-present.\(fixture.facts.contains("task144.controlled.released"))",
                             control: "\(controlPrefix).release")
                     } onPressingChanged: { pressing in
                         Task144ControlGestureObservation.record("pressing.\(pressing)", control: "\(controlPrefix).release")
+                        Task145T18ControlInputObservation.recordPressing(pressing, control: "\(controlPrefix).release")
                     }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityValue(fixture.automaticReadback + Task144RootObservation.snapshotAtRealRender())
                     .accessibilityIdentifier("\(controlPrefix).release")
+                    .background {
+                        if Task145T18ControlInputObservation.enabled {
+                            Task145T18ControlGeometryObservation(control: "\(controlPrefix).release")
+                                .allowsHitTesting(false)
+                        }
+                    }
             }.font(.caption2)
         }.padding(2).background(.ultraThinMaterial)
+            .overlay(alignment: .topLeading) {
+                if Task145T18ControlInputObservation.enabled {
+                    Task145PerformanceReadback(identifier: "task146.t18.input-observation",
+                        readValue: { Task145T18ControlInputObservation.snapshot() })
+                        .frame(width: 1, height: 1).allowsHitTesting(false)
+                }
+            }
             // Observation controls must not consume the product's viewport
             // when the real root is exercised at accessibility text sizes.
             .dynamicTypeSize(.medium ... .large)
@@ -6629,6 +6664,177 @@ private struct Task144ControlledRootControls: View {
         }
     }
 }
+/// T18 action only. Keep one explicitly identified contact window in bounded
+/// RAM; pre-contact layout activity cannot consume critical touch/press slots.
+/// No publishing, I/O, model access, recognition or admission is introduced.
+@MainActor
+enum Task145T18ControlInputObservation {
+    static let enabled = ProcessInfo.processInfo.environment["TASK145_T18_OBSERVATION"] == "1"
+        && ProcessInfo.processInfo.environment["TASK145_SCOPE_INCREMENTAL_UI"] == "membership-refusal"
+        && ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]
+            .flatMap(UUID.init(uuidString:)) != nil
+    private static var sequence = 0
+    private static var currentGeometry: [String: Any] = [:]
+    private static var latestCapturedGeometry: [String: Any] = [:]
+    private static var baseline: [String: Any] = [:]
+    private static var lastGeometrySignature: String?
+    private static weak var currentProbe: UIView?
+    private static var currentControl = ""
+    private static var startUptime: TimeInterval?
+    private static var startReason = "NOT_STARTED"
+    private static var closedUptime: TimeInterval?
+    private static var firstTouchID: String?
+    private static var critical: [String: [String: Any]] = [:]
+    private static var geometryChanges: [[String: Any]] = []
+    private static var counts: [String: Int] = [:]
+
+    private static func count(_ name: String) { counts[name, default: 0] += 1 }
+    private static func bytes(_ value: Any) -> Int {
+        (try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))?.count ?? Int.max
+    }
+    private static func begin(_ reason: String) {
+        guard startUptime == nil else { return }
+        // No historical reset: all preceding callbacks remain in counters and
+        // the latest pre-contact geometry is declared as this window baseline.
+        startUptime = ProcessInfo.processInfo.systemUptime; startReason = reason
+        baseline = currentGeometry; latestCapturedGeometry = currentGeometry
+    }
+    private static func criticalSlot(_ stage: String, fields: [String: Any], entry: TimeInterval) {
+        sequence += 1
+        guard critical[stage] == nil else { count("repeated-critical-" + stage); return }
+        var row = fields.merging(["seq": sequence, "stage": stage, "handlerEntryUptime": entry]) { _, new in new }
+        if bytes(row) > 400 {
+            count("critical-row-byte-limit")
+            // Explicitly incomplete; never use a missing field as absence proof.
+            row = ["seq": sequence, "stage": stage, "handlerEntryUptime": entry, "status": "ROW_BYTE_LIMIT"]
+        }
+        // Six first-write slots have separate ownership from geometry history.
+        critical[stage] = row
+        if closedUptime == nil, critical["pressing.false"] != nil,
+           critical["touch-ended"] != nil || critical["touch-cancelled"] != nil {
+            closedUptime = ProcessInfo.processInfo.systemUptime
+        }
+    }
+    static func recordGeometry(_ view: UIView, control: String, stage: String) {
+        guard enabled else { return }
+        let entry = ProcessInfo.processInfo.systemUptime
+        count("geometry-callbacks"); currentProbe = view; currentControl = control
+        let window = view.window
+        var fields: [String: Any] = ["control": control,
+            "probeID": String(describing: ObjectIdentifier(view)),
+            "windowID": window.map { String(describing: ObjectIdentifier($0)) } ?? "missing",
+            "bounds": String(describing: view.bounds),
+            "frameWindow": window.map { String(describing: view.convert(view.bounds, to: $0)) } ?? "missing",
+            "frameScreen": window.map { String(describing: view.convert(view.bounds, to: $0.screen.coordinateSpace)) } ?? "missing",
+            "windowBounds": window.map { String(describing: $0.bounds) } ?? "missing",
+            "keyWindow": window?.isKeyWindow ?? false,
+            "sceneState": window?.windowScene.map { $0.activationState.rawValue } ?? -1]
+        if bytes(fields) > 600 {
+            count("geometry-row-byte-limit")
+            fields = ["control": control, "status": "ROW_BYTE_LIMIT"]
+        }
+        let signature = String(decoding: (try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])) ?? Data(), as: UTF8.self)
+        currentGeometry = fields
+        let changed = signature != lastGeometrySignature
+        lastGeometrySignature = signature
+        guard let startUptime else { if changed { count("pre-contact-geometry-changes") }; return }
+        guard closedUptime == nil else { count("post-contact-geometry-callbacks"); return }
+        latestCapturedGeometry = fields
+        guard changed || ["window-attached", "window-detached", "dismantle"].contains(stage) else { return }
+        sequence += 1
+        // Keep two actual changes/lifecycle boundaries. Unchanged pressing
+        // samples must not consume their slots; full baseline/latest are above.
+        var row: [String: Any] = ["seq": sequence, "stage": stage, "handlerEntryUptime": entry,
+            "windowStartUptime": startUptime]
+        for key in ["probeID", "windowID", "frameWindow", "sceneState", "status"] {
+            if let value = fields[key] { row[key] = value }
+        }
+        let candidate = geometryChanges + [row]
+        if candidate.count <= 2 && bytes(candidate) <= 800 { geometryChanges = candidate }
+        else { count("geometry-history-omitted-latest-retained") }
+    }
+    static func recordPressing(_ pressing: Bool, control: String) {
+        guard enabled else { return }
+        let entry = ProcessInfo.processInfo.systemUptime
+        if let currentProbe, currentControl == control {
+            recordGeometry(currentProbe, control: control, stage: "pressing-sample")
+        }
+        begin("first-pressing-callback")
+        var row: [String: Any] = ["control": control]
+        for key in ["probeID", "windowID", "frameWindow"] { row[key] = currentGeometry[key] ?? "missing" }
+        criticalSlot("pressing.\(pressing)", fields: row, entry: entry)
+    }
+    static func recordPerform(control: String) {
+        guard enabled else { return }
+        let entry = ProcessInfo.processInfo.systemUptime
+        begin("first-perform-callback")
+        criticalSlot("perform-entry", fields: ["control": control], entry: entry)
+    }
+    static func recordTouches(_ touches: Set<UITouch>, stage: String) {
+        guard enabled else { return }
+        let entry = ProcessInfo.processInfo.systemUptime
+        guard touches.count == 1, let touch = touches.first else { count("not-single-touch"); return }
+        let id = String(describing: ObjectIdentifier(touch))
+        if stage == "touch-began", firstTouchID == nil {
+            guard let currentProbe, let window = currentProbe.window, touch.window === window,
+                  currentControl == "task144.controlled.release" else { count("contact-outside-release-window"); return }
+            recordGeometry(currentProbe, control: currentControl, stage: "contact-baseline")
+            firstTouchID = id; begin("first-native-contact")
+        }
+        guard firstTouchID == id else { count("other-contact-callbacks"); return }
+        let point = touch.location(in: touch.window)
+        var row: [String: Any] = ["touchID": id, "touchUptime": touch.timestamp,
+            "phase": touch.phase.rawValue, "pointWindow": String(describing: point),
+            "windowID": touch.window.map { String(describing: ObjectIdentifier($0)) } ?? "missing"]
+        if let currentProbe, let window = currentProbe.window {
+            row["withinReleaseFrame"] = currentProbe.convert(currentProbe.bounds, to: window).contains(point)
+        }
+        criticalSlot(stage, fields: row, entry: entry)
+    }
+    static func snapshot() -> String {
+        guard enabled else { return "" }
+        let value: [String: Any] = ["protocol": "task146-t18-passive-input-v2",
+            "pid": ProcessInfo.processInfo.processIdentifier, "window": "FIRST_RELEASE_CONTACT",
+            "namespace": ProcessInfo.processInfo.environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]?.lowercased() ?? "absent",
+            "startUptime": startUptime as Any? ?? NSNull(), "startReason": startReason,
+            "closedUptime": closedUptime as Any? ?? NSNull(), "baseline": baseline,
+            "critical": critical, "firstGeometryChanges": geometryChanges,
+            "latestWindowGeometry": latestCapturedGeometry, "counters": counts,
+            "caps": ["criticalSlots": 6, "criticalRowBytes": 400, "geometryHistoryBytes": 800,
+                "geometryHistoryRows": 2, "geometrySnapshotBytes": 600, "exportJSONBytes": 5_800]]
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
+              data.count <= 5_800 else { return ";task146.t18.input.ledger.EXPORT_BYTE_LIMIT_INCOMPLETE" }
+        return ";task146.t18.input.ledger." + data.base64EncodedString()
+    }
+}
+
+@MainActor
+private struct Task145T18ControlGeometryObservation: UIViewRepresentable {
+    let control: String
+    func makeUIView(context: Context) -> Probe {
+        let view = Probe(); view.control = control
+        view.isUserInteractionEnabled = false
+        view.isAccessibilityElement = false; view.accessibilityElementsHidden = true
+        return view
+    }
+    func updateUIView(_ view: Probe, context: Context) { view.control = control }
+    static func dismantleUIView(_ view: Probe, coordinator: ()) {
+        Task145T18ControlInputObservation.recordGeometry(view, control: view.control, stage: "dismantle")
+    }
+    final class Probe: UIView {
+        var control = ""
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            Task145T18ControlInputObservation.recordGeometry(self, control: control, stage: "layout")
+        }
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            Task145T18ControlInputObservation.recordGeometry(self, control: control,
+                stage: window == nil ? "window-detached" : "window-attached")
+        }
+    }
+}
+
 /// On-demand public UIKit observations in the isolated fixture only. This view
 /// does not participate in hit testing or publish any application state.
 @MainActor

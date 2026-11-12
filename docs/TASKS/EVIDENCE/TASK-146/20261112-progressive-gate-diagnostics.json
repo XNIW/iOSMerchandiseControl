@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-12T20:06:49.257803-03:00",
+  "status": "STATIC_REVIEWED_DIAGNOSTIC_NATIVE_PENDING_NOT_ACCEPTANCE",
+  "functionalBaseline": "7241f7d5a4d6bca68cd4666daaf8c0ac4374b0f4",
+  "diagnosticAppTree": "a77accc30d9e98ddc7dde702dc9853fe0850857c",
+  "sourceFilesSHA256": {
+    ".github/workflows/ios-product-images-ci.yml": "f36d49f32e810c52fa74eda8642110b8fa3636b703dc398093e6de4bd1071572",
+    "iOSMerchandiseControl/ContentView.swift": "4764197ce14279268e87083e6427b04373836cd104c858b45cbbd6f44e87a30a",
+    "iOSMerchandiseControl/Task145PerformanceObservation.swift": "aba0835d1bc6c6a03fb31d5f51f771cf40d2ca05d0de6a31ffc3f21ecaa0d11a",
+    "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift": "7ae90be68ba84e9b79733bf6be119c72330659255e80d11a10ccfdffff460252",
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "aeb1ddf2cc8e4997fd1e1d3a784ab1ddc14649531548672cacde1b359c5fdf4c"
+  },
+  "reviewSHA256": "031f764ef890ca8ac017433ef357ab9630a0872c37a031d3d5360e0fe2f2136c",
+  "incrementalPR": {
+    "number": 30,
+    "head": "3f8f514c859a68a72d18db81f95651a5f6125dd0",
+    "base": "94fb03a5fd3b770f866655154874723192ebc390",
+    "CI": 43323644025,
+    "status": "IN_PROGRESS_NOT_MERGED",
+    "scope": "Storefront_exact461ad4_twofiles_plus_CI_qualification"
+  },
+  "focused": [
+    {
+      "tag": "codex/task146-gate-diagnostics-20261112-b2t19",
+      "selectors": [
+        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
+        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation"
+      ],
+      "profile": "DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START",
+      "question": "Process/mainCPU at existingB2critical phases; native selected-visible timestamp vs unchangedT19AXdeadline"
+    },
+    {
+      "tag": "codex/task146-gate-diagnostics-20261112-t18",
+      "selectors": [
+        "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_normal_dark_action"
+      ],
+      "profile": "DEBUG_STANDARD",
+      "question": "Actual native contact timestamp vs handlerentry plus targetgeometry/lifecycle during unchanged1.5s path"
+    }
+  ],
+  "originalT0": true,
+  "thresholdSeconds": 5,
+  "longPressMinimumSeconds": 1,
+  "requestedPressSeconds": 1.5,
+  "newSampler": false,
+  "T17": "BLOCKED_USB_USER_UNAVAILABLE_NO_REPEAT_REQUEST",
+  "deferredPhysical16": "UNCHANGED",
+  "humanActionRequiredNow": null,
+  "freeBeforeBytes": 177700147200,
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT/closure-resume-20261112.ROOT/progressive-integration-20261112.ROOT"
+}

@@ -6147,6 +6147,16 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // The fixture still requires one full second of recognized
                 // pressing. Keep margin for native delivery of this one gesture.
                 release.press(forDuration: 1.5)
+                defer {
+                    // Read bounded RAM only after the original action admission
+                    // and producer wait have ended; never add queries to them.
+                    if app.state == .runningForeground {
+                        let input = app.otherElements["task146.t18.input-observation"]
+                        let value = input.exists ? (input.value as? String ?? "VALUE_ABSENT_NOT_OBSERVED") : "ELEMENT_ABSENT_NOT_OBSERVED"
+                        let attachment = XCTAttachment(string: value)
+                        attachment.name = "T18 passive native input timestamps"; attachment.lifetime = .keepAlways; add(attachment)
+                    }
+                }
                 do {
                     try t18Await("task145.seq6.safety-terminal", timeout: 30)
                 } catch {
@@ -6684,9 +6694,33 @@ extension LocalAvailabilityRootUITests {
         if mode == "cycles", cycles == 30 { try task146ConfigureAnimationIdleDriver() }
         var stage = "own-ACK-precondition"
         var uiRows: [[String: Any]] = []
+        var tabDiagnostics: [[String: Any]] = []
+        var exportedTabDiagnostics = false
+        var diagnosticAppPID: Int?
+        func exportTabDiagnostics(_ reason: String) {
+            guard !exportedTabDiagnostics else { return }
+            exportedTabDiagnostics = true
+            // Call only after the original predicate has failed or after all
+            // timed tab admissions. This adds no AX query to a live 5s window.
+            let driver: [String: Any] = ["protocol": "task146-t19-tab-driver-v1", "reason": reason,
+                "pid": ProcessInfo.processInfo.processIdentifier, "namespace": runID,
+                "expectedAppPID": diagnosticAppPID as Any? ?? NSNull(),
+                "clock": "same-Simulator-boot-systemUptime", "tabs": tabDiagnostics,
+                "originalTabBudgetSeconds": 5]
+            let bytes = (try? JSONSerialization.data(withJSONObject: driver, options: [.sortedKeys])) ?? Data()
+            let attachment = XCTAttachment(data: bytes, uniformTypeIdentifier: "public.json")
+            attachment.name = "T19 exact tab driver timestamps"; attachment.lifetime = .keepAlways; add(attachment)
+            if app.state == .runningForeground {
+                let readback = app.otherElements["task146.t19.tab-observation"]
+                let value = readback.exists ? (readback.value as? String ?? "VALUE_ABSENT_NOT_OBSERVED") : "ELEMENT_ABSENT_NOT_OBSERVED"
+                let native = XCTAttachment(string: value)
+                native.name = "T19 passive native tab timestamps"; native.lifetime = .keepAlways; add(native)
+            }
+        }
         var terminal = "FAIL"
         var firstError: Error?
         defer {
+            exportTabDiagnostics("case-terminal-after-timed-tab-admissions")
             // Only the owned controlled app process. Host later archives its exact namespace.
             app.terminate()
             let stopped = app.state == .notRunning
@@ -6710,6 +6744,7 @@ extension LocalAvailabilityRootUITests {
                 value["baseline"] as? String != nil && value["qualifiedPID"] as? Int == value["pid"] as? Int
             }
             let originalPID = try XCTUnwrap(baseline["pid"] as? Int)
+            diagnosticAppPID = originalPID
             var previousPID = originalPID
             var previousInvocations = Set<String>()
             let expectedVerified = try XCTUnwrap(baseline["verifiedText"] as? String)
@@ -6738,27 +6773,73 @@ extension LocalAvailabilityRootUITests {
                 XCTAssertGreaterThan(frame, 0)
                 for tab in ["Database", "History", "Inventory", "Options"] {
                     XCTAssertEqual(app.state, .runningForeground)
-                    let tabDeadline = ProcessInfo.processInfo.systemUptime + 5
+                    let tabStart = ProcessInfo.processInfo.systemUptime
+                    let tabDeadline = tabStart + 5
                     let buttons = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", tab))
                     let button = buttons.element(boundBy: 0)
-                    // A present tab needs no one-second existence polling. An
-                    // absent tab retains the same bounded five-second admission.
-                    let present = button.exists || button.waitForExistence(
-                        timeout: max(0, tabDeadline - ProcessInfo.processInfo.systemUptime))
-                    XCTAssertTrue(present && ProcessInfo.processInfo.systemUptime <= tabDeadline)
-                    if !button.isSelected { button.tap() }
-                    // Root recreation may replace the bar after tap returns.
-                    // Require its actual selected flag within the same five-second
-                    // tab deadline; do not retap or extend admission after the tap.
-                    var selected = buttons.element(boundBy: 0).isSelected
-                    if !selected {
-                        let selection = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                            buttons.element(boundBy: 0).isSelected
-                        }, object: nil)
-                        selected = XCTWaiter.wait(for: [selection], timeout: max(
-                            0, tabDeadline - ProcessInfo.processInfo.systemUptime)) == .completed
+                    var diagnostic: [String: Any] = ["cycle": number, "tab": tab,
+                        "startedUptime": tabStart, "deadlineUptime": tabDeadline]
+                    let existenceStarted = ProcessInfo.processInfo.systemUptime
+                    var present = button.exists
+                    diagnostic["existsQueryStarted"] = existenceStarted
+                    diagnostic["existsQueryReturned"] = ProcessInfo.processInfo.systemUptime
+                    diagnostic["existsResult"] = present
+                    if !present {
+                        diagnostic["existenceWaitStarted"] = ProcessInfo.processInfo.systemUptime
+                        present = button.waitForExistence(timeout: max(0, tabDeadline - ProcessInfo.processInfo.systemUptime))
+                        diagnostic["existenceWaitReturned"] = ProcessInfo.processInfo.systemUptime
                     }
-                    XCTAssertTrue(selected && ProcessInfo.processInfo.systemUptime <= tabDeadline)
+                    let presenceEvaluation = ProcessInfo.processInfo.systemUptime
+                    let presentWithinDeadline = present && presenceEvaluation <= tabDeadline
+                    diagnostic["present"] = present; diagnostic["presenceEvaluation"] = presenceEvaluation
+                    diagnostic["presentWithinDeadline"] = presentWithinDeadline
+                    if !presentWithinDeadline {
+                        tabDiagnostics.append(diagnostic); exportTabDiagnostics("original-presence-predicate-failed")
+                    }
+                    XCTAssertTrue(presentWithinDeadline,
+                        "T19 tab presence: present=\(present), evaluated=\(presenceEvaluation), deadline=\(tabDeadline)")
+                    diagnostic["preTapSelectedQueryStarted"] = ProcessInfo.processInfo.systemUptime
+                    let preTapSelected = button.isSelected
+                    diagnostic["preTapSelectedQueryReturned"] = ProcessInfo.processInfo.systemUptime
+                    diagnostic["preTapSelected"] = preTapSelected
+                    if !preTapSelected {
+                        diagnostic["tapStarted"] = ProcessInfo.processInfo.systemUptime
+                        button.tap()
+                        diagnostic["tapReturned"] = ProcessInfo.processInfo.systemUptime
+                    }
+                    // Root recreation may replace the bar after tap returns.
+                    // Keep the original fresh selected flag and same total5s.
+                    diagnostic["postTapSelectedQueryStarted"] = ProcessInfo.processInfo.systemUptime
+                    var selected = buttons.element(boundBy: 0).isSelected
+                    diagnostic["postTapSelectedQueryReturned"] = ProcessInfo.processInfo.systemUptime
+                    diagnostic["postTapSelected"] = selected
+                    if !selected {
+                        var polls: [[String: Any]] = [], droppedPolls = 0
+                        let selection = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                            let began = ProcessInfo.processInfo.systemUptime
+                            let value = buttons.element(boundBy: 0).isSelected
+                            let ended = ProcessInfo.processInfo.systemUptime
+                            if polls.count < 16 { polls.append(["started": began, "returned": ended, "selected": value]) }
+                            else { droppedPolls += 1 }
+                            return value
+                        }, object: nil)
+                        diagnostic["selectionWaitStarted"] = ProcessInfo.processInfo.systemUptime
+                        let result = XCTWaiter.wait(for: [selection], timeout: max(
+                            0, tabDeadline - ProcessInfo.processInfo.systemUptime))
+                        diagnostic["selectionWaitReturned"] = ProcessInfo.processInfo.systemUptime
+                        diagnostic["selectionWaitResult"] = result.rawValue
+                        diagnostic["polls"] = polls; diagnostic["droppedPolls"] = droppedPolls
+                        selected = result == .completed
+                    }
+                    let selectionEvaluation = ProcessInfo.processInfo.systemUptime
+                    let selectedWithinDeadline = selected && selectionEvaluation <= tabDeadline
+                    diagnostic["selected"] = selected; diagnostic["selectionEvaluation"] = selectionEvaluation
+                    diagnostic["deadlineSatisfied"] = selectionEvaluation <= tabDeadline
+                    diagnostic["selectedWithinDeadline"] = selectedWithinDeadline
+                    tabDiagnostics.append(diagnostic)
+                    if !selectedWithinDeadline { exportTabDiagnostics("original-selected-and-deadline-predicate-failed") }
+                    XCTAssertTrue(selectedWithinDeadline,
+                        "T19 tab selection: selected=\(selected), evaluated=\(selectionEvaluation), deadline=\(tabDeadline)")
                     XCTAssertFalse(app.staticTexts["task145.t19.failed"].exists)
                 }
                 let optionsForm = try c3OptionsForm(stage: "T19-verified-date", downstream: ["verified-date"])

@@ -89,6 +89,31 @@ nonisolated enum Task145PerformanceResourceSnapshot {
         guard sysctlbyname("hw.machine", &bytes, &count, nil, 0) == 0 else { return "UNKNOWN" }
         return String(cString: bytes)
     }
+    // One current-thread snapshot, not a periodic sampler. The caller must
+    // be on main; failures omit CPU values rather than inventing zero cost.
+    static func captureCurrentMainThreadCPU(prefix: String) -> [String: UInt64] {
+        var values: [String: UInt64] = [prefix + "observed_on_main_thread": Thread.isMainThread ? 1 : 0]
+        guard Thread.isMainThread else { return values }
+        let thread = mach_thread_self()
+        guard thread != MACH_PORT_NULL else { return values }
+        // mach_thread_self grants a send right. Release only that owned right,
+        // including a failed thread_info call; never enumerate other threads.
+        defer { _ = mach_port_deallocate(mach_task_self_, thread) }
+        var info = thread_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<natural_t>.size)
+        let status = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+            }
+        }
+        values[prefix + "main_thread_cpu_status"] = UInt64(UInt32(bitPattern: status))
+        if status == KERN_SUCCESS {
+            values[prefix + "main_thread_user_us"] = UInt64(info.user_time.seconds) * 1_000_000 + UInt64(info.user_time.microseconds)
+            values[prefix + "main_thread_system_us"] = UInt64(info.system_time.seconds) * 1_000_000 + UInt64(info.system_time.microseconds)
+        }
+        return values
+    }
+
     static func capture(prefix: String) -> [String: UInt64] {
         var usage = rusage()
         var values: [String: UInt64] = [prefix + "thermal_state_raw": UInt64(ProcessInfo.processInfo.thermalState.rawValue)]
@@ -118,18 +143,23 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
     var facts: String = ""
     var validate: @MainActor () -> Bool = { true }
     var onRendered: (@MainActor () -> Void)?
+    var validateNative: (@MainActor (UIView) -> Bool)? = nil
+    var onNativeRendered: (@MainActor (UIView) -> Void)? = nil
     func makeUIView(context: Context) -> Boundary {
         let view = Boundary(); view.isUserInteractionEnabled = false; return view
     }
     func updateUIView(_ view: Boundary, context: Context) {
         view.event = event; view.facts = facts; view.qualifies = qualifies; view.validate = validate
         view.onRendered = onRendered
+        view.validateNative = validateNative; view.onNativeRendered = onNativeRendered
         view.setNeedsLayout()
     }
     final class Boundary: UIView {
         var event = ""; var facts = ""; var qualifies = false
         var validate: @MainActor () -> Bool = { true }
         var onRendered: (@MainActor () -> Void)?
+        var validateNative: (@MainActor (UIView) -> Bool)?
+        var onNativeRendered: (@MainActor (UIView) -> Void)?
         private var link: CADisplayLink?
         private var token: String?
         private var visibilityDeadlineNS: UInt64?
@@ -143,7 +173,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
         override func layoutSubviews() {
             super.layoutSubviews()
-            guard Task145PerformanceConfiguration.measures || onRendered != nil else { return }
+            guard Task145PerformanceConfiguration.measures || onRendered != nil || onNativeRendered != nil else { return }
             guard qualifies, window != nil,
                   !bounds.isEmpty,
                   token != Task144RootObservation.performanceSampleID() + ":" + event + ":" + facts,
@@ -177,7 +207,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
             return true
         }
         @objc private func afterLayout() {
-            guard qualifies, validate(), visibleInHierarchy() else {
+            guard qualifies, validate(), validateNative?(self) != false, visibleInHierarchy() else {
                 if DispatchTime.now().uptimeNanoseconds >= (visibilityDeadlineNS ?? 0) {
                     link?.invalidate(); link = nil
                 }
@@ -185,7 +215,8 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
             }
             link?.invalidate(); link = nil
             token = Task144RootObservation.performanceSampleID() + ":" + event + ":" + facts
-            if let onRendered { onRendered() }
+            if let onNativeRendered { onNativeRendered(self) }
+            else if let onRendered { onRendered() }
             else { Task144RootObservation.performanceMark(event, facts: facts) }
         }
         override func didMoveToWindow() {
@@ -207,7 +238,7 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
         private var frames: CADisplayLink?
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            guard Task145PerformanceConfiguration.measures else { return }
+            guard Task145PerformanceConfiguration.measures || Task145T18ControlInputObservation.enabled else { return }
             guard let window else {
                 frames?.invalidate(); frames = nil
                 if let touch { touch.view?.removeGestureRecognizer(touch) }; touch = nil
@@ -217,8 +248,10 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
             let observer = TouchObserver(); observer.cancelsTouchesInView = false
             observer.delaysTouchesBegan = false; observer.delaysTouchesEnded = false
             window.addGestureRecognizer(observer); touch = observer
-            let link = CADisplayLink(target: self, selector: #selector(observeFrame))
-            frames = link; link.add(to: .main, forMode: .common)
+            if Task145PerformanceConfiguration.measures {
+                let link = CADisplayLink(target: self, selector: #selector(observeFrame))
+                frames = link; link.add(to: .main, forMode: .common)
+            }
         }
         @objc private func observeFrame(_ link: CADisplayLink) {
             Task144RootObservation.performanceFrame(UInt64(link.timestamp * 1_000_000_000))
@@ -230,12 +263,19 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
     }
     final class TouchObserver: UIGestureRecognizer {
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-began")
             if let touch = touches.first {
                 Task144RootObservation.performanceTouch(UInt64(touch.timestamp * 1_000_000_000))
             }
         }
-        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) { state = .failed }
-        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { state = .failed }
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-ended")
+            state = .failed
+        }
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-cancelled")
+            state = .failed
+        }
         override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool { false }
         override func canBePrevented(by preventingGestureRecognizer: UIGestureRecognizer) -> Bool { false }
     }
@@ -264,6 +304,129 @@ struct Task145PerformanceReadback: UIViewRepresentable {
             get { readValue() }
             set { }
         }
+    }
+}
+
+
+/// Diagnostic-only T19 selection timestamps. No publisher, disk write, input,
+/// forced layout or navigation. Existing XCTest selected/deadline gate is final.
+@MainActor
+enum Task146T19TabObservation {
+    private static let environment = ProcessInfo.processInfo.environment
+    static let enabled = ["cycles", "repeated-material"].contains(environment["TASK145_T19_UI"] ?? "")
+        && environment["TASK145_T19_STAGE"] == "collect"
+        && environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"].flatMap(UUID.init(uuidString:)) != nil
+    private static let namespace = environment["TASK144_LOCAL_AVAILABILITY_FIXTURE"]?.lowercased() ?? "absent"
+    private static let pid = ProcessInfo.processInfo.processIdentifier
+    private static let capacity = 512
+    private(set) static var requestOrdinal = 0
+    private static var requestedTab: Int?
+    private static var requestedPresentation: String?
+    private static var marks: [[String: Any]] = []
+    private static var dropped = 0
+    private static var committed: Set<Int> = []
+    private static var noChangeAssignments = 0
+    private static var noChangeAssignmentsCapped = false
+
+    static func bindingRequested(from: Int, to: Int, presentationID: String) {
+        guard enabled else { return }
+        // Same-value presentation restoration need not invalidate SwiftUI.
+        // Keep its passive count separate; do not supersede a real request.
+        guard from != to else {
+            if noChangeAssignments < capacity { noChangeAssignments += 1 }
+            else { noChangeAssignmentsCapped = true }
+            return
+        }
+        guard marks.count < capacity else { dropped += 1; return }
+        requestOrdinal += 1; requestedTab = to; requestedPresentation = presentationID
+        append("binding-entry", tab: to, presentationID: presentationID,
+            extra: ["fromTab": from, "request": requestOrdinal])
+    }
+    static func publicationObserved(tab: Int, presentationID: String) {
+        guard enabled else { return }
+        append("binding-published", tab: tab, presentationID: presentationID,
+            extra: ["request": requestOrdinal])
+    }
+    private static func append(_ kind: String, tab: Int, presentationID: String, extra: [String: Any]) {
+        guard marks.count < capacity else { dropped += 1; return }
+        var row = extra
+        row["sequence"] = marks.count + 1; row["kind"] = kind
+        row["tab"] = tab; row["presentation"] = presentationID
+        row["uptime"] = ProcessInfo.processInfo.systemUptime
+        marks.append(row)
+    }
+    private static func current(tab: Int, request: Int, presentationID: String) -> Bool {
+        enabled && request > 0 && request == requestOrdinal
+            && requestedTab == tab && requestedPresentation == presentationID
+    }
+    static func nativeQualifies(_ view: UIView, tab: Int, request: Int, presentationID: String) -> Bool {
+        current(tab: tab, request: request, presentationID: presentationID)
+            && nativeSelection(view, tab: tab) != nil
+    }
+    static func nativeCommitted(_ view: UIView, tab: Int, request: Int, presentationID: String) {
+        guard current(tab: tab, request: request, presentationID: presentationID),
+              !committed.contains(request), let native = nativeSelection(view, tab: tab) else { return }
+        guard marks.count < capacity, committed.count < capacity else { dropped += 1; return }
+        committed.insert(request)
+        append("native-selected-visible-display-opportunity", tab: tab, presentationID: presentationID,
+            extra: ["request": request, "nativeSelectedIndex": native.selectedIndex,
+                "nativeSelectedItemIndex": native.itemIndex, "nativeController": native.controller])
+    }
+    private struct NativeSelection {
+        let selectedIndex: Int
+        let itemIndex: Int
+        let controller: String
+    }
+    private static func visible(_ view: UIView, in window: UIWindow) -> Bool {
+        guard view.window === window, !view.bounds.isEmpty else { return false }
+        var rectangle = view.convert(view.bounds, to: window).intersection(window.bounds)
+        var ancestor: UIView? = view
+        while let node = ancestor {
+            guard !node.isHidden, node.alpha > 0.99 else { return false }
+            if node.clipsToBounds { rectangle = rectangle.intersection(node.convert(node.bounds, to: window)) }
+            guard !rectangle.isNull, !rectangle.isEmpty else { return false }
+            ancestor = node.superview
+        }
+        return true
+    }
+    private static func nativeSelection(_ probe: UIView, tab: Int) -> NativeSelection? {
+        guard let window = probe.window, window.isKeyWindow, !window.isHidden,
+              window.windowScene?.activationState == .foregroundActive,
+              visible(probe, in: window), var root = window.rootViewController else { return nil }
+        // A sheet remains authoritative until UIKit removes it. Do not count
+        // the background tab bar through a modal presentation.
+        while let presented = root.presentedViewController { root = presented }
+        var queue = [root], seen = Set<ObjectIdentifier>(), matches: [NativeSelection] = []
+        while let controller = queue.popLast() {
+            guard seen.insert(ObjectIdentifier(controller)).inserted else { continue }
+            guard seen.count <= 64 else { return nil }
+            queue.append(contentsOf: controller.children)
+            guard let tabs = controller as? UITabBarController,
+                  !tabs.isBeingDismissed, !tabs.isBeingPresented,
+                  tabs.transitionCoordinator == nil,
+                  tabs.selectedIndex == tab,
+                  let selected = tabs.selectedViewController,
+                  !selected.isBeingDismissed, !selected.isBeingPresented,
+                  selected.transitionCoordinator == nil,
+                  let selectedView = selected.viewIfLoaded, visible(selectedView, in: window),
+                  visible(tabs.tabBar, in: window),
+                  let item = tabs.tabBar.selectedItem, let items = tabs.tabBar.items,
+                  let index = items.firstIndex(where: { $0 === item }), index == tab else { continue }
+            matches.append(NativeSelection(selectedIndex: tabs.selectedIndex, itemIndex: index,
+                controller: String(reflecting: type(of: tabs))))
+        }
+        return matches.count == 1 ? matches[0] : nil
+    }
+    static func readback() -> String {
+        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v1", "pid": pid,
+            "namespace": namespace, "clock": "same-Simulator-boot-systemUptime",
+            "capacity": capacity, "dropped": dropped, "requestOrdinal": requestOrdinal,
+            "noChangeAssignments": noChangeAssignments, "noChangeAssignmentsCapped": noChangeAssignmentsCapped,
+            "marks": marks, "acceptance": "DIAGNOSTIC_ONLY_ORIGINAL_XCTEST_5S_GATE_UNCHANGED"]
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
+            return "SERIALIZATION_FAILED_NOT_OBSERVED"
+        }
+        return String(decoding: data, as: UTF8.self)
     }
 }
 

@@ -6,11 +6,11 @@
 |---|---|
 | Task ID / namespace | TASK-146 / iOSMerchandiseControl |
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
-| Stato globale / task | ACTIVE / BLOCKED |
+| Stato globale / task | ACTIVE / ACTIVE |
 | Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION_BLOCKED_REVIEW_HOLD — ordinario PASS; finalCI2039/3/43/16; T17USB |
+| Esito documentale | EXECUTION_PROGRESSIVE_INTEGRATION_AND_TARGETED_DEBUG — gate e qualifiche preservati |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **CODEX ROOT / causa B2 e confini T18-T19; USER solo USB+sblocco quando disponibile** |
+| Responsabile della prossima azione | **CODEX ROOT / dipendenze merge e debug B2-T18-T19; nessun nuovo prerequisito umano ora** |
 | Creato / aggiornato | 2026-11-04 / 2026-11-12, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
@@ -20,6 +20,24 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — gruppo Storefront e composizione diagnostica dei tre gate — 2026-11-12T20:06:49.257803-03:00
+
+**ACTIVE/EXECUTION.** Unica analisi dipendenze conclusa: gruppo applicativo autonomo Storefront(2file, delta esatto461ad4e5 giàPR29), nessuna API/schema/Auth/bootstrap/outbox nuova; evita soltanto pubblicazioni di valori invariati mantenendo cambi reali/scope. Gli altri gruppi trascinano nuovi sync/root/CAS/queue oppure non hanno comportamento autonomo verificabile. Una sola PR incrementale30 dalla main94fb: head3f8f514c859a68a72d18db81f95651a5f6125dd0, review distinta STATICPASS, CI43323644025 ancora in corso sulla composizione propria; Debug giàSUCCESS. Nessun PASS candidato trasferito al sottoinsieme, nessun merge ancora. Le sole qualifiche CI aggiunte sono ammissione spazio, Release e postflight, senza esclusioni/timeout modificati; mappa versoPR29 nel report del gruppo.
+
+**Prossima prova discriminante, non fix applicativo già qualificato.** Cinque file aggiornati nella worktreeS: Task144fixture, Task145PerformanceObservation, ContentView, LocalAvailabilityRootUITests e workflow. CPU cumulativa processo/main in cinque marker B2 esistenti, con costo di acquisizione esplicito; nessun nuovo sampler/broker. T18 dueasset originali CRC/hash verificati(19009B/64KB, vecchioledgerimmutato) confermano path1,5s fermo sul bersaglio; nuovo buffer passivo identifica contatto nativo, handler, frame/lifecycle con sei slot critici riservati. Export RAM su richiesta dopo gesture/producer, budget5740BJSON/7682encoded verificato. T19 separa timestamp/query/booleani XCTest e commit UIKit selezionato/visibile con PID/namespace/presentation; idempotenti non supersedono richiesta reale, buffer512. Soglie5s/1s, press1,5s, T0, produttore/predicato e query originali restano invariati; dati mancanti NOT_OBSERVED.
+
+**✅ STATIC ESEGUITO PASS:** review distinta0blocker, parseSwiftDEBUG, syntaxYAML/nuoviPython e diff-check; typecheck locale della CPU helper distinto dalla buildApp. Guardia disco riusata dal gruppo PR30 prima di qualsiasiXcode/resolve:12,5GBcrescita+riserva30,3GB, misura volumi effettivi; postflight sempre dopo tuttiSDK con ricevuta piccola. AppTree diagnostica `a77accc30d9e98ddc7dde702dc9853fe0850857c`, baseline funzionale7241; nessun PASS runtime nuovo attribuito. Build/diagnosi **❌ NON ESEGUITE ancora**: previste due focused sullo stesso commit, profili originali distinti(macOS26/Xcode26.6 ARM): B2+T19 optimizedDebug con assert reali; T18 standardDebug. Tag di sola pubblicazione codex/task146-gate-diagnostics-20261112-b2t19 e codex/task146-gate-diagnostics-20261112-t18, nessuna nuova PR o matrice completa. Ciascuna run ha la propria domanda e budget, non retry per selezionare verde; export prodotto per custodia, niente sampler ripetuto.
+
+**Handoff in corso:** eseguire le due focused, interpretare i discriminanti, correggere il punto causale e provare prima le regressioni pertinenti; matrice completa soltanto sulla composizione pronta. PR30 merge dopo review/CI esatte, poi mainCI; raccordo PR29 senza duplicare Storefront. T17USB/16differiti e cleanup delle dueHistory restano distinti, nessuna nuova richiesta umana ora; sourceprimary/WIP/index/dati/sessioni/canonici preservati. Dettagli nella receipt `20261112-progressive-gate-diagnostics.json` e progressive-integration-20261112.ROOT.
+
+### Execution — addendum integrazione progressiva e debug mirato — 2026-11-12T19:36:20.210190-03:00
+
+**ACTIVE / EXECUTION.** Ripresa esplicita dal checkpoint0120c790: controllati una volta PR29head459c/App7241, CI43301058573(2039PASS/3FAIL/43SKIP/16DIFFERITI), main iOS94fb/Android0c0/Admin7d e ricevuta finale. Qualifiche precedenti conservate nei propri perimetri, nessun nuovo audit. Override utente: integrazione progressiva autorizzata per gruppi autonomi realmente qualificati; completamento TASK146 distinto dal merge di un gruppo. La precedente condizione globale che sospendeva ogni integrazione fino a tutti i gate è superata solo per gruppi la cui indipendenza sia dimostrata, senza saltare check/protezioni. Planning Claude non riscritto; raccordo operativo annotato nella sezione Execution.
+
+Una sola analisi mirata delle dipendenze main→PR29, più debug B2/T18/T19 in parallelo con reviewer distinti; root possiede le modifiche, consumer canonici seriali. Prima artifacts esistenti; se manca un discriminante, una prova diagnostica con domanda precisa e strumenti già presenti. Soglie5s/longpress1s, T0, riga utile, interazione reale e producer/safety invariati. I dueT17 restano NOT_RUN/BLOCKED_USB: l'utente ha già dichiarato Min non disponibile, nessuna nuova richiesta del medesimo prerequisito; pacchetti/sessioni/fixture KEEP. Cleanup dueHistory vuote resta indipendente dai gruppi pronti. Android/Admin WIP/indice preservati, nessuna nuova review Admin7d senza delta. Ricevute nuove nella sottodirectory progressive-integration-20261112.ROOT del dossier corrente.
+
+**Handoff in corso:** individuare il più ampio gruppo coerente e separabile, oppure documentare la dipendenza concreta una volta e passare ai tre fix. Qualificare ogni composizione effettiva prima di merge; dopo merge CI main esatta. Nessun DONE anticipato o nuovo GO generico.
 
 ### Execution — matrice finale 459c qualificata, review HOLD e handoff corrente — 2026-11-12T22:01:19.913519+00:00
 

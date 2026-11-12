@@ -200,6 +200,38 @@ jobs:
       - name: Verify shared contract hashes
         run: shasum -a 256 -c contracts/product-image-v1.sha256
 
+      - name: Admit SDK disk growth before native consumers
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,shutil,subprocess
+          from pathlib import Path
+          # Existing iOS runner forecasts 3.5GB per SDK batch. Admit both
+          # configurations, package resolution, the full result and one boot.
+          growth={'debugSDK':3_500_000_000,'releaseSDK':3_500_000_000,
+                  'packages':2_000_000_000,'fullTestResult':2_000_000_000,
+                  'simulatorBoot':1_000_000_000,'concurrentReserve':500_000_000}
+          reserve=30_300_000_000  # Existing runner reserve, above the 30GB floor.
+          paths=[Path.cwd(),Path(os.environ['RUNNER_TEMP']),
+                 Path.home()/'Library/Developer/Xcode/DerivedData']
+          volumes={}
+          for requested in paths:
+              actual=requested
+              while not actual.exists():actual=actual.parent
+              device=os.stat(actual).st_dev
+              if device not in volumes:
+                  free=shutil.disk_usage(actual).free
+                  volumes[device]={'path':str(actual),'freeBytes':free,
+                      'afterForecastBytes':free-sum(growth.values())}
+          row={'phase':'before-native','atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'growthBytes':growth,
+               'reserveBytes':reserve,'volumes':list(volumes.values())}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-native-disk.json'
+          assert not path.exists(),'refuse mixed disk receipts'
+          path.write_text(json.dumps(row,sort_keys=True)+'\n')
+          print(json.dumps(row,sort_keys=True))
+          assert all(v['afterForecastBytes']>=reserve for v in volumes.values()),'BLOCKED_DISK_SPACE'
+          PY
+
       - name: Select an available iPhone Simulator
         run: |
           # Initialize CoreSimulator before asking Xcode for concrete destinations.
@@ -906,6 +938,7 @@ jobs:
           name: task145-ci-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/task146-debug-build-profile.json
+            ${{ runner.temp }}/task146-native-disk.json
             ${{ runner.temp }}/task146-debug-assertion-probe/
             ${{ runner.temp }}/ios-xctest-shard
             ${{ runner.temp }}/ios-xctest-failure-summary
@@ -962,6 +995,41 @@ jobs:
               assert report.with_suffix(suffix).stat().st_size > 0
           print("Sensitive-scan report and log verified")
           PY
+
+      - name: Record final native disk postflight
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,shutil,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          admission=root/'task146-native-disk.json'
+          row={'phase':'after-all-native-checks','atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+               'exclusivePhysicalRecovered':'NOT_CLAIMED','removedPaths':[]}
+          if admission.is_file():
+              before=json.loads(admission.read_text())
+              assert before['head']==row['head'],'mixed native disk admission'
+              row['reserveBytes']=before['reserveBytes']
+              row['volumes']=[{'path':item['path'],'freeBytes':shutil.disk_usage(item['path']).free,
+                  'beforeFreeBytes':item['freeBytes']}for item in before['volumes']]
+              row['status']='PASS'if all(item['freeBytes']>=row['reserveBytes']for item in row['volumes'])else'BLOCKED_DISK_SPACE'
+          else:row['status']='NOT_ADMITTED_NO_PREFLIGHT_RECEIPT'
+          path=root/'task146-native-postflight.json'
+          assert not path.exists(),'refuse mixed native disk postflight'
+          path.write_text(json.dumps(row,sort_keys=True)+'\n')
+          print(json.dumps(row,sort_keys=True))
+          assert row['status']!='BLOCKED_DISK_SPACE','native postflight below reserve'
+          PY
+
+      - name: Preserve final native disk receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: task146-native-postflight-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/task146-native-postflight.json
+          if-no-files-found: error
+          retention-days: 1
 
   complete-coverage:
     if: ${{ always() && inputs.task146_t17_predecessor_debug != true && inputs.task146_t17_candidate_release != true && (github.event_name != 'workflow_dispatch' || (inputs.task144_a_campaign != true && inputs.task146_focused_tests == '')) }}

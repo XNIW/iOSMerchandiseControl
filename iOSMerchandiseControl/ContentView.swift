@@ -156,6 +156,10 @@ struct ContentView: View {
     private var selectedTab: Int {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
         nonmutating set {
+            #if DEBUG
+            Task146T19TabObservation.bindingRequested(from: selectedTab, to: newValue,
+                presentationID: syncStoreGenerationController.presentationID)
+            #endif
             // Persist the actual choice before SwiftUI publishes it. A same-scope
             // authorization/readability update can restore presentation in the
             // same transaction, before onChange has observed the new selection.
@@ -344,6 +348,10 @@ struct ContentView: View {
         }
         .onChange(of: syncStoreGenerationController.presentationID) { _, _ in restoreLocalPresentation() }
         .onChange(of: selectedTab) { _, value in
+            #if DEBUG
+            Task146T19TabObservation.publicationObserved(tab: value,
+                presentationID: syncStoreGenerationController.presentationID)
+            #endif
             syncStoreGenerationController.preferLocalReadDomain(value == 2 ? .sessions : .catalog)
             guard isCurrentModelGeneration, !hidesBusinessDataForPendingRecovery else { return }
             localPresentation?.update(presentationID: mountedPresentationID) { $0.selectedTab = value }
@@ -727,6 +735,29 @@ struct ContentView: View {
         // Mount the visible section first. A visited section stays mounted so
         // switching tabs keeps its navigation, workbook and editor state.
         .onChange(of: selectedTab) { _, tab in openedTabs.insert(tab) }
+        #if DEBUG
+        .background {
+            if Task146T19TabObservation.enabled {
+                let tab = selectedTab
+                let presentation = syncStoreGenerationController.presentationID
+                let request = Task146T19TabObservation.requestOrdinal
+                ZStack {
+                    Task145PerformanceRenderBoundary(event: "t19-native-tab-selection", qualifies: true,
+                        facts: "\(request):\(tab):\(presentation)",
+                        validateNative: { view in
+                            Task146T19TabObservation.nativeQualifies(view, tab: tab,
+                                request: request, presentationID: presentation)
+                        }, onNativeRendered: { view in
+                            Task146T19TabObservation.nativeCommitted(view, tab: tab,
+                                request: request, presentationID: presentation)
+                        })
+                    Task145PerformanceReadback(identifier: "task146.t19.tab-observation",
+                        readValue: { Task146T19TabObservation.readback() })
+                        .frame(width: 1, height: 1)
+                }.allowsHitTesting(false)
+            }
+        }
+        #endif
         .task {
             #if DEBUG
             Task144RootObservation.recordCachedCatalogPhase("navigation-task-entry")
