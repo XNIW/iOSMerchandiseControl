@@ -1,0 +1,186 @@
+{
+  "at": "2026-11-12T12:57:14.184795-03:00",
+  "status": "BLOCKED_EXTERNAL_RUNNER_CAPACITY_AND_IOS_T17_OS_ISOLATION",
+  "lastPhase": "EXECUTION",
+  "REVIEW": false,
+  "DONE": false,
+  "previousPublishedCheckpoint": "09c406006623c465e3a5da7803f32b7a82e67b50",
+  "nativeAppSource": "7241f7d5a4d6bca68cd4666daaf8c0ac4374b0f4",
+  "nativeAppTree": "d30dcd36581876ca74c24f5a0562c94b539e619b",
+  "nativeFixCommits": [
+    "2bd17127",
+    "7241f7d5"
+  ],
+  "nativeSourceChangedAfterFocused16": false,
+  "focused16": {
+    "run": 43240989885,
+    "status": "PASS",
+    "DebugSDK": "PASS_XCODE26.6",
+    "testsPassed": 16,
+    "skips": 0,
+    "discovery": 2101,
+    "scope": "FOCUSED_NOT_FINAL",
+    "newDeltaLineWarnings": 0
+  },
+  "B2": {
+    "run": 43245839064,
+    "status": "NOT_RUN_ON_NEW_COMPOSITION",
+    "external": "BLOCKED_HOSTED_ARM_CAPACITY",
+    "job": 131278129441,
+    "jobConclusion": "cancelled",
+    "jobSteps": 0,
+    "Build": "NOT_RUN",
+    "SIM": "NOT_RUN",
+    "priorQualifiedApplicationObservation": "f33f7.335606833s FAIL vs5s; cause UNKNOWN; HIT0scan",
+    "newPerformanceBenefit": "NOT_MEASURED",
+    "identicalRetry": "Do not repeat without new actual admission/service evidence; no new collectors"
+  },
+  "localSDK": {
+    "source": "09c40600 (same App/test/CI trees as7241f7d5)",
+    "toolchain": "Xcode27.2/27B52 iphonesimulator27.2 arm64, distinct from hosted26.6",
+    "publicTESTConfigSHA256": "154a137692161c1a1f5d1014567501428d1706945285431b7639aa5546d302cc",
+    "existingPackagePinsMatched": 13,
+    "ReleaseBuild": "PASS_RAW_SDK_EXIT0",
+    "ReleaseSignature": "PASS_STRICT_23_PIN_PRODUCT",
+    "AnalyzeDebug": "PASS_RAW_SDK_EXIT0_WITH_PREEXISTING_SOURCE_WARNINGS",
+    "warnings": {
+      "Release": 1,
+      "Analyze": 41,
+      "newDeltaSourceWarnings": 0
+    },
+    "sensitiveScan": "PASS_SAME_FOUR_CI_PATHS",
+    "controllers": "Two postflight FAIL_EXIT2 preserved. Early native-quiescence rejection, exact earlier consumer UNKNOWN; later observed/group/cohort empty, official lease release completed. Unsupported shell attribution explicitly withdrawn. No repeated SDK actions.",
+    "runtime": "NOT_RUN_NO_INSTALL_BOOT_OR_LAUNCH"
+  },
+  "iosT17": {
+    "status": "BLOCKED_OS_NETWORK_ISOLATION",
+    "canonicalSimulator": "459C668B-7CE8-443B-BAB3-7D3D5FFC9143 iOS26.1 Settings+Developer fully inspected; no radio controls/Network Link Conditioner",
+    "physical": "00008130-001644523A2A001C, paired but tunnelState unavailable; last connection14:11UTC; no physical test",
+    "twoCases": "NOT_RUN",
+    "physical16": "DEFERRED_USER_UNCHANGED"
+  },
+  "ordinaryNewComposition": "NOT_RUN; previous f33f2.143s/0scan/useful manual and Save proofs retained only for that binary. Existing UI control tool unavailable after session interruption; target admission and useful interaction not attempted blindly.",
+  "final2101": {
+    "status": "NOT_RUN",
+    "expectedPass": 2042,
+    "allowedSkip": 43,
+    "deferredPhysical": 16,
+    "notForDiagnosis": true
+  },
+  "repositories": {
+    "iOS": {
+      "main": "94fb03a5fd3b770f866655154874723192ebc390",
+      "PR29": "OPEN_NOT_MERGED_HEAD3d4578c4",
+      "PR28": "OPEN_DRAFT_HEAD2699b448_KEEP",
+      "integration": "NOT_RUN_CRITICAL_GATES_OPEN",
+      "newMainCI": "NOT_RUN",
+      "candidatePRAncestry": "PR29 head ancestor of09c40600; fast-forward available after gates, no force needed"
+    },
+    "Android": {
+      "main": "0c0ceab55dd0f57956791d91def6e3b59b804a69",
+      "PR": 34,
+      "CI": 43118457806,
+      "CIStatus": "SUCCESS_ACQUIRED",
+      "T17": "Case18 Debug de3c sourceUNKNOWN→Release2f38 PASS; case20 identical Release→Release PASS idempotence only; case19 FAIL deadline retained",
+      "initialResiduals": "B1a/ordinary valid-cache path qualified in prior exact scopes; native tree unchanged"
+    },
+    "Admin": {
+      "main": "0d61aaeb2312acdfdaab29df9ca0267e57920b2c",
+      "PR": 151,
+      "CI": 43155600313,
+      "CloudflareBuildCI": 43155600256,
+      "CIStatus": "SUCCESS",
+      "deploys": "SKIPPED",
+      "currentTESTWorkerVersion": "UNKNOWN_GET401; prior142 historical only",
+      "review": "PASS_STATIC_NATIVE_CONTRACTS; accepted pos_sales writer-v2 fence remains ASUS/ingestion dependency, mobile SELECT unchanged"
+    }
+  },
+  "cleanup": {
+    "newDeletions": 0,
+    "newRemovedLogicalBytes": 0,
+    "newRemovedAllocatedBytes": 0,
+    "oldDevices": "6 existing roots retained: five HOLD and obsolete lookup6E59 KEEP. Native Dual consumer quiescence verified now; data release not proven.",
+    "products": "Current local SDK Release/Analyze products retained, allocated1943613440B; canonical first FAIL/native predecessors protected",
+    "fixtures": "Own synthetic product7f457d2d/historyffda96b2/oldoutbox61 plus emptyHistory93aaa954 retained for outstanding named consumers, no generic queue manipulation",
+    "canonicalDevicesAndQCOW2": "KEEP_ALL",
+    "WIP": "Primary iOS index5202e036 unchanged; Android/Admin foreign work preserved",
+    "freeBytes": 178857693184,
+    "APFS": "Includes own SDK growth and external concurrent changes; no recovered-space claim this batch"
+  },
+  "next": "Resume exact B2 only with new actual runner admission evidence; T17 on OS-isolable authorized canonical/available physical target, then same-composition ordinary/final matrix/CI/review/PR29 main and PR28 reconciliation. No new GO or planning. Reuse acquired artifacts with source/config/toolchain verification.",
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT",
+  "evidenceFiles": {
+    "B2-REVIEW-FIXES-CLASSIFICATION.ROOT.json": {
+      "bytes": 1067,
+      "sha256": "bfbe58ebb99ebc0312d402e5dad8a1295242009a3264a48e1c6bb5da825c9ef6"
+    },
+    "B2-REVIEW-FIXES-ANNOTATIONS.ROOT.json": {
+      "bytes": 1712,
+      "sha256": "843822bedcd7d03159eec425875d21c1a04628a5eaa03f1e58322ef87fb5bee9"
+    },
+    "SENSITIVE-SCAN-RESULT.ROOT.json": {
+      "bytes": 625,
+      "sha256": "d257b68882511c60f04c5f787a300b6a0176f38b9c160f5aaeb1506f70e5f3e9"
+    },
+    "local-sdk-checks.ROOT/RELEASE-CLASSIFICATION.POSTPROCESSED.ROOT.json": {
+      "bytes": 1657,
+      "sha256": "ce8fce8208cdc768117c25cfefff2041223626f43c96705969b20f87b27f4273"
+    },
+    "local-sdk-checks.ROOT/LEASE-CAUSE-CORRECTION.POSTPROCESSED.ROOT.json": {
+      "bytes": 1025,
+      "sha256": "7cc29cb387706f1aaeff3ac00d8e4aad637427938df90c6c8b7d4a1e640add07"
+    },
+    "local-sdk-checks.ROOT/RELEASE-PRODUCT-PINS.ROOT.json": {
+      "bytes": 3784,
+      "sha256": "c139201ca5a85344209d99bf955f97a5de509afc012cf17cc85e4e6cb5d3be7d"
+    },
+    "local-sdk-checks.ROOT/RELEASE-WARNING-MAPPING.POSTPROCESSED.ROOT.json": {
+      "bytes": 358,
+      "sha256": "71a4eebd4fa13eb96c63763fab451803daafa954be57efae6ca1c12fe54d9c11"
+    },
+    "local-sdk-analyze.ROOT/ANALYZE-CLASSIFICATION.POSTPROCESSED.ROOT.json": {
+      "bytes": 13202,
+      "sha256": "da52c1f9b5eaeaed8293c0916bd1a412ca4e14639909f79d9e8bd6d8978ed172"
+    },
+    "local-sdk-analyze.ROOT/LIVE-CONSUMER-OBSERVATION.ROOT.json": {
+      "bytes": 282,
+      "sha256": "cc73812f866170361b7d8d2d6d9ec4346737e056bf7cb60acee5d8fabcd6a160"
+    },
+    "review-fixes-focused.ROOT/DEBUG-WARNING-MAPPING.POSTPROCESSED.ROOT.json": {
+      "bytes": 9950,
+      "sha256": "e536125ddeb8e74bcc467f1d62fe9c944c7922ab45039387d256425890edda71"
+    },
+    "physical-availability.ROOT/RESULT.ROOT.json": {
+      "bytes": 197,
+      "sha256": "60d205caa3be4e940437b4408a7edf47b49a131dccdcb84e581c0096e5fd8061"
+    },
+    "EXISTING-DEVICE-RETENTION-REVIEW.ROOT.json": {
+      "bytes": 1223,
+      "sha256": "5cc3bcf641223774991baf0cbf2166e79a1a316d89de1ffaf730ed12659fb4c1"
+    },
+    "DUAL-INTERRUPTION-POSTFLIGHT.ROOT.json": {
+      "bytes": 1117,
+      "sha256": "10e5c6901850bd935820ade06c85d22f40a07da89cafd12896224ff62c05c13c"
+    },
+    "FINAL-OWNED-POSTFLIGHT.ROOT.json": {
+      "bytes": 4213,
+      "sha256": "0f5636a3b0450b3509721726c95124fd5584bf1f2506cce469892c43758dcce8"
+    },
+    "LOCAL-SDK-FINAL-RETENTION.ROOT.json": {
+      "bytes": 50224,
+      "sha256": "3843abbc41cc59fc37eb1b01e8fcb1b85c525cda566ed4b6a206fd801fbd577a"
+    },
+    "LOCAL-SDK-DEPENDENCIES.ROOT.json": {
+      "bytes": 2262,
+      "sha256": "a8aeb7bed380a0968caee4296b14f5a7cd9a0f1033d495a66c625e76bc246065"
+    },
+    "local-sdk-checks.ROOT.py": {
+      "bytes": 5927,
+      "sha256": "ec2549d427bae98748031c20aaeac18d8ab4d6fa51035697a737e96e7f81188f"
+    },
+    "local-sdk-analyze.ROOT.py": {
+      "bytes": 4149,
+      "sha256": "be64bbeb060d57a93573116393174c2d32cf5a7e3d290beb23dedbd477a13826"
+    }
+  }
+}

@@ -6,11 +6,11 @@
 |---|---|
 | Task ID / namespace | TASK-146 / iOSMerchandiseControl |
 | File task | docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md |
-| Stato globale / task | ACTIVE / ACTIVE |
-| Fase attuale | **EXECUTION** |
-| Esito documentale | EXECUTION — due fix iOS7241f7d5, focused16 PASS; B2/T17 iOS e integrazione aperti |
+| Stato globale / task | ACTIVE / BLOCKED |
+| Fase attuale | **EXECUTION (ultima fase; gate esterni bloccati)** |
+| Esito documentale | BLOCKED_EXTERNAL — due fix iOS7241f7d5/16PASS; B2 runner capacity e T17 rete OS, integrazione non eseguita |
 | Responsabile del coordinamento | **Coordinatore TASK-146**, ruolo unico assunto dal responsabile della sessione autorizzata e nominato nel registro; nessuna assegnazione permanente a una chat |
-| Responsabile della prossima azione | **CODEX ROOT / B2, T17 iOS, raccordo backend e review indipendenti**, poi gate finali e integrazione |
+| Responsabile della prossima azione | **CODEX ROOT / ripresa dopo ammissione runner B2 e disponibilità target OS per T17**, poi gate finali e integrazione |
 | Creato / aggiornato | 2026-11-04 / 2026-11-12, America/Santiago |
 | Ultimo agente | CODEX_EXECUTOR_TASK146 / sessione20261104T215638Z |
 | Coordinamento | MOBILE_SYNC_RECOVERY_OFFLINE_UX |
@@ -20,6 +20,26 @@
 ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sulla directory GitHub al commit 94fb03a5: massimo iOS 145, nessuna TASK-146. Android arriva a 144; Admin usa una numerazione indipendente e possiede già una TASK-146 estranea: questa task è sempre qualificata **iOS TASK-146**, non rinumera Admin e non crea copie Android/backend.
 
 ## Execution corrente — GO20261104T215638Z
+
+### Execution — verifiche disponibili concluse, gate esterni ancora aperti — 2026-11-12T12:57:14.184795-03:00
+
+**BLOCKED, ultima fase EXECUTION; non REVIEW/DONE.** Due fix iOS pubblicati e qualificati nel proprio perimetro: `2bd17127`/`7241f7d5`, AppTree `d30dcd36`, checkpoint documentale `09c40600`; nessun delta App dopo focused16. [Receipt portabile](EVIDENCE/TASK-146/20261112-reviewed-fixes-and-external-gates.json). Nessun nuovo planning/GO, nuova variante UI o collector CPU. TASK-145 iOS/TASK-144 Android restano assorbite nei rispettivi stati: nessun DONE non qualificato.
+
+**✅ ESEGUITI — review statica e focused16 PASS:** CI43240989885 su7241f7d5, Debug Xcode26.6/ARM,16/16 PASS e discovery2101. Nuovo piano dopo Save arrivata fra snapshot idle e drain attraversato fino a push/evento unico, ACK riaperto, stessa generazione/nojournal; regressioni gap/capacità/autorità preservate. SDK Auth failure prima HTTP ripristina solo l'ammissione CAS mai sigillata; prepared-senza-witness/malformed e unknown dopo reopen non diventano ritentabili. Nessun beneficio temporale B2 dedotto da questi fix.14warning Debug, contesti sorgente antecedenti e3notifiche AppIntents;0warning sulle righe del delta.
+
+**⚠️ B2 nuova composizione NON ESEGUIBILE — capacità runner:** run43245839064/job131278129441 attesa dal15:15UTC, poi cancelled senza alcuno step. Annotazione GitHub: “The job was not acquired by Runner of type hosted even after multiple attempts”; avvisi di capacità macOS ARM insufficiente. **BUILD/SIM/B2 NOT_RUN**, non FAIL applicativo. Ultimo B2 applicativo f33f7,335606833s/5s resta FAIL, HIT0scan, causa esclusivaUNKNOWN; nessuna sostituzione col miglior ordinario o sottrazione preApp. Nessun prodotto nuovo prodotto da questa run; nessun retry identico senza nuova evidenza concreta di disponibilità. Confronto pagato ancora storicamente BLOCKED_BILLING, nessun cambio pagamenti/limiti/privilegi.
+
+**✅ ESEGUITI — controlli locali indipendenti sullo stesso AppTree:** Xcode27.2/27B52, SDK27.2/arm64, configurazione pubblica TEST154 e13checkout già presenti esattamente corrispondenti a Package.resolved. Release **SDK exit0/BUILD SUCCEEDED**, prodotto23pin/firma strict/min26.1 verificati; Debug Analyze **SDK exit0/ANALYZE SUCCEEDED**,41warning mappati a contesti precedenti/Vendor2/libxls/tool,0nuovi sulle righe del delta. Release1warning preesistente. Scan sensitive sullo stesso perimetro4path della CI **PASS**, report/log/MD persistiti. Nessuna installazione, boot, launch o prova B2 locale: toolchain distinta da26.6, nessuna qualifica runtime dedotta.
+
+**FAIL collector separati e postflight riconciliato:** due controller hanno conservato exit2 per guardia di quiescenza subito dopo SDK riuscito; Analyze era NOT_RUN nel primo e non è stata ripetuta la Release. La lettura dei record SDK e le verifiche fresche successive confermano0consumer osservati/gruppo/cohort e consentono il rilascio ufficiale delle lease. L'attribuzione iniziale al wrapper era un'inferenza non dimostrata, ritirata con receipt additiva; consumer esatto al primo rifiutoUNKNOWN. Guardia e limiti invariati, nessun timeout aumentato, nessun esito storico riscritto. Ricette e hash sono persistenti nell'evidence, non soltanto/tmp.
+
+**⚠️ Due T17 iOS NON ESEGUIBILI:** verificata tutta Impostazioni/Sviluppo sul459C/iOS26.1 senza controllo radio o Network Link Conditioner; nessun toggle Mac/nuovo privilegio. Lettura ufficiale dell'iPhoneMin conferma pairing ma **tunnelState unavailable**, non target fisico utilizzabile; nessuna prova fisica o installazione.16fisici e statistiche restano DIFFERITI_USER. Ordinario utile della nuova composizione e final2101 **NON ESEGUITI**: vecchi2,143s/Save/Release read restano ai propri binari; controllo UI non disponibile nella sessione dopo l'interruzione, nessuna ammissione/installazione cieca. Final atteso2042PASS/43skip/16differiti, nessuna somma di candidati.
+
+**Main e raccordo verificati:** iOS94fb03a5 invariata, PR29head3d4578c4 OPEN/non-draft e PR28head2699b448 OPEN/draft. Il checkpoint è discendente della headPR29: fast-forward disponibile dopo i gate, senza force. Non avanzata ora perché attiverebbe la matrice completa prima della qualifica B2. Android0c0ceab5/PR34/CI43118457806 PASS acquisiti; T17casi18/20 PASS nei perimetri e19FAILdeadline conservato,90s perHTTP distinto dal budget raccolta. Admin0d61aaeb/PR151, CI43155600313 e CFbuild43155600256 PASS, deploy SKIPPED; sette RPC mobile invariati nella review111commit/225file e metadataTEST letti. Versione WorkerTEST correnteUNKNOWN dopo GET401,142 solo storico. Fence accepted-write pos_sales con writer_contextv2 resta dipendenza ASUS/ingestione, non nuova campagna POS read. Nessuna attività Windows/TASK140F chiusa o modificata.
+
+**✅ Postflight/retention ESEGUITI:** run propri terminati, consumer nativi quiescenti e lease SDK rilasciate. Cleanup esistente applicato prima/dopo,0lotti idonei rimossi in questo batch; nessuna pretesa di recupero fisico. Due prodotti SDK correnti mantenuti,1943613440B allocati, senza copia DerivedData ridondante. Review inventario esistente:5root HOLD+vecchio lookup6E59 KEEP, nessuna prova di rilascio dati/sessioni; consumer Dual storico ora verificato quiescente, esito storico/pin conservati. Canonici/3QCOW2/credenziali/sessioni/dati/WIP/indice5202e036 e PR28/worktree KEEP. Fixture propria condivisa/outbox61 e History vuota93aaa954 conservate per consumer nominati e cleanup nativo successivo, nessun reset di coda. Liberi alla misura **178857693184B**, variazione APFS comprende attività esterne e crescita SDK propria.
+
+**Handoff post-execution di ripresa:** mancano precisamente un'ammissione reale del runner B2 con T0/5s/controlli originali e un target TEST con rete OS isolabile per T17. Dopo variazione effettiva, riusare la candidata e i prodotti quando profilo/toolchain coincidono; completare ordinario utile, full2101/controlli sulla stessa composizione, review, avanzamento e mergePR29, CI della main risultante e riconciliazionePR28/task assorbite/cleanup. Nessun nuovo GO generale, nessuna eliminazione di lavoro non pubblicato. I verdi mirati/locali non autorizzano REVIEW/DONE con questi gate aperti.
 
 ### Execution — review indipendenti, due fix iOS e qualifica mirata — 2026-11-12T12:17:19.253293-03:00
 
