@@ -1,0 +1,147 @@
+{
+  "atUTC": "2026-11-12T22:01:19.913519+00:00",
+  "status": "BLOCKED_LAST_EXECUTION_REVIEW_HOLD_NOT_DONE",
+  "checkpointTag": "codex/task146-final-matrix-hold-20261112",
+  "PR29": {
+    "head": "459c3d347e695ac6d2607c437d71c5dc84d15c17",
+    "commits": 201,
+    "codeActuallyPublished": true,
+    "merged": false,
+    "base": "94fb03a5fd3b770f866655154874723192ebc390"
+  },
+  "AppSource": "7241f7d5a4d6bca68cd4666daaf8c0ac4374b0f4",
+  "AppTree": "d30dcd36581876ca74c24f5a0562c94b539e619b",
+  "finalCI": {
+    "attempt": 1,
+    "checkoutQualifiedAsExactHead": true,
+    "conclusion": "failure",
+    "event": "pull_request",
+    "eventMergeSHA": "235ed8eaaf38769c9803fe89d6c60872072fab22",
+    "head": "459c3d347e695ac6d2607c437d71c5dc84d15c17",
+    "id": 43301058573,
+    "status": "completed",
+    "url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/43301058573"
+  },
+  "counts": {
+    "DEFERRED_USER": 16,
+    "Failed": 3,
+    "Passed": 2039,
+    "Skipped": 43
+  },
+  "expected": 2101,
+  "observed": 2085,
+  "review": "HOLD",
+  "ordinary": "PASS_LOCAL_RELEASE_XCODE27.2_iOS26.1_SAVE_ACK_SERVER_REOPEN_NO_TIMING",
+  "focused16": "PASS_PRESERVED",
+  "helper": "TWO_FIXTURE_LINES_LOCAL33_HOST18_PLUS33_PASS",
+  "B2": {
+    "latestSeconds": 5.843973583333309,
+    "standaloneSeconds": 6.537430666666751,
+    "oldSeconds": 7.335606833,
+    "thresholdSeconds": 5,
+    "originalT0": true,
+    "cache": "HIT_0SCAN",
+    "cause": "UNKNOWN_NO_SPECULATIVE_FIX",
+    "capacityAttempt": "NOT_RUN",
+    "paidComparison": "NOT_RUN_BILLING"
+  },
+  "T18": "FAIL_INPUT_NOT_RECOGNIZED_0.8286_LT1_PRODUCER_NOT_TRAVERSED_CAUSE_UNKNOWN",
+  "T19": "FAIL_OPTIONS_CYCLE2_LINE6761_COMPOUND_SELECTED_AND_5S_DEADLINE_AMBIGUITY_28CYCLES_NOT_RUN",
+  "T17": "TWO_IOS_NOT_RUN_USB_USER_UNAVAILABLE_PRECONDITIONS_REQUIRED_NO_GENERAL_GO",
+  "userDeferredPhysical16": "UNCHANGED_DEFERRED_USER",
+  "main": {
+    "iOS": "94fb03a5fd3b770f866655154874723192ebc390",
+    "Android": "0c0ceab55dd0f57956791d91def6e3b59b804a69",
+    "Admin": "7d94271f38b2f0310050c9b089e0db0ce3b8cbfc"
+  },
+  "Admin": {
+    "newPR": 153,
+    "previousPR": 152,
+    "contracts": "SEVEN_UNCHANGED_NEW_DELTA_ONLY",
+    "CI": 43313187095,
+    "CFBuild": 43313187156,
+    "deploymentSteps": "SKIPPED",
+    "lastTESTReceiptVersion": "cfd6920-bef3-441e-99f6-2a1b83aaf498",
+    "TESTCurrentVersion": "NOT_ATTESTED_BY_NEW_MAIN_CI"
+  },
+  "PR28": "OPEN_DRAFT_MAPPING68_PRESERVED_PENDING_QUALIFIED_MAIN",
+  "SDK": {
+    "Debug": "8_OF8_SUCCESS",
+    "Release": "SUCCESS",
+    "Analyze": "SUCCESS",
+    "scan": "SUCCESS",
+    "newWarnings": "NOT_VERIFIABLE_FROM_EXPORTED_FINAL_METADATA_PRIOR_MAPS_REMAIN_SCOPED"
+  },
+  "latest459cBinary": "NOT_EXPORTED_EQUIVALENCE_TO7241_NOT_VERIFIABLE_NO_NEW_EXECUTION_FOR_CUSTODY",
+  "cleanup": {
+    "logicalBytes": 3228625,
+    "allocatedBytes": 4587520,
+    "physicalExclusive": "UNKNOWN_NOT_ATTRIBUTED",
+    "emptyHistories": "ZERO_DELETED_CUA_COORDINATE_UNAVAILABLE",
+    "sharedT17Fixtures": "KEEP_NAMED_CONSUMERS_NO_PURGE",
+    "newDevices": 0
+  },
+  "freeBytes": 177966043136,
+  "primaryIndexSHA256": "5202e036df5964920978cfe4f02125bd124743cc0f64b8a7775ca8778d7c2753",
+  "primaryCheckoutUpdates": "ANDROID_ADMIN_WIP_OVERLAP_PRESERVED_NO_FORCE",
+  "next": "Causal B2/T18/T19 resolution; Min USB+unlock when available, compatibility preflight and two T17; final matrix/review then merge/mainCI/reconciliation/cleanup",
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT/closure-resume-20261112.ROOT",
+  "evidenceFiles": {
+    "final-ci-459c-review/SUMMARY.ROOT.json": {
+      "bytes": 7871,
+      "sha256": "75d76298a0dc52fae295fa726ae7d21c0f9108177ca3f5e6eef8bc3708f06e48"
+    },
+    "final-ci-459c-review/REVIEW-HOLD.ROOT.md": {
+      "bytes": 3127,
+      "sha256": "42940b3f87f77a0445541ca57845d381a29584380d1b4f4471ef09456d82d3c9"
+    },
+    "final-ci-459c-review/aggregate.ROOT/aggregate.json": {
+      "bytes": 290461,
+      "sha256": "70b70524d5fa55771b9df864cb225594f4ca931ad99d53cb5a8a9064ec10eead"
+    },
+    "final-ci-459c-review/POSTFLIGHT.ROOT.json": {
+      "bytes": 5041,
+      "sha256": "427da711f9deec080289582aa9ec6edd680556e460b4988c4a5a013ba105eb2d"
+    },
+    "final-ci-459c-review/ui-long-observation.ROOT/T19-BOUNDARY.ROOT.json": {
+      "bytes": 5570,
+      "sha256": "eab68ca9d546f7da3854dd46f47dddd26e144803e360fe3c2dafedc93b969680"
+    },
+    "final-ci-459c-review/ui-t18-zh.ROOT/exact-app-stdout38411.ROOT/GESTURE-BOUNDARY.ROOT.json": {
+      "bytes": 3321,
+      "sha256": "ac9958478c878c93756ca7ce0f446a738877cf35edbfa2427c59d9362f03447d"
+    },
+    "admin-latest-delta-review/SUMMARY.ROOT.json": {
+      "bytes": 11135,
+      "sha256": "d4151cf2cc61fd9439238945e03631ca85ab8b581ca5454f564048aa231510ac"
+    },
+    "admin-delta-review/SUMMARY.ROOT.json": {
+      "bytes": 5324,
+      "sha256": "30b0b9b7b4f56a39320c63e20da6f382a6861691eb8e7ac74a7caaa3d5f51067"
+    },
+    "FINAL-LOCAL-POSTFLIGHT.ROOT.json": {
+      "bytes": 2036,
+      "sha256": "bde63c61502d9c71d4878bcb3d4db62bd8e1eaa3337e698ec412ae5e19a6b786"
+    },
+    "B2-CUSTODY-FINAL-POSTFLIGHT.ROOT.json": {
+      "bytes": 801,
+      "sha256": "da491a9907c5016ecfac8b765711a7627b660938298f194cefdb37bfc3103cd0"
+    },
+    "HELPER-FIXTURE-CLEANUP-RESULT.ROOT.json": {
+      "bytes": 1055,
+      "sha256": "bd2ae9c8757dbedee1e17a6b5b9cba20df63d0f3d25e99419b5ef22090ac8a73"
+    },
+    "OWNED-TEMP-RECEIPTS-CLEANUP-RESULT.ROOT.json": {
+      "bytes": 220,
+      "sha256": "7c2336a36d1c73ec5a57f77b45a11254363ed6b18de266dc30f19ed2ff36f79e"
+    },
+    "ANDROID-MAIN-PREFLIGHT.ROOT.json": {
+      "bytes": 3653,
+      "sha256": "542bbf17f142de2fa82c2afb8566a1ceb89c059f2cf4432566df86943b775c55"
+    },
+    "ADMIN-MAIN-PREFLIGHT.ROOT.json": {
+      "bytes": 1258,
+      "sha256": "36d120d157d9234bb76901ba0efb93098159727ceadcfc76365e6b1460a00e42"
+    }
+  }
+}
