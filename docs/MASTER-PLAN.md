@@ -5,7 +5,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
 
-**TASK-146 — BLOCKED / ultima fase EXECUTION — Consolidamento mobile, disponibilità per dominio e consultazione vendite POS.** File task `docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md`. Mandato end-to-end utente2026-11-04 e successive conferme di completamento, review, pubblicazione e integrazione sulle main. Responsabile attuale CODEX ROOT. Planning e criteri vigenti nel file task. TASK-145 iOS e TASK-144 Android BLOCKED/assorbite, senza DONE. POS online-only, resto dell'app offline con database, outbox durevole e recupero incrementale. Offline OS iOS DIFFERITO_USER per indisponibilità di dispositivi fisici, campagne statistiche estese DIFFERITE. Il registro corrente pubblicato è `docs/COORDINATION/MOBILE_SYNC_RECOVERY_OFFLINE_UX/EXECUTION/20261016-resume/RESUME_STATUS.md`. Android main0c0ceab5 con PR34 e CI43118457806 PASS; Admin main0d61aaeb/PR151 con CI e Cloudflare build PASS, deploy SKIPPED. iOS candidata7241f7d5 pubblicata, focused16 PASS, PR29 in qualifica e integrazione aperta. Stato aggiornato2026-11-12, dettagli e attribuzione delle evidenze nel task.
+**TASK-146 — ACTIVE / EXECUTION — Consolidamento mobile, disponibilità per dominio e consultazione vendite POS.** File task `docs/TASKS/TASK-146-mobile-consolidation-domain-readiness-pos.md`. Addendum utente: ripresa mirata afc2bb7b, review/integrazione e DONE condizionati ai criteri; responsabile CODEX ROOT. App7241f7d5 invariata, focused16 e Release/Analyze/scan preservati; ordinario Release localeSDK27.2 sul canonico26.1 con Save/ACK/server/reopen PASS. B2 ospitato26.6 attempt2 FAIL6,5374307s/5s, causa esclusiva UNKNOWN; attempt1 capacità e confrontoBilling distinti. T17iOS richiedono USB sul fisico già abbinato, utente non disponibile ora;16fisici/statistiche DIFFERITI invariati. Primo fullCI43299839609 fermato da path locale della fixture helper, fix2righe/33test PASS; nuova matrice sul commit effettivo da qualificare. Androidmain0c0ceab5 invariata; Adminmain5ff8577f/PR152 con CI esatta e receipt deployTEST distinte, setteRPC mobile invariati. Nessun merge/DONE o chiusuraPR28 anticipati. Registro unico e dettaglio nel file task; nessun nuovo planning o taskASUS.
 
 Checkpoint 2026-11-12T12:57:14.184795-03:00. TASK146 BLOCKED, ultima faseEXECUTION: due fix iOS7241f7d5 e focused16PASS; Release/AnalyzeSDK27.2 e scanPASS con controllerFAIL/postflight riconciliati separati. B2nuovo43245839064 BUILD/SIMNOT_RUN per mancata acquisizione runner ARM, precedente7,3356sFAIL invariato; T17iOS BLOCKED reteOS/physicaltunnelunavailable. Full2101/ordinariofinale/PR29mainCI/PR28 aperti. Androidmain0c0ceab5 e Adminmain0d61aaeb verificati, qualifiche distinte, nessun REVIEW/DONE.0nuove rimozioni qualificate, dati/sessioni/QCOW2/WIP preservati; liberi178857693184B. Dettagli e ripresa senza nuovo GO nel task/registro.
 
@@ -195,7 +195,7 @@ tree del merge è identico. CI pull request `31331876775` e CI push sul merge
 
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
-## Stato globale
+## Stato globale — snapshot storico TASK-145
 **ACTIVE — TASK-145 BLOCKED / REVIEW.** Fonte primaria: `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`. Gate locali completati, handoff finale disponibile. Mancano CI, app installate, TEST, upgrade e prestazioni; owner coordinator/reviewer-integrator. Execution conclusa, nessun DONE. Il precedente TASK-144 iOS resta BLOCKED, ultima fase FIX, con storia intatta.
 
 **Snapshot storico precedente, non ownership corrente:** file `docs/TASKS/TASK-144-mobile-parity-root-cause-ios.md`. TASK-144 PR11 integrata normalmente main2322c5e1, CI exact-head36940178787/main36942886476 PASS1.403/36. Auth nativa verificata; recovery TEST, misure e convergenza ancora aperte. TASK-143 iOS resta integrato con PR10/main30d226d0 e CI verificata; validazione fisica/distribuzione non inferite. TASK-141 e gli altri stati storici invariati, senza riaperture.
@@ -1047,7 +1047,7 @@ Il perimetro **TASK‑110** ha coperto audit/implementazione **Android + iOS + S
 > **2026-05-05 (handoff):** execution **TASK-040 Slice A/B/C/D** completata da **Cursor / Executor**: full pull preview con paginazione deterministica/budget partial, bridge `remoteID` SwiftData Product/Supplier/Category, link/apply locale idempotente con conflitti `remoteIdConflict`/`missingRemoteReference`, UI DEBUG Options localizzata. Build Debug PASS, Build Release PASS, XCTest PASS, `git diff --check` PASS, grep anti-scope PASS. Handoff a **Claude / Reviewer**. **Nessuna scrittura Supabase**, **nessun push**, **nessun sync automatico**, **nessun `record_sync_event`**, **nessun dirty/outbox**, **nessun ProductPrice apply remoto**. **TASK-039 resta DONE**.
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
-## Workflow task attivo
+## Workflow task attivo — snapshot storico TASK-145
 - **Task attivo:** TASK-145 — Sync automatica, recovery non bloccante e UX offline iOS
 - **File task attivo:** `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`
 - **Stato globale progetto:** **ACTIVE**
@@ -1141,7 +1141,7 @@ Qualunque altra transizione è invalida.
 - **CHANGES_REQUIRED** = fix mirati necessari, task recuperabile → FIX
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
-## Task attivo
+## Task attivo — snapshot storico TASK-145
 - **Task attivo corrente:** TASK-145.
 - **File task attivo:** `docs/TASKS/TASK-145-mobile-sync-recovery-offline-ux-ios.md`.
 - **Stato task:** **BLOCKED**.

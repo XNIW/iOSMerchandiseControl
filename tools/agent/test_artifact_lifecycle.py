@@ -617,6 +617,7 @@ print('SDK_STUB_ONLY')
         stub.chmod(0o755)
         config = self.base / "config.env"
         config.write_text(f'''source {str(REPO / 'tools/agent/config.example.env')!r}
+MC_IOS_REPO={str(REPO)!r}
 MC_IOS_SCHEME=Fixture
 MC_IOS_DESTINATION="generic/platform=iOS Simulator"
 PATH={str(binaries)!r}:"$PATH"
@@ -645,6 +646,7 @@ mc_disk_available_bytes() {{ printf '100000000000\\n'; }}
         stub.chmod(0o755)
         config = self.base / "config.env"
         config.write_text(f"""source {str(REPO / 'tools/agent/config.example.env')!r}
+MC_IOS_REPO={str(REPO)!r}
 MC_IOS_DESTINATION="generic/platform=iOS Simulator"
 PATH={str(binaries)!r}:"$PATH"
 mc_artifact_begin() {{ MC_ARTIFACT_RUN=""; return 1; }}
