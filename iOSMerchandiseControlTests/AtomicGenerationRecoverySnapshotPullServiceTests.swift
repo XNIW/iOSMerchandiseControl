@@ -9856,7 +9856,10 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
             await setup.engine.run(action: .lightReconcile, source: .foregroundPoll,
                 ownerUserID: proof.fixture.ownerUserID)
         }
-        XCTAssertEqual(result.status, .recoveryRequired)
+        XCTAssertEqual(result.status, .scheduledRetry)
+        XCTAssertNotNil(result.localWorkReplan)
+        XCTAssertNil(result.scheduledRetryAfter)
+        XCTAssertNil(result.verifiedFinalization)
         XCTAssertNil(result.continuationReceipt)
         XCTAssertFalse(result.verifiedConvergence)
         XCTAssertEqual(proof.remote.catalogPushCallCount, 0)
@@ -9865,6 +9868,78 @@ final class AtomicGenerationRecoverySnapshotPullServiceTests: XCTestCase {
         XCTAssertNil(AccountBindingStore(defaults: proof.fixture.defaults).pendingRecoveryJournal)
         let context = ModelContext(try reopenFixture(proof.fixture).controller.modelContainer)
         XCTAssertEqual(try context.fetch(FetchDescriptor<LocalPendingChange>()).first?.status, .pending)
+
+        // The root captured an actually idle snapshot before the real local
+        // Save. Its first standalone drain must replan, not create a journal.
+        let current = try await makeRealContinuationProof()
+        let fixture = current.fixture
+        current.stateStore.recordRunResult(current.result)
+        let generation = try XCTUnwrap(fixture.controller.activeManifest?.generationID)
+        let lease = try XCTUnwrap(fixture.controller.captureLease(for: fixture.controller.modelContainer))
+        current.remote.prepareProductForPush(ordinaryContinuationProduct(fixture: fixture,
+            id: current.productID, stock: 0))
+        let auth = try RI08SyntheticAuth(ownerUserID: fixture.ownerUserID)
+        defer { auth.close() }
+        let pull = SyncEventIncrementalPullService(modelContainer: fixture.controller.modelContainer,
+            remote: current.remote, defaults: fixture.defaults, storeGenerationController: fixture.controller)
+        let runtime = RI08ObservedRealRuntime(facade: AutomaticSyncRuntimeFacade(authViewModel: auth.viewModel,
+            catalogPushProvider: CatalogPushService(modelContainer: fixture.controller.modelContainer,
+                remote: current.remote, defaults: fixture.defaults),
+            productPriceProvider: nil, historySessionProvider: nil, incrementalPullProvider: pull,
+            recoverySnapshotPullProvider: nil,
+            activityRegistrationProvider: SyncActivityRegistrationService(modelContainer: fixture.controller.modelContainer,
+                recorder: current.remote, defaults: fixture.defaults),
+            deviceAuthorization: AtomicRecoveryDeviceAuthorization(status: "active", canWrite: true),
+            defaults: fixture.defaults,
+            runAdmissionValidator: { try await MainActor.run { try fixture.controller.validateLease(lease) } }))
+        let captured = expectation(description: "Root captured the idle decision before Save")
+        let decision = Task144HeldRealDecisionProvider(underlying: completedRecoveryDecisionProvider(fixture),
+            entered: captured, holdsFirstOnly: true)
+        let first = expectation(description: "Standalone drain requests fresh local-work decision")
+        let second = expectation(description: "Fresh decision pushes and drains exact ACK")
+        runtime.expectedCompletions = [first, second]
+        let root = makeCompletedRecoveryOrchestrator(proof: current, auth: auth, runtime: runtime,
+            lease: lease, decisionProvider: decision)
+        defer { root.stop(); decision.release() }
+        root.submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
+        await fulfillment(of: [captured], timeout: 2)
+        let changeID = try Task126OwnerStoreGate.withLocalMutationFence(
+            modelContainer: fixture.controller.modelContainer, ownerUserID: fixture.ownerUserID,
+            defaults: fixture.defaults) { context in
+                let id = current.productID
+                let product = try XCTUnwrap(context.fetch(FetchDescriptor<Product>(predicate: #Predicate { $0.remoteID == id })).first)
+                let baseline = LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                product.stockQuantity = 1
+                let change = try XCTUnwrap(LocalPendingChangeAccumulator(context: context,
+                    ownerUserID: fixture.ownerUserID, storeIdentity: current.scope.storeIdentity)
+                    .recordProductChange(product: product, operation: .update, origin: .manualCatalogSave,
+                        changedFields: ["stockQuantity"], baselineFingerprintHash: baseline))
+                try context.save()
+                return change.changeID
+            }
+        decision.release()
+        await fulfillment(of: [first, second], timeout: 2)
+        for _ in 0..<100 where current.stateStore.state.phase != .idle { await Task.yield() }
+        XCTAssertEqual(current.stateStore.state.phase, .idle)
+        XCTAssertEqual(runtime.results.last?.status, .success)
+        XCTAssertFalse(runtime.results.last?.verifiedConvergence == true)
+        XCTAssertNil(runtime.results.last?.verifiedFinalization)
+        XCTAssertEqual(runtime.actions, [.lightReconcile, .sequence([.lightReconcile, .pushPending, .drainEvents])])
+        XCTAssertEqual(runtime.results.first?.status, .scheduledRetry)
+        XCTAssertNil(runtime.results.first?.continuationReceipt)
+        XCTAssertNotNil(runtime.results.first?.localWorkReplan)
+        XCTAssertNotNil(runtime.results.last?.continuationReceipt)
+        XCTAssertEqual(current.remote.catalogPushCallCount, 1)
+        XCTAssertEqual(current.remote.recordRequests.count, 1)
+        XCTAssertEqual(fixture.controller.activeManifest?.generationID, generation)
+        XCTAssertNil(AccountBindingStore(defaults: fixture.defaults).pendingRecoveryJournal)
+        let reopened = try reopenFixture(fixture)
+        let persisted = try ModelContext(reopened.controller.modelContainer).fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(persisted.filter { $0.changeID == changeID }.count, 1)
+        XCTAssertEqual(persisted.first { $0.changeID == changeID }?.status, .acknowledged)
+        XCTAssertEqual(try ordinaryStock(fixture: fixture, productID: current.productID), 1)
+        XCTAssertEqual(ordinaryWatermark(fixture: fixture), 42)
+        XCTAssertEqual(auth.networkBlocker.requestCount, 0)
     }
 
     func testAutomaticReconcilePushDrainPreservesGenuineRemoteDirtyConflict() async throws {
@@ -15070,9 +15145,10 @@ private final class Task144HeldRealDecisionProvider: SyncDecisionInputProviding 
     private let underlying: any SyncDecisionInputProviding
     private let entered: XCTestExpectation
     private var continuation: CheckedContinuation<Void, Never>?
+    private let holdsFirstOnly: Bool
     private(set) var returned = false
-    init(underlying: any SyncDecisionInputProviding, entered: XCTestExpectation) {
-        self.underlying = underlying; self.entered = entered
+    init(underlying: any SyncDecisionInputProviding, entered: XCTestExpectation, holdsFirstOnly: Bool = false) {
+        self.underlying = underlying; self.entered = entered; self.holdsFirstOnly = holdsFirstOnly
     }
     func updateNetworkStatus(_ status: AutomaticSyncNetworkStatus) async { await underlying.updateNetworkStatus(status) }
     func recordRealtimeEvent() async { await underlying.recordRealtimeEvent() }
@@ -15080,7 +15156,9 @@ private final class Task144HeldRealDecisionProvider: SyncDecisionInputProviding 
                       ownerUserID: UUID?, isSyncBusy: Bool) async -> SyncDecisionInputSnapshot {
         let snapshot = await underlying.makeSnapshot(triggerSource: triggerSource, isAuthenticated: isAuthenticated,
             ownerUserID: ownerUserID, isSyncBusy: isSyncBusy)
-        await withCheckedContinuation { continuation = $0; entered.fulfill() }
+        if !holdsFirstOnly || !returned {
+            await withCheckedContinuation { continuation = $0; entered.fulfill() }
+        }
         returned = true
         return snapshot
     }

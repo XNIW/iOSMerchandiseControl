@@ -262,6 +262,8 @@ nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
     var scheduledRetryAfter: TimeInterval?
     var verifiedConvergence: Bool
     var continuationReceipt: SyncIncrementalContinuationReceipt?
+    // Transient authority to replan local work, never a durable readiness proof.
+    var localWorkReplan: SyncIncrementalLocalWorkDeferral?
     var verifiedFinalization: SyncStoreRecoveryFinalization?
     var failure: AutomaticSyncFailure?
     var observation: SyncAutomaticRunObservation?
@@ -285,6 +287,7 @@ nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
             ? AutomaticSyncFailure(disposition: .transient, category: .network) : nil)
         // Generic results never manufacture ordinary continuation authority.
         self.continuationReceipt = nil
+        self.localWorkReplan = nil
         self.verifiedFinalization = nil
         self.observation = nil
     }

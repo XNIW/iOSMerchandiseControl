@@ -995,6 +995,21 @@ final class SyncOrchestrator: ObservableObject {
                 return
             }
             guard foregroundInvocationID == invocationID else { return }
+            if let deferral = result.localWorkReplan {
+                // Observers of recordRunResult may synchronously retire scope.
+                // A replan carries no continuation or recovery authority.
+                guard acceptsLocalWorkReplan(deferral, result: result, scope: ownerScope) else {
+                    completeForegroundTask(invocationID: invocationID, runDeferred: false)
+                    return
+                }
+                if !isDeferredReplay {
+                    deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                    recordRuntimeDiagnostic("foreground.outcome", "local_work_replan")
+                    completeForegroundTask(invocationID: invocationID)
+                    return
+                }
+                // A repeated race uses the existing finite retry budget below.
+            }
             if prepareAutomaticRecoveryAfterIncrementalGap(result: result, action: action,
                 source: source, scope: ownerScope) {
                 // The current drain has finished and its precomputed push never
@@ -1638,6 +1653,26 @@ final class SyncOrchestrator: ObservableObject {
             return (.lightReconcile, snapshot.hasPendingLocalChanges)
         }
         return (action, snapshot.hasPendingLocalChanges)
+    }
+
+    private func acceptsLocalWorkReplan(_ deferral: SyncIncrementalLocalWorkDeferral,
+        result: SyncAutomaticRunResult, scope: Task126VerifiedOwnerStoreScope?) -> Bool {
+        guard !Task.isCancelled, !isStopped, currentScenePhase != .background,
+              result.status == .scheduledRetry, !result.verifiedConvergence,
+              result.continuationReceipt == nil, result.verifiedFinalization == nil,
+              result.errorCode == nil, result.blockReason == nil,
+              deferral.isBound(to: defaults), let scope, scope.pendingReplacement == nil,
+              let observation = result.observation,
+              observation.hasValidPersistentFacts, observation.matches(result),
+              observation.origin.isCurrent(defaults: defaults, ownerUserID: scope.ownerUserID),
+              isRecoveryCompletionEntityCurrent(scope, verifiedConvergence: false),
+              let controller = storeGenerationController, let lease = storeGenerationLease,
+              observation.origin.generationID == controller.activeManifest?.generationID else { return false }
+        do {
+            try controller.validateLease(lease)
+            try deferral.validateForPush()
+            return true
+        } catch { return false }
     }
 
     private func prepareAutomaticRecoveryAfterIncrementalGap(

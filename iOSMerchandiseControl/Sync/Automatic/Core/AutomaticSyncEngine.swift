@@ -318,6 +318,12 @@ actor AutomaticSyncEngine {
             recordDiagnostic("lastOutcome", "checkpoint_publication_pending")
             return await complete(SyncAutomaticRunResult(status: .scheduledRetry,
                 didWork: didRun || committedWork), observationSource: observationSource)
+        } catch AutomaticIncrementalRecoveryError.localWorkPending(let deferral) {
+            recordDiagnostic("lastOutcome", "local_work_replan")
+            var result = SyncAutomaticRunResult.scheduledRetry()
+            result.didWork = didRun
+            result.localWorkReplan = deferral
+            return await complete(result, observationSource: observationSource, cancellationToken: cancellationToken)
         } catch AutomaticIncrementalRecoveryError.recoveryRequired(let recoveryDidWork) {
             recordDiagnostic("lastOutcome", "recovery_required")
             return await complete(.recoveryRequired(didWork: didRun || recoveryDidWork), observationSource: observationSource)
@@ -369,6 +375,12 @@ actor AutomaticSyncEngine {
         let completedAt = now()
         await singleFlight.finish()
         var finalResult = result
+        if result.localWorkReplan != nil {
+            if let cancellationToken {
+                do { try await cancellationPolicy.checkCancellation(token: cancellationToken) }
+                catch { finalResult = .cancelled() }
+            } else { finalResult.localWorkReplan = nil }
+        }
         if let receipt = result.continuationReceipt {
             if let cancellationToken {
                 do {
@@ -485,6 +497,13 @@ actor AutomaticSyncEngine {
                 // completed drain. Rejected work retains the caller's failure;
                 // neither path grants continuation, convergence or readiness.
                 return (false, false, nil, false, allowsLocalWorkDeferral ? deferral : nil, nil)
+            }
+            if !allowsExplicitRecovery, let deferral = summary.localWorkDeferral,
+               deferral.isBound(to: defaults), deferral.matches(summary) {
+                try await MainActor.run { try deferral.validateForPush() }
+                // The decision predates this Save. Replan with current pending
+                // work; an empty bounded drain is not a remote integrity gap.
+                throw AutomaticIncrementalRecoveryError.localWorkPending(deferral)
             }
             let reason = summary.requiresFullRecoveryReason
             recordRecoveryRequest(reason: reason)
@@ -772,6 +791,7 @@ private enum AutomaticIncrementalRecoveryError: Error {
     case policyRejected
     case recoveryRequired(didWork: Bool)
     case checkpointPublicationPending(didWork: Bool)
+    case localWorkPending(SyncIncrementalLocalWorkDeferral)
 }
 
 private extension SyncAction {
