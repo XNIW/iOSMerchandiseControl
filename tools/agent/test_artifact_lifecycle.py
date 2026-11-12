@@ -54,6 +54,16 @@ class LifecycleTests(unittest.TestCase):
         with self.reg.exclusive():
             return self.reg.begin(args(**values))
 
+    def test_quiescent_cli_blocks_until_native_consumers_terminate(self):
+        token = self.begin()
+        argv = [str(HELPER), "--root", str(self.root), "quiescent", "--run", token]
+        with patch.object(sys, "argv", argv), patch.object(m.Registry, "quiescent", return_value=False) as check:
+            self.assertEqual(m.main(), 2)
+            check.assert_called_once()
+            self.assertEqual(check.call_args.kwargs, {"for_cleanup": False})
+        with patch.object(sys, "argv", argv), patch.object(m.Registry, "quiescent", return_value=True):
+            self.assertEqual(m.main(), 0)
+
     def output(self, token, kind="integral-result", config="Debug"):
         with self.reg.exclusive():
             path = Path(self.reg.path(args(run=token, kind=kind, configuration=config)))
@@ -412,7 +422,11 @@ Testables UserInfoKeyValues UserInfos""".split())
 
     def test_harmless_execution_becomes_quiescent(self):
         token = self.begin()
-        rc = m.execute(self.reg, args(run=token, timeout=0, argv=[sys.executable, "-c", "pass"]))
+        # This isolated program cannot spawn children. Detached-child attribution
+        # is exercised by the separate real-child test below; unrelated host
+        # arrivals must not turn this fixture into a global-idleness requirement.
+        with patch.object(m, "unattributed_survivors", return_value=[]):
+            rc = m.execute(self.reg, args(run=token, timeout=0, argv=[sys.executable, "-I", "-S", "-c", "pass"]))
         self.assertEqual(rc, 0)
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
@@ -604,6 +618,7 @@ print('SDK_STUB_ONLY')
         config = self.base / "config.env"
         config.write_text(f'''source {str(REPO / 'tools/agent/config.example.env')!r}
 MC_IOS_SCHEME=Fixture
+MC_IOS_DESTINATION="generic/platform=iOS Simulator"
 PATH={str(binaries)!r}:"$PATH"
 mc_disk_available_bytes() {{ printf '100000000000\\n'; }}
 ''')
@@ -620,6 +635,27 @@ mc_disk_available_bytes() {{ printf '100000000000\\n'; }}
         self.assertEqual({o["kind"] for o in run["outputs"]}, {"products", "integral-result"})
         self.assertTrue(Path(run["report"]).is_file())
         self.assertIn("ARTIFACT_CLEANUP_EXIT=0", result.stdout)
+
+    def test_native_command_refuses_missing_lifecycle_registration(self):
+        binaries = self.base / "bin"
+        binaries.mkdir()
+        marker = self.base / "sdk-must-not-start"
+        stub = binaries / "xcodebuild"
+        stub.write_text("#!/bin/sh\n" + "touch " + repr(str(marker)) + "\n")
+        stub.chmod(0o755)
+        config = self.base / "config.env"
+        config.write_text(f"""source {str(REPO / 'tools/agent/config.example.env')!r}
+MC_IOS_DESTINATION="generic/platform=iOS Simulator"
+PATH={str(binaries)!r}:"$PATH"
+mc_artifact_begin() {{ MC_ARTIFACT_RUN=""; return 1; }}
+""")
+        env = os.environ.copy()
+        env.update(MC_AGENT_CONFIG=str(config), MC_EVIDENCE_DIR=str(self.base / "evidence"), MC_TASK_ID="TASK-146")
+        result = subprocess.run(["bash", str(REPO / "tools/agent/mc-agent.sh"), "ios", "build", "debug"],
+                                env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertFalse(marker.exists())
+        self.assertIn("Reconcile the existing artifact registry", result.stdout)
 
     def gradle_fixture(self, execute=True, prefix=""):
         token = self.begin()

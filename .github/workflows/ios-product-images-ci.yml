@@ -3,6 +3,13 @@ name: iOS Product Images CI
 on:
   pull_request:
     paths:
+      - "tools/agent/lib/ios.sh"
+      - "tools/agent/lib/android.sh"
+      - "tools/agent/lib/common.sh"
+      - "tools/agent/test_device_reuse.py"
+      - "tools/agent/lib/artifact_lifecycle.py"
+      - "tools/agent/test_artifact_lifecycle.py"
+      - "tools/agent/config.example.env"
       - ".github/workflows/ios-product-images-ci.yml"
       - "contracts/**"
       - "iOSMerchandiseControl/**"
@@ -13,6 +20,13 @@ on:
   push:
     branches: [main]
     paths:
+      - "tools/agent/lib/ios.sh"
+      - "tools/agent/lib/android.sh"
+      - "tools/agent/lib/common.sh"
+      - "tools/agent/test_device_reuse.py"
+      - "tools/agent/lib/artifact_lifecycle.py"
+      - "tools/agent/test_artifact_lifecycle.py"
+      - "tools/agent/config.example.env"
       - ".github/workflows/ios-product-images-ci.yml"
       - "contracts/**"
       - "iOSMerchandiseControl/**"
@@ -172,6 +186,13 @@ jobs:
       - name: Validate explicit focused selection
         if: ${{ matrix.shard == 'focused' || inputs.task146_export_ordinary_app == true }}
         run: python3 .github/ci/ios-xctest-shards.py validate-focused focused
+
+      - name: Check canonical local device helpers
+        if: matrix.shard == 'unit-target'
+        run: |
+          python3 -B tools/agent/test_device_reuse.py
+          MC_ARTIFACT_TEST_ROOT="$RUNNER_TEMP/device-reuse-lifecycle-fixtures" python3 -B tools/agent/test_artifact_lifecycle.py
+          bash -n tools/agent/lib/ios.sh tools/agent/lib/android.sh tools/agent/lib/common.sh tools/agent/config.example.env
 
       - name: Record diagnostic export reservation
         run: python3 -c 'from pathlib import Path; import os,time; (Path(os.environ["RUNNER_TEMP"])/"ios-ci-start.monotonic").write_text(str(time.monotonic()))'

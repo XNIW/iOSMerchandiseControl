@@ -287,7 +287,12 @@ mc_prefix_like() {
 
 mc_lock_path() {
   local task="${1:-$MC_TASK_ID}"
-  printf '%s' "$MC_IOS_REPO/docs/TASKS/EVIDENCE/${task}/agent-runs/.mc-agent-live.lock"
+  # Shared across task/evidence directories; native platforms can proceed independently.
+  case "${MC_COMMAND:-}" in
+    ios*|physical\ ios*) printf '%s' "$MC_IOS_REPO/docs/TASKS/EVIDENCE/.mc-agent-ios-device.lock" ;;
+    android*|physical\ android*) printf '%s' "$MC_IOS_REPO/docs/TASKS/EVIDENCE/.mc-agent-android-device.lock" ;;
+    *) printf '%s' "$MC_IOS_REPO/docs/TASKS/EVIDENCE/${task}/agent-runs/.mc-agent-live.lock" ;;
+  esac
 }
 
 mc_acquire_live_lock() {
@@ -297,28 +302,33 @@ mc_acquire_live_lock() {
   lock="$(mc_lock_path "$task")"
   mkdir -p "$(dirname "$lock")"
   if [[ -f "$lock" ]]; then
-    local lock_pid lock_ts lock_mtime now
+    local lock_pid lock_ts registry_root registry_run
     lock_pid="$(sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$lock" 2>/dev/null | head -1)"
     lock_ts="$(sed -n 's/.*timestamp=\([^ ]*\).*/\1/p' "$lock" 2>/dev/null | head -1)"
     if [[ -n "$lock_pid" ]] && ! kill -0 "$lock_pid" 2>/dev/null; then
-      rm -f "$lock"
-    else
-      now="$(date +%s)"
-      lock_mtime="$(stat -f %m "$lock" 2>/dev/null || stat -c %Y "$lock" 2>/dev/null || echo "$now")"
-      if (( now - lock_mtime >= ${MC_LOCK_STALE_SECONDS:-3600} )); then
-        rm -f "$lock"
-      else
-        MC_SUMMARY="Live/cleanup lock is already held for ${task}."
-        MC_NEXT_ACTION="Wait for pid=${lock_pid:-unknown} (${lock_ts:-unknown}) or inspect $(mc_relpath "$lock")."
+      registry_root="$(sed -n 's/^registry_root=//p' "$lock")"
+      registry_run="$(sed -n 's/^registry_run=//p' "$lock")"
+      if [[ -z "$registry_root" || -z "$registry_run" ]] || ! python3 "${MC_AGENT_ROOT}/lib/artifact_lifecycle.py" --root "$registry_root" quiescent --run "$registry_run" >/dev/null 2>&1; then
+        MC_SUMMARY="Previous native lock owner exited, but consumer quiescence is not proved."
+        MC_NEXT_ACTION="Reconcile the recorded lifecycle run before releasing this device."
         return "$MC_EXIT_BLOCKED"
       fi
+      rm -f "$lock"
+    else
+      # Age never authorizes removing a live or unidentified owner's lock.
+      MC_SUMMARY="Live/cleanup lock is already held for ${task}."
+      MC_NEXT_ACTION="Wait for pid=${lock_pid:-unknown} (${lock_ts:-unknown}) or inspect $(mc_relpath "$lock")."
+      return "$MC_EXIT_BLOCKED"
     fi
   fi
-  if ( set -o noclobber; printf 'pid=%s command=%s timestamp=%s\n' "$$" "${MC_COMMAND:-unknown}" "$(mc_now_iso)" > "$lock" ) 2>/dev/null; then
+  if ( set -o noclobber; printf 'pid=%s command=%s timestamp=%s\nregistry_root=%s\nregistry_run=%s\n' "$$" "${MC_COMMAND:-unknown}" "$(mc_now_iso)" "${MC_ARTIFACT_BASE:-}" "${MC_ARTIFACT_RUN:-}" > "$lock" ) 2>/dev/null; then
     MC_LOCK_HELD=1
     MC_LOCK_FILE="$lock"
-    if [[ "${MC_IN_WRAPPER:-0}" == "1" ]]; then
-      trap mc_release_live_lock INT TERM
+    if [[ -n "${MC_ARTIFACT_RUN:-}" ]]; then
+      : # mc_artifact_interrupt/finish own success, error and cancellation cleanup.
+    elif [[ "${MC_IN_WRAPPER:-0}" == "1" ]]; then
+      trap 'mc_release_live_lock; exit 130' INT
+      trap 'mc_release_live_lock; exit 143' TERM
     else
       trap mc_release_live_lock EXIT INT TERM
     fi
@@ -331,10 +341,16 @@ mc_acquire_live_lock() {
 
 mc_release_live_lock() {
   if [[ "${MC_LOCK_HELD:-0}" == "1" && -n "${MC_LOCK_FILE:-}" ]]; then
+    if [[ -n "${MC_ARTIFACT_RUN:-}" ]] && ! mc_artifact_call quiescent --run "$MC_ARTIFACT_RUN" >/dev/null 2>&1; then
+      MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}device_lock_kept_native_consumers_unconfirmed"
+      return "$MC_EXIT_BLOCKED"
+    fi
     rm -f "$MC_LOCK_FILE"
   fi
   MC_LOCK_HELD=0
-  trap - EXIT INT TERM
+  if [[ -z "${MC_ARTIFACT_RUN:-}" ]]; then
+    trap - EXIT INT TERM
+  fi
 }
 
 mc_require_live() {
@@ -413,7 +429,9 @@ mc_artifact_begin() {
 mc_artifact_interrupt() {
   local code="${1:-1}"
   [[ -n "${MC_ARTIFACT_RUN:-}" ]] || return 0
-  mc_artifact_call interrupt --run "$MC_ARTIFACT_RUN" --code "$code" >/dev/null 2>&1 || true
+  if mc_artifact_call interrupt --run "$MC_ARTIFACT_RUN" --code "$code" >/dev/null 2>&1; then
+    mc_release_live_lock
+  fi
   mc_artifact_maintain
   # Raw output remains in the registered run's raw directory for crash diagnosis.
 }
@@ -570,8 +588,21 @@ mc_run_wrapped() {
   esac
   MC_IN_WRAPPER=1
   MC_DISK_BLOCKED=0
-  "$@" > "$raw_tmp" 2>&1
-  raw_status="$?"
+  case "$MC_COMMAND" in
+    ios*|android*|physical\ ios*|physical\ android*)
+      if [[ -z "${MC_ARTIFACT_RUN:-}" ]]; then
+        MC_SUMMARY="Native command BLOCKED: lifecycle registration is required."
+        MC_NEXT_ACTION="Reconcile the existing artifact registry before using the canonical device."
+        raw_status="$MC_EXIT_BLOCKED"
+      elif mc_acquire_live_lock; then
+        "$@" > "$raw_tmp" 2>&1
+        raw_status="$?"
+      else
+        raw_status="$MC_EXIT_BLOCKED"
+      fi
+      ;;
+    *) "$@" > "$raw_tmp" 2>&1; raw_status="$?" ;;
+  esac
   MC_IN_WRAPPER=0
   # Some legacy callers map every nonzero SDK exit to FAIL. Preserve admission BLOCKED.
   if [[ "$MC_DISK_BLOCKED" == "1" ]]; then
@@ -597,9 +628,9 @@ mc_run_wrapped() {
   MC_TIMESTAMP_END_ISO="$(mc_now_iso)"
   MC_SUMMARY="${MC_SUMMARY:-Command completed with exit ${exit_code}.}"
   MC_NEXT_ACTION="${MC_NEXT_ACTION:-Review report.}"
+  mc_release_live_lock || true
   mc_report_write "$exit_code" "$MC_SUMMARY" "$MC_NEXT_ACTION" "$duration_ms" \
     "${MC_ROWS_CREATED:-0}" "${MC_ROWS_DELETED:-0}" "${MC_RESIDUE_COUNT:-0}" "${MC_TEST_PREFIX:-}"
-  mc_release_live_lock
   mc_artifact_finish "$exit_code"
   if [[ "${MC_QUIET:-0}" != "1" ]]; then
     mc_print_final_summary "$exit_code"

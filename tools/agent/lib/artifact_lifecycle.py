@@ -1318,6 +1318,7 @@ def main():
     i = sub.add_parser("interrupt")
     i.add_argument("--run", required=True)
     i.add_argument("--code", type=int, required=True)
+    sub.add_parser("quiescent").add_argument("--run", required=True)
     for action in ("lease-acquire", "lease-release"):
         sub.add_parser(action).add_argument("--run", required=True)
     c = sub.add_parser("cleanup")
@@ -1352,6 +1353,9 @@ def main():
                 print(json.dumps(reg.capture_gradle(args)))
             elif args.action == "interrupt":
                 reg.interrupt(args)
+            elif args.action == "quiescent":
+                if not reg.quiescent(reg.read(args.run), for_cleanup=False):
+                    raise Hold("native consumers have not terminated")
             elif args.action.startswith("lease-"):
                 reg.lease(args)
             elif args.action == "cleanup":
