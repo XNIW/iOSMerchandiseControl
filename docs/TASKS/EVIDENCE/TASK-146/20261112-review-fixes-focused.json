@@ -1,0 +1,112 @@
+{
+  "at": "2026-11-12T12:17:19.253293-03:00",
+  "status": "ACTIVE_EXECUTION_FOCUSED16_PASS_FINAL_GATES_OPEN",
+  "nativeCandidate": "7241f7d5a4d6bca68cd4666daaf8c0ac4374b0f4",
+  "appTree": "d30dcd36581876ca74c24f5a0562c94b539e619b",
+  "commits": [
+    "2bd17127",
+    "7241f7d5"
+  ],
+  "publishedTag": "codex/task146-ios-review-fixes-20261112",
+  "integratedMain": false,
+  "reviews": {
+    "sync": "PASS_STATIC_NO_NEW_FINDINGS; stale-snapshot test reviewed",
+    "manual": "PASS_STATIC_SCOPED; prepared-no-witness/HTTP counter test gap closed before build",
+    "androidAndAdmin": "PASS_STATIC_REUSE_PREVIOUS_NATIVE_GATES"
+  },
+  "focused": {
+    "run": 43240989885,
+    "job": 131261010708,
+    "status": "PASS",
+    "build": "Debug standard SDK PASS",
+    "counts": {
+      "Passed": 16
+    },
+    "discovery": 2101,
+    "runtime": "iPhone16e iOS26.2 arm64",
+    "artifact": 13954893961,
+    "artifactSHA256": "d98fc2a1ac45a4baea5f66fbfd2c65aaa8ee159c33905d69ad98eeff33d36ceb",
+    "scope": "FOCUSED_NOT_FINAL",
+    "Release": "NOT_RUN",
+    "Analyze": "NOT_RUN",
+    "scan": "NOT_RUN"
+  },
+  "fixes": {
+    "localWork": "Strict no-event bound deferral schedules one fresh root decision; repeated races existing finite scheduler; no continuation/convergence/journal; real Save/ACK/reopen PASS",
+    "manual": "Exact original CAS restored only after failedBeforeWrite and no persisted batch/member seal or live witness; prepared/unknown preserved; real SDK Auth failure zero HTTP + subsequent actual service push PASS",
+    "manualLimit": "No new crash-recovery protocol or scope-retirement fallback; conservatively rejected by fence",
+    "historicalRecoveryCause": "Root defect demonstrated deterministically, not retroactive proof of nighttime plan; recovery requested 9.768s before server ACK"
+  },
+  "B2": {
+    "latestQualifiedResult": "FAIL7.335606833s f33f",
+    "newCandidate": "QUEUED_BUILD_SIM_NOT_RUN",
+    "T0": "unchanged before app.launch",
+    "limitSeconds": 5,
+    "run": 43245839064
+  },
+  "T17IOS": {
+    "status": "BLOCKED_OS_NETWORK_ISOLATION",
+    "inspection": "Settings root and complete Developer list on canonical26.1, no Network Link Conditioner/radio controls; returned Home; no settings changed",
+    "physical": "devicectl available(paired), not connected; no physical test or install attempted",
+    "physical16": "DEFERRED_USER_UNCHANGED"
+  },
+  "android": {
+    "main": "0c0ceab55dd0f57956791d91def6e3b59b804a69",
+    "CI": 43118457806,
+    "B3": "Case20 raw ACK83.168s; case18 upperbound63.746s; timeout90s per HTTP, not capture window; no rerun",
+    "case19": "FAIL_PHASE_DEADLINE_RETAINED"
+  },
+  "admin": {
+    "main": "0d61aaeb2312acdfdaab29df9ca0267e57920b2c",
+    "PR": 151,
+    "CI": 43155600313,
+    "CloudflareBuild": 43155600256,
+    "deployStaging": "SKIPPED",
+    "deployProduction": "SKIPPED",
+    "currentWorkerVersion": "UNKNOWN_CURRENT_METADATA_GET401; prior142 historical only",
+    "nativeRPCMetadata": "Seven current TEST signatures/MD5/authenticated ACL read; not native runtime acceptance",
+    "sharedDependency": "pos_sales accepted-write fence for writer v2; no mobile SELECT change; ASUS ownership independent"
+  },
+  "finalMatrix": "NOT_RUN_2101_2042_PASS_EXPECTED_43_OPTIN_SKIP_16_DEFERRED",
+  "PR29": "OPEN_HEAD3d4578c4_NOT_ADVANCED_OR_MERGED",
+  "PR28": "OPEN_DRAFT_PRESERVE_UNTIL_MAIN_QUALIFIED",
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT",
+  "evidenceFiles": {
+    "ADMIN-MOBILE-CONTRACT-REVIEW.ROOT.json": {
+      "bytes": 1109,
+      "sha256": "1c09ec2aae4809ed2b26573b2cc6846aa7a9fff9a85dd3b550adcd0311aad864"
+    },
+    "ADMIN-STAGING-DEPLOYMENT-READ.ROOT.json": {
+      "bytes": 250,
+      "sha256": "12e2b6ecab8b0cef1940eb5a581a4d086ea963a0ee24d238fdff4c868e443165"
+    },
+    "TEST-NATIVE-RPC-METADATA.ROOT.json": {
+      "bytes": 1017,
+      "sha256": "d045e5a046032835a735e6e602ead75095cb057cef38a3bff729749eb3020057"
+    },
+    "FOCUSED-RUN.CURRENT.ROOT.json": {
+      "bytes": 6085,
+      "sha256": "821d16507df52de04d730246f7431d2a5946089f7d188f9c6a6067fe3b6e584c"
+    },
+    "review-fixes-focused.ROOT/RESULT.ROOT.json": {
+      "bytes": 512,
+      "sha256": "23e59cb02ae9c301cee8410931044a7362090c26734942d7ced82776fa95abcf"
+    },
+    "review-fixes-focused.ROOT/metadata/ios-xctest-shard/coverage.json": {
+      "bytes": 7538,
+      "sha256": "1befd3e0f732dd3183381351c687929217e376571d14b7b60d924ec802b97be8"
+    },
+    "ios-settings-capability.ROOT/RESULT.ROOT.json": {
+      "bytes": 133,
+      "sha256": "57b6c5b9b84911926acf80065f219b4f2daca9755945c754056b109a00607d65"
+    },
+    "ios-settings-capability02.ROOT/UI-DONE.ROOT.json": {
+      "bytes": 635,
+      "sha256": "3b97e9a2f6b209c07fb1551f4777640010df46e9a95c4ce081e00a0ea39e3858"
+    },
+    "ios-settings-capability02.ROOT/RESULT.ROOT.json": {
+      "bytes": 132,
+      "sha256": "a288236fd535b026e2b2b954ea31a3faa55af833fb015030b91bda98e990e13c"
+    }
+  }
+}
