@@ -1,0 +1,50 @@
+{
+  "atUTC": "2026-11-12T22:46:10.439759+00:00",
+  "status": "INCREMENTAL_COMPOSITION_PROPOSED_CHECKS_PENDING",
+  "task": "iOS TASK-146",
+  "userOverride": "2026-11-12 progressive independent verified groups may merge before global TASK146 completion",
+  "base": "94fb03a5fd3b770f866655154874723192ebc390",
+  "mapsPR29Head": "459c3d347e695ac6d2607c437d71c5dc84d15c17",
+  "sourceApplicationCommit": "461ad4e5ccda1ddd0a29c36b86169c4f7f84b4cc",
+  "applicationFiles": [
+    "iOSMerchandiseControl/StorefrontAuthoring.swift",
+    "iOSMerchandiseControlTests/StorefrontAuthoringTests.swift"
+  ],
+  "behavior": "Suppress equal @Published Storefront visible-state assignments during activation/filter reset; retain actual changes, task cancellation, generation fencing, populated-scope clearing and callbacks.",
+  "unchanged": [
+    "public API",
+    "schema and persisted data",
+    "pending/outbox/receipts",
+    "auth and transport",
+    "bootstrap/domain readiness",
+    "long-press input and section selection budgets"
+  ],
+  "dependencies": "Existing Storefront types and methods already in main; complete two-file main-to-PR29 delta exactly equals461ad4e5. No extracted architecture fragments.",
+  "qualificationRequired": {
+    "actualComposition": "New main-based subset; previous full-candidate PASS not transferred",
+    "affectedClasses": [
+      "iOSMerchandiseControlTests/StorefrontAuthoringStoreTests",
+      "iOSMerchandiseControlTests/StorefrontFilterGenerationTests"
+    ],
+    "entireExistingStorefrontFileTestCount": 46,
+    "CI": "Existing product-images job and full XCTest suite unchanged; Debug, Analyze, sensitive scan and explicit Release build",
+    "review": "Distinct reviewer before merge",
+    "mainCI": "Exact resultant merge SHA must pass before integrated qualification"
+  },
+  "workflowOnlyQualificationChanges": [
+    "Disk admission before native consumers: 12.5GB estimated Debug/Release/packages/full-result/boot/concurrent growth, reserve30.3GB from existing runner (above30GBfloor), byte-based per volume JSON log",
+    "Release build on same checkout/toolchain after Analyze",
+    "Always postflight: official shutdown/readback of only selected hosted CI Simulator, final byte-space log",
+    "Export the same selected hosted DEVICE_ID before bootstatus, so always-postflight can identify it after boot failure/cancellation"
+  ],
+  "outsideIncrementalMerge": {
+    "B2": "Full TASK146 candidate remains FAIL5.8439736/6.5374307s vs5s; no startup claim for this group",
+    "T18": "Full candidate zh producer input not recognized; root debug remains required",
+    "T19": "Full candidate Options cycle2 deadline/selection failure; thirty cycles remain required",
+    "T17iOS": "Two cases NOT_RUN/USB unavailable; no schema/session/pending mutation in this group, so no dependence",
+    "physical16": "DEFERRED_USER unchanged",
+    "globalTASK146": "ACTIVE execution; incremental group merge is not global DONE"
+  },
+  "PR29Reconciliation": "Keep source Storefront blobs identical; after normal incremental merge refresh PR29 merge base, do not apply Storefront patch twice. Rest of PR29 stays outside main until separately qualified.",
+  "staticReviewFix": "Owned-device export ordered before boot; no test, selector or timeout change"
+}
