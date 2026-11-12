@@ -837,7 +837,11 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
                 }
             }
         }
-        let didCommitPendingOutcome = applyPendingStateTransition(
+        let restoredUndispatchedAdmission: Bool
+        if result.status == .failedBeforeWrite {
+            restoredUndispatchedAdmission = (try? atomic.restoreUndispatchedAdmission(original: original)) == true
+        } else { restoredUndispatchedAdmission = false }
+        let didCommitPendingOutcome = restoredUndispatchedAdmission || applyPendingStateTransition(
             result: result, snapshot: admitted, ownerUserID: ownerUserID, atomic: atomic, verifiedReadOnlyChangeIDs: execution.verifiedReadOnlyChangeIDs)
         guard result.confirmedCatalogChangeCount > 0 else {
             return result

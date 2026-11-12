@@ -422,6 +422,45 @@ final class ManualPendingAtomicBatchExecution {
         }
     }
 
+    /// Only the still-live invocation can undo its admission after the SDK
+    /// returns without dispatch. Persisted/ambiguous requests remain sealed.
+    func restoreUndispatchedAdmission(original: LocalPendingManualDispatchSnapshot) throws -> Bool {
+        guard witnesses.isEmpty, original.scope == snapshot.scope,
+              original.tokens.count == snapshot.tokens.count,
+              Set(original.tokens.map(\.changeID)) == Set(snapshot.tokens.map(\.changeID)),
+              original.tokens.allSatisfy({ $0.statusRaw == LocalPendingChangeStatus.pending.rawValue
+                && $0.lastAttemptAt == nil }) else { return false }
+        return try snapshot.withFence(modelContainer: container, ownerUserID: owner, defaults: defaults) { context in
+            guard let scope = snapshot.scope,
+                  Task126OwnerStoreGate.activeManifestWithLeaseHeld(container)?.generationID == generationID else {
+                throw LocalPendingManualDispatchError.staleBatch
+            }
+            let rows = try snapshot.exactRowsWithFenceHeld(context: context, ownerUserID: owner, defaults: defaults)
+            guard rows.allSatisfy({ $0.status == .sent }) else { throw LocalPendingManualDispatchError.staleBatch }
+            let ids = Set(snapshot.tokens.map(\.changeID))
+            let records = try ManualPendingAtomicRequestStore.records(context: context, scope: scope)
+            guard records.allSatisfy({ $0.1.request.batchID != batchID
+                && $0.1.protectedChangeIDs.isDisjoint(with: ids) }) else { return false }
+            do {
+                for row in rows {
+                    guard let token = original.tokens.first(where: { $0.changeID == row.changeID }) else {
+                        throw LocalPendingManualDispatchError.staleBatch
+                    }
+                    row.status = .pending
+                    row.lastAttemptAt = token.lastAttemptAt
+                    row.updatedAt = token.updatedAt
+                    // No business/revision field may have changed at admission.
+                    guard token.matches(row) else { throw LocalPendingManualDispatchError.staleBatch }
+                }
+                try context.save()
+                return true
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+    }
+
     /// A complete service read-back is required before this method is called.
     /// A crash during confirmation remains protected until the single ACK save.
     func confirmVerifiedResponses(requiresWrite: Bool, verifiedReadOnlyChangeIDs: Set<String> = []) throws {

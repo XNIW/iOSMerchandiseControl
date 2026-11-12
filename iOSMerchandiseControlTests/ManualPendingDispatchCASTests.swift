@@ -1,4 +1,5 @@
 import SwiftData
+import Supabase
 import XCTest
 @testable import iOSMerchandiseControl
 
@@ -75,6 +76,29 @@ final class ManualPendingDispatchCASTests: XCTestCase {
     func testUnchangedCreateUsesActualServiceLinksRemoteIDAndAcknowledgesOnlyOriginalToken() async throws {
         let fixture = try await makeFixture()
         let original = try fixture.token()
+        // Real SDK auth read fails before the exact wire callback. This is an
+        // admission failure, unlike the sealed/unknown HTTP cases below.
+        let authConfiguration = URLSessionConfiguration.ephemeral
+        authConfiguration.protocolClasses = [ManualCASNoSessionURLProtocol.self]
+        let httpBefore = ManualCASNoSessionURLProtocol.requestCount
+        let authSession = URLSession(configuration: authConfiguration)
+        defer { authSession.invalidateAndCancel() }
+        let provider = SupabaseClientProvider(config: .init(
+            projectURL: URL(string: "https://manual-no-session.example.invalid")!,
+            publishableKey: "synthetic-key", productImageAPIBaseURL: nil),
+            authStorage: ManualCASEmptyAuthStorage(), session: authSession,
+            autoRefreshToken: false, authRegistry: SupabaseAuthClientRegistry())
+        let noSession = SyncCatalogPushAdapter(context: ModelContext(fixture.container),
+            manualPushService: SupabaseManualPushService(remote: SupabaseManualPushRemoteClient(
+                clientProvider: provider, defaults: fixture.defaults)), defaults: fixture.defaults)
+        let beforeAuth = try await noSession.makePushPlan(ownerUserID: fixture.owner)
+        XCTAssertTrue(beforeAuth.isSendable)
+        let denied = await noSession.execute(plan: beforeAuth, ownerUserID: fixture.owner)
+        XCTAssertEqual(denied.status, .failedBeforeWrite)
+        XCTAssertEqual(ManualCASNoSessionURLProtocol.requestCount, httpBefore, "No HTTP, including Auth refresh, was dispatched")
+        XCTAssertEqual(try fixture.token(), original, "Proven undispatched admission restores its exact original token")
+        XCTAssertTrue(try ManualPendingAtomicRequestStore.records(context: ModelContext(fixture.container)).isEmpty)
+        XCTAssertEqual(fixture.remote.businessEntries, 0)
         let plan = try await fixture.provider.makePushPlan(ownerUserID: fixture.owner)
         XCTAssertTrue(plan.isSendable)
         let result = await fixture.provider.execute(plan: plan, ownerUserID: fixture.owner)
@@ -862,6 +886,28 @@ final class ManualPendingDispatchCASTests: XCTestCase {
         XCTAssertEqual(try fixture.token(), sent.tokens.first)
         XCTAssertTrue(try ManualPendingAtomicRequestStore.records(context: ModelContext(fixture.container)).isEmpty)
         XCTAssertEqual(fixture.remote.insertEntries, 0)
+
+        // Persisting prepareExact without appending an in-memory witness must
+        // still prohibit rollback, including when beginDispatch never ran.
+        var request = URLRequest(url: URL(string: "https://manual.example.invalid/rest/v1/inventory_product_prices")!)
+        request.httpMethod = "POST"
+        request.httpBody = try PostgrestClient.Configuration.jsonEncoder.encode([payload])
+        try sent.withFence(modelContainer: fixture.container, ownerUserID: fixture.owner,
+            defaults: fixture.defaults) { context in
+                _ = try ManualPendingAtomicRequestStore.prepareExact(request: request, requestID: UUID(),
+                    batchID: atomic.batchID, members: sent.tokens, requestMemberIDs: [fixture.changeID],
+                    scope: fixture.scope, generationID: try XCTUnwrap(fixture.controller.activeManifest?.generationID),
+                    context: context)
+            }
+        XCTAssertFalse(try atomic.restoreUndispatchedAdmission(original: original))
+        XCTAssertEqual(try fixture.token(), sent.tokens.first)
+        let read = ModelContext(fixture.container)
+        let prepared = try XCTUnwrap(ManualPendingAtomicRequestStore.records(context: read).first?.0)
+        XCTAssertEqual(prepared.lastErrorKindRaw, ManualPendingAtomicRequestStore.Phase.prepared.rawValue)
+        prepared.metadataPayloadJSON = "{}"
+        try read.save()
+        XCTAssertThrowsError(try atomic.restoreUndispatchedAdmission(original: original))
+        XCTAssertEqual(try fixture.token(), sent.tokens.first)
     }
 
     func testTwoOriginalPriceFractionsWithSameWireFieldsAreAmbiguous() async throws {
@@ -1240,4 +1286,23 @@ private func manualCASBeforeDispatch(_ payload: some Encodable, table: String, s
     wire.setValue("never-persist-test-secret", forHTTPHeaderField: "Authorization")
     try ManualPendingAtomicDispatchContext.beforeDispatch?(wire)
     return body
+}
+
+private nonisolated final class ManualCASEmptyAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    func store(key: String, value: Data) throws { }
+    func retrieve(key: String) throws -> Data? { nil }
+    func remove(key: String) throws { }
+}
+
+private nonisolated final class ManualCASNoSessionURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var count = 0
+    static var requestCount: Int { lock.withLock { count } }
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.lock.withLock { Self.count += 1 }
+        client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
+    }
+    override func stopLoading() { }
 }
