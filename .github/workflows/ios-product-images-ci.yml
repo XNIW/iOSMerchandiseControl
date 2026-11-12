@@ -41,6 +41,38 @@ jobs:
       - name: Verify shared contract hashes
         run: shasum -a 256 -c contracts/product-image-v1.sha256
 
+      - name: Admit SDK disk growth before native consumers
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,shutil,subprocess
+          from pathlib import Path
+          # Existing iOS runner forecasts 3.5GB per SDK batch. Admit both
+          # configurations, package resolution, the full result and one boot.
+          growth={'debugSDK':3_500_000_000,'releaseSDK':3_500_000_000,
+                  'packages':2_000_000_000,'fullTestResult':2_000_000_000,
+                  'simulatorBoot':1_000_000_000,'concurrentReserve':500_000_000}
+          reserve=30_300_000_000  # Existing runner reserve, above the 30GB floor.
+          paths=[Path.cwd(),Path(os.environ['RUNNER_TEMP']),
+                 Path.home()/'Library/Developer/Xcode/DerivedData']
+          volumes={}
+          for requested in paths:
+              actual=requested
+              while not actual.exists():actual=actual.parent
+              device=os.stat(actual).st_dev
+              if device not in volumes:
+                  free=shutil.disk_usage(actual).free
+                  volumes[device]={'path':str(actual),'freeBytes':free,
+                      'afterForecastBytes':free-sum(growth.values())}
+          row={'phase':'before-native','atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'growthBytes':growth,
+               'reserveBytes':reserve,'volumes':list(volumes.values())}
+          path=Path(os.environ['RUNNER_TEMP'])/'task146-incremental-disk.json'
+          assert not path.exists(),'refuse mixed disk receipts'
+          path.write_text(json.dumps(row,sort_keys=True)+'\n')
+          print(json.dumps(row,sort_keys=True))
+          assert all(v['afterForecastBytes']>=reserve for v in volumes.values()),'BLOCKED_DISK_SPACE'
+          PY
+
       - name: Select an available iPhone Simulator
         run: |
           # Initialize CoreSimulator before asking Xcode for concrete destinations.
@@ -76,9 +108,9 @@ jobs:
             DEVICE_ID="$(select_device_id "$DESTINATIONS")"
           fi
           echo "Selected compatible simulator: $DEVICE_ID"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
-          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
       - name: Record Xcode toolchain
         run: xcodebuild -version
@@ -428,6 +460,14 @@ jobs:
           -destination "generic/platform=iOS Simulator"
           CODE_SIGNING_ALLOWED=NO analyze
 
+      - name: Build Release
+        run: >-
+          xcodebuild -project iOSMerchandiseControl.xcodeproj
+          -scheme iOSMerchandiseControl
+          -configuration Release
+          -destination "generic/platform=iOS Simulator"
+          CODE_SIGNING_ALLOWED=NO build
+
       - name: Secret scan
         run: >-
           ./tools/agent/mc-agent.sh scan sensitive
@@ -435,3 +475,29 @@ jobs:
           iOSMerchandiseControlTests
           contracts
           .github/workflows/ios-product-images-ci.yml
+
+      - name: Release owned hosted Simulator and record postflight
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import datetime,json,os,shutil,subprocess
+          from pathlib import Path
+          device=os.environ.get('DEVICE_ID')
+          state=None
+          if device:
+              tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','--json'],text=True))
+              found=[row for rows in tree['devices'].values() for row in rows if row['udid']==device]
+              assert len(found)==1,'owned hosted Simulator identity changed'
+              state=found[0]['state']
+              if state in ('Booted','Booting'):
+                  subprocess.run(['xcrun','simctl','shutdown',device],check=True)
+                  tree=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','--json'],text=True))
+                  found=[row for rows in tree['devices'].values() for row in rows if row['udid']==device]
+                  assert len(found)==1,'owned hosted Simulator missing after shutdown'
+                  state=found[0]['state']
+              assert state=='Shutdown',state
+          row={'phase':'postflight','atUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'ownedHostedDevice':device,'state':state,
+               'freeBytes':shutil.disk_usage(Path(os.environ['RUNNER_TEMP'])).free}
+          print(json.dumps(row,sort_keys=True))
+          PY

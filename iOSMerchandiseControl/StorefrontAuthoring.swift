@@ -857,13 +857,15 @@ final class StorefrontAuthoringStore: ObservableObject {
         pendingSummaryTask = nil
         filterTask = nil
         pendingSummaryIDs.removeAll()
-        summaries.removeAll()
-        filteredProductIDs.removeAll()
-        conflictedProductIDs.removeAll()
+        // @Published also sends for equal assignments. Initial activation must
+        // not invalidate Database for list state that is already empty.
+        if !summaries.isEmpty { summaries.removeAll() }
+        if !filteredProductIDs.isEmpty { filteredProductIDs.removeAll() }
+        if !conflictedProductIDs.isEmpty { conflictedProductIDs.removeAll() }
         currentFilterPage = 0
-        filterHasNextPage = false
-        isFilterLoading = false
-        errorCode = nil
+        if filterHasNextPage { filterHasNextPage = false }
+        if isFilterLoading { isFilterLoading = false }
+        if errorCode != nil { errorCode = nil }
     }
 
     func summary(for productID: UUID) -> StorefrontPublicationSummary? {
@@ -887,16 +889,17 @@ final class StorefrontAuthoringStore: ObservableObject {
         filterGeneration &+= 1
         filterTask?.cancel()
         filterTask = nil
-        isFilterLoading = false
+        if isFilterLoading { isFilterLoading = false }
         currentFilter = filter
         currentQuery = query
         currentFilterPage = 0
-        filteredProductIDs.removeAll()
-        filterHasNextPage = filter != .all && filter != .conflict
-        errorCode = nil
+        if !filteredProductIDs.isEmpty { filteredProductIDs.removeAll() }
+        let hasNextPage = filter != .all && filter != .conflict
+        if filterHasNextPage != hasNextPage { filterHasNextPage = hasNextPage }
+        if errorCode != nil { errorCode = nil }
         guard filter != .all else { return }
         if filter == .conflict {
-            filteredProductIDs = conflictedProductIDs
+            if filteredProductIDs != conflictedProductIDs { filteredProductIDs = conflictedProductIDs }
             return
         }
         loadNextFilterPage(scope: scope)

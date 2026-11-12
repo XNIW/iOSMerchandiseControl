@@ -321,7 +321,13 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         let store = StorefrontAuthoringStore(service: service, defaults: defaults, pendingStorage: pendingStorage)
         let scope = StorefrontScope(accountID: UUID(), shopID: UUID())
         let productIDs = (0..<150).map { _ in UUID() }
+        var publications = 0
+        let observation = store.objectWillChange.sink { publications += 1 }
+        defer { observation.cancel() }
         store.activate(scope: scope)
+        store.resetFilter(.all, query: nil, scope: scope)
+        store.resetFilter(.all, query: "new local query", scope: scope)
+        XCTAssertEqual(publications, 0, "Empty activation/all-filter must not invalidate the ordinary Database root")
 
         for productID in productIDs {
             store.requestVisibleSummary(productID: productID, scope: scope)
@@ -332,6 +338,14 @@ final class StorefrontAuthoringStoreTests: XCTestCase {
         XCTAssertEqual(batches.reduce(0) { $0 + $1.count }, 150)
         XCTAssertTrue(batches.allSatisfy { !$0.isEmpty && $0.count <= 100 })
         XCTAssertEqual(Set(productIDs).filter { store.summary(for: $0) != nil }.count, 150)
+        XCTAssertGreaterThan(publications, 0, "Actual summary changes must still publish")
+        let beforeSwitch = publications
+        store.activate(scope: StorefrontScope(accountID: scope.accountID, shopID: UUID()))
+        XCTAssertGreaterThan(publications, beforeSwitch, "A populated scope change must clear visible state")
+        XCTAssertTrue(store.summaries.isEmpty)
+        let afterClear = publications
+        store.activate(scope: nil)
+        XCTAssertEqual(publications, afterClear, "An already empty scope must not send redundant resets")
     }
 
     func testCachedReadAndLocalDraftRemainScopedOffline() async throws {
