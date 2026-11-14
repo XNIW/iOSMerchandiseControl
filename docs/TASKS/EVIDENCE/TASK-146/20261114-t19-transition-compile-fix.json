@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-14T12:34:10.954858+00:00",
+  "parent": "b406e9c065434c5e5a5a947e9e85bb4bdfbd71ec",
+  "failedRun": 43594772266,
+  "status": "BUILD_FAIL_NATIVE_NOT_RUN",
+  "failure": "Four newly introduced NSStringFromCGRect calls unavailable in Swift; compiler prescribes NSCoder.string(for:).",
+  "fix": "Only four API renames, same arguments and diagnostic fields. No functional, driver, T0, 5s, 30cycle or observer change.",
+  "sourceSHA256": "587e8008e3296026afa3d76ac5c15cfe57c8ef3cb608a6bee95085ac1b4b7636",
+  "checks": {
+    "swiftDEBUGParse": "PASS",
+    "diffCheck": "PASS",
+    "nativeBuildAfterFix": "NOT_RUN",
+    "B2AfterFix": "NOT_RUN",
+    "T19AfterFix": "NOT_RUN"
+  },
+  "newExecutionReason": "Compile blocker corrected; precise transition completion/visibility/CPU discriminant still unexecuted. One same-profile B2+T19; B2 preserves existing optimized profile. No blind retry.",
+  "retention": "First compile failure and all prior results kept; no exported product from failed build."
+}

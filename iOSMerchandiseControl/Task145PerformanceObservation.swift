@@ -504,7 +504,7 @@ enum Task146T19TabObservation {
         var value: [String: Any] = ["role": role,
             "viewIdentity": String(describing: ObjectIdentifier(view)),
             "windowMatches": view.window === window, "hasWindow": view.window != nil,
-            "bounds": NSStringFromCGRect(view.bounds), "windowFrame": NSStringFromCGRect(view.convert(view.bounds, to: window)),
+            "bounds": NSCoder.string(for: view.bounds), "windowFrame": NSCoder.string(for: view.convert(view.bounds, to: window)),
             "clock": ProcessInfo.processInfo.systemUptime]
         guard view.window === window else { value["reason"] = "window-mismatch-or-detached"; return value }
         guard !view.bounds.isEmpty else { value["reason"] = "empty-bounds"; return value }
@@ -525,8 +525,8 @@ enum Task146T19TabObservation {
                 value["ancestor"] = ["role": "visibility-predicate-ancestor",
                     "identity": String(describing: ObjectIdentifier(node)), "hidden": node.isHidden,
                     "alpha": Double(node.alpha), "clipsToBounds": node.clipsToBounds,
-                    "bounds": NSStringFromCGRect(node.bounds),
-                    "windowFrame": NSStringFromCGRect(node.convert(node.bounds, to: window))]
+                    "bounds": NSCoder.string(for: node.bounds),
+                    "windowFrame": NSCoder.string(for: node.convert(node.bounds, to: window))]
                 return value
             }
             ancestor = node.superview

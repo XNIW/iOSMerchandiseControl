@@ -1,5 +1,11 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — correzione API della diagnostica T19 — 2026-11-14, America/Santiago
+
+La run43594772266 su b406 termina BUILD_FAIL prima di XCTest: quattro chiamate NSStringFromCGRect non disponibili in Swift. B2/T19 NOT_RUN, nessun tempo nativo o pacchetto esportato. Receipt e primo errore conservati; stop Simulator e postflight ospitati PASS, tutti i consumer conclusi. Raccolta493352 B sotto4MB, postflight16459 B separato.
+
+Corrette soltanto le quattro chiamate in Task145PerformanceObservation con NSCoder.string(for:) suggerito dal compilatore, stessi argomenti/campi. Parse Swift DEBUG e diffcheck PASS; verifica SDK/runtime ancora NON_ESEGUITA. Nessuna modifica funzionale, driver o soglia. Dopo review distinta, una esecuzione dello stesso controllo di completamento/visibilità/CPU ancora non attraversato è giustificata dalla correzione del blocco compile. Nessun retry per cercare verde, nessuna nuova famiglia runner. PR29/PR30/main e T17 USB invariati.
+
 ### Execution — controllo del completamento UIKit T19 ammesso — 2026-11-14, America/Santiago
 
 Un solo file aggiornato: Task145PerformanceObservation, esclusivamente enum diagnostico T19 DEBUG. Callback-only sul coordinatore UIKit già esistente, massimo2identità/request; registra tempo effettivo di callback, durata/context/cancellazione e letture successive di stato/visibilità con clock distinti. CPUmain discreta tramite helper già qualificato, nessun sampler/timer/poll/animazione/layout aggiunto. La callback non viene presentata da sola come prova di scanout o UI visibile. Testdriver, T0,5 s,30cicli e observer render1 s invariati.
