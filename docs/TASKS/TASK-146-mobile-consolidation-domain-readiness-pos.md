@@ -21,6 +21,16 @@ ID verificato sui nomi delle task locali iOS, sulle occorrenze documentali e sul
 
 ## Execution corrente — GO20261104T215638Z
 
+### Execution — delta minimo B2 capture-after e driver T19 pre-tap — 2026-11-14, America/Santiago
+
+Applicate tre sole sorgenti: Task145PerformanceObservation e SyncStoreGeneration per la diagnostica B2, LocalAvailabilityRootUITests per il driver T19. Hash pre/post e patch verificati; review indipendenti0finding sul B2v2(1c68bdf0) e T19v2(38cf837e), parse Swift DEBUG/Release applicativa e diffcheck PASS. SDK e runtime di questa composizione ancora NON_ESEGUITI.
+
+B2 resta una misura causale, non un fix: soltanto DEBUG/cache/capture-after, tre fence, CPU/thread corrente, intervalli della chiamata al lock e physicalAfter;11righe/cap16 per tentativo. Export terminale per-riga(max414 B), evitando il limite1024 B del logger; il candidato monolitico non è mai stato eseguito. Guard/throws/unlock e significato cache/autorità invariati. Overhead incluso nel gate; CPU sotto lock aggiunge costo, lo storico worker elapsed precede l'export, physical residual contiene anche il lock storeURL non separato. Nessuna attribuzione esclusiva o sottrazione.
+
+T19 candidato solo cycles/30: query immediata pre-tap e bindingAX soltanto per match univoco, attesa originale quando assente e descriptor originale per ambiguità/no match al rebind. L'identità vincolata serve solo a preselected/tap nativo; l'intero blocco post-tap resta byte-identico con query fresca, polling, T0 e limite5 s, assert e30cicli. Il caso repeated-material conserva il comportamento originale. Respinta la scorciatoia che avrebbe usato il vecchio AX per il PASS finale. Vantaggio temporale non ancora misurato; eventuale identità obsoleta fallisce più severamente senza falso PASS.
+
+Ammessa UNA nuova focused B2+T19, stesso profilo/lane, nessun sampler/reuse nuovo o matrice completa. Domande verificabili: costo lock/fence/physicalAfter e costo reale del prefisso T19 corretto. Tutti i FAIL restano conservati; PR29/PR30/main/T17 USB invariati. Receipt20261114-b2-fence-t19-prefix.json e tagcodex/task146-b2-fence-t19-prefix-20261114; ROOT resta unico owner di applicazione/dispatch/custodia, analisi e review parallele in sola lettura.
+
 ### Execution — esiti del controllo UIKit e prossimo discriminante causale — 2026-11-14, America/Santiago
 
 Run43595539160, sorgente ded5bc7a/AppTree9b20a3ce, Xcode26.6/17F113 ARM64/optimized Debug con assert reali: BUILD PASS, discovery2101 e due selettori esatti; **2FAIL, nessun PASS finale**. Il predecessore b406/43594772266 resta BUILD_FAIL con B2/T19 NOT_RUN; quattro nomi API corretti nel solo formatter CGRect, review distinta0finding.

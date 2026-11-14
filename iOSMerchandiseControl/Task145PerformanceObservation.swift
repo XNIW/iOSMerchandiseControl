@@ -92,8 +92,24 @@ nonisolated enum Task145PerformanceResourceSnapshot {
     // One current-thread snapshot, not a periodic sampler. The caller must
     // be on main; failures omit CPU values rather than inventing zero cost.
     static func captureCurrentMainThreadCPU(prefix: String) -> [String: UInt64] {
+        captureThreadCPU(prefix: prefix, field: "main_thread", requiresMainThread: true)
+    }
+
+    // The same owned-thread primitive for a synchronous B2 worker segment.
+    // Thread identity must match before interpreting cumulative CPU deltas.
+    static func captureCurrentThreadCPU(prefix: String) -> [String: UInt64] {
+        var values = captureThreadCPU(prefix: prefix, field: "thread", requiresMainThread: false)
+        var identity: UInt64 = 0
+        let status = pthread_threadid_np(nil, &identity)
+        values[prefix + "thread_id_status"] = UInt64(UInt32(bitPattern: status))
+        if status == 0 { values[prefix + "thread_id"] = identity }
+        return values
+    }
+
+    private static func captureThreadCPU(prefix: String, field: String,
+                                        requiresMainThread: Bool) -> [String: UInt64] {
         var values: [String: UInt64] = [prefix + "observed_on_main_thread": Thread.isMainThread ? 1 : 0]
-        guard Thread.isMainThread else { return values }
+        guard !requiresMainThread || Thread.isMainThread else { return values }
         let thread = mach_thread_self()
         guard thread != MACH_PORT_NULL else { return values }
         // mach_thread_self grants a send right. Release only that owned right,
@@ -106,10 +122,10 @@ nonisolated enum Task145PerformanceResourceSnapshot {
                 thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
             }
         }
-        values[prefix + "main_thread_cpu_status"] = UInt64(UInt32(bitPattern: status))
+        values[prefix + field + "_cpu_status"] = UInt64(UInt32(bitPattern: status))
         if status == KERN_SUCCESS {
-            values[prefix + "main_thread_user_us"] = UInt64(info.user_time.seconds) * 1_000_000 + UInt64(info.user_time.microseconds)
-            values[prefix + "main_thread_system_us"] = UInt64(info.system_time.seconds) * 1_000_000 + UInt64(info.system_time.microseconds)
+            values[prefix + field + "_user_us"] = UInt64(info.user_time.seconds) * 1_000_000 + UInt64(info.user_time.microseconds)
+            values[prefix + field + "_system_us"] = UInt64(info.system_time.seconds) * 1_000_000 + UInt64(info.system_time.microseconds)
         }
         return values
     }

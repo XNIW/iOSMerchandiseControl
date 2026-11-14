@@ -6787,7 +6787,10 @@ extension LocalAvailabilityRootUITests {
                         "appPID": diagnosticAppPID as Any? ?? NSNull(),
                         "startedUptime": tabStart, "deadlineUptime": tabDeadline]
                     let existenceStarted = ProcessInfo.processInfo.systemUptime
-                    var present = button.exists
+                    let useBoundPreTap = mode == "cycles" && cycles == 30
+                    var preTapMatches = useBoundPreTap ? buttons.allElementsBoundByAccessibilityElement : []
+                    var present = useBoundPreTap ? !preTapMatches.isEmpty : button.exists
+                    if useBoundPreTap { diagnostic["presenceQueryKind"] = "allElementsBoundByAccessibilityElement" }
                     diagnostic["existsQueryStarted"] = existenceStarted
                     diagnostic["existsQueryReturned"] = ProcessInfo.processInfo.systemUptime
                     diagnostic["existsResult"] = present
@@ -6795,6 +6798,7 @@ extension LocalAvailabilityRootUITests {
                         diagnostic["existenceWaitStarted"] = ProcessInfo.processInfo.systemUptime
                         present = button.waitForExistence(timeout: max(0, tabDeadline - ProcessInfo.processInfo.systemUptime))
                         diagnostic["existenceWaitReturned"] = ProcessInfo.processInfo.systemUptime
+                        if present && useBoundPreTap { preTapMatches = buttons.allElementsBoundByAccessibilityElement }
                     }
                     let presenceEvaluation = ProcessInfo.processInfo.systemUptime
                     let presentWithinDeadline = present && presenceEvaluation <= tabDeadline
@@ -6805,13 +6809,19 @@ extension LocalAvailabilityRootUITests {
                     }
                     XCTAssertTrue(presentWithinDeadline,
                         "T19 tab presence: present=\(present), evaluated=\(presenceEvaluation), deadline=\(tabDeadline)")
+                    // Bind only the unique cycles/30 pre-tap match. Ambiguity or no
+                    // match at rebinding retains the original query descriptor.
+                    let preTapButton = useBoundPreTap && preTapMatches.count == 1 ? preTapMatches[0] : button
+                    if useBoundPreTap {
+                        diagnostic["preTapBinding"] = preTapMatches.count == 1 ? "accessibility-element" : "query-index0"
+                    }
                     diagnostic["preTapSelectedQueryStarted"] = ProcessInfo.processInfo.systemUptime
-                    let preTapSelected = button.isSelected
+                    let preTapSelected = preTapButton.isSelected
                     diagnostic["preTapSelectedQueryReturned"] = ProcessInfo.processInfo.systemUptime
                     diagnostic["preTapSelected"] = preTapSelected
                     if !preTapSelected {
                         diagnostic["tapStarted"] = ProcessInfo.processInfo.systemUptime
-                        button.tap()
+                        preTapButton.tap()
                         diagnostic["tapReturned"] = ProcessInfo.processInfo.systemUptime
                     }
                     // Root recreation may replace the bar after tap returns.

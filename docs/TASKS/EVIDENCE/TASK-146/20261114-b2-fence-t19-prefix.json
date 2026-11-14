@@ -1,0 +1,47 @@
+{
+  "atUTC": "2026-11-14T13:29:30.957273+00:00",
+  "parent": "18bf7b3b0568fc18e879e5ea944f92c0b7c5cb30",
+  "tag": "codex/task146-b2-fence-t19-prefix-20261114",
+  "sourceFiles": {
+    "iOSMerchandiseControl/Task145PerformanceObservation.swift": "3b048eda2918c2560dbe49fc62e25da077bafb207fb5ca7de7ecf6a1e905c152",
+    "iOSMerchandiseControl/Sync/Automatic/Recovery/SyncStoreGeneration.swift": "7b9147544555dbbd1375b837168c4d1c7c3f3a5f084288d55d35418e85482ee4",
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": "1fe4c9dad9ff096ac1c2d0d52898c2e2d5f7a77b5ad4fd09e3ea85d40fd31c36"
+  },
+  "B2PatchSHA256": "1c68bdf08274eabcb8ea339c5e8b888fb73efb175e795367b09b76a00563b139",
+  "T19PatchSHA256": "38cf837e9cfc4e0ad0c5bbb223835173c2f55360308a83f4c4a40ef3c5739d72",
+  "T19ReviewSHA256": "d653e6243da21041128df4f212a233bb0adf3ce8ae4d6e9cfa013765933704ed",
+  "B2Review": "Independent b2_resume/b2_patch_review PASS v2 recorded in immutable author manifest95b47803; no open findings",
+  "reason": [
+    "B2 actual capture-after+worker lag distinguishes lock-call/fence/physical residual with currentworkerCPU, no guard change",
+    "T19 remove duplicated pre-tap query resolution for exactly cycles30; final fresh posttap selected+original5s predicate byte-identical"
+  ],
+  "scope": "FOCUSED_NOT_FINAL",
+  "inputs": {
+    "task146_focused_tests": "[\"iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld\", \"iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation\"]",
+    "task146_b2_cpu_sampling": false,
+    "task146_export_ordinary_app": true,
+    "task146_b2_arm_memory": false,
+    "task146_reuse_native_run": ""
+  },
+  "assertionsT0AndAll30Unchanged": true,
+  "B2FunctionalFixClaimed": false,
+  "T19Speedup": "NOT_RUN_NOT_CLAIMED",
+  "checks": {
+    "DEBUGSyntaxParse": "PASS",
+    "ReleaseSyntaxParseAppFiles": "PASS",
+    "diffCheck": "PASS",
+    "nativeSDK": "NOT_RUN",
+    "nativeRuntime": "NOT_RUN"
+  },
+  "localFreeBytes": 176608952320,
+  "newLocalNativeConsumers": 0,
+  "hostedGuard": "Existing12.5GB forecast plus30.3GB reserve beforeSDK",
+  "retention": "Keep ded exact SDK +7241 distinct, export current successor viaexistingworkflow for exactfirst/latestfailure custody; no install/extract",
+  "previousRun": 43595539160,
+  "previousPostflight": "PASS; monitors/readers/SDKcustody consumers closed",
+  "reviewLimits": [
+    "Logger rows<=414B bounded under1024B native dynamicdata cap; no unqualified bulkJSON",
+    "B2 lockCPU captureunderlockaddsmeasuredobservercost, no subtraction; storeURL lock residualnotpureactivework",
+    "BoundAX onlyprefixtarget; mayfailmorestrictly ifretired, never suppliesfinalPASS. Other repeated-material case retainsoriginalbehavior"
+  ]
+}
