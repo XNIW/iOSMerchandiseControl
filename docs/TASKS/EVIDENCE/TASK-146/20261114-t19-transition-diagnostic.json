@@ -1,0 +1,36 @@
+{
+  "atUTC": "2026-11-14T12:25:04.187527+00:00",
+  "parent": "808b9ef7eede89a26f68f10e1d2f82ae3b826d6f",
+  "appTree": "8aa1a22b6a525bd4aafe4c3e75ec0efb6208a31f",
+  "tag": "codex/task146-t19-transition-20261114",
+  "patchSHA256": "48dc6a50669992155ccc5176cd294d643660894d2ab94b1644fdf19523e1f3a3",
+  "source": "iOSMerchandiseControl/Task145PerformanceObservation.swift",
+  "sourceSHA256": "e7d9ca8a531e036cff5ab2f2b4aca77bebde7c7b34a001e414ebb658a6c359db",
+  "question": "Date actual existing UIKit transition completion and exact visibility rejection versus unchanged5s; distinguish mainCPU/wall lag. Callback timestamp is not alone scanout or actual-visible proof.",
+  "profile": "Original optimizedDebug with real assertions, same Xcode26.6 lane",
+  "selectors": [
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation"
+  ],
+  "sampling": false,
+  "exportOrdinaryApp": true,
+  "reuseNativeRun": "",
+  "b2CompanionReason": "Existing workflow preserves original long optimized profile only with B2 present; all results retained, not best-run selection. No functional B2 fix claimed.",
+  "newFunctionalFix": false,
+  "testsT0BudgetInputsUnchanged": true,
+  "newPollOrAnimation": false,
+  "cap": {
+    "marksPerPID": 512,
+    "requestsPerNormalPID": 40,
+    "maximumMarksPerRequest": 12,
+    "normalMaximum": 480,
+    "coordinatorsPerRequest": 2,
+    "callbacksPerPID": 80,
+    "PIDSegments": 3
+  },
+  "hostedDiskPreflight": "Existing workflow forecast12.5GB+reserve30.3GB beforeSDK; export capability existing",
+  "localFreeBytes": 176836059136,
+  "localHeavyOutput": "No SDK; one exact-size current SDKZIP custody after export, separate Registry/admission and metadata4MB ledger unchanged",
+  "keepConditions": "Current SDK product ownerROOT until T19causalclosure and qualified successor, old7241 retained separately; no expand/install/sessioncopy.",
+  "independentReviewSHA256": "5fcdbb9742e798420c194770c0ee8e9adede85d2c81bd189079140b545e2c307"
+}

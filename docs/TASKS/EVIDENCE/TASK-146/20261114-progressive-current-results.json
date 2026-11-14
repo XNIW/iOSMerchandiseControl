@@ -1,0 +1,67 @@
+{
+  "atUTC": "2026-11-14T12:17:16.115001+00:00",
+  "status": "ACTIVE_EXECUTION_TARGETED_GATES_NO_MERGE",
+  "functionalBaseline": "7241f7d5",
+  "diagnosticHead": "d4f0ec17a81a786473f948090ffa23f5bc63ad81",
+  "currentHead": "808b9ef7eede89a26f68f10e1d2f82ae3b826d6f",
+  "PR29Head": "459c3d347e695ac6d2607c437d71c5dc84d15c17",
+  "PR30Head": "3f8f514c859a68a72d18db81f95651a5f6125dd0",
+  "iOSMain": "94fb03a5fd3b770f866655154874723192ebc390",
+  "AndroidMain": "0c0ceab55dd0f57956791d91def6e3b59b804a69",
+  "AdminMain": "09d21c7cfb08741b9d6595fd4ca04b18397897be",
+  "mergedThisExecution": [],
+  "mainCIThisExecution": "NOT_RUN_NO_MERGE",
+  "B2": {
+    "run": 43590947364,
+    "result": "FOCUSED_PASS_NOT_FINAL",
+    "elapsed": 4.220995541666665,
+    "causalFixClaimed": false
+  },
+  "T18": {
+    "run": 43592197189,
+    "result": "PASS_ORIGINAL_UNINSTRUMENTED_FOCUSED_NOT_FINAL",
+    "cases": 1,
+    "routes": 4,
+    "causalFixClaimed": false
+  },
+  "T19": {
+    "run": 43590947364,
+    "result": "FAIL_ORIGINAL_5S",
+    "elapsed": 5.271491416666549,
+    "noOpCyclesPassed": 2,
+    "UICyclesCompleted": 1,
+    "nativeSelectedFlagTimely": true,
+    "nativeContentSettledTimely": "NOT_PROVEN",
+    "next": "Existing UIKit transition completion, visibility reasons and bounded mainCPU. Review correcting repeated end notifications before any dispatch."
+  },
+  "T17iOS": "TWO_NOT_RUN_BLOCKED_USB_USER_UNAVAILABLE_NO_REPEAT_REQUEST",
+  "lastFullMatrix": {
+    "run": 43301058573,
+    "passed": 2039,
+    "failed": 3,
+    "skipped": 43,
+    "deferredUser": 16,
+    "total": 2101
+  },
+  "PR30": "HOLD1592PASS_1FAIL_36SKIP_REQUIRED_FULL_CI_RED_46STOREFRONTPASS",
+  "UIcleanup": "BLOCKED_AFTER_UPDATE_COMPUTER_USE_SKILL_AND_TOOLS_UNAVAILABLE_NO_DEVICE_INPUT",
+  "sourceIndexPrimarySHA256": "5202e036df5964920978cfe4f02125bd124743cc0f64b8a7775ca8778d7c2753",
+  "evidence": {
+    "diag-t19-native-state-d4.ROOT/SUMMARY.ROOT.json": {
+      "sha256": "036e199bc0fc2264da211be7c2c87c5b900069686f206d486ca9aea41f8192c9",
+      "bytes": 7657
+    },
+    "t18-uninstrumented-808.ROOT/SUMMARY.ROOT.json": {
+      "sha256": "202f76110861c5667cb86d4281459cc6f0ad00be9cc7af488d367fd179384276",
+      "bytes": 6646
+    },
+    "admin-delta-20261114.ROOT/SUMMARY.ROOT.json": {
+      "sha256": "0822eee836633df1c9a9375d6d34c53ddf7703550cc610a9febe66deb89c4cfe",
+      "bytes": 9525
+    },
+    "admin-delta-20261114.ROOT/DEVICE-CALLSITE-FK-ADDENDUM.ROOT.json": {
+      "sha256": "1d3c6226c7905014c3e3e2cd839370589e978bc762eaac002a448f640863e151",
+      "bytes": 5225
+    }
+  }
+}

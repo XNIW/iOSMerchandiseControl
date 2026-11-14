@@ -327,6 +327,21 @@ enum Task146T19TabObservation {
     private static weak var nativeProbe: UIView?
     private static var nativeProbePresentation: String?
     private static var lastProbeSnapshot: [String: Any] = [:]
+    private static var transitionRegistrations: Set<String> = []
+    private static var transitionCounts: [Int: Int] = [:]
+    private static var transitionRegistrationsDropped = 0
+    private static var completedTransitions: Set<String> = []
+    private static var endedRequests: Set<Int> = []
+    private static var publishedRequests: Set<Int> = []
+    private static var repeatedEvents: [String: Int] = [:]
+    private static var repeatedEventCountsCapped = false
+    private static var lastPublicationMismatch: [String: Any] = [:]
+
+    private static func noteRepeatedEvent(_ kind: String) {
+        let count = repeatedEvents[kind, default: 0]
+        if count < capacity { repeatedEvents[kind] = count + 1 }
+        else { repeatedEventCountsCapped = true }
+    }
 
     static func bindingRequested(from: Int, to: Int, presentationID: String) -> Int? {
         guard enabled else { return nil }
@@ -352,6 +367,17 @@ enum Task146T19TabObservation {
     }
     static func publicationObserved(tab: Int, presentationID: String) {
         guard enabled else { return }
+        guard current(tab: tab, request: requestOrdinal, presentationID: presentationID) else {
+            noteRepeatedEvent("publication-without-current-matching-request")
+            lastPublicationMismatch = ["request": requestOrdinal, "tab": tab, "presentation": presentationID,
+                "uptime": ProcessInfo.processInfo.systemUptime,
+                "requestedTab": requestedTab as Any? ?? NSNull(),
+                "requestedPresentation": requestedPresentation as Any? ?? NSNull()]
+            return
+        }
+        guard !publishedRequests.contains(requestOrdinal) else { noteRepeatedEvent("publication"); return }
+        guard publishedRequests.count < capacity else { dropped += 1; return }
+        publishedRequests.insert(requestOrdinal)
         append("binding-published", tab: tab, presentationID: presentationID,
             extra: ["request": requestOrdinal])
         snapshot("native-state-at-publication", tab: tab, request: requestOrdinal, presentationID: presentationID)
@@ -362,6 +388,14 @@ enum Task146T19TabObservation {
         row["sequence"] = marks.count + 1; row["kind"] = kind
         row["tab"] = tab; row["presentation"] = presentationID
         row["uptime"] = ProcessInfo.processInfo.systemUptime
+        if ["binding-entry", "binding-assignment-returned", "binding-published",
+            "native-transition-completed", "native-render-observation-ended"].contains(kind) {
+            let began = DispatchTime.now().uptimeNanoseconds
+            var cpu = Task145PerformanceResourceSnapshot.captureCurrentMainThreadCPU(prefix: "")
+            cpu["capture_start_uptime_ns"] = began
+            cpu["capture_end_uptime_ns"] = DispatchTime.now().uptimeNanoseconds
+            row["mainCPU"] = cpu
+        }
         marks.append(row)
     }
     private static func current(tab: Int, request: Int, presentationID: String) -> Bool {
@@ -378,8 +412,51 @@ enum Task146T19TabObservation {
             value["rejection"] = "current-window-probe-unavailable"
             append(kind, tab: tab, presentationID: presentationID, extra: value); return
         }
-        value["native"] = inspectNative(probe, tab: tab).values
+        let native = inspectNative(probe, tab: tab, includeDetails: true)
+        value["native"] = native.values
         append(kind, tab: tab, presentationID: presentationID, extra: value)
+        observeTransitions(native.transitions, probe: probe, tab: tab, request: request, presentationID: presentationID)
+    }
+    // Completion-only registration observes the actual UIKit transition. No
+    // alongside animation, timer, polling, view loading or layout is requested.
+    private static func observeTransitions(_ transitions: [(String, UIViewControllerTransitionCoordinator)],
+        probe: UIView, tab: Int, request: Int, presentationID: String) {
+        for (role, coordinator) in transitions {
+            let identity = String(describing: ObjectIdentifier(coordinator as AnyObject))
+            let key = "\(request):\(identity)"
+            guard !transitionRegistrations.contains(key) else { continue }
+            guard transitionRegistrations.count < 80, (transitionCounts[request] ?? 0) < 2,
+                  marks.count < capacity else { transitionRegistrationsDropped += 1; continue }
+            transitionRegistrations.insert(key); transitionCounts[request, default: 0] += 1
+            let started = ProcessInfo.processInfo.systemUptime
+            let original = transitionDetails(coordinator)
+            let accepted = coordinator.animate(alongsideTransition: nil) { [weak probe] context in
+                let callbackEntry = ProcessInfo.processInfo.systemUptime
+                guard !completedTransitions.contains(key) else { noteRepeatedEvent("transition-completion"); return }
+                guard completedTransitions.count < 80 else { dropped += 1; return }
+                completedTransitions.insert(key)
+                var value: [String: Any] = ["request": request, "coordinator": identity, "role": role,
+                    "callbackEntryUptime": callbackEntry,
+                    "registrationStartedUptime": started, "transition": transitionDetails(context),
+                    "requestIsCurrent": current(tab: tab, request: request, presentationID: presentationID)]
+                if let probe { value["native"] = inspectNative(probe, tab: tab, includeDetails: true).values }
+                else { value["native"] = ["rejection": "registered-probe-released"] }
+                append("native-transition-completed", tab: tab, presentationID: presentationID, extra: value)
+            }
+            // UIKit may invoke completion even when registration returns false.
+            // Record both facts; neither alone overrides the original UI gate.
+            append("native-transition-registration", tab: tab, presentationID: presentationID,
+                extra: ["request": request, "coordinator": identity, "role": role,
+                    "registrationStartedUptime": started, "registrationReturnedUptime": ProcessInfo.processInfo.systemUptime,
+                    "alongsideRegistrationAccepted": accepted, "transition": original])
+        }
+    }
+    private static func transitionDetails(_ context: UIViewControllerTransitionCoordinatorContext) -> [String: Any] {
+        ["identity": String(describing: ObjectIdentifier(context as AnyObject)),
+            "expectedDurationSeconds": context.transitionDuration, "animated": context.isAnimated,
+            "initiallyInteractive": context.initiallyInteractive, "interactive": context.isInteractive,
+            "cancelled": context.isCancelled, "percentComplete": Double(context.percentComplete),
+            "completionVelocity": Double(context.completionVelocity), "completionCurve": context.completionCurve.rawValue]
     }
     static func nativeQualifies(_ view: UIView, tab: Int, request: Int, presentationID: String) -> Bool {
         guard enabled else { return false }
@@ -406,12 +483,56 @@ enum Task146T19TabObservation {
     }
     static func nativeObservationEnded(_ reason: String, tab: Int, request: Int, presentationID: String) {
         guard current(tab: tab, request: request, presentationID: presentationID) else { return }
-        append("native-render-observation-ended", tab: tab, presentationID: presentationID,
-            extra: ["request": request, "reason": reason, "lastProbe": lastProbeSnapshot])
+        guard !endedRequests.contains(request) else { noteRepeatedEvent("observation-end"); return }
+        guard endedRequests.count < capacity else { dropped += 1; return }
+        endedRequests.insert(request)
+        var value: [String: Any] = ["request": request, "reason": reason, "lastProbe": lastProbeSnapshot]
+        if nativeProbePresentation == presentationID, let probe = nativeProbe {
+            value["nativeAtObservationEnd"] = inspectNative(probe, tab: tab, includeDetails: true).values
+        }
+        append("native-render-observation-ended", tab: tab, presentationID: presentationID, extra: value)
     }
     private struct NativeInspection {
         let values: [String: Any]
         let settledSelection: Bool
+        var transitions: [(String, UIViewControllerTransitionCoordinator)] = []
+    }
+    // Explain the existing model-geometry predicate only at explicit snapshots
+    // and completion/expiry, never at every display-link poll. No scanout claim.
+    private static func visibilityDetails(_ view: UIView?, in window: UIWindow, role: String) -> [String: Any] {
+        guard let view else { return ["reason": "view-not-loaded"] }
+        var value: [String: Any] = ["role": role,
+            "viewIdentity": String(describing: ObjectIdentifier(view)),
+            "windowMatches": view.window === window, "hasWindow": view.window != nil,
+            "bounds": NSStringFromCGRect(view.bounds), "windowFrame": NSStringFromCGRect(view.convert(view.bounds, to: window)),
+            "clock": ProcessInfo.processInfo.systemUptime]
+        guard view.window === window else { value["reason"] = "window-mismatch-or-detached"; return value }
+        guard !view.bounds.isEmpty else { value["reason"] = "empty-bounds"; return value }
+        var rectangle = view.convert(view.bounds, to: window).intersection(window.bounds)
+        var ancestor: UIView? = view, count = 0
+        while let node = ancestor {
+            count += 1
+            guard count <= 64 else { value["reason"] = "explanation-ancestor-limit"; return value }
+            var reason: String?
+            if node.isHidden { reason = "ancestor-hidden" }
+            else if !(node.alpha > 0.99) { reason = "ancestor-alpha-not-above-0.99" }
+            else {
+                if node.clipsToBounds { rectangle = rectangle.intersection(node.convert(node.bounds, to: window)) }
+                if rectangle.isNull || rectangle.isEmpty { reason = "ancestor-clips-intersection-empty" }
+            }
+            if let reason {
+                value["reason"] = reason; value["ancestorDepth"] = count
+                value["ancestor"] = ["role": "visibility-predicate-ancestor",
+                    "identity": String(describing: ObjectIdentifier(node)), "hidden": node.isHidden,
+                    "alpha": Double(node.alpha), "clipsToBounds": node.clipsToBounds,
+                    "bounds": NSStringFromCGRect(node.bounds),
+                    "windowFrame": NSStringFromCGRect(node.convert(node.bounds, to: window))]
+                return value
+            }
+            ancestor = node.superview
+        }
+        value["reason"] = "model-geometry-visible"; value["ancestorDepth"] = count
+        return value
     }
     private static func visible(_ view: UIView, in window: UIWindow) -> Bool {
         guard view.window === window, !view.bounds.isEmpty else { return false }
@@ -425,10 +546,11 @@ enum Task146T19TabObservation {
         }
         return true
     }
-    private static func inspectNative(_ probe: UIView, tab: Int) -> NativeInspection {
+    private static func inspectNative(_ probe: UIView, tab: Int, includeDetails: Bool = false) -> NativeInspection {
         func rejected(_ reason: String) -> NativeInspection {
-            NativeInspection(values: ["rejection": reason, "stateReadUptime": ProcessInfo.processInfo.systemUptime],
-                settledSelection: false)
+            var value: [String: Any] = ["rejection": reason, "stateReadUptime": ProcessInfo.processInfo.systemUptime]
+            if includeDetails, let window = probe.window { value["probeVisibility"] = visibilityDetails(probe, in: window, role: "observer-probe") }
+            return NativeInspection(values: value, settledSelection: false)
         }
         guard let window = probe.window, window.isKeyWindow, !window.isHidden,
               window.windowScene?.activationState == .foregroundActive,
@@ -462,28 +584,47 @@ enum Task146T19TabObservation {
         let contentVisible: Bool
         if let selectedView = selected?.viewIfLoaded { contentVisible = visible(selectedView, in: window) }
         else { contentVisible = false }
-        let tabsTransition = tabs.transitionCoordinator != nil
-        let selectedTransition = selected?.transitionCoordinator != nil
+        let tabsCoordinator = tabs.transitionCoordinator
+        let selectedCoordinator = selected?.transitionCoordinator
+        let tabsTransition = tabsCoordinator != nil
+        let selectedTransition = selectedCoordinator != nil
         let presenting = tabs.isBeingPresented || selected?.isBeingPresented == true
         let dismissing = tabs.isBeingDismissed || selected?.isBeingDismissed == true
         let actualSelected = selectedIndex == tab && itemIndex == tab
         let settled = actualSelected && barVisible && contentVisible
             && !tabsTransition && !selectedTransition && !presenting && !dismissing
-        let values: [String: Any] = ["stateReadUptime": stateReadUptime,
+        var values: [String: Any] = ["stateReadUptime": stateReadUptime,
             "nativeController": String(reflecting: type(of: tabs)),
             "selectedIndex": selectedIndex, "selectedItemIndex": itemIndex as Any? ?? NSNull(),
             "selectedIndexAndItemMatchTarget": actualSelected, "tabBarVisible": barVisible,
             "selectedContentVisible": contentVisible, "tabControllerTransitionActive": tabsTransition,
             "selectedControllerTransitionActive": selectedTransition, "presenting": presenting,
             "dismissing": dismissing, "settledSelection": settled]
-        return NativeInspection(values: values, settledSelection: settled)
+        var transitions: [(String, UIViewControllerTransitionCoordinator)] = []
+        if includeDetails {
+            values["selectedContentVisibility"] = visibilityDetails(selected?.viewIfLoaded, in: window, role: "selected-content")
+            values["tabBarVisibility"] = visibilityDetails(tabs.tabBar, in: window, role: "tab-bar")
+            if let tabsCoordinator {
+                values["tabTransition"] = transitionDetails(tabsCoordinator)
+                transitions.append(("tabController", tabsCoordinator))
+            }
+            if let selectedCoordinator {
+                values["selectedTransition"] = transitionDetails(selectedCoordinator)
+                transitions.append(("selectedController", selectedCoordinator))
+            }
+        }
+        return NativeInspection(values: values, settledSelection: settled, transitions: transitions)
     }
     static func readback() -> String {
-        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v2", "pid": pid,
+        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v3", "pid": pid,
             "namespace": namespace, "clock": "same-Simulator-boot-systemUptime",
             "capacity": capacity, "dropped": dropped, "requestOrdinal": requestOrdinal,
             "noChangeAssignments": noChangeAssignments, "noChangeAssignmentsCapped": noChangeAssignmentsCapped,
             "marks": marks, "lastProbe": lastProbeSnapshot,
+            "transitionRegistrationCount": transitionRegistrations.count,
+            "transitionRegistrationsDropped": transitionRegistrationsDropped,
+            "repeatedEvents": repeatedEvents, "repeatedEventCountsCapped": repeatedEventCountsCapped,
+            "lastPublicationMismatch": lastPublicationMismatch,
             "acceptance": "DIAGNOSTIC_ONLY_ORIGINAL_XCTEST_5S_GATE_UNCHANGED"]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
             return "SERIALIZATION_FAILED_NOT_OBSERVED"

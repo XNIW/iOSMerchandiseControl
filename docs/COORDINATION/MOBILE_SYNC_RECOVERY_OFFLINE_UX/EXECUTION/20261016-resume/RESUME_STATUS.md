@@ -1,5 +1,35 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — controllo del completamento UIKit T19 ammesso — 2026-11-14, America/Santiago
+
+Un solo file aggiornato: Task145PerformanceObservation, esclusivamente enum diagnostico T19 DEBUG. Callback-only sul coordinatore UIKit già esistente, massimo2identità/request; registra tempo effettivo di callback, durata/context/cancellazione e letture successive di stato/visibilità con clock distinti. CPUmain discreta tramite helper già qualificato, nessun sampler/timer/poll/animazione/layout aggiunto. La callback non viene presentata da sola come prova di scanout o UI visibile. Testdriver, T0,5 s,30cicli e observer render1 s invariati.
+
+Review distinta0blocker comunicati; corretto first-end per richiesta, first-completion percoordinatore e first-publication solo perrequest/tab/presentation correnti. Ripetizioni e mismatch restano espliciti fuori dal ledger, lastProbe resta live. Cap512 invariato, massimo480mark nei40request/PID previsti, tre segmenti; niente demangling aggiunto per le etichette geometriche. Hash patch48dc6a50/postimagee7d9ca8a verificati, parse Swift DEBUG e diffcheck PASS. Non è un fix funzionale già qualificato.
+
+Ammessa UNA focused B2+T19 sul tag codex/task146-t19-transition-20261114. B2 accompagna T19 perché il workflow esistente conserva il profilo optimized Debug originale soltanto con B2 nel set: nessuna modifica di runner/flag/assert per aggirarlo, tutti i risultati saranno conservati. Export ordinario già disponibile attivato nella stessa run per custodire il prodotto esatto corrente, senza installazione o duplicati espansi; ROOT registra separatamente dimensione/hash/spazio/condizione di rilascio. Nessun secondo sampler e nessun retry per scegliere verde. Build/SIM nuovi NON_ESEGUITI prima del dispatch.
+
+Riepilogo corrente MASTER raccordato al file task su richiesta esplicita di coerenza dell'addendum; stato/fase e backlog/priorità invariati. T18 originale808 già PASS nel proprio perimetro, niente nuova ripetizione T18 per il solo enum inattivo nel suo caso. Matrice completa e review finale rimangono successive alla risoluzione dei requisiti pertinenti.
+
+### Execution — B2 mirato, T18 originale e residuo T19 qualificati — 2026-11-14, America/Santiago
+
+**ACTIVE / EXECUTION, nessun merge o DONE.** Sorgente corrente808b9ef7 dopo ritiro della sola diagnostica T18; baseline funzionale7241 conservata. PR29head459c e PR30head3f8 restano fuori da main iOS94fb. La PR incrementale rimane HOLD per il proprio check completo rosso, senza waiver o estensione al Core. Ultima matrice completa invariata:43301058573,2039 PASS/3 FAIL/43 SKIP/16 DIFFERITI_USER=2101; nessuna somma dei nuovi focused al totale finale.
+
+| Gate mirato | Tipo | Esito corrente e limite |
+|---|---|---|
+| B2 su d4 | BUILD/SIM | ✅ ESEGUITO PASS4,220995542 s nella43590947364; T0/5 s, riga utile, autorità e HIT/0scan invariati. Main CPU94,5%/92,9% nei gap; nessun fix causale rivendicato. Precedenti FAIL e sampler distinto conservati. |
+| T18 originale su808 | BUILD/SIM | ✅ ESEGUITO PASS1/1 nella43592197189, Debug standard26.6/17F113, discovery2101, gesto reale1,5 s/minimo1 s e producer/safety sulle4sezioni. Nessun recognizer diagnostico aggiunto; touchduration attuale non osservata. Vecchio0,829 s resta FAIL storico senza causa retroattiva. |
+| T19 su d4 | BUILD/SIM | ✅ ESEGUITO FAIL5,271491 s contro5 s, cycle2/Options. Due no-op verificati ma un solo ciclo UI completo. Selezione UIKit+0,674275 s e setter7,33 ms; publication+3,478676 s, contenuto visibile/stabile entro5 s non provato. |
+| T17 iOS | MANUAL/SIM/TEST | ⚠️ NON ESEGUIBILI: USB di Min dichiarato indisponibile, nessuna nuova richiesta. Due NOT_RUN/BLOCKED,16fisici già differiti invariati. |
+| Matrice finale nuova/review finale/merge/mainCI | INTEGRATION | ❌ NON ESEGUITI: completare T19 e requisiti pertinenti sulla composizione effettiva, senza trasferire PASS di subset. |
+
+T19 log effettivi: wait posttap nel main runloop1,703 s con SystemGestureGate timeout, snapshot/query selected2,570 s; non dimostrato un wait superfluo eliminabile. Stesso PID/presentation nei cicli1/2; observer del secondo no-op già concluso prima di Options, nessuna causa fsync coincidente provata. Prossimo controllo preciso: completion del coordinatore UIKit esistente, motivo geometrico della visibilità e CPUmain discreta, senza timer, nuova animazione o alterazione del gate. Review della proposta ha richiesto dedup delle notifiche di fine osservazione per preservare il cap512; nessuna nuova run prima della correzione/review.
+
+Postflight delle due run concluso: stop Simulator e disco ospitato PASS, reader/monitor terminali. T19 raccolta2183149 B/4MB +postflight16460 B; T18 raccolta809668 B/4MB +postflight16459 B. Rimossi soltanto due proiezioni T19 troncate superate dai raw canonici:480000 B logici/483328 B allocati, nessuna attribuzione fisica esclusiva APFS. Raw, DB risultati, manifest, FAIL e pacchetto7241 hash-verificato KEEP con condizioni nel dossier. Nessun dato/sessione o target locale modificato.
+
+Il riavvio Desktop ha consentito un nuovo controllo della capacità UI: skill Computer Use elencata ma file assente, nessun tool desktop esposto. Zero input/cancellazioni; due History vuote ancora KEEP. Questo cleanup non blocca debug/review. Android0c0 invariata; Admin09d e sola review del nuovo delta sono raccordati con ricevuta ASUS, CI e deploy distinti. Receipt portabile20261114-progressive-current-results.json.
+
+**Handoff in corso:** portare a termine il discriminante preciso T19, correggere solo una causa dimostrata e verificare i30cicli; poi matrice/review sulla composizione effettiva. Il residuo non è soltanto USB, T19 è ancora FAIL. Nessun nuovo GO generale richiesto.
+
 ### Execution — regressione T18 senza strumentazione del contatto — 2026-11-14, America/Santiago
 
 Applicato il ritiro esatto della sola strumentazione T18 aggiunta5d nei tre file Task144LocalAvailabilityRootFixture, Task145PerformanceObservation e LocalAvailabilityRootUITests. Hash preimage/postimage e review distinta0finding verificati; parse Swift DEBUG e diffcheck PASS. Rimangono byte-identici al pre5d il gesto originale press1,5 s/minimo1 s, canale TASK145_T18_OBSERVATION, producer/safety e assert. Nessun fix causale del vecchio0,829 s rivendicato.
