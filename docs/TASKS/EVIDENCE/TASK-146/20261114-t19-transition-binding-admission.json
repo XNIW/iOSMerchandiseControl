@@ -1,0 +1,41 @@
+{
+  "atUTC": "2026-11-14T14:34:10.340346+00:00",
+  "parent": "96b55de5f87aea6bfc9389eb114219642318aa91",
+  "tag": "codex/task146-t19-transition-binding-20261114",
+  "patchSHA256": "8a7edc0dc54dbdc1db5e53fac7feb56c444458d0e2988ff996183fbdff06ebe2",
+  "scope": "DIAGNOSTIC_NOT_FUNCTIONAL_FIX_OR_FINAL_QUALIFICATION",
+  "sourceFiles": {
+    "iOSMerchandiseControl/Task145PerformanceObservation.swift": "d3c8ce3d8f54cae0c3c5eb41d1f9e412dc0ca9844524ae8699e37cbd32726e73",
+    "iOSMerchandiseControl/ContentView.swift": "813c33e8eb73e5d0c06977f86c4fefc436de65483fcac5d31637c16dc78381cc"
+  },
+  "wholeUITestSHA256": "bf4c84ea538618986fb9a13baa51d6406ea7d6683f73296f3e053b8a4fd80ef7",
+  "receipts": {
+    "T19-N4-v4-REVIEW.T19_RESUME.json": "9c10143e9cb25c76b421816f2f2c9dbbfcbad4dbecd7796c2e8011dd25c23a52",
+    "T19-N4-v3-PAYLOAD-SIZING.ROOT.json": "210c47fc1befbbc4156bbf7f3247f89e08a29493701fb56bd7d9e34569c454bb",
+    "T19-N4-API-TYPECHECK.ROOT.json": "61344a09e8078a406c38ad4c977e45ef1c255333cdfc25e323ef0a0f53cd8bea",
+    "T19-N4-v3-ENUM-TYPECHECK.ROOT.json": "c83d1844d4f3da5bda0a35dae3f5bfc16cb0267be0b91a818f7577380f54e109",
+    "T19-N4-PROFILE-CHECK.T19_RESUME.json": "8546990ab89c8a6d0c0a4eea673010552e69007336d02b9c234e02ddb13348dd",
+    "LOCAL-MAIN-CUSTODY-20261114.ROOT.json": "f0466d7c397a14a72ac7153e6f497bd7c08ac348e4db3a434fd1c9aef279607e"
+  },
+  "question": "Classify source/destination of existing transition and actual same-context binding reads after one tap; preserve all original gate semantics",
+  "checks": {
+    "staticReview": "PASS_0_OPEN",
+    "parseDebugRelease": "PASS",
+    "local27_2APIAndEnumTypecheck": "PASS_NOT_FULL_APP_OR_HOSTED",
+    "hostedBuildRuntime": "NOT_RUN"
+  },
+  "thresholdSeconds": 5,
+  "cycles": 30,
+  "readbackCostTelemetryAdded": false,
+  "inputs": {
+    "task146_focused_tests": "[\"iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld\", \"iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation\"]",
+    "task146_b2_cpu_sampling": false,
+    "task146_export_ordinary_app": true,
+    "task146_b2_arm_memory": false,
+    "task146_reuse_native_run": ""
+  },
+  "localFreeBytes": 176452681728,
+  "hostedDiskGuard": "Existing12.5GB forecast plus30.3GB reserve",
+  "retention": "Export exact current SDK via existing workflow; ROOT bounded custody; no extraction/install",
+  "primaryIndexSHA256": "5202e036df5964920978cfe4f02125bd124743cc0f64b8a7775ca8778d7c2753"
+}

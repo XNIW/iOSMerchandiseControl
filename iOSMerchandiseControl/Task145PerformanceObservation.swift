@@ -3,6 +3,7 @@ import Foundation
 import Darwin
 import SwiftUI
 import UIKit
+import ObjectiveC
 
 // TASK145_PERF: data owned exclusively by Task144RootObservation.shared.
 // No disk, stdout, model fetch, published state, or periodic progress while open.
@@ -337,6 +338,189 @@ enum Task146T19TabObservation {
     private static var repeatedEventCountsCapped = false
     private static var lastPublicationMismatch: [String: Any] = [:]
 
+    // N4 retains only the current and previous request. Older topology/getter
+    // summaries are explicitly evicted; the original 512-mark ledger is intact.
+    private struct BindingReads {
+        var count = 0, matching = 0, mismatching = 0, changes = 0
+        var countsCapped = false
+        var firstValue: Int?, lastValue: Int?, firstMismatchValue: Int?, lastMismatchValue: Int?
+        var firstUptime: Double?, lastUptime: Double?
+        var firstMatchingUptime: Double?, lastMatchingUptime: Double?
+        var firstMismatchingUptime: Double?, lastMismatchingUptime: Double?
+        var firstMismatchAfterMatchUptime: Double?, lastMismatchAfterMatchUptime: Double?
+        var mismatchingValueMask = 0, outOfRangeMismatch = false
+
+        mutating func record(_ value: Int, target: Int, at uptime: Double) {
+            if count < 512 { count += 1 } else { countsCapped = true }
+            if firstValue == nil { firstValue = value; firstUptime = uptime }
+            if let lastValue, lastValue != value {
+                if changes < 512 { changes += 1 } else { countsCapped = true }
+            }
+            lastValue = value; lastUptime = uptime
+            if value == target {
+                if matching < 512 { matching += 1 } else { countsCapped = true }
+                if firstMatchingUptime == nil { firstMatchingUptime = uptime }
+                lastMatchingUptime = uptime
+            } else {
+                if mismatching < 512 { mismatching += 1 } else { countsCapped = true }
+                if firstMismatchingUptime == nil {
+                    firstMismatchingUptime = uptime; firstMismatchValue = value
+                }
+                lastMismatchingUptime = uptime; lastMismatchValue = value
+                if (0..<4).contains(value) { mismatchingValueMask |= 1 << value }
+                else { outOfRangeMismatch = true }
+                if firstMatchingUptime != nil {
+                    if firstMismatchAfterMatchUptime == nil { firstMismatchAfterMatchUptime = uptime }
+                    lastMismatchAfterMatchUptime = uptime
+                }
+            }
+        }
+        var json: [String: Any] {
+            ["count": count, "matching": matching, "mismatching": mismatching, "changes": changes,
+             "countsCapped": countsCapped, "firstValue": firstValue as Any? ?? NSNull(),
+             "lastValue": lastValue as Any? ?? NSNull(),
+             "firstMismatchValue": firstMismatchValue as Any? ?? NSNull(),
+             "lastMismatchValue": lastMismatchValue as Any? ?? NSNull(),
+             "firstUptime": firstUptime as Any? ?? NSNull(), "lastUptime": lastUptime as Any? ?? NSNull(),
+             "firstMatchingUptime": firstMatchingUptime as Any? ?? NSNull(),
+             "lastMatchingUptime": lastMatchingUptime as Any? ?? NSNull(),
+             "firstMismatchingUptime": firstMismatchingUptime as Any? ?? NSNull(),
+             "lastMismatchingUptime": lastMismatchingUptime as Any? ?? NSNull(),
+             "firstMismatchAfterMatchUptime": firstMismatchAfterMatchUptime as Any? ?? NSNull(),
+             "lastMismatchAfterMatchUptime": lastMismatchAfterMatchUptime as Any? ?? NSNull(),
+             "mismatchingValueMask": mismatchingValueMask, "outOfRangeMismatch": outOfRangeMismatch]
+        }
+    }
+    private struct BindingContextMismatches {
+        var count = 0, controllerMismatches = 0, mountedMismatches = 0
+        var countsCapped = false
+        var firstUptime: Double?, lastUptime: Double?
+        var firstValue: Int?, lastValue: Int?
+        var firstPresentation: String?, lastPresentation: String?
+        var firstMounted: String?, lastMounted: String?
+        mutating func record(_ value: Int, presentation: String, mounted: String?,
+            expected: String, at uptime: Double) {
+            if count < 512 { count += 1 } else { countsCapped = true }
+            if presentation != expected {
+                if controllerMismatches < 512 { controllerMismatches += 1 } else { countsCapped = true }
+            }
+            if mounted != expected {
+                if mountedMismatches < 512 { mountedMismatches += 1 } else { countsCapped = true }
+            }
+            if firstUptime == nil {
+                firstUptime = uptime; firstValue = value
+                firstPresentation = presentation; firstMounted = mounted
+            }
+            lastUptime = uptime; lastValue = value
+            lastPresentation = presentation; lastMounted = mounted
+        }
+        var json: [String: Any] {
+            ["count": count, "controllerMismatches": controllerMismatches,
+             "mountedMismatches": mountedMismatches, "countsCapped": countsCapped,
+             "firstUptime": firstUptime as Any? ?? NSNull(), "lastUptime": lastUptime as Any? ?? NSNull(),
+             "firstValue": firstValue as Any? ?? NSNull(), "lastValue": lastValue as Any? ?? NSNull(),
+             "firstPresentation": firstPresentation as Any? ?? NSNull(),
+             "lastPresentation": lastPresentation as Any? ?? NSNull(),
+             "firstMounted": firstMounted as Any? ?? NSNull(), "lastMounted": lastMounted as Any? ?? NSNull()]
+        }
+    }
+    private struct RecentRequest {
+        let request: Int, fromTab: Int, tab: Int
+        let presentation: String
+        var reads = BindingReads()
+        var contextMismatches = BindingContextMismatches()
+        var transitions: [[String: Any]] = []
+        var json: [String: Any] {
+            ["request": request, "fromTab": fromTab, "tab": tab, "presentation": presentation,
+             "bindingReads": reads.json, "contextMismatches": contextMismatches.json,
+             "transitions": transitions]
+        }
+    }
+    private static var recentRequests: [RecentRequest] = []
+    private static var evictedRequests = 0, evictedTopologyRecords = 0, topologyCaptureMisses = 0
+    private static var recentCountersCapped = false
+
+    private static func beginRecentRequest(from: Int, to: Int, presentationID: String) {
+        if recentRequests.count == 2 {
+            let old = recentRequests.removeFirst()
+            if evictedRequests < capacity { evictedRequests += 1 } else { recentCountersCapped = true }
+            let total = evictedTopologyRecords + old.transitions.count
+            if total > capacity { recentCountersCapped = true }
+            evictedTopologyRecords = min(capacity, total)
+        }
+        recentRequests.append(RecentRequest(request: requestOrdinal, fromTab: from,
+            tab: to, presentation: presentationID))
+    }
+    // Called only with the value already returned by the actual Binding.get.
+    // No second binding read, publisher, query, per-read ledger row or polling.
+    static func bindingValueRead(_ value: Int, presentationID: String, mountedPresentationID: String?) {
+        guard enabled, requestOrdinal > 0,
+              let index = recentRequests.firstIndex(where: { $0.request == requestOrdinal }) else { return }
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let expected = recentRequests[index].presentation
+        guard presentationID == expected, mountedPresentationID == expected else {
+            recentRequests[index].contextMismatches.record(value, presentation: presentationID,
+                mounted: mountedPresentationID, expected: expected, at: uptime)
+            return
+        }
+        let target = recentRequests[index].tab
+        recentRequests[index].reads.record(value, target: target, at: uptime)
+    }
+    private static func topologyIdentity(_ object: AnyObject?) -> String? {
+        object.map { String(UInt(bitPattern: ObjectIdentifier($0)), radix: 16) }
+    }
+    private static func topologyObject(_ object: AnyObject?) -> Any {
+        guard let object else { return NSNull() }
+        let name = object_getClassName(object)
+        var prefix: [UInt8] = []; prefix.reserveCapacity(24)
+        var sanitized = false
+        for offset in 0..<24 {
+            let byte = UInt8(bitPattern: name[offset])
+            if byte == 0 { break }
+            if (32...126).contains(byte), byte != 0x22, byte != 0x5c { prefix.append(byte) }
+            else { prefix.append(0x3f); sanitized = true }
+        }
+        let classID = object_getClass(object).map {
+            String(UInt(bitPattern: ObjectIdentifier($0)), radix: 16)
+        }
+        let value: [Any] = [topologyIdentity(object) as Any? ?? NSNull(), classID as Any? ?? NSNull(),
+            String(decoding: prefix, as: UTF8.self), name[prefix.count] != 0, sanitized]
+        return value
+    }
+    private static func captureTransitionTopology(_ context: UIViewControllerTransitionCoordinatorContext,
+        observedController: UIViewController, tabs: UITabBarController,
+        role: String, request: Int, coordinator: String) {
+        guard let index = recentRequests.firstIndex(where: { $0.request == request }) else {
+            if topologyCaptureMisses < capacity { topologyCaptureMisses += 1 } else { recentCountersCapped = true }
+            return
+        }
+        let started = ProcessInfo.processInfo.systemUptime
+        let from = context.viewController(forKey: .from), to = context.viewController(forKey: .to)
+        let fromView = context.view(forKey: .from), toView = context.view(forKey: .to)
+        let container = context.containerView
+        let children = tabs.viewControllers ?? []
+        let fromIndex = from.flatMap { value in children.firstIndex(where: { $0 === value }) }
+        let toIndex = to.flatMap { value in children.firstIndex(where: { $0 === value }) }
+        var parents: [Any] = [], parent = observedController.parent
+        while let value = parent, parents.count < 4 {
+            parents.append(topologyObject(value)); parent = value.parent
+        }
+        var row: [String: Any] = ["coordinator": coordinator, "role": role,
+            "captureStartedUptime": started, "presentationStyle": context.presentationStyle.rawValue,
+            "fromController": topologyObject(from), "toController": topologyObject(to),
+            "fromView": topologyObject(fromView), "toView": topologyObject(toView),
+            "containerView": topologyObject(container), "queriedController": topologyObject(observedController),
+            "fromParentID": topologyIdentity(from?.parent) as Any? ?? NSNull(),
+            "toParentID": topologyIdentity(to?.parent) as Any? ?? NSNull(),
+            "fromTabIndex": fromIndex as Any? ?? NSNull(), "toTabIndex": toIndex as Any? ?? NSNull(),
+            "tabControllerID": topologyIdentity(tabs) as Any? ?? NSNull(),
+            "selectedControllerID": topologyIdentity(tabs.selectedViewController) as Any? ?? NSNull(),
+            "queriedParents": parents, "parentsTruncated": parent != nil]
+        row["captureReturnedUptime"] = ProcessInfo.processInfo.systemUptime
+        // The existing per-request registration cap admits at most two rows.
+        recentRequests[index].transitions.append(row)
+    }
+
     private static func noteRepeatedEvent(_ kind: String) {
         let count = repeatedEvents[kind, default: 0]
         if count < capacity { repeatedEvents[kind] = count + 1 }
@@ -354,6 +538,7 @@ enum Task146T19TabObservation {
         }
         guard marks.count < capacity else { dropped += 1; return nil }
         requestOrdinal += 1; requestedTab = to; requestedPresentation = presentationID
+        beginRecentRequest(from: from, to: to, presentationID: presentationID)
         append("binding-entry", tab: to, presentationID: presentationID,
             extra: ["fromTab": from, "request": requestOrdinal])
         snapshot("native-state-at-binding-entry", tab: to, request: requestOrdinal, presentationID: presentationID)
@@ -419,9 +604,9 @@ enum Task146T19TabObservation {
     }
     // Completion-only registration observes the actual UIKit transition. No
     // alongside animation, timer, polling, view loading or layout is requested.
-    private static func observeTransitions(_ transitions: [(String, UIViewControllerTransitionCoordinator)],
+    private static func observeTransitions(_ transitions: [(String, UIViewControllerTransitionCoordinator, UIViewController, UITabBarController)],
         probe: UIView, tab: Int, request: Int, presentationID: String) {
-        for (role, coordinator) in transitions {
+        for (role, coordinator, observedController, tabs) in transitions {
             let identity = String(describing: ObjectIdentifier(coordinator as AnyObject))
             let key = "\(request):\(identity)"
             guard !transitionRegistrations.contains(key) else { continue }
@@ -430,6 +615,8 @@ enum Task146T19TabObservation {
             transitionRegistrations.insert(key); transitionCounts[request, default: 0] += 1
             let started = ProcessInfo.processInfo.systemUptime
             let original = transitionDetails(coordinator)
+            captureTransitionTopology(coordinator, observedController: observedController, tabs: tabs,
+                role: role, request: request, coordinator: identity)
             let accepted = coordinator.animate(alongsideTransition: nil) { [weak probe] context in
                 let callbackEntry = ProcessInfo.processInfo.systemUptime
                 guard !completedTransitions.contains(key) else { noteRepeatedEvent("transition-completion"); return }
@@ -495,7 +682,7 @@ enum Task146T19TabObservation {
     private struct NativeInspection {
         let values: [String: Any]
         let settledSelection: Bool
-        var transitions: [(String, UIViewControllerTransitionCoordinator)] = []
+        var transitions: [(String, UIViewControllerTransitionCoordinator, UIViewController, UITabBarController)] = []
     }
     // Explain the existing model-geometry predicate only at explicit snapshots
     // and completion/expiry, never at every display-link poll. No scanout claim.
@@ -600,23 +787,23 @@ enum Task146T19TabObservation {
             "selectedContentVisible": contentVisible, "tabControllerTransitionActive": tabsTransition,
             "selectedControllerTransitionActive": selectedTransition, "presenting": presenting,
             "dismissing": dismissing, "settledSelection": settled]
-        var transitions: [(String, UIViewControllerTransitionCoordinator)] = []
+        var transitions: [(String, UIViewControllerTransitionCoordinator, UIViewController, UITabBarController)] = []
         if includeDetails {
             values["selectedContentVisibility"] = visibilityDetails(selected?.viewIfLoaded, in: window, role: "selected-content")
             values["tabBarVisibility"] = visibilityDetails(tabs.tabBar, in: window, role: "tab-bar")
             if let tabsCoordinator {
                 values["tabTransition"] = transitionDetails(tabsCoordinator)
-                transitions.append(("tabController", tabsCoordinator))
+                transitions.append(("tabController", tabsCoordinator, tabs, tabs))
             }
-            if let selectedCoordinator {
+            if let selectedCoordinator, let selected {
                 values["selectedTransition"] = transitionDetails(selectedCoordinator)
-                transitions.append(("selectedController", selectedCoordinator))
+                transitions.append(("selectedController", selectedCoordinator, selected, tabs))
             }
         }
         return NativeInspection(values: values, settledSelection: settled, transitions: transitions)
     }
     static func readback() -> String {
-        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v3", "pid": pid,
+        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v4", "pid": pid,
             "namespace": namespace, "clock": "same-Simulator-boot-systemUptime",
             "capacity": capacity, "dropped": dropped, "requestOrdinal": requestOrdinal,
             "noChangeAssignments": noChangeAssignments, "noChangeAssignmentsCapped": noChangeAssignmentsCapped,
@@ -625,6 +812,14 @@ enum Task146T19TabObservation {
             "transitionRegistrationsDropped": transitionRegistrationsDropped,
             "repeatedEvents": repeatedEvents, "repeatedEventCountsCapped": repeatedEventCountsCapped,
             "lastPublicationMismatch": lastPublicationMismatch,
+            "recentObservation": ["policy": "current-and-previous-request-only",
+                "maximumRequests": 2, "maximumCoordinatorsPerRequest": 2, "maximumQueriedParents": 4,
+                "classPrefixBytes": 24, "identityFormat": "process-local-hex-not-a-lifetime-token",
+                "objectFields": ["id", "classID", "classPrefix", "classTruncated", "classSanitized"],
+                "bindingContext": "controller-and-mounted-presentation-match; not-exclusive-view-owner",
+                "evictedRequests": evictedRequests, "evictedTopologyRecords": evictedTopologyRecords,
+                "topologyCaptureMisses": topologyCaptureMisses, "countersCapped": recentCountersCapped,
+                "requests": recentRequests.map { $0.json }],
             "acceptance": "DIAGNOSTIC_ONLY_ORIGINAL_XCTEST_5S_GATE_UNCHANGED"]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
             return "SERIALIZATION_FAILED_NOT_OBSERVED"

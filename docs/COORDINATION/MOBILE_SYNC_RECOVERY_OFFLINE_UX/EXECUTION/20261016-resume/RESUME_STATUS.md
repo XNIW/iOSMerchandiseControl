@@ -1,5 +1,15 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — discriminante T19 sul coordinatore e sul binding — 2026-11-14, America/Santiago
+
+Applicata soltanto la proposta N4 V4 in Task145PerformanceObservation e ContentView, sul ritiro96b55 (AppTree identico ded). Misura from/to/view/container e parent del coordinatore già registrato, e il valore restituito dal getter reale del binding. Nessun secondo getter, setter nuovo, tap, timer, callback o query AX; nuovo contesto letto soltanto quando T19 è attivo. Il test completo resta byte-identico bf4c84ea: T0,5 s,30cicli, oracle e query fresca finali invariati.
+
+Ritenzione diagnostica limitata alla richiesta corrente e precedente:2request×2coordinator/PID,4parent, classi ASCII24 byte, troncamenti/eviction/mismatch espliciti. Il ledger512 resta invariato; contesto controller/mounted compatibile non prova owner esclusivo della view. Sizing conservativo2998072 B sotto decoder3MB, modello non garanzia universale; nessun aumento dei budget. V1/V2/V3 respinte prima di qualsiasi esecuzione per carrier/provenienza/letture fuori guard, conservate come proposte storiche. Telemetria aggiuntiva del costo readback esclusa per margine e perturbazione, non attestata come misurata.
+
+**✅ STATIC ESEGUITO PASS:** review indipendente V4 zero finding aperti, hash/apply-check/diff-check e parse DEBUG/Release. Typecheck isolato API e intero enum PASS con SDK27.2/Swift6.4.2 locale, senza App build o esecuzione; non è qualifica Xcode26.6. **❌ BUILD/SIM ospitati NON ESEGUITI ancora.** Ammessa UNA focused B2+T19 sul medesimo profilo ottimizzato: il workflow esistente renderebbe T19-only standard Debug, quindi conserva la coppia. Domanda: quale transizione origina il ritorno Options→Inventory→Options e quale valore legge il binding, senza attribuire al solo driver il precedente FAIL. B2 resta regressione della composizione dopo ritiro del probe, tutti i risultati conservati; samplerfalse/reuseempty, nessun nuovo runner o dispositivo.
+
+**Handoff in corso:** eseguire il controllo, interpretare identità/clock/limiti e correggere solo una causa dimostrata prima della matrice completa. PR29/PR30 e main restano invariati; head Android0c0 e Admin09d riconfermati14:19 senza nuovo delta/review. Main locali primary non dichiarate convergenti: iOS3a24 avanti2, Android120a indietro17, Admind021 indietro175, tutte checked-out con WIP e sovrapposizioni; origin/main fresche e indici preservati, nessun reset/rename o aggiornamento forzato. T17 USB già indisponibile,16fisici differiti e cleanupUI separati. Receipt20261114-t19-transition-binding-admission.json; esiti c964 e postflight nel riepilogo sottostante.
+
 ### Execution — c964: esiti misurati e ritiro dei due interventi senza beneficio — 2026-11-14, America/Santiago
 
 **ACTIVE / EXECUTION.** Run43600054525 attempt1, c96449da/AppTreee76b8e4d, Xcode26.6/17F113 ARM64 optimized Debug con assert reali: BUILD PASS, discovery2101, **B2 e T19 FAIL**. Nessuna selezione del risultato migliore, nessun nuovo merge o PASS finale.

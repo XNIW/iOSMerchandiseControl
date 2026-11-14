@@ -176,7 +176,17 @@ struct ContentView: View {
         }
     }
     private var selectedTabBinding: Binding<Int> {
-        Binding(get: { selectedTab }, set: { selectedTab = $0 })
+        Binding(get: {
+            let value = selectedTab
+            #if DEBUG
+            if Task146T19TabObservation.enabled {
+                Task146T19TabObservation.bindingValueRead(value,
+                    presentationID: syncStoreGenerationController.presentationID,
+                    mountedPresentationID: mountedPresentationID)
+            }
+            #endif
+            return value
+        }, set: { selectedTab = $0 })
     }
     @State private var mountedPresentationID: String?
     @State private var isCorruptJournalReviewPresented = false
