@@ -1,0 +1,25 @@
+{
+  "atUTC": "2026-11-14T14:15:46.626327+00:00",
+  "testedHead": "c96449dacd90d3930cc396e11d883466a5c4ca8c",
+  "testedAppTree": "e76b8e4d65a1f3405bebc10875ba5d52793a8831",
+  "run": 43600054525,
+  "attempt": 1,
+  "status": "B2_T19_FAIL_NO_FINAL_PASS",
+  "B2Seconds": 6.781903458333318,
+  "T19Seconds": 7.29723725,
+  "thresholdSeconds": 5,
+  "retirement": "Three source files restored byte-exact ded; no functional fix or transferred PASS",
+  "postRetirementSDKAndRuntime": "NOT_RUN",
+  "T18": "Original808 PASS1/1 in own scope",
+  "T17": "Two NOT_RUN/BLOCKED_USB no repeated request",
+  "merged": [],
+  "primaryIndexSHA256": "5202e036df5964920978cfe4f02125bd124743cc0f64b8a7775ca8778d7c2753",
+  "receipts": {
+    "diag-b2-fence-t19-prefix-c964.ROOT/SUMMARY.ROOT.json": "01429961734f11046c69941bfd363c4e1c96700697fa704c5b9da123af5a245b",
+    "diag-b2-fence-t19-prefix-c964.ROOT/B2-INTERPRETATION.ROOT.json": "6192d881c8bb97b177a27288578489bedf7379be52359e3cdd9edfdc41319255",
+    "diag-b2-fence-t19-prefix-c964.ROOT/T19-REQUEST7-EVENTS.ROOT.json": "edc078656c14b96ec2c4c43ad3ac3b4634f258eafb65962f98caf3389ff05127",
+    "T19-C964-INDEPENDENT-INTERPRETATION.ROOT.json": "0bf951ee13682c768de09d37405d21ef13e558600c004ac5bef3d05d83284323",
+    "B2-CAPTURE-AFTER-RETIRE-c964-INDEPENDENT-REVIEW.ROOT.json": "e99b5a111e82ca8896a4e7dad057c6f894926de94934fd1d26c20798df3855a7",
+    "T19-PRE-TAP-RETIREMENT-c964-INDEPENDENT-REVIEW.ROOT.json": "8cdfd84087677a463560e38dbc61ebbf6f95a6a045e92f01240ce0d919c15b76"
+  }
+}

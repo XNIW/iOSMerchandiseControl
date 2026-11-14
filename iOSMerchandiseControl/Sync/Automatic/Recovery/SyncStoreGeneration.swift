@@ -605,37 +605,10 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
     }
 
     func captureActiveMutationFence(
-        for active: SyncStoreActiveGeneration,
-        observingCaptureCost: ((String, UInt64, UInt64) -> Void)? = nil
+        for active: SyncStoreActiveGeneration
     ) throws -> SyncStoreActiveMutationFence {
-        #if DEBUG
-        // The callback is synchronous, never retained, and supplied only by the
-        // B2 capture-after caller. Default callers do not read the environment.
-        let observer = observingCaptureCost != nil
-            && ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache"
-            ? observingCaptureCost : nil
-        if let observer {
-            let entered = DispatchTime.now().uptimeNanoseconds
-            observer("fence-entry", entered, entered)
-        }
-        // The entry CPU capture finishes before this actual lock request.
-        let lockRequested = observer == nil ? 0 : DispatchTime.now().uptimeNanoseconds
-        #endif
         lock.lock()
-        #if DEBUG
-        let lockAcquired = observer == nil ? 0 : DispatchTime.now().uptimeNanoseconds
-        observer?("fence-lock", lockRequested, lockAcquired)
-        #endif
-        defer {
-            #if DEBUG
-            let workEnded = observer == nil ? 0 : DispatchTime.now().uptimeNanoseconds
-            #endif
-            lock.unlock()
-            #if DEBUG
-            let unlocked = observer == nil ? 0 : DispatchTime.now().uptimeNanoseconds
-            observer?("fence-return", workEnded, unlocked)
-            #endif
-        }
+        defer { lock.unlock() }
         let currentManifest = try decodeAndValidateManifestIfPresent()
         guard currentManifest == active.manifest else {
             throw ShopSyncRecoveryContractError.checkpointChanged
@@ -671,8 +644,7 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
     /// Capture AFTER SwiftData has opened the store: WAL/SHM changes, migration,
     /// metadata changes and every unknown writer conservatively cause a miss.
     func capturePhysicalBodyProof(
-        for active: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence,
-        observingCaptureCost: ((String, UInt64, UInt64) -> Void)? = nil
+        for active: SyncStoreActiveGeneration, fence: SyncStoreActiveMutationFence
     ) throws -> LocalCatalogPhysicalProofStore.Snapshot {
 // TASK145_CAPTURE_FRONTIER_BEGIN capture-start
 #if DEBUG
@@ -690,22 +662,6 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         }
 #endif
 // TASK145_CAPTURE_FRONTIER_END capture-start
-        #if DEBUG
-        let observer = observingCaptureCost != nil
-            && ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache"
-            ? observingCaptureCost : nil
-        if let observer {
-            let entered = DispatchTime.now().uptimeNanoseconds
-            observer("physical-after-entry", entered, entered)
-        }
-        defer {
-            if let observer {
-                let finished = DispatchTime.now().uptimeNanoseconds
-                observer(captureCompleted ? "physical-after-return" : "physical-after-throw",
-                         finished, finished)
-            }
-        }
-        #endif
         guard let manifest = active.manifest else {
             throw LocalCatalogPhysicalProofStore.Failure.unavailable
         }
@@ -714,8 +670,7 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         captureFrontier = .initialFence
 #endif
 // TASK145_CAPTURE_FRONTIER_END initial-fence
-        guard try captureActiveMutationFence(for: active,
-                observingCaptureCost: observingCaptureCost) == fence else {
+        guard try captureActiveMutationFence(for: active) == fence else {
             throw LocalCatalogPhysicalProofStore.Failure.unavailable
         }
 // TASK145_CAPTURE_FRONTIER_BEGIN membership
@@ -782,8 +737,7 @@ nonisolated final class SyncStoreGenerationRepository: @unchecked Sendable {
         captureFrontier = .finalFence
 #endif
 // TASK145_CAPTURE_FRONTIER_END final-fence
-        guard try captureActiveMutationFence(for: active,
-                observingCaptureCost: observingCaptureCost) == fence else {
+        guard try captureActiveMutationFence(for: active) == fence else {
             throw LocalCatalogPhysicalProofStore.Failure.unavailable
         }
 // TASK145_CAPTURE_FRONTIER_BEGIN context-after
@@ -2085,40 +2039,9 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
 #if DEBUG
                     let workerCostStartNS = DispatchTime.now().uptimeNanoseconds
                     var workerCostReturnedNormally = false
-                    let observesCaptureAfter = ProcessInfo.processInfo.environment["TASK146_B2_DOMAIN_UI"] == "cache"
-                    var captureAfterRows: [[String: Any]] = []
-                    var captureAfterDropped = 0
-                    // No await occurs inside these observed calls. All rows are
-                    // local to this worker, bounded to three fences plus physical.
-                    let captureAfterObserver: ((String, UInt64, UInt64) -> Void)? =
-                        observesCaptureAfter ? { event, start, end in
-                            guard captureAfterRows.count < 16 else {
-                                captureAfterDropped += 1; return
-                            }
-                            let captureStart = DispatchTime.now().uptimeNanoseconds
-                            let cpu = Task145PerformanceResourceSnapshot.captureCurrentThreadCPU(prefix: "")
-                            let captureEnd = DispatchTime.now().uptimeNanoseconds
-                            captureAfterRows.append(["event": event, "startNS": start, "endNS": end,
-                                "cpu": cpu, "captureStartNS": captureStart, "captureEndNS": captureEnd])
-                        } : nil
                     defer {
                         let elapsed = DispatchTime.now().uptimeNanoseconds &- workerCostStartNS
                         Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.worker start_ns.\(workerCostStartNS, privacy: .public) elapsed_ns.\(elapsed, privacy: .public) attempt.\(qualificationCostAttempt, privacy: .public) returned.\(workerCostReturnedNormally, privacy: .public) cancelled.\(Task.isCancelled, privacy: .public) last_stage.\(stage, privacy: .public)")
-                        if observesCaptureAfter {
-                            // Terminal diagnostic export is after the historical
-                            // worker elapsed stamp. Its cost remains in B2's T0.
-                            let exportStart = DispatchTime.now().uptimeNanoseconds
-                            // Each bounded row stays below the existing log carrier's
-                            // dynamic-content budget; no aggregate multi-KB string.
-                            for (index, row) in captureAfterRows.enumerated() {
-                                let bytes = try? JSONSerialization.data(withJSONObject: row, options: [.sortedKeys])
-                                let payload = bytes.map { String(decoding: $0, as: UTF8.self) }
-                                    ?? "SERIALIZATION_FAILED_NOT_OBSERVED"
-                                Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.capture-after-row start_ns.\(workerCostStartNS, privacy: .public) attempt.\(qualificationCostAttempt, privacy: .public) index.\(index, privacy: .public) count.\(captureAfterRows.count, privacy: .public) payload.\(payload, privacy: .public)")
-                            }
-                            let exportEnd = DispatchTime.now().uptimeNanoseconds
-                            Logger(subsystem: "com.niwcyber.iOSMerchandiseControl", category: "LocalBodyQualification").notice("populated-qualification-cost kind.capture-after-end start_ns.\(workerCostStartNS, privacy: .public) attempt.\(qualificationCostAttempt, privacy: .public) count.\(captureAfterRows.count, privacy: .public) dropped.\(captureAfterDropped, privacy: .public) export_start_ns.\(exportStart, privacy: .public) export_end_ns.\(exportEnd, privacy: .public)")
-                        }
                     }
 #endif
 // TASK145_COST39_END worker-start
@@ -2186,18 +2109,11 @@ final class SyncStoreGenerationController: ObservableObject, @unchecked Sendable
                             guard rejected.isEmpty else { throw SyncStoreGenerationError.activationReadBackFailed }
                         }
                         stage = "capture-after"
-                        #if DEBUG
-                        let observer = captureAfterObserver
-                        #else
-                        let observer: ((String, UInt64, UInt64) -> Void)? = nil
-                        #endif
-                        let after = try repository.captureActiveMutationFence(for: captured,
-                            observingCaptureCost: observer)
+                        let after = try repository.captureActiveMutationFence(for: captured)
                         guard before == after else { throw ShopSyncRecoveryContractError.checkpointChanged }
                         var physicalAfter: LocalCatalogPhysicalProofStore.Snapshot?
                         if physicalBefore != nil {
-                            physicalAfter = try? repository.capturePhysicalBodyProof(for: captured, fence: after,
-                                observingCaptureCost: observer)
+                            physicalAfter = try? repository.capturePhysicalBodyProof(for: captured, fence: after)
                         }
                         if reused, physicalBefore != physicalAfter {
                             throw ShopSyncRecoveryContractError.checkpointChanged
