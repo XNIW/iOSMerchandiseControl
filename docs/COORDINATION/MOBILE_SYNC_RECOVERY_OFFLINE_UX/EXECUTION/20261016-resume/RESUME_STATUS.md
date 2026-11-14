@@ -1,5 +1,19 @@
 # TASK-146 — Registro corrente pubblicato
 
+### Execution — esiti del controllo UIKit e prossimo discriminante causale — 2026-11-14, America/Santiago
+
+Run43595539160, sorgente ded5bc7a/AppTree9b20a3ce, Xcode26.6/17F113 ARM64/optimized Debug con assert reali: BUILD PASS, discovery2101 e due selettori esatti; **2FAIL, nessun PASS finale**. Il predecessore b406/43594772266 resta BUILD_FAIL con B2/T19 NOT_RUN; quattro nomi API corretti nel solo formatter CGRect, review distinta0finding.
+
+**B2, ✅ BUILD/SIM ESEGUITO FAIL7,543052417 s/5 s.** HIT/0scan, autorità e riga reale conservati. Pre-marker App3,314126 s comprende inizializzazioni prima del corpo init, non tutto host; gap main CPU92,40%/90,52%. Worker1,402224 s contro0,101649 d4: prossimo controllo preciso separa lock/fence e physicalAfter nel capture-after esistente. Il worker termina543 ms prima del readback main: costo sovrapposto, nessuna sottrazione o attribuzione esclusiva. Nessun fix B2 rivendicato; tutti i risultati precedenti restano nel dossier.
+
+**T19, ✅ BUILD/SIM ESEGUITO FAIL5,414324375 s/5 s, ciclo1 Options.** Nella stessa run/PID33651/request3/presentation, selezione e geometria native settled a2,725366 s e successiva display opportunity3,526257 s provano selezione tempestiva osservata tardi; non soltanto rawselected/callback. Il gate originale resta FAIL, nessun clock sostituito e nessun PASS retroattivo su459c/d4. Una query remota selected dura2,564552 s: preparazione attributi0,768 s, dispatch/preparazione main0,534 s, capture0,536 s, conversione/filter/reply0,704 s. Nessun Value richiesto in quel gate; getter del ledger osservato prima di T0. MatchAll effettivo circa38 ms: firstMatch da solo non è un fix causale dimostrato. Review indipendente conferma la distinzione; ulteriore lavoro limitato al costo osservativo dimostrato, senza ridurre5 s o assert. Un producer no-op PASS,29NOT_RUN,0cicli UI completi.
+
+T18 originale808 PASS1/1 conservato; due T17 NOT_RUN/BLOCKED_USB e16fisici differiti invariati. PR29head459c/PR30head3f8 HOLD/main iOS94fb invariati; nessun merge/mainCI nuovo. Android0c0 e Admin09d/CI/ricevuta TEST ASUS mantengono le qualifiche già registrate. Matrice finale/review e integrazione dei gruppi pertinenti ancora NON_ESEGUITE perché B2/T19 critici restano aperti.
+
+Postflight ospitato PASS100340715520 B, stop Simulator riuscito; monitor/readers conclusi. Raccolta1866716 B/4MB e16458 B postflight separato. Prodotto esatto ded conservato sotto Registry0259d084: ZIP56390229 B SHA d43beeaf10d12f4e469c0b33f459685812eeff890d1e9584ba820ea98a319ae6, manifest/provenienza/toolchain/due tar verificati, nessuna estrazione/installazione. Consumer concluso; keeper7241 distinto per le dipendenze residue. Evidenze correnti4,713MB logici/5,210MB allocati KEEP per causa aperta, nessun duplicato superfluo qualificato; liberi175886360576 B, nessuna attribuzione APFS esclusiva. Nuova ricerca mirata Plugin Management non offre un canale Computer Use pertinente o riparabile: nessuna configurazione/permesso modificato, due History vuote KEEP.
+
+**Handoff in corso:** controllare il preciso costo B2 lock/fence/physicalAfter e correggere il driver T19 soltanto su causa verificata, conservando il budget complessivo originale. Nessun nuovo GO generico o richiesta USB ripetuta; attività indipendenti continuano. Receipt portabile20261114-transition-results.json.
+
 ### Execution — correzione API della diagnostica T19 — 2026-11-14, America/Santiago
 
 La run43594772266 su b406 termina BUILD_FAIL prima di XCTest: quattro chiamate NSStringFromCGRect non disponibili in Swift. B2/T19 NOT_RUN, nessun tempo nativo o pacchetto esportato. Receipt e primo errore conservati; stop Simulator e postflight ospitati PASS, tutti i consumer conclusi. Raccolta493352 B sotto4MB, postflight16459 B separato.

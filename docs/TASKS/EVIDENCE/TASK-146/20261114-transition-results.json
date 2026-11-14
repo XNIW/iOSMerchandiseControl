@@ -1,0 +1,251 @@
+{
+  "atUTC": "2026-11-14T13:13:05.861981+00:00",
+  "sourceHead": "ded5bc7a6cfa748e84c708a6ba649841c3206348",
+  "appTree": "9b20a3ce2df0522d674651bf466f749bcf460c40",
+  "run": 43595539160,
+  "status": "TWO_ORIGINAL_FAILS_NATIVE_T19_TIMELY_OBSERVATION_LATE",
+  "summary": {
+    "atUTC": "2026-11-14T13:09:09.153153+00:00",
+    "head": "ded5bc7a6cfa748e84c708a6ba649841c3206348",
+    "appTree": "9b20a3ce2df0522d674651bf466f749bcf460c40",
+    "tag": "codex/task146-t19-transition-api-20261114",
+    "run": 43595539160,
+    "attempt": 1,
+    "job": 132449114188,
+    "url": "https://github.com/XNIW/iOSMerchandiseControl/actions/runs/43595539160",
+    "status": "FOCUSED_FAIL_2_OF_2_ORIGINAL_GATES_RETAINED",
+    "checks": {
+      "head": true,
+      "run": true,
+      "attempt": true,
+      "manifest": true,
+      "workflow": true,
+      "checkout": true,
+      "selection": true,
+      "discovery": true,
+      "counts": true,
+      "summary": true,
+      "summaryExport": true,
+      "testsExport": true,
+      "missing": true,
+      "focused": true,
+      "optimized": true,
+      "budget": true
+    },
+    "discovery": {
+      "count": 2101,
+      "missing": [],
+      "unexpected": []
+    },
+    "profile": "DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START",
+    "sampler": false,
+    "toolchain": {
+      "architecture": "arm64",
+      "cpu": "3",
+      "memoryBytes": "7516192768",
+      "model": "VirtualMac2,1",
+      "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.2\nBuildVersion:\t\t25G332",
+      "resourcePhases": [
+        {
+          "atUTC": "2026-11-14T12:36:01.453198+00:00",
+          "bootedCount": 0,
+          "device": "73903A6E-DECF-4552-ADBB-B4B1F348F51F",
+          "initialState": "Shutdown",
+          "phase": "before-sdk",
+          "state": "Shutdown",
+          "swap": "vm.swapusage: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+          "vm": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                    10536.\nPages active:                                 166441.\nPages inactive:                               152114.\nPages speculative:                             14371.\nPages throttled:                                   0.\nPages wired down:                              89355.\nPages purgeable:                                1188.\n\"Translation faults\":                        3160099.\nPages copy-on-write:                          234368.\nPages zero filled:                           1002826.\nPages reactivated:                            116286.\nPages purged:                                   5790.\nFile-backed pages:                            203730.\nAnonymous pages:                              129196.\nPages stored in compressor:                    82935.\nPages occupied by compressor:                  24925.\nDecompressions:                                36362.\nCompressions:                                 126907.\nPageins:                                      340885.\nPageouts:                                       2090.\nSwapins:                                           0.\nSwapouts:                                          0."
+        },
+        {
+          "atUTC": "2026-11-14T12:47:40.905354+00:00",
+          "bootedCount": 0,
+          "device": "73903A6E-DECF-4552-ADBB-B4B1F348F51F",
+          "initialState": "Shutdown",
+          "phase": "after-sdk",
+          "state": "Shutdown",
+          "swap": "vm.swapusage: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+          "vm": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                    88741.\nPages active:                                  78832.\nPages inactive:                               130274.\nPages speculative:                             18879.\nPages throttled:                                   0.\nPages wired down:                              90133.\nPages purgeable:                                 488.\n\"Translation faults\":                       17338967.\nPages copy-on-write:                         1928667.\nPages zero filled:                           4903171.\nPages reactivated:                            684819.\nPages purged:                                  13299.\nFile-backed pages:                            152615.\nAnonymous pages:                               75370.\nPages stored in compressor:                   150454.\nPages occupied by compressor:                  50612.\nDecompressions:                               386851.\nCompressions:                                 608824.\nPageins:                                      633882.\nPageouts:                                       4395.\nSwapins:                                           0.\nSwapouts:                                          0."
+        },
+        {
+          "atUTC": "2026-11-14T12:50:13.923531+00:00",
+          "bootedCount": null,
+          "bootstatusExitCode": 0,
+          "device": "73903A6E-DECF-4552-ADBB-B4B1F348F51F",
+          "initialState": "UNKNOWN_RESOURCE_PROBE_TIMEOUT",
+          "phase": "after-boot",
+          "state": "UNKNOWN_RESOURCE_PROBE_TIMEOUT",
+          "stateProbeError": "simctl list exceeded diagnostic 20s; bootstatus succeeded",
+          "swap": "vm.swapusage: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+          "vm": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                     3650.\nPages active:                                 102459.\nPages inactive:                               100555.\nPages speculative:                              1382.\nPages throttled:                                   0.\nPages wired down:                             123818.\nPages purgeable:                                3401.\n\"Translation faults\":                       21088593.\nPages copy-on-write:                         2291058.\nPages zero filled:                           5695157.\nPages reactivated:                            957699.\nPages purged:                                  17670.\nFile-backed pages:                             87121.\nAnonymous pages:                              117275.\nPages stored in compressor:                   338725.\nPages occupied by compressor:                 125801.\nDecompressions:                               462674.\nCompressions:                                 881761.\nPageins:                                      767916.\nPageouts:                                       8395.\nSwapins:                                           0.\nSwapouts:                                          0."
+        }
+      ],
+      "xcode": "Xcode 26.6\nBuild version 17F113"
+    },
+    "tests": {
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld": "Failed",
+      "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation": "Failed"
+    },
+    "B2": {
+      "verdict": "FAIL",
+      "seconds": 7.543052416666569,
+      "budgetSeconds": 5,
+      "receipt": "B2-INTERPRETATION.ROOT.json",
+      "fixClaim": false,
+      "previousPASSNotTransferred": true
+    },
+    "T19": {
+      "verdict": "FAIL",
+      "seconds": 5.414324374999978,
+      "budgetSeconds": 5,
+      "cycle": 1,
+      "tab": "Options",
+      "appPID": 33651,
+      "driverPID": 27921,
+      "namespace": "955f98f7-4e96-434d-8cc4-5ccf41fddb05",
+      "presentation": "0156255c-7f65-43a5-aa1d-b281a818e4cc",
+      "request": 3,
+      "originalT0": 1454.4895861250002,
+      "deadline": 1459.4895861250002,
+      "selectionEvaluation": 1459.9039105000002,
+      "selectedResult": true,
+      "nativeActualSelectionRowOffset": 0.7997448333333068,
+      "nativeContentVisibleRowOffset": 1.1809769999999844,
+      "nativeCompletedAndSettledGeometryRowOffset": 2.725365624999995,
+      "nativeDisplayOpportunityRowOffset": 3.5262567499999022,
+      "classification": "TIMELY_NATIVE_SELECTED_AND_SETTLED_MODEL_GEOMETRY_WITH_LATE_XCTEST_QUERY",
+      "nativeCounts": {
+        "segments": 1,
+        "droppedSegments": 0,
+        "marks": 27,
+        "capacity": 512,
+        "requests": 3,
+        "transitionRegistrations": 3,
+        "transitionRegistrationsDropped": 0,
+        "dropped": 0,
+        "repeated": {},
+        "repeatedCountsCapped": false,
+        "lastPublicationMismatch": {}
+      },
+      "producerCyclesPASS": 1,
+      "producerRemainingNOT_RUN": 29,
+      "fullyQualifiedUICycles": 0,
+      "rootRecreation": "NOT_TRAVERSED",
+      "stateInvariant": {
+        "pidMatches": true,
+        "baselineEqualsCycle": true,
+        "noWorkStatus": "noWork",
+        "rpcCalls": [
+          "fetchSyncEventsAfter",
+          "fetchReconciliationRemoteCounts",
+          "fetchSyncEventsAfter"
+        ]
+      },
+      "querySeconds": 2.564551583333241,
+      "queryBreakdownReceipt": "focused.ROOT/observations.ROOT/T19-QUERY-BREAKDOWN.ROOT.json",
+      "limits": [
+        "Native witnesses retain actual request/current authority/geometry but do not replace original selected-and-deadline5s predicate. No scanout proof or retrospective PASS claimed.",
+        "MainCPU discrete observations include app/framework/AX/observer work and end before late postSelected query.",
+        "Ambient diagnostic value serialization is demonstrable before gate. PostSelected snapshot omits Value; hidden getter cost is not instrumented.",
+        "A specific safe driver/product fix is not established solely by timely witness; no source changes or new dispatch by reader."
+      ]
+    },
+    "ordinaryProduct": {
+      "owner": "ROOT",
+      "artifact": 14114941332,
+      "bytes": 56390229,
+      "sha256": "d43beeaf10d12f4e469c0b33f459685812eeff890d1e9584ba820ea98a319ae6",
+      "receipt": "../t19-transition-product-ded.ROOT/VERIFIED.ROOT.json",
+      "custody": "PASS_VERIFIED_BY_ROOT_AND_RECEIPT_READ",
+      "localInstall": false,
+      "expanded": false,
+      "readerDownloaded": false,
+      "scope": "Exact diagnostic optimized Debug compiled app/support, not ordinary authenticated Release acceptance"
+    },
+    "buildAndChecks": {
+      "Debug": "PASS",
+      "Release": "SKIPPED_FOCUSED_LANE",
+      "Analyze": "SKIPPED_FOCUSED_LANE",
+      "secretScan": "SKIPPED_FOCUSED_LANE",
+      "newWarnings": "NOT_QUALIFIED_DELTA"
+    },
+    "budgets": {
+      "focusedArtifact": 1866716,
+      "focusedCap": 4000000,
+      "postflightArtifact": 16458,
+      "postflightCap": 4000000,
+      "reset": false,
+      "fullNativeArchiveDownloaded": false,
+      "SDKProduct": "ROOT separate exact-size Registry custody, no charge or copy by metadata reader"
+    },
+    "postflight": {
+      "hosted": {
+        "atUTC": "2026-11-14T12:59:24.152472+00:00",
+        "exclusivePhysicalRecovered": "NOT_CLAIMED",
+        "head": "ded5bc7a6cfa748e84c708a6ba649841c3206348",
+        "phase": "after-all-native-checks",
+        "removedPaths": [],
+        "reserveBytes": 30300000000,
+        "status": "PASS",
+        "volumes": [
+          {
+            "beforeFreeBytes": 103620415488,
+            "freeBytes": 100340715520,
+            "path": "/Users/runner/work/iOSMerchandiseControl/iOSMerchandiseControl"
+          }
+        ]
+      },
+      "simulatorStop": "success",
+      "monitor": "TERMINAL",
+      "readers": "ALL_TERMINAL_NO_LOCAL_SDK_DEVICE_CONSUMER",
+      "localFreeBytes": 175886360576,
+      "ownedEvidenceLogicalBytes": 4712996,
+      "ownedEvidenceAllocatedBytes": 5210112,
+      "removedPaths": [],
+      "keptReason": "Latest relevant original gate FAIL, exactnative/readback/rawlogs/CI metadata required for causal review; no expandedProducts or full decodedlogs created",
+      "owner": "ROOT TASK146",
+      "releaseCondition": "Causal closure and qualified successor; reconcile diagnostic retirement and subsequent test needs before releasing",
+      "canonicalDevices": "No local device consumer or changes"
+    },
+    "receipts": [
+      {
+        "path": "focused.ROOT/VERIFIED.ROOT.json",
+        "sha256": "fab3200d1f75c913a3c102e6114307f3e4c2ef97d1fa277da71d656d4223ebcc"
+      },
+      {
+        "path": "focused.ROOT/observations.ROOT/T19-NATIVE-TIMELINE.ROOT.json",
+        "sha256": "ed923a0df6e3644795ad17ff1dc0574e2d1ab15d41dd7036496fb30e12fc53e9"
+      },
+      {
+        "path": "focused.ROOT/observations.ROOT/T19-QUERY-BREAKDOWN.ROOT.json",
+        "sha256": "6152255f0583ca8b734712012b11e7d5f726e163e4f1d187aa34d4daa60f5b11"
+      },
+      {
+        "path": "focused.ROOT/observations.ROOT/APP-SESSION-LOG-PROJECTION.ROOT.json",
+        "sha256": "723e7a081fc0e0a664c4cc64434472425b56ea440e8eed1d98dcc1df03c4cc61"
+      },
+      {
+        "path": "focused.ROOT/observations.ROOT/T19-STATE.DECODED.ROOT.json",
+        "sha256": "f50c172da61cef26f16f0856533ea49036c24419d5ffdd1bb1743a6928e63aa8"
+      },
+      {
+        "path": "B2-INTERPRETATION.ROOT.json",
+        "sha256": "366e00a94ad9377f09b7dd09ceb394c2fd08e113f8eb13d06676e3f2e364366e"
+      },
+      {
+        "path": "native-postflight.ROOT/task146-native-postflight.json",
+        "sha256": "9385655c9d79671a82d02eaefdc84d90770de5e0148b400bf94424d0f5c46b70"
+      }
+    ],
+    "nextDiscriminant": "Use the acquired remote-query phases and independent review to identify any minimal causal correction preserving original T0/5s/input/authority. No new generic observer, sampler, runner or retry is authorized by this summary.",
+    "sourceEditsByReader": false,
+    "dispatchesByReader": 0
+  },
+  "summarySHA256": "e923da42cbb55be374f5f915e1b568cc2b9f36fcd29b6b521f7b71488aef59a4",
+  "independentT19Review": "T19-N3-INDEPENDENT-INTERPRETATION.ROOT.json",
+  "next": [
+    "B2 capture-after lock/fence/physicalAfter precise distinction, no guard change",
+    "T19 original5s retained; exactobservationalcost review, no speculativefirstMatch ornativePASSreplacement"
+  ],
+  "mainIntegration": "NONE; PR29/PR30/main unchanged",
+  "T17": "BLOCKED_USB_USER_UNAVAILABLE_NO_REPEAT_REQUEST"
+}
