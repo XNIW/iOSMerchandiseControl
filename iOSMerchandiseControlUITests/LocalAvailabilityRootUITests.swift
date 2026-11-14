@@ -6147,16 +6147,6 @@ final class LocalAvailabilityRootUITests: XCTestCase {
                 // The fixture still requires one full second of recognized
                 // pressing. Keep margin for native delivery of this one gesture.
                 release.press(forDuration: 1.5)
-                defer {
-                    // Read bounded RAM only after the original action admission
-                    // and producer wait have ended; never add queries to them.
-                    if app.state == .runningForeground {
-                        let input = app.otherElements["task146.t18.input-observation"]
-                        let value = input.exists ? (input.value as? String ?? "VALUE_ABSENT_NOT_OBSERVED") : "ELEMENT_ABSENT_NOT_OBSERVED"
-                        let attachment = XCTAttachment(string: value)
-                        attachment.name = "T18 passive native input timestamps"; attachment.lifetime = .keepAlways; add(attachment)
-                    }
-                }
                 do {
                     try t18Await("task145.seq6.safety-terminal", timeout: 30)
                 } catch {

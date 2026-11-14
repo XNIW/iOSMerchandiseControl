@@ -1,0 +1,37 @@
+{
+  "atUTC": "2026-11-14T11:53:33.562845+00:00",
+  "parent": "d4f0ec17a81a786473f948090ffa23f5bc63ad81",
+  "patchSHA256": "efd44b2f66ff46b36f0058da3ffb959548a56edface69af59f2152773990fdd7",
+  "files": {
+    "iOSMerchandiseControl/Task144LocalAvailabilityRootFixture.swift": {
+      "beforeSHA256": "7ae90be68ba84e9b79733bf6be119c72330659255e80d11a10ccfdffff460252",
+      "afterSHA256": "dbc5be4915db2605e35bc0521deba87f2f153c1fb57d8c08ba2b67df49ee79e9",
+      "beforeBytes": 725892,
+      "afterBytes": 714880
+    },
+    "iOSMerchandiseControl/Task145PerformanceObservation.swift": {
+      "beforeSHA256": "f21202d4eca21669aeb9c40abe51e43370ab893c57fbcae1800dfdfa2f3eb1e4",
+      "afterSHA256": "0810b163f010260e7cbef4eba23dedcdde4e767e78979bbd9f7627c9e4421f0c",
+      "beforeBytes": 28530,
+      "afterBytes": 28088
+    },
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift": {
+      "beforeSHA256": "c5fd9f06601eb13941e8fc6aa3d33489cc0e7c308e6645784d631dabf262bfcb",
+      "afterSHA256": "bf4c84ea538618986fb9a13baa51d6406ea7d6683f73296f3e053b8a4fd80ef7",
+      "beforeBytes": 510376,
+      "afterBytes": 509666
+    }
+  },
+  "review": "T18-UNINSTRUMENTED-RETIREMENT-INDEPENDENT-REVIEW.ROOT.json",
+  "reason": "Pertinent regression after removing added recognizer/input observation; prior instrumentedPASS cannot qualify original gesture. No causalfixclaim or best-run selection.",
+  "selector": [
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testT18_zh_normal_dark_action"
+  ],
+  "profile": "DEBUG_STANDARD",
+  "hostedLane": "existing macos-26 Xcode26.6 iPhone16e26.2; independent hosted job, no local target",
+  "localSDK": "Swift parse only, no build",
+  "localDiskGuard": "no heavy local batch; remote workflow12.5GB forecast+30.3GB reserve before SDK",
+  "sourceChangedDuringOtherRun": false,
+  "d4Run": "43590947364 immutable commit remains unchanged",
+  "tag": "codex/task146-t18-uninstrumented-20261114"
+}

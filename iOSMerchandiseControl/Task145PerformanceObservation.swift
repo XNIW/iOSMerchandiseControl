@@ -244,7 +244,7 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
         private var frames: CADisplayLink?
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            guard Task145PerformanceConfiguration.measures || Task145T18ControlInputObservation.enabled else { return }
+            guard Task145PerformanceConfiguration.measures else { return }
             guard let window else {
                 frames?.invalidate(); frames = nil
                 if let touch { touch.view?.removeGestureRecognizer(touch) }; touch = nil
@@ -254,10 +254,8 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
             let observer = TouchObserver(); observer.cancelsTouchesInView = false
             observer.delaysTouchesBegan = false; observer.delaysTouchesEnded = false
             window.addGestureRecognizer(observer); touch = observer
-            if Task145PerformanceConfiguration.measures {
-                let link = CADisplayLink(target: self, selector: #selector(observeFrame))
-                frames = link; link.add(to: .main, forMode: .common)
-            }
+            let link = CADisplayLink(target: self, selector: #selector(observeFrame))
+            frames = link; link.add(to: .main, forMode: .common)
         }
         @objc private func observeFrame(_ link: CADisplayLink) {
             Task144RootObservation.performanceFrame(UInt64(link.timestamp * 1_000_000_000))
@@ -269,19 +267,12 @@ struct Task145PerformanceWindowObservation: UIViewRepresentable {
     }
     final class TouchObserver: UIGestureRecognizer {
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-began")
             if let touch = touches.first {
                 Task144RootObservation.performanceTouch(UInt64(touch.timestamp * 1_000_000_000))
             }
         }
-        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
-            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-ended")
-            state = .failed
-        }
-        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
-            Task145T18ControlInputObservation.recordTouches(touches, stage: "touch-cancelled")
-            state = .failed
-        }
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) { state = .failed }
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { state = .failed }
         override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool { false }
         override func canBePrevented(by preventingGestureRecognizer: UIGestureRecognizer) -> Bool { false }
     }
