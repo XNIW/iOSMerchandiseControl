@@ -157,8 +157,13 @@ struct ContentView: View {
         get { selectedTabOverride?.wrappedValue ?? fallbackSelectedTab }
         nonmutating set {
             #if DEBUG
-            Task146T19TabObservation.bindingRequested(from: selectedTab, to: newValue,
-                presentationID: syncStoreGenerationController.presentationID)
+            let observedPresentation = syncStoreGenerationController.presentationID
+            let observedRequest = Task146T19TabObservation.bindingRequested(from: selectedTab, to: newValue,
+                presentationID: observedPresentation)
+            defer {
+                Task146T19TabObservation.bindingAssignmentReturned(request: observedRequest,
+                    tab: newValue, presentationID: observedPresentation)
+            }
             #endif
             // Persist the actual choice before SwiftUI publishes it. A same-scope
             // authorization/readability update can restore presentation in the
@@ -750,6 +755,9 @@ struct ContentView: View {
                         }, onNativeRendered: { view in
                             Task146T19TabObservation.nativeCommitted(view, tab: tab,
                                 request: request, presentationID: presentation)
+                        }, onNativeObservationEnded: { _, reason in
+                            Task146T19TabObservation.nativeObservationEnded(reason,
+                                tab: tab, request: request, presentationID: presentation)
                         })
                     Task145PerformanceReadback(identifier: "task146.t19.tab-observation",
                         readValue: { Task146T19TabObservation.readback() })

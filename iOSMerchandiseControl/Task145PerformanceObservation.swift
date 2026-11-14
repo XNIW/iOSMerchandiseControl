@@ -145,6 +145,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
     var onRendered: (@MainActor () -> Void)?
     var validateNative: (@MainActor (UIView) -> Bool)? = nil
     var onNativeRendered: (@MainActor (UIView) -> Void)? = nil
+    var onNativeObservationEnded: (@MainActor (UIView, String) -> Void)? = nil
     func makeUIView(context: Context) -> Boundary {
         let view = Boundary(); view.isUserInteractionEnabled = false; return view
     }
@@ -152,6 +153,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
         view.event = event; view.facts = facts; view.qualifies = qualifies; view.validate = validate
         view.onRendered = onRendered
         view.validateNative = validateNative; view.onNativeRendered = onNativeRendered
+        view.onNativeObservationEnded = onNativeObservationEnded
         view.setNeedsLayout()
     }
     final class Boundary: UIView {
@@ -160,6 +162,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
         var onRendered: (@MainActor () -> Void)?
         var validateNative: (@MainActor (UIView) -> Bool)?
         var onNativeRendered: (@MainActor (UIView) -> Void)?
+        var onNativeObservationEnded: (@MainActor (UIView, String) -> Void)?
         private var link: CADisplayLink?
         private var token: String?
         private var visibilityDeadlineNS: UInt64?
@@ -210,6 +213,7 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
             guard qualifies, validate(), validateNative?(self) != false, visibleInHierarchy() else {
                 if DispatchTime.now().uptimeNanoseconds >= (visibilityDeadlineNS ?? 0) {
                     link?.invalidate(); link = nil
+                    onNativeObservationEnded?(self, "existing-one-second-visibility-window-expired")
                 }
                 return
             }
@@ -221,8 +225,10 @@ struct Task145PerformanceRenderBoundary: UIViewRepresentable {
         }
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            if window == nil { link?.invalidate(); link = nil }
-            else { setNeedsLayout() }
+            if window == nil {
+                if link != nil { onNativeObservationEnded?(self, "window-detached-before-observation") }
+                link?.invalidate(); link = nil
+            } else { setNeedsLayout() }
         }
         deinit { link?.invalidate(); if let activation { NotificationCenter.default.removeObserver(activation) } }
     }
@@ -327,25 +333,37 @@ enum Task146T19TabObservation {
     private static var committed: Set<Int> = []
     private static var noChangeAssignments = 0
     private static var noChangeAssignmentsCapped = false
+    private static weak var nativeProbe: UIView?
+    private static var nativeProbePresentation: String?
+    private static var lastProbeSnapshot: [String: Any] = [:]
 
-    static func bindingRequested(from: Int, to: Int, presentationID: String) {
-        guard enabled else { return }
+    static func bindingRequested(from: Int, to: Int, presentationID: String) -> Int? {
+        guard enabled else { return nil }
         // Same-value presentation restoration need not invalidate SwiftUI.
         // Keep its passive count separate; do not supersede a real request.
         guard from != to else {
             if noChangeAssignments < capacity { noChangeAssignments += 1 }
             else { noChangeAssignmentsCapped = true }
-            return
+            return nil
         }
-        guard marks.count < capacity else { dropped += 1; return }
+        guard marks.count < capacity else { dropped += 1; return nil }
         requestOrdinal += 1; requestedTab = to; requestedPresentation = presentationID
         append("binding-entry", tab: to, presentationID: presentationID,
             extra: ["fromTab": from, "request": requestOrdinal])
+        snapshot("native-state-at-binding-entry", tab: to, request: requestOrdinal, presentationID: presentationID)
+        return requestOrdinal
+    }
+    static func bindingAssignmentReturned(request: Int?, tab: Int, presentationID: String) {
+        guard enabled, let request else { return }
+        append("binding-assignment-returned", tab: tab, presentationID: presentationID,
+            extra: ["request": request, "requestIsCurrent": current(tab: tab, request: request, presentationID: presentationID)])
+        snapshot("native-state-at-binding-return", tab: tab, request: request, presentationID: presentationID)
     }
     static func publicationObserved(tab: Int, presentationID: String) {
         guard enabled else { return }
         append("binding-published", tab: tab, presentationID: presentationID,
             extra: ["request": requestOrdinal])
+        snapshot("native-state-at-publication", tab: tab, request: requestOrdinal, presentationID: presentationID)
     }
     private static func append(_ kind: String, tab: Int, presentationID: String, extra: [String: Any]) {
         guard marks.count < capacity else { dropped += 1; return }
@@ -359,23 +377,50 @@ enum Task146T19TabObservation {
         enabled && request > 0 && request == requestOrdinal
             && requestedTab == tab && requestedPresentation == presentationID
     }
+    private static func snapshot(_ kind: String, tab: Int, request: Int, presentationID: String) {
+        var value: [String: Any] = ["request": request]
+        guard current(tab: tab, request: request, presentationID: presentationID) else {
+            value["rejection"] = "binding-request-superseded-or-unavailable"
+            append(kind, tab: tab, presentationID: presentationID, extra: value); return
+        }
+        guard nativeProbePresentation == presentationID, let probe = nativeProbe else {
+            value["rejection"] = "current-window-probe-unavailable"
+            append(kind, tab: tab, presentationID: presentationID, extra: value); return
+        }
+        value["native"] = inspectNative(probe, tab: tab).values
+        append(kind, tab: tab, presentationID: presentationID, extra: value)
+    }
     static func nativeQualifies(_ view: UIView, tab: Int, request: Int, presentationID: String) -> Bool {
-        current(tab: tab, request: request, presentationID: presentationID)
-            && nativeSelection(view, tab: tab) != nil
+        guard enabled else { return false }
+        // Only a weak reference to an already attached observer; no lookup,
+        // new view, layout, navigation, input or state publication is requested.
+        if view.window != nil {
+            nativeProbe = view; nativeProbePresentation = presentationID
+        }
+        guard current(tab: tab, request: request, presentationID: presentationID) else { return false }
+        let native = inspectNative(view, tab: tab)
+        lastProbeSnapshot = ["request": request, "presentation": presentationID,
+            "uptime": ProcessInfo.processInfo.systemUptime, "native": native.values]
+        return native.settledSelection
     }
     static func nativeCommitted(_ view: UIView, tab: Int, request: Int, presentationID: String) {
         guard current(tab: tab, request: request, presentationID: presentationID),
-              !committed.contains(request), let native = nativeSelection(view, tab: tab) else { return }
+              !committed.contains(request) else { return }
+        let native = inspectNative(view, tab: tab)
+        guard native.settledSelection else { return }
         guard marks.count < capacity, committed.count < capacity else { dropped += 1; return }
         committed.insert(request)
         append("native-selected-visible-display-opportunity", tab: tab, presentationID: presentationID,
-            extra: ["request": request, "nativeSelectedIndex": native.selectedIndex,
-                "nativeSelectedItemIndex": native.itemIndex, "nativeController": native.controller])
+            extra: ["request": request, "native": native.values])
     }
-    private struct NativeSelection {
-        let selectedIndex: Int
-        let itemIndex: Int
-        let controller: String
+    static func nativeObservationEnded(_ reason: String, tab: Int, request: Int, presentationID: String) {
+        guard current(tab: tab, request: request, presentationID: presentationID) else { return }
+        append("native-render-observation-ended", tab: tab, presentationID: presentationID,
+            extra: ["request": request, "reason": reason, "lastProbe": lastProbeSnapshot])
+    }
+    private struct NativeInspection {
+        let values: [String: Any]
+        let settledSelection: Bool
     }
     private static func visible(_ view: UIView, in window: UIWindow) -> Bool {
         guard view.window === window, !view.bounds.isEmpty else { return false }
@@ -389,40 +434,66 @@ enum Task146T19TabObservation {
         }
         return true
     }
-    private static func nativeSelection(_ probe: UIView, tab: Int) -> NativeSelection? {
+    private static func inspectNative(_ probe: UIView, tab: Int) -> NativeInspection {
+        func rejected(_ reason: String) -> NativeInspection {
+            NativeInspection(values: ["rejection": reason, "stateReadUptime": ProcessInfo.processInfo.systemUptime],
+                settledSelection: false)
+        }
         guard let window = probe.window, window.isKeyWindow, !window.isHidden,
               window.windowScene?.activationState == .foregroundActive,
-              visible(probe, in: window), var root = window.rootViewController else { return nil }
-        // A sheet remains authoritative until UIKit removes it. Do not count
-        // the background tab bar through a modal presentation.
+              visible(probe, in: window), var root = window.rootViewController else {
+            return rejected("probe-or-foreground-window-not-visible")
+        }
+        // A sheet remains authoritative until UIKit removes it.
         while let presented = root.presentedViewController { root = presented }
-        var queue = [root], seen = Set<ObjectIdentifier>(), matches: [NativeSelection] = []
+        var queue = [root], seen = Set<ObjectIdentifier>(), candidates: [UITabBarController] = []
         while let controller = queue.popLast() {
             guard seen.insert(ObjectIdentifier(controller)).inserted else { continue }
-            guard seen.count <= 64 else { return nil }
+            guard seen.count <= 64 else { return rejected("controller-inventory-bound") }
             queue.append(contentsOf: controller.children)
-            guard let tabs = controller as? UITabBarController,
-                  !tabs.isBeingDismissed, !tabs.isBeingPresented,
-                  tabs.transitionCoordinator == nil,
-                  tabs.selectedIndex == tab,
-                  let selected = tabs.selectedViewController,
-                  !selected.isBeingDismissed, !selected.isBeingPresented,
-                  selected.transitionCoordinator == nil,
-                  let selectedView = selected.viewIfLoaded, visible(selectedView, in: window),
-                  visible(tabs.tabBar, in: window),
-                  let item = tabs.tabBar.selectedItem, let items = tabs.tabBar.items,
-                  let index = items.firstIndex(where: { $0 === item }), index == tab else { continue }
-            matches.append(NativeSelection(selectedIndex: tabs.selectedIndex, itemIndex: index,
-                controller: String(reflecting: type(of: tabs))))
+            if let tabs = controller as? UITabBarController, tabs.isViewLoaded,
+               tabs.viewIfLoaded?.window === window {
+                candidates.append(tabs)
+            }
         }
-        return matches.count == 1 ? matches[0] : nil
+        guard candidates.count == 1, let tabs = candidates.first else {
+            return rejected(candidates.isEmpty ? "native-tab-controller-unavailable" : "ambiguous-native-tab-controllers")
+        }
+        // Date the actual selectedIndex/selectedItem even while transition is
+        // active; that state is distinct from a later settled display mark.
+        let selectedIndex = tabs.selectedIndex
+        let itemIndex = tabs.tabBar.selectedItem.flatMap { selected in
+            tabs.tabBar.items?.firstIndex(where: { $0 === selected })
+        }
+        let stateReadUptime = ProcessInfo.processInfo.systemUptime
+        let selected = tabs.selectedViewController
+        let barVisible = visible(tabs.tabBar, in: window)
+        let contentVisible: Bool
+        if let selectedView = selected?.viewIfLoaded { contentVisible = visible(selectedView, in: window) }
+        else { contentVisible = false }
+        let tabsTransition = tabs.transitionCoordinator != nil
+        let selectedTransition = selected?.transitionCoordinator != nil
+        let presenting = tabs.isBeingPresented || selected?.isBeingPresented == true
+        let dismissing = tabs.isBeingDismissed || selected?.isBeingDismissed == true
+        let actualSelected = selectedIndex == tab && itemIndex == tab
+        let settled = actualSelected && barVisible && contentVisible
+            && !tabsTransition && !selectedTransition && !presenting && !dismissing
+        let values: [String: Any] = ["stateReadUptime": stateReadUptime,
+            "nativeController": String(reflecting: type(of: tabs)),
+            "selectedIndex": selectedIndex, "selectedItemIndex": itemIndex as Any? ?? NSNull(),
+            "selectedIndexAndItemMatchTarget": actualSelected, "tabBarVisible": barVisible,
+            "selectedContentVisible": contentVisible, "tabControllerTransitionActive": tabsTransition,
+            "selectedControllerTransitionActive": selectedTransition, "presenting": presenting,
+            "dismissing": dismissing, "settledSelection": settled]
+        return NativeInspection(values: values, settledSelection: settled)
     }
     static func readback() -> String {
-        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v1", "pid": pid,
+        let value: [String: Any] = ["protocol": "task146-t19-tab-observation-v2", "pid": pid,
             "namespace": namespace, "clock": "same-Simulator-boot-systemUptime",
             "capacity": capacity, "dropped": dropped, "requestOrdinal": requestOrdinal,
             "noChangeAssignments": noChangeAssignments, "noChangeAssignmentsCapped": noChangeAssignmentsCapped,
-            "marks": marks, "acceptance": "DIAGNOSTIC_ONLY_ORIGINAL_XCTEST_5S_GATE_UNCHANGED"]
+            "marks": marks, "lastProbe": lastProbeSnapshot,
+            "acceptance": "DIAGNOSTIC_ONLY_ORIGINAL_XCTEST_5S_GATE_UNCHANGED"]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else {
             return "SERIALIZATION_FAILED_NOT_OBSERVED"
         }

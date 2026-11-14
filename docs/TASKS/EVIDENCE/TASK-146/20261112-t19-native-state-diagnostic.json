@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-12T21:05:52.932602-03:00",
+  "status": "STATIC_REVIEWED_NATIVE_STATE_DIAGNOSTIC_PENDING",
+  "tag": "codex/task146-t19-native-state-20261112",
+  "parent": "5d1ae1c32b3b2a7df4efcb48c4047984e1f0d21f",
+  "diagnosticAppTree": "73205e348ea523394f3c1ab9f907da77adcdc5ea",
+  "files": [
+    "iOSMerchandiseControl/ContentView.swift",
+    "iOSMerchandiseControl/Task145PerformanceObservation.swift",
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests.swift"
+  ],
+  "reviewSHA256": "922c39f9c1e662053f318d18e24abd93605cbec26e0acb52816881759a15d0fb",
+  "question": "Was actual native selectedIndex/item and visible section timely before original5s, or setter/publication/native transition late? Record rejection reason instead of treating missing1srender as non-selection.",
+  "selectors": [
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testIndependentHistoryWorkbookAndCatalogReadWhileAnotherDomainIsHeld",
+    "iOSMerchandiseControlUITests/LocalAvailabilityRootUITests/testThirtyHealthyNoOpCyclesPreserveStoreAndTabsAcrossRootRecreation"
+  ],
+  "profile": "DEBUG_OPTIMIZED_ASSERTIONS_CACHED_START",
+  "noGateTapWaitChanges": true,
+  "exportOrdinaryApp": false,
+  "sampler": false,
+  "PR30": "HOLD_NOT_MERGED_REQUIRED_FULL_CI_FAIL",
+  "evidenceRoot": "/Users/minxiang/Documents/Codex/mobile-sync-execution-20261016-resume/task146-execution-20261104T215638Z/b1/t17-upgrade-execution.ROOT/device-reuse.ROOT/execution-addendum-20261112.ROOT/closure-resume-20261112.ROOT/progressive-integration-20261112.ROOT"
+}

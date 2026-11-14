@@ -6697,6 +6697,21 @@ extension LocalAvailabilityRootUITests {
         var tabDiagnostics: [[String: Any]] = []
         var exportedTabDiagnostics = false
         var diagnosticAppPID: Int?
+        var nativeDiagnosticSegments: [[String: Any]] = []
+        var nativeDiagnosticSegmentsDropped = 0
+        func captureNativeTabDiagnostics(_ reason: String) {
+            guard nativeDiagnosticSegments.count < 3 else { nativeDiagnosticSegmentsDropped += 1; return }
+            // Reopen checkpoints occur after all four original timed tab gates.
+            // Preserve each process RAM segment before its normal termination.
+            let value: String
+            if app.state == .runningForeground {
+                let readback = app.otherElements["task146.t19.tab-observation"]
+                value = readback.exists ? (readback.value as? String ?? "VALUE_ABSENT_NOT_OBSERVED") : "ELEMENT_ABSENT_NOT_OBSERVED"
+            } else { value = "APP_NOT_FOREGROUND_NOT_OBSERVED" }
+            nativeDiagnosticSegments.append(["reason": reason,
+                "expectedAppPID": diagnosticAppPID as Any? ?? NSNull(),
+                "capturedUptime": ProcessInfo.processInfo.systemUptime, "readback": value])
+        }
         func exportTabDiagnostics(_ reason: String) {
             guard !exportedTabDiagnostics else { return }
             exportedTabDiagnostics = true
@@ -6710,12 +6725,13 @@ extension LocalAvailabilityRootUITests {
             let bytes = (try? JSONSerialization.data(withJSONObject: driver, options: [.sortedKeys])) ?? Data()
             let attachment = XCTAttachment(data: bytes, uniformTypeIdentifier: "public.json")
             attachment.name = "T19 exact tab driver timestamps"; attachment.lifetime = .keepAlways; add(attachment)
-            if app.state == .runningForeground {
-                let readback = app.otherElements["task146.t19.tab-observation"]
-                let value = readback.exists ? (readback.value as? String ?? "VALUE_ABSENT_NOT_OBSERVED") : "ELEMENT_ABSENT_NOT_OBSERVED"
-                let native = XCTAttachment(string: value)
-                native.name = "T19 passive native tab timestamps"; native.lifetime = .keepAlways; add(native)
-            }
+            captureNativeTabDiagnostics(reason)
+            let nativeValue: [String: Any] = ["protocol": "task146-t19-tab-observation-bundle-v1",
+                "namespace": runID, "segments": nativeDiagnosticSegments,
+                "droppedSegments": nativeDiagnosticSegmentsDropped]
+            let nativeBytes = (try? JSONSerialization.data(withJSONObject: nativeValue, options: [.sortedKeys])) ?? Data()
+            let native = XCTAttachment(data: nativeBytes, uniformTypeIdentifier: "public.json")
+            native.name = "T19 passive native tab timestamps"; native.lifetime = .keepAlways; add(native)
         }
         var terminal = "FAIL"
         var firstError: Error?
@@ -6778,6 +6794,7 @@ extension LocalAvailabilityRootUITests {
                     let buttons = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", tab))
                     let button = buttons.element(boundBy: 0)
                     var diagnostic: [String: Any] = ["cycle": number, "tab": tab,
+                        "appPID": diagnosticAppPID as Any? ?? NSNull(),
                         "startedUptime": tabStart, "deadlineUptime": tabDeadline]
                     let existenceStarted = ProcessInfo.processInfo.systemUptime
                     var present = button.exists
@@ -6869,12 +6886,14 @@ extension LocalAvailabilityRootUITests {
                     "observedAppPID": try XCTUnwrap(afterTabs["pid"] as? Int)])
                 if cycles == 30 && [10, 20].contains(number) {
                     stage = "quiet-reopen-\(number)"
+                    captureNativeTabDiagnostics("before-quiet-reopen-\(number)")
                     app.terminate(); XCTAssertEqual(app.state, .notRunning); app.launch()
                     let reopened = try t19Wait(deadline: min(deadline, ProcessInfo.processInfo.systemUptime + 45)) {
                         $0["qualifiedPID"] as? Int == $0["pid"] as? Int && ($0["pid"] as? Int) != previousPID
                     }
                     let newPID = try XCTUnwrap(reopened["pid"] as? Int)
                     XCTAssertNotEqual(newPID, previousPID); previousPID = newPID
+                    diagnosticAppPID = newPID
                     let completedAfterReopen = try XCTUnwrap(reopened["completed"] as? Int)
                     XCTAssertGreaterThanOrEqual(completedAfterReopen, completedAfterTabs)
                     XCTAssertLessThanOrEqual(completedAfterReopen, cycles)
